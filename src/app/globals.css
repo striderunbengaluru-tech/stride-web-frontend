@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Stride Brand Colors ── */
+  --color-stride-yellow-accent: #E1D03F;  /* CTAs, highlights, active states */
+  --color-stride-purple-primary: #4B2862; /* Primary backgrounds, nav, headers */
+  --color-stride-bg: #4B2862;             /* Default page background (solid purple) */
+  --color-copy-white: #ffffff;            /* Text on dark/purple surfaces */
+  --color-copy-black: #010101;            /* Text on light/yellow surfaces */
+
+  /* ── Font Families ── */
+  --font-heading: var(--font-libre-baskerville);
+  --font-body: var(--font-roboto);
+}
+
+body {
+  font-family: var(--font-roboto), sans-serif;
+  background-color: rgba(75, 40, 98, 0.94); /* deep purple — stride brand */
+  color: #ffffff;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-libre-baskerville), serif;
+}
+
+/* ── Font utility classes — apply to any element regardless of tag ── */
+.font-libre {
+  font-family: var(--font-libre-baskerville), serif;
+}
+
+.font-roboto {
+  font-family: var(--font-roboto), sans-serif;
+}
+
+/* ── Utility: hide scrollbar while keeping scroll functionality ── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

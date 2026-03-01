@@ -1,0 +1,25 @@
+{
+  "title": "Move as One.",
+  "scrollToExpand": "Scroll to run ↓",
+  "overlay": {
+    "pretitle": "Register for our upcoming run",
+    "eventName": "Tim's Power Run",
+    "eventDate": "15 March 2025",
+    "eventLocation": "Cubbon Park, Bengaluru",
+    "ctaLabel": "Register Now",
+    "ctaHref": "/events"
+  },
+  "content": {
+    "heading": "Run with India's **2nd Largest Running Community.**",
+    "subheading": "Stride Run Club is Bengaluru's community for runners of all paces. Whether you're chasing a PB or your first 5K, you belong here.",
+    "ctas": [
+      { "label": "Get Started", "href": "/events", "variant": "primary" },
+      { "label": "View Upcoming Runs", "href": "/events", "variant": "secondary" }
+    ],
+    "stats": [
+      { "value": "500+", "label": "Active Members" },
+      { "value": "50+", "label": "Events Run" },
+      { "value": "2+", "label": "Years Strong" }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "who-can-join",
+    "number": "01",
+    "question": "Who can join Stride Run Club?",
+    "answer": "Everyone — no pace requirement, no experience needed. We welcome first-timers chasing their debut 5K and seasoned marathoners alike. If you can put one foot in front of the other, you belong here."
+  },
+  {
+    "id": "when-where",
+    "number": "02",
+    "question": "When and where do you meet?",
+    "answer": "We run regularly at Agara Lake, HSR or Atal Bihari Vajpayee Stadium, HSR, Bengaluru. Most runs happen on weekend mornings and select weekday mornings called The Lake Hop Run. Check the Events page for upcoming dates, timings, and meeting points."
+  },
+  {
+    "id": "membership-fee",
+    "number": "03",
+    "question": "Is there a membership fee?",
+    "answer": "Joining the Stride community is free. Individual run events may carry a small registration fee to cover logistics — you'll see the exact amount on the event listing before you commit."
+  },
+  {
+    "id": "how-to-register",
+    "number": "04",
+    "question": "How do I register for a run?",
+    "answer": "Head to the Events page, find the run that excites you, and tap Register Now. Slots fill up fast, so book early — registration is confirmed on a first-come basis."
+  },
+  {
+    "id": "what-to-bring",
+    "number": "05",
+    "question": "What should I bring to a group run?",
+    "answer": "Comfortable running shoes, a water bottle, and your best energy. We'll handle the route, pacing groups, and the post-run high-fives. On longer runs, we recommend a light snack and sun protection."
+  },
+  {
+    "id": "training",
+    "number": "06",
+    "question": "Do you offer training programmes?",
+    "answer": "Yes. Our Training Lead designs structured blocks for every goal — 5K build-ups, half-marathon plans, and full marathon prep. Follow the community feed or check the Events page for upcoming training cycles."
+  }
+]

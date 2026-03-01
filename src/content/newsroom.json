@@ -1,0 +1,51 @@
+{
+  "heading": {
+    "pretitle": "Press & Media",
+    "title": "We have been all over the **news**",
+    "subtitle": "Bengaluru's running community has caught the eye of the city's top publications. Here's what they're saying about Stride."
+  },
+  "articles": [
+    {
+      "id": "deccan-herald-2024",
+      "publication": "Deccan Herald",
+      "publicationLogo": "https://static.toiimg.com/thumb/msid-95254840,width-1280,height-720,resizemode-4/95254840.jpg",
+      "title": "Free clubs to run and socialise in Bengaluru",
+      "excerpt": "Running clubs in Bengaluru offer a vibrant mix of fitness, friendship, and community — and Stride is leading the charge with a growing pack of enthusiastic runners at Agara Lake.",
+      "image": "/assets/images/hero-main-featured.webp",
+      "author": "Barkha Kumari",
+      "date": "2024-12-27",
+      "url": "https://www.deccanherald.com/india/karnataka/bengaluru/free-clubs-to-run-and-socialise-in-bengaluru-3333168",
+      "featured": true
+    },
+    {
+      "id": "news-karnataka-2024",
+      "publication": "News Karnataka",
+      "publicationLogo": "https://newskarnataka.com/newskarnataka-logo.svg",
+      "title": "Bengaluru's social running clubs offer fun and fitness with a community twist",
+      "excerpt": "Social running clubs across Bengaluru are redefining fitness — turning early morning runs into lively community events that attract hundreds every weekend.",
+      "image": "/assets/images/hero-main-featured.webp",
+      "author": "News Karnataka",
+      "date": "2024-12-27",
+      "url": "https://newskarnataka.com/karnataka/bengaluru/bengalurus-social-running-clubs-offer-fun-and-fitness-with-a-community-twist/27122024",
+      "featured": false
+    }
+  ],
+  "stats": [
+    {
+      "value": "47K+",
+      "label": "Instagram followers",
+      "href": "https://www.instagram.com/stride_runclub_bengaluru/"
+    },
+    {
+      "value": "500+",
+      "label": "Active members",
+      "href": "#"
+    }
+  ],
+  "communityQuote": {
+    "text": "Joining Stride was the best decision I made this year. It's not just running — it's a family.",
+    "author": "Kushagra Gupta",
+    "location": "Bengaluru, India",
+    "authorImage": "https://media.licdn.com/dms/image/v2/D4D03AQHO28kqlPJhgg/profile-displayphoto-scale_400_400/B4DZf46sxwH8Ak-/0/1752227827420?e=1773878400&v=beta&t=c9Sq4EbRJ4eEZ1eeIXS5fqeeWpuiCbmPloF2bBh3CGA"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "heading": {
+    "pretitle": "Stride Gear",
+    "title": "Run in **style**",
+    "subtitle": "Official Stride Run Club merchandise — wear the pack, represent the community."
+  },
+  "viewAllHref": "/shop",
+  "products": [
+    {
+      "id": "stride-socks",
+      "name": "Stride Socks",
+      "price": "₹999",
+      "href": "/shop/stride-socks",
+      "image": "/assets/images/temp-prod-2.png"
+    },
+    {
+      "id": "stride-tote-bag",
+      "name": "Stride Tote Bag",
+      "price": "₹799",
+      "href": "/shop/stride-tote-bag",
+      "image": "/assets/images/temp-prod-1.png"
+    },
+    {
+      "id": "pace-setter-hoodie",
+      "name": "Pace Setter Hoodie",
+      "price": "₹2,499",
+      "href": "/shop/pace-setter-hoodie",
+      "image": "/assets/images/temp-prod-2.png"
+    },
+    {
+      "id": "trail-runner-shorts",
+      "name": "Trail Runner Shorts",
+      "price": "₹1,299",
+      "href": "/shop/trail-runner-shorts",
+      "image": "/assets/images/temp-prod-1.png"
+    },
+    {
+      "id": "hydration-flask",
+      "name": "Hydration Flask",
+      "price": "₹599",
+      "href": "/shop/hydration-flask",
+      "image": "/assets/images/temp-prod-2.png"
+    }
+  ]
+}
