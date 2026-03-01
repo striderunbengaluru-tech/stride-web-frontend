@@ -43,10 +43,10 @@ export default function MerchSection() {
 
   return (
     <section className='py-12 md:py-20'>
-      <div className='container mx-auto px-6'>
+      <div className='max-w-6xl mx-auto px-6'>
 
         {/* Section heading */}
-        <div className='max-w-4xl mx-auto mb-8 md:mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4'>
+        <div className='max-w-6xl mx-auto mb-8 md:mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4'>
           <div>
             <p className='text-stride-yellow-accent text-xs font-medium tracking-widest uppercase mb-4 font-roboto'>
               {heading.pretitle}
@@ -70,7 +70,7 @@ export default function MerchSection() {
         </div>
 
         {/* Carousel — bleeds to screen edges on mobile via negative margin */}
-        <div className='max-w-4xl mx-auto'>
+        <div className='max-w-6xl mx-auto'>
           <div className='flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0'>
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -79,7 +79,7 @@ export default function MerchSection() {
         </div>
 
         {/* View all — mobile only, below carousel */}
-        <div className='max-w-4xl mx-auto mt-8 flex justify-center sm:hidden'>
+        <div className='max-w-6xl mx-auto mt-8 flex justify-center sm:hidden'>
           <Link
             href={viewAllHref}
             className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-bold px-8 py-3 rounded-md hover:opacity-90 transition-opacity font-roboto text-sm'

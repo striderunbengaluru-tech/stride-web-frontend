@@ -32,6 +32,11 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-roboto), sans-serif;
 }
 
+/* ── Utility: yellow glow — used for active nav indicator dot ── */
+.glow-yellow {
+  box-shadow: 0 0 6px 1px var(--color-stride-yellow-accent);
+}
+
 /* ── Utility: hide scrollbar while keeping scroll functionality ── */
 .scrollbar-hide {
   -ms-overflow-style: none;

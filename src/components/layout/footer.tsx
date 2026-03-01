@@ -35,7 +35,7 @@ export default function Footer() {
         {/* Logo */}
         <Link href='/' aria-label='Stride Run Club home' className='mx-auto mb-6 block w-fit'>
           <Image
-            src='/assets/images/stride-logo-full.webp'
+            src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg'
             alt='Stride Run Club'
             width={160}
             height={50}

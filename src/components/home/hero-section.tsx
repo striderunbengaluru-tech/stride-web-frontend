@@ -11,7 +11,7 @@ const HeroSection = () => {
   return (
     <ScrollExpandMedia
       mediaType='image'
-      mediaSrc='/hero-main-featured.webp'
+      mediaSrc='/assets/images/hero-main-featured.webp'
       bgVideoSrc={BG_VIDEO_SRC}
       title={title}
       scrollToExpand={scrollToExpand}
@@ -53,7 +53,7 @@ const RunRegistrationOverlay = () => {
 const HeroContent = () => {
   const { heading, subheading, ctas, stats } = heroData.content;
   return (
-    <div className='max-w-4xl mx-auto text-center'>
+    <div className='max-w-6xl mx-auto text-center'>
       <h2 className='text-4xl lg:text-5xl font-bold text-white mb-4'>
         <HighlightedText text={heading} />
       </h2>

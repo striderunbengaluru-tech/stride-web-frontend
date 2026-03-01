@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
@@ -14,6 +17,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.cdninstagram.com',
+      },
+      // Supabase Storage — project assets (event covers, product images, etc.)
+      {
+        protocol: 'https',
+        hostname: 'ienotcjldormdxrzukpk.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },

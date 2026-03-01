@@ -5,8 +5,8 @@ const FAQ_ITEMS: AccordionItem[] = faqData;
 
 export default function FaqSection() {
   return (
-    <section className='container mx-auto px-6 py-12 md:py-20'>
-      <div className='max-w-4xl mx-auto'>
+    <section className='max-w-6xl mx-auto px-6 py-12 md:py-20'>
+      <div>
 
         {/* Section heading */}
         <div className='mb-8 md:mb-12'>

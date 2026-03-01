@@ -109,9 +109,22 @@ Stride is a community app — it must feel fast for every member, on any device,
 - Prefer streaming with `loading.tsx` and `Suspense` boundaries for slow data
 
 ### Images & Assets
-- Always use `next/image` for images — configure `sizes` and `priority` appropriately
+- Use `next/image` for **local assets and known static hostnames** (Supabase Storage, placehold.co, Instagram CDN) — configure `sizes` and `priority` appropriately
+- Use a plain `<img>` tag for **user-generated or external avatar URLs** (e.g. Google OAuth avatars from `lh3.googleusercontent.com`) where the hostname is not known at build time — always add `loading="lazy"` and `fetchPriority="low"` unless the image is above the fold; suppress the lint warning with `// eslint-disable-next-line @next/next/no-img-element`
 - Optimize all static assets; use WebP/AVIF formats
 - SVGs used as icons must be inlined or loaded as components — not via `<img>` tags
+
+### Image Hostnames (next.config.ts remotePatterns)
+Allowed hostnames for `next/image`:
+- `placehold.co` — development placeholders
+- `cdn.instagram.com` / `**.cdninstagram.com` — Stride brand photos
+- `ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/**` — Supabase Storage assets
+
+### Supabase Storage
+- Use Supabase Storage buckets to serve all app-managed assets (event covers, product images, member uploads)
+- Storage URLs follow the pattern: `https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/[bucket]/[path]`
+- These are safe to use with `next/image` since the hostname is known and configured in `next.config.ts`
+- Default all buckets to **private**; only set a bucket to public when the content is intentionally public (e.g. event cover images, product photos)
 
 ### Bundles & Code Splitting
 - Lazy-load heavy client components (maps, charts, rich editors) with `next/dynamic`
