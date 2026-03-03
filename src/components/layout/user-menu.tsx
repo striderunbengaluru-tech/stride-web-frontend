@@ -14,6 +14,7 @@ type Props = {
 
 export default function UserMenu({ username, firstName, avatarUrl }: Props) {
   const [open, setOpen] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -48,7 +49,7 @@ export default function UserMenu({ username, firstName, avatarUrl }: Props) {
         aria-label={`${firstName}'s account menu`}
       >
         {/* Avatar — always visible on all screen sizes */}
-        {avatarUrl ? (
+        {avatarUrl && !imgFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
@@ -56,6 +57,8 @@ export default function UserMenu({ username, firstName, avatarUrl }: Props) {
             width={32}
             height={32}
             className='w-8 h-8 rounded-full object-cover shrink-0'
+            referrerPolicy='no-referrer'
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <div className='w-8 h-8 rounded-full bg-stride-yellow-accent/20 border border-stride-yellow-accent/40 flex items-center justify-center shrink-0'>

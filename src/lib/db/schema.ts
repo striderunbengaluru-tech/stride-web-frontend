@@ -15,6 +15,15 @@ export const user = pgTable('user', {
   username: text('username').unique(),
   bio: text('bio'),
   role: text('role').notNull().default('GUEST'),
+  // Extended profile fields
+  coverUrl: text('coverUrl'),
+  location: text('location'),
+  skills: text('skills'), // JSON-encoded string[]
+  linkedinUrl: text('linkedinUrl'),
+  instagramUrl: text('instagramUrl'),
+  stravaUrl: text('stravaUrl'),
+  prompts: text('prompts'), // JSON-encoded { question: string; answer: string }[]
+  runsCompleted: integer('runsCompleted').notNull().default(0),
 })
 
 export const session = pgTable('session', {
@@ -63,11 +72,17 @@ export const events = pgTable('events', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  subtitle: text('subtitle'),
   description: text('description'),
+  details: text('details'), // Long markdown body
   location: text('location'),
+  locationUrl: text('locationUrl'), // Google Maps URL
+  stravaRouteUrl: text('stravaRouteUrl'),
   eventDate: timestamp('eventDate'),
+  endDate: timestamp('endDate'),
   capacity: integer('capacity'),
-  status: text('status').notNull().default('DRAFT'),
+  pricePaise: integer('pricePaise').notNull().default(0), // 0 = free
+  status: text('status').notNull().default('DRAFT'), // DRAFT | PUBLISHED | CANCELLED
   coverUrl: text('coverUrl'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
@@ -82,6 +97,21 @@ export const products = pgTable('products', {
   stock: integer('stock').notNull().default(0),
   status: text('status').notNull().default('DRAFT'),
   imageUrl: text('imageUrl'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+})
+
+export const eventRegistrations = pgTable('event_registrations', {
+  id: text('id').primaryKey(),
+  eventId: text('eventId')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('PENDING'), // PENDING | CONFIRMED | CANCELLED
+  cashfreeOrderId: text('cashfreeOrderId'),
+  cashfreePaymentId: text('cashfreePaymentId'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
