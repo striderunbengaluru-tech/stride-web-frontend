@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const MILESTONES = [
   {
     level: 'Stride Newbie',
-    threshold: '5+ runs',
+    threshold: '0–5 runs',
     emoji: '🏃',
     badgeClasses: 'text-green-400 border-green-400/40 bg-green-400/10',
     barClasses: 'bg-green-400',
@@ -23,7 +23,7 @@ const MILESTONES = [
   },
   {
     level: 'Stride Regular',
-    threshold: '15 runs',
+    threshold: '6–15 runs',
     emoji: '⚡',
     badgeClasses: 'text-blue-400 border-blue-400/40 bg-blue-400/10',
     barClasses: 'bg-blue-400',
@@ -37,7 +37,7 @@ const MILESTONES = [
   },
   {
     level: 'Stride OG Member',
-    threshold: '>15 runs',
+    threshold: '16+ runs',
     emoji: '🏆',
     badgeClasses: 'text-stride-yellow-accent border-stride-yellow-accent/40 bg-stride-yellow-accent/10',
     barClasses: 'bg-stride-yellow-accent',

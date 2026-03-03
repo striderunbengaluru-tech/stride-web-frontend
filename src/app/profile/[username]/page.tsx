@@ -40,20 +40,19 @@ const SKILL_ICONS: Record<string, React.ReactNode> = {
   'New Runner':    <Star size={11} aria-hidden='true' />,
 }
 
-function getMemberLevel(runs: number): { label: string; classes: string } | null {
-  if (runs > 15) return {
+function getMemberLevel(runs: number): { label: string; classes: string } {
+  if (runs >= 16) return {
     label: 'Stride OG Member',
     classes: 'text-stride-yellow-accent border-stride-yellow-accent/50 bg-stride-yellow-accent/10',
   }
-  if (runs >= 15) return {
+  if (runs >= 6) return {
     label: 'Stride Regular',
     classes: 'text-blue-400 border-blue-400/50 bg-blue-400/10',
   }
-  if (runs >= 5) return {
+  return {
     label: 'Stride Newbie',
     classes: 'text-green-400 border-green-400/50 bg-green-400/10',
   }
-  return null
 }
 
 function parseJson<T>(raw: string | null, fallback: T): T {
@@ -264,15 +263,9 @@ export default async function ProfilePage({ params }: Props) {
               <div className='flex items-center gap-2'>
                 <span className='text-white/50 text-xs font-medium uppercase tracking-wider'>Milestone Progress</span>
                 {/* Level badge — always visible */}
-                {memberLevel ? (
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${memberLevel.classes}`}>
-                    {memberLevel.label}
-                  </span>
-                ) : (
-                  <span className='inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border border-white/20 bg-white/5 text-white/40'>
-                    New Member
-                  </span>
-                )}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${memberLevel.classes}`}>
+                  {memberLevel.label}
+                </span>
               </div>
               <div className='flex items-center gap-1 text-white/30'>
                 <span className='text-white/70 text-sm font-semibold tabular-nums'>
@@ -292,10 +285,9 @@ export default async function ProfilePage({ params }: Props) {
 
             {/* Next milestone hint */}
             <p className='text-white/25 text-xs mt-2'>
-              {!memberLevel && 'Stride Newbie badge unlocks at 5 runs'}
-              {memberLevel?.label === 'Stride Newbie' && 'Stride Regular badge unlocks at 15 runs'}
-              {memberLevel?.label === 'Stride Regular' && 'Stride OG Member badge unlocks at 16 runs'}
-              {memberLevel?.label === 'Stride OG Member' && "You've reached the highest milestone 🏆"}
+              {memberLevel.label === 'Stride Newbie' && 'Stride Regular badge unlocks at 6 runs'}
+              {memberLevel.label === 'Stride Regular' && 'Stride OG Member badge unlocks at 16 runs'}
+              {memberLevel.label === 'Stride OG Member' && "You've reached the highest milestone 🏆"}
             </p>
           </div>
         </Link>
