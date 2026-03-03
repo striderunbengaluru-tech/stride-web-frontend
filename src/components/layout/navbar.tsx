@@ -1,30 +1,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
 import UserMenu from './user-menu'
 import NavLinks from './nav-links'
 
 const Navbar = async () => {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const session = await auth.api.getSession({ headers: await headers() })
 
   let navUser: { username: string; firstName: string; avatarUrl: string | null } | null = null
 
-  if (user) {
-    const { data } = await supabase
-      .from('users')
-      .select('username, full_name, avatar_url')
-      .eq('id', user.id)
-      .single()
-
-    if (data) {
-      navUser = {
-        username: data.username,
-        firstName: data.full_name?.split(' ')[0] ?? data.username,
-        avatarUrl: data.avatar_url,
-      }
+  if (session?.user) {
+    const u = session.user as typeof session.user & { username?: string }
+    navUser = {
+      username: u.username ?? u.id,
+      firstName: u.name?.split(' ')[0] ?? u.username ?? 'You',
+      avatarUrl: u.image ?? null,
     }
   }
 

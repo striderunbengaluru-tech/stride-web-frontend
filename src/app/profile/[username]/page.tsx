@@ -1,10 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import type { UserProfile } from '@/types/user'
-import { ROLES } from '@/types/auth'
-import { signOut } from '@/lib/auth/actions'
+import { auth } from '@/lib/auth'
+import { RoleBadge } from '@/utils/profile'
+import { db } from '@/lib/db'
+import { user as userTable } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { SignOutButton } from '@/components/profile/sign-out-button'
 
 type Props = {
   params: Promise<{ username: string }>
@@ -19,21 +22,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProfilePage({ params }: Props) {
   const { username } = await params
-  const supabase = await createClient()
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at')
-    .eq('username', username)
-    .single<UserProfile>()
+  const [row] = await db
+    .select({
+      id: userTable.id,
+      username: userTable.username,
+      full_name: userTable.name,
+      bio: userTable.bio,
+      role: userTable.role,
+      avatar_url: userTable.image,
+      created_at: userTable.createdAt,
+    })
+    .from(userTable)
+    .where(eq(userTable.username, username))
+    .limit(1)
 
-  if (!profile) notFound()
+  if (!row) notFound()
 
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser()
+  const profile = row as unknown as UserProfile
 
-  const isOwnProfile = currentUser?.id === profile.id
+  const session = await auth.api.getSession({ headers: await headers() })
+  const isOwnProfile = session?.user?.id === profile.id
   const joinedYear = new Date(profile.created_at).getFullYear()
 
   return (
@@ -47,7 +56,7 @@ export default async function ProfilePage({ params }: Props) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={profile.avatar_url}
-                  alt={profile.full_name ?? profile.username}
+                  alt={profile.full_name ?? profile.username ?? username}
                   width={96}
                   height={96}
                   loading='lazy'
@@ -57,7 +66,7 @@ export default async function ProfilePage({ params }: Props) {
               ) : (
                 <div className='w-24 h-24 rounded-full bg-stride-yellow-accent/20 border border-stride-yellow-accent/40 flex items-center justify-center'>
                   <span className='text-stride-yellow-accent text-3xl font-bold'>
-                    {(profile.full_name ?? profile.username)
+                    {(profile.full_name ?? profile.username ?? username)
                       .charAt(0)
                       .toUpperCase()}
                   </span>
@@ -68,11 +77,11 @@ export default async function ProfilePage({ params }: Props) {
             <div className='flex-1 text-center sm:text-left'>
               <div className='flex flex-col sm:flex-row sm:items-center gap-2 justify-center sm:justify-start'>
                 <h1 className='text-2xl font-bold text-white'>
-                  {profile.full_name ?? profile.username}
+                  {profile.full_name ?? profile.username ?? username}
                 </h1>
                 <RoleBadge role={profile.role} />
               </div>
-              <p className='text-white/50 text-sm mt-1'>@{profile.username}</p>
+              <p className='text-white/50 text-sm mt-1'>@{profile.username ?? username}</p>
               <p className='text-white/40 text-xs mt-1'>
                 Member since {joinedYear}
               </p>
@@ -91,15 +100,7 @@ export default async function ProfilePage({ params }: Props) {
           {/* Own profile actions */}
           {isOwnProfile && (
             <div className='mt-6 pt-6 border-t border-white/10 flex gap-3'>
-              <form action={signOut}>
-                <button
-                  type='submit'
-                  className='flex items-center gap-2 text-white/50 hover:text-white text-sm font-medium transition-colors min-h-11 px-4 rounded-md border border-white/15 hover:border-white/30'
-                >
-                  <LogOut size={15} aria-hidden='true' />
-                  Sign out
-                </button>
-              </form>
+              <SignOutButton />
             </div>
           )}
         </div>
@@ -108,19 +109,3 @@ export default async function ProfilePage({ params }: Props) {
   )
 }
 
-function RoleBadge({ role }: { role: UserProfile['role'] }) {
-  if (role === ROLES.GUEST) return null
-
-  const styles =
-    role === ROLES.ADMIN
-      ? 'bg-stride-yellow-accent/20 text-stride-yellow-accent border-stride-yellow-accent/40'
-      : 'bg-white/10 text-white/70 border-white/20'
-
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${styles}`}
-    >
-      {role}
-    </span>
-  )
-}

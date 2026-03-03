@@ -1,8 +1,11 @@
 {
   "mcpServers": {
-    "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=ienotcjldormdxrzukpk"
+    "neon": {
+      "command": "npx",
+      "args": ["-y", "@neondatabase/mcp-server-neon", "start"],
+      "env": {
+        "NEON_API_KEY": ""
+      }
     }
   }
 }

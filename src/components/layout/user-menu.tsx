@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogOut, User } from 'lucide-react'
-import { signOut } from '@/lib/auth/actions'
+import { authClient } from '@/lib/auth/client'
 
 type Props = {
   username: string
@@ -14,6 +15,7 @@ type Props = {
 export default function UserMenu({ username, firstName, avatarUrl }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
@@ -24,6 +26,17 @@ export default function UserMenu({ username, firstName, avatarUrl }: Props) {
     document.addEventListener('mousedown', onOutsideClick)
     return () => document.removeEventListener('mousedown', onOutsideClick)
   }, [])
+
+  async function handleSignOut() {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push('/login')
+          router.refresh()
+        },
+      },
+    })
+  }
 
   return (
     <div ref={ref} className='relative'>
@@ -75,16 +88,15 @@ export default function UserMenu({ username, firstName, avatarUrl }: Props) {
           </Link>
 
           <div className='border-t border-copy-white/10'>
-            <form action={signOut}>
-              <button
-                type='submit'
-                role='menuitem'
-                className='w-full flex items-center gap-3 px-4 py-3 text-copy-white/70 hover:text-copy-white hover:bg-copy-white/10 transition-colors text-sm'
-              >
-                <LogOut size={15} aria-hidden='true' />
-                Log Out
-              </button>
-            </form>
+            <button
+              type='button'
+              role='menuitem'
+              onClick={handleSignOut}
+              className='w-full flex items-center gap-3 px-4 py-3 text-copy-white/70 hover:text-copy-white hover:bg-copy-white/10 transition-colors text-sm'
+            >
+              <LogOut size={15} aria-hidden='true' />
+              Log Out
+            </button>
           </div>
         </div>
       )}
