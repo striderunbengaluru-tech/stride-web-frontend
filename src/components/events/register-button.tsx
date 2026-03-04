@@ -1,13 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Cashfree: any
-  }
-}
+import { useRouter } from 'next/navigation'
 
 type Props = {
   eventId: string
@@ -19,6 +13,7 @@ type Props = {
 
 export function RegisterButton({ eventId, pricePaise, isFull, isRegistered, isLoggedIn }: Props) {
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   if (isRegistered) {
     return (
@@ -69,16 +64,8 @@ export function RegisterButton({ eventId, pricePaise, isFull, isRegistered, isLo
         return
       }
 
-      // Free event registered
-      if (data.registered) {
-        window.location.reload()
-        return
-      }
-
-      // Paid — open Cashfree checkout
-      if (data.paymentSessionId) {
-        const cashfree = await window.Cashfree({ mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox' })
-        cashfree.checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: '_self' })
+      if (data.registrationId && data.slug) {
+        router.push(`/events/${data.slug}/confirmation/${data.registrationId}`)
       }
     } finally {
       setLoading(false)
@@ -88,18 +75,12 @@ export function RegisterButton({ eventId, pricePaise, isFull, isRegistered, isLo
   const label = pricePaise === 0 ? 'RSVP Free' : `Register — ₹${pricePaise / 100}`
 
   return (
-    <>
-      {pricePaise > 0 && (
-        // Load Cashfree JS SDK
-        <script src='https://sdk.cashfree.com/js/v3/cashfree.js' async />
-      )}
-      <button
-        onClick={handleRegister}
-        disabled={loading}
-        className='w-full py-3.5 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-60 min-h-11'
-      >
-        {loading ? 'Processing…' : label}
-      </button>
-    </>
+    <button
+      onClick={handleRegister}
+      disabled={loading}
+      className='w-full py-3.5 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-60 min-h-11'
+    >
+      {loading ? 'Processing…' : label}
+    </button>
   )
 }

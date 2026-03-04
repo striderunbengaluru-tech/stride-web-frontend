@@ -1,5 +1,8 @@
 'use client'
 
+import { useRef, useState } from 'react'
+import Image from 'next/image'
+import { Upload, X } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
 
 type Props = {
@@ -9,8 +12,39 @@ type Props = {
 }
 
 export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [coverPreview, setCoverPreview] = useState<string>(defaultValues.coverUrl ?? '')
+  const [uploading, setUploading] = useState(false)
+
+  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setCoverPreview(URL.createObjectURL(file))
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/admin/upload-event-cover', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setCoverPreview(data.url)
+        if (hiddenCoverRef.current) hiddenCoverRef.current.value = data.url
+      } else {
+        alert(data.error ?? 'Upload failed')
+        setCoverPreview(defaultValues.coverUrl ?? '')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const hiddenCoverRef = useRef<HTMLInputElement>(null)
+
   return (
     <form action={action} className='space-y-5'>
+      {/* Hidden field carries the uploaded URL */}
+      <input ref={hiddenCoverRef} type='hidden' name='coverUrl' defaultValue={defaultValues.coverUrl ?? ''} />
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-5'>
         <Field label='Event Name *' name='name' defaultValue={defaultValues.name} required />
         <Field label='Subtitle' name='subtitle' defaultValue={defaultValues.subtitle} />
@@ -66,7 +100,50 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
         </div>
       </div>
 
-      <Field label='Cover Image URL' name='coverUrl' defaultValue={defaultValues.coverUrl} />
+      {/* Cover image upload */}
+      <div className='flex flex-col gap-2'>
+        <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>Cover Image</label>
+        {coverPreview ? (
+          <div className='relative w-full aspect-video rounded-lg overflow-hidden border border-white/15'>
+            <Image src={coverPreview} alt='Cover preview' fill className='object-cover' sizes='600px' />
+            <button
+              type='button'
+              onClick={() => {
+                setCoverPreview('')
+                if (hiddenCoverRef.current) hiddenCoverRef.current.value = ''
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+              className='absolute top-2 right-2 p-1 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors'
+              aria-label='Remove cover image'
+            >
+              <X size={14} />
+            </button>
+            {uploading && (
+              <div className='absolute inset-0 flex items-center justify-center bg-black/50'>
+                <span className='text-white text-sm font-medium'>Uploading…</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type='button'
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className='flex flex-col items-center justify-center gap-2 w-full aspect-video rounded-lg border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/70 transition-colors disabled:opacity-50'
+          >
+            <Upload size={24} />
+            <span className='text-sm'>{uploading ? 'Uploading…' : 'Click to upload cover image'}</span>
+            <span className='text-xs text-white/30'>JPG, PNG, WebP — max 8MB</span>
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type='file'
+          accept='image/*'
+          onChange={handleCoverChange}
+          className='hidden'
+        />
+      </div>
 
       <div className='flex gap-3 pt-2'>
         <button

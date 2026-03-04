@@ -53,76 +53,15 @@ export async function POST(request: Request) {
     }
   }
 
-  // Free event — confirm immediately
-  if (event.price_paise === 0) {
-    await adminClient.from('event_registrations').insert({
-      id: nanoid(),
-      event_id: eventId,
-      user_id: user.id,
-      status: 'CONFIRMED',
-    })
-    return NextResponse.json({ registered: true })
-  }
-
-  // Paid event — create Cashfree order
-  const orderId = `STRIDE-${nanoid(10)}`
-  const appId = process.env.STRIDE_CASHFREE_APP_ID
-  const secretKey = process.env.STRIDE_CASHFREE_SECRET_KEY
-  const env = process.env.STRIDE_CASHFREE_ENV ?? 'sandbox'
-
-  const cashfreeBase =
-    env === 'production'
-      ? 'https://api.cashfree.com/pg'
-      : 'https://sandbox.cashfree.com/pg'
-
-  // Fetch display name for Cashfree customer_name
-  const { data: profile } = await adminClient
-    .from('users')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
-
-  const orderRes = await fetch(`${cashfreeBase}/orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-version': '2023-08-01',
-      'x-client-id': appId ?? '',
-      'x-client-secret': secretKey ?? '',
-    },
-    body: JSON.stringify({
-      order_id: orderId,
-      order_amount: event.price_paise / 100,
-      order_currency: 'INR',
-      customer_details: {
-        customer_id: user.id,
-        customer_name: profile?.full_name ?? user.email ?? 'Stride Member',
-        customer_email: user.email ?? '',
-        customer_phone: '9999999999', // Cashfree requires phone; placeholder
-      },
-      order_meta: {
-        return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/events/${event.slug}?order_id=${orderId}`,
-        notify_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhooks/cashfree`,
-      },
-    }),
-  })
-
-  if (!orderRes.ok) {
-    const errBody = await orderRes.text()
-    console.error('[Cashfree] Order creation failed:', errBody)
-    return NextResponse.json({ error: 'Payment initiation failed' }, { status: 502 })
-  }
-
-  const orderData = await orderRes.json()
-
-  // Create PENDING registration
+  // Confirm immediately — Cashfree payment integration is pending credentials.
+  // All registrations (free and paid) are confirmed at booking time for now.
+  const registrationId = nanoid()
   await adminClient.from('event_registrations').insert({
-    id: nanoid(),
+    id: registrationId,
     event_id: eventId,
     user_id: user.id,
-    status: 'PENDING',
-    cashfree_order_id: orderId,
+    status: 'CONFIRMED',
   })
 
-  return NextResponse.json({ paymentSessionId: orderData.payment_session_id, orderId })
+  return NextResponse.json({ registrationId, slug: event.slug })
 }

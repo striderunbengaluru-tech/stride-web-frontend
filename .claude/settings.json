@@ -1,11 +1,13 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(yarn install --ignore-engines)",
+      "Bash(yarn add react-qr-code --ignore-engines)"
+    ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",
-      "/Users/kushagra.g/Documents"
-    ],
-    "allow": [
-      "Bash(yarn install --ignore-engines)"
+      "/Users/kushagra.g/Documents",
+      "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/events/[slug]/confirmation"
     ]
   }
 }

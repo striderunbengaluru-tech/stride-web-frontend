@@ -42,7 +42,7 @@ const RunRegistrationOverlay = () => {
       </div>
       <a
         href={ctaHref}
-        className='bg-stride-yellow-accent text-stride-purple-primary font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity text-lg'
+        className='bg-stride-yellow-accent text-stride-dark font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity text-lg'
       >
         {ctaLabel}
       </a>
@@ -68,7 +68,7 @@ const HeroContent = () => {
             <a
               key={cta.label}
               href={cta.href}
-              className='bg-stride-yellow-accent text-copy-black font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity'
+              className='bg-stride-yellow-accent text-stride-dark font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity'
             >
               {cta.label}
             </a>

@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
         hostname: 'ienotcjldormdxrzukpk.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      // Vercel Blob — legacy URLs from pre-migration data
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
+      },
     ],
   },
 };

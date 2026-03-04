@@ -5,6 +5,7 @@ const navLinks = [
   { href: '/admin/events', label: 'Events' },
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/users', label: 'Users' },
+  { href: '/admin/scan', label: 'Scan QR' },
 ]
 
 export function AdminNav() {
