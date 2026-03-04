@@ -3,7 +3,10 @@
     "allow": [
       "Bash(yarn install --ignore-engines)",
       "Bash(yarn add react-qr-code --ignore-engines)",
-      "Bash(yarn add react-qr-scanner --ignore-engines)"
+      "Bash(yarn add react-qr-scanner --ignore-engines)",
+      "Bash(yarn remove react-qr-scanner)",
+      "Bash(yarn add @yudiel/react-qr-scanner --ignore-engines)",
+      "Bash(yarn remove react-qr-scanner --ignore-engines)"
     ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",

@@ -7,12 +7,13 @@ export type QrPayload = {
   registrationId: string
   eventId: string
   userId: string
-  issuedAt: number
 }
 
+// Token is deterministic: same registration always produces the same QR code.
+// Security comes from the HMAC signature + DB validation on scan, not from timestamps.
 export function generateQrToken(registrationId: string, eventId: string, userId: string): string {
   const payload = Buffer.from(
-    JSON.stringify({ r: registrationId, e: eventId, u: userId, t: Date.now() })
+    JSON.stringify({ r: registrationId, e: eventId, u: userId })
   ).toString('base64url')
 
   const sig = createHmac('sha256', SECRET).update(payload).digest('base64url')
@@ -38,12 +39,11 @@ export function verifyQrToken(token: string): QrPayload | null {
 
   try {
     const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8'))
-    if (!decoded.r || !decoded.e || !decoded.u || !decoded.t) return null
+    if (!decoded.r || !decoded.e || !decoded.u) return null
     return {
       registrationId: decoded.r,
       eventId: decoded.e,
       userId: decoded.u,
-      issuedAt: decoded.t,
     }
   } catch {
     return null

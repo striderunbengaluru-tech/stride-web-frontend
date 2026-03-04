@@ -1,34 +1,26 @@
 'use client'
 
-import { useState, useCallback, type ComponentType, type CSSProperties } from 'react'
+import { useState, useRef, useCallback, type ComponentType } from 'react'
 import dynamic from 'next/dynamic'
 import { CheckCircle2, XCircle, AlertCircle, Loader2, ScanLine, RotateCcw } from 'lucide-react'
 
-type QrScanData = { text: string; canvas: HTMLCanvasElement }
-type QrScannerProps = {
-  onScan: (data: QrScanData | null) => void
-  onError: (error: Error) => void
-  constraints?: MediaStreamConstraints
-  style?: CSSProperties
+type IDetectedBarcode = { rawValue: string }
+type ScannerProps = {
+  onScan: (detectedCodes: IDetectedBarcode[]) => void
+  onError?: (error: unknown) => void
+  constraints?: MediaTrackConstraints
+  components?: { audio?: boolean; onOff?: boolean; torch?: boolean; zoom?: boolean; finder?: boolean }
+  styles?: { container?: React.CSSProperties; video?: React.CSSProperties }
 }
 
-// Dynamically import to avoid SSR issues with camera APIs
-const Scanner = dynamic<QrScannerProps>(
-  () => import('react-qr-scanner').then((m) => (m.default ?? m) as ComponentType<QrScannerProps>),
+const Scanner = dynamic<ScannerProps>(
+  () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner as ComponentType<ScannerProps>),
   { ssr: false, loading: () => <ScannerPlaceholder label='Loading scanner…' /> }
 )
 
-type CheckInResult = {
-  success: true
-  checkedInAt: string
-  attendeeName: string
-  eventName: string
-  runsCompleted: number
-} | {
-  success: false
-  message: string
-  checkedInAt?: string
-}
+type CheckInResult =
+  | { success: true; checkedInAt: string; attendeeName: string; eventName: string; runsCompleted: number }
+  | { success: false; message: string; checkedInAt?: string }
 
 function ScannerPlaceholder({ label }: { label: string }) {
   return (
@@ -64,15 +56,17 @@ function formatTime(iso: string) {
 
 export function QrScanner() {
   const [result, setResult] = useState<CheckInResult | null>(null)
-  const [processing, setProcessing] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const lastTokenRef = { current: '' }
+  // Use refs for processing flag and last token to avoid stale closure bugs
+  const processingRef = useRef(false)
+  const lastTokenRef = useRef('')
 
-  const handleScan = useCallback(async (data: QrScanData | null) => {
-    const token = data?.text ?? null
-    if (!token || processing || token === lastTokenRef.current) return
+  const handleScan = useCallback(async (detectedCodes: IDetectedBarcode[]) => {
+    const token = detectedCodes[0]?.rawValue
+    if (!token || processingRef.current || token === lastTokenRef.current) return
+
+    processingRef.current = true
     lastTokenRef.current = token
-    setProcessing(true)
     setScanError(null)
 
     try {
@@ -104,14 +98,15 @@ export function QrScanner() {
     } catch {
       setResult({ success: false, message: 'Network error — try again' })
     } finally {
-      setProcessing(false)
+      processingRef.current = false
     }
-  }, [processing])
+  }, [])
 
   function reset() {
     setResult(null)
     setScanError(null)
     lastTokenRef.current = ''
+    processingRef.current = false
   }
 
   // Success screen
@@ -124,7 +119,6 @@ export function QrScanner() {
             <p className='text-green-300 font-bold text-xl'>{result.attendeeName}</p>
             <p className='text-white/60 text-sm mt-1'>{result.eventName}</p>
           </div>
-
           <div className='w-full grid grid-cols-2 gap-3'>
             <div className='bg-white/5 rounded-xl p-3'>
               <p className='text-white/40 text-xs uppercase tracking-wider mb-1'>Check-in Time</p>
@@ -135,7 +129,6 @@ export function QrScanner() {
               <p className='text-stride-yellow-accent font-bold text-xl'>{result.runsCompleted}</p>
             </div>
           </div>
-
           <button
             onClick={reset}
             className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
@@ -148,7 +141,7 @@ export function QrScanner() {
     )
   }
 
-  // Error/already-checked-in screen
+  // Error / already-checked-in screen
   if (result && !result.success) {
     return (
       <div className='w-full max-w-md mx-auto'>
@@ -169,21 +162,19 @@ export function QrScanner() {
 
   return (
     <div className='w-full max-w-md mx-auto space-y-4'>
-      {/* Scanner viewport */}
       <div className='relative rounded-xl overflow-hidden border border-white/15'>
-        {processing && (
-          <div className='absolute inset-0 z-10 flex items-center justify-center bg-black/70'>
-            <Loader2 size={40} className='text-stride-yellow-accent animate-spin' />
-          </div>
-        )}
         <Scanner
           onScan={handleScan}
-          onError={(err: unknown) => {
+          onError={(err) => {
             const msg = err instanceof Error ? err.message : String(err)
-            if (!msg.toLowerCase().includes('no qr')) setScanError(msg)
+            // Suppress noisy non-errors from continuous scanning
+            if (!msg.toLowerCase().includes('no qr') && !msg.toLowerCase().includes('notfound')) {
+              setScanError(msg)
+            }
           }}
-          constraints={{ video: { facingMode: 'environment' } }}
-          style={{ width: '100%', display: 'block' }}
+          constraints={{ facingMode: 'environment' }}
+          components={{ audio: false, onOff: false, torch: false, zoom: false, finder: false }}
+          styles={{ container: { width: '100%' }, video: { width: '100%', display: 'block' } }}
         />
         {/* Corner bracket overlay */}
         <div className='absolute inset-0 pointer-events-none'>
