@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import "./globals.css";
 
 const libreBaskerville = Libre_Baskerville({
@@ -42,9 +43,11 @@ export default function RootLayout({
       <body
         className={`${libreBaskerville.variable} ${roboto.variable} font-body antialiased`}
       >
-        <Navbar />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </AuthProvider>
         <Analytics />
         <SpeedInsights />
       </body>
