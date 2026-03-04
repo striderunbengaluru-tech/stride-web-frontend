@@ -1,10 +1,7 @@
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { user as userTable } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 
 const schema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -21,8 +18,9 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
   const parsed = schema.safeParse(body)
@@ -30,17 +28,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { skills, prompts, ...rest } = parsed.data
+  const { skills, prompts, linkedinUrl, instagramUrl, stravaUrl, name, ...rest } = parsed.data
 
-  await db
-    .update(userTable)
-    .set({
+  await adminClient
+    .from('users')
+    .update({
       ...rest,
+      full_name: name,
+      linkedin_url: linkedinUrl !== undefined ? (linkedinUrl || null) : undefined,
+      instagram_url: instagramUrl !== undefined ? (instagramUrl || null) : undefined,
+      strava_url: stravaUrl !== undefined ? (stravaUrl || null) : undefined,
       skills: skills !== undefined ? JSON.stringify(skills) : undefined,
       prompts: prompts !== undefined ? JSON.stringify(prompts) : undefined,
-      updatedAt: new Date(),
+      updated_at: new Date().toISOString(),
     })
-    .where(eq(userTable.id, session.user.id))
+    .eq('id', user.id)
 
   return NextResponse.json({ ok: true })
 }

@@ -1,6 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { events } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { EventCard } from '@/components/events/event-card'
 
 export const metadata = {
@@ -8,21 +6,13 @@ export const metadata = {
 }
 
 export default async function EventsPage() {
-  const allEvents = await db
-    .select({
-      id: events.id,
-      name: events.name,
-      subtitle: events.subtitle,
-      slug: events.slug,
-      eventDate: events.eventDate,
-      location: events.location,
-      pricePaise: events.pricePaise,
-      status: events.status,
-      coverUrl: events.coverUrl,
-    })
-    .from(events)
-    .where(eq(events.status, 'PUBLISHED'))
-    .orderBy(asc(events.eventDate))
+  const { data: allEvents } = await adminClient
+    .from('events')
+    .select('id, name, subtitle, slug, event_date, location, price_paise, status, cover_url')
+    .eq('status', 'PUBLISHED')
+    .order('event_date', { ascending: true })
+
+  const events = allEvents ?? []
 
   return (
     <main className='min-h-screen pt-24'>
@@ -32,24 +22,24 @@ export default async function EventsPage() {
           Races, group runs, and community meetups — all in one place.
         </p>
 
-        {allEvents.length === 0 ? (
+        {events.length === 0 ? (
           <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-16 text-center'>
             <p className='text-white/40 text-lg'>No upcoming events right now.</p>
             <p className='text-white/30 text-sm mt-2'>Check back soon — we run regularly!</p>
           </div>
         ) : (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {allEvents.map((event) => (
+            {events.map((event) => (
               <EventCard
                 key={event.id}
                 name={event.name}
                 subtitle={event.subtitle}
                 slug={event.slug}
-                eventDate={event.eventDate}
+                eventDate={event.event_date}
                 location={event.location}
-                pricePaise={event.pricePaise}
+                pricePaise={event.price_paise}
                 status={event.status}
-                coverUrl={event.coverUrl}
+                coverUrl={event.cover_url}
               />
             ))}
           </div>

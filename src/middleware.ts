@@ -1,38 +1,60 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_PREFIXES = ['/admin']
 const AUTH_PATHS = ['/login', '/register']
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+export async function middleware(request: NextRequest) {
+  // Supabase SSR requires refreshing the session on every request.
+  // We must update the response cookies so the session stays alive.
+  let supabaseResponse = NextResponse.next({ request })
 
-  // Better Auth sets this cookie when a session is active.
-  // The __Secure- prefix is used automatically in production (HTTPS).
-  const sessionCookie =
-    request.cookies.get('better-auth.session_token') ??
-    request.cookies.get('__Secure-better-auth.session_token')
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // IMPORTANT: Do not add logic between createServerClient and auth.getUser().
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix)
   )
 
-  if (isProtected && !sessionCookie) {
+  if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  if (AUTH_PATHS.includes(pathname) && sessionCookie) {
+  if (AUTH_PATHS.includes(pathname) && user) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return NextResponse.next()
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    // Exclude static assets and Better Auth's own API routes from middleware
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

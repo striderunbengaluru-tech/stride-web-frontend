@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",
+      "/Users/kushagra.g/Documents"
+    ],
+    "allow": [
+      "Bash(yarn install --ignore-engines)"
+    ]
+  }
+}

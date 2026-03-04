@@ -1,27 +1,25 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { nanoid } from 'nanoid'
-import { eq } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { events, products, user as userTable } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 import { eventSchema, productSchema } from '@/lib/validations/admin'
 
 async function requireAdmin() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect('/')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/')
 
-  // Always read role fresh from DB — cookieCache may hold a stale value
-  const [row] = await db
-    .select({ role: userTable.role })
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
-    .limit(1)
+  // Always read role fresh from DB — JWT claims may hold stale values.
+  const { data: row } = await adminClient
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
   if (row?.role !== 'ADMIN') redirect('/')
-  return session
+  return user
 }
 
 function slugify(name: string) {
@@ -38,18 +36,22 @@ export async function createEventAction(formData: FormData): Promise<void> {
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
-  if (!parsed.success) return // Validation failure: silent; page re-renders with original values
+  if (!parsed.success) return
 
-  const { name, eventDate, endDate, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, stravaRouteUrl, pricePaise, coverUrl, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
-  await db.insert(events).values({
+  await adminClient.from('events').insert({
     id,
     name,
     slug,
-    eventDate: eventDate ? new Date(eventDate) : null,
-    endDate: endDate ? new Date(endDate) : null,
+    event_date: eventDate ? new Date(eventDate).toISOString() : null,
+    end_date: endDate ? new Date(endDate).toISOString() : null,
+    location_url: locationUrl || null,
+    strava_route_url: stravaRouteUrl || null,
+    price_paise: pricePaise,
+    cover_url: coverUrl || null,
     ...rest,
   })
 
@@ -63,25 +65,26 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, stravaRouteUrl, pricePaise, coverUrl, ...rest } = parsed.data
 
-  await db
-    .update(events)
-    .set({
-      name,
-      eventDate: eventDate ? new Date(eventDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
-      updatedAt: new Date(),
-      ...rest,
-    })
-    .where(eq(events.id, id))
+  await adminClient.from('events').update({
+    name,
+    event_date: eventDate ? new Date(eventDate).toISOString() : null,
+    end_date: endDate ? new Date(endDate).toISOString() : null,
+    location_url: locationUrl || null,
+    strava_route_url: stravaRouteUrl || null,
+    price_paise: pricePaise,
+    cover_url: coverUrl || null,
+    updated_at: new Date().toISOString(),
+    ...rest,
+  }).eq('id', id)
 
   redirect('/admin/events')
 }
 
 export async function deleteEventAction(id: string): Promise<void> {
   await requireAdmin()
-  await db.delete(events).where(eq(events.id, id))
+  await adminClient.from('events').delete().eq('id', id)
   redirect('/admin/events')
 }
 
@@ -94,10 +97,18 @@ export async function createProductAction(formData: FormData): Promise<void> {
   const parsed = productSchema.safeParse(raw)
   if (!parsed.success) return
 
+  const { pricePaise, imageUrl, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(parsed.data.name)
 
-  await db.insert(products).values({ id, slug, ...parsed.data })
+  await adminClient.from('products').insert({
+    id,
+    slug,
+    price_paise: pricePaise,
+    image_url: imageUrl || null,
+    ...rest,
+  })
+
   redirect('/admin/products')
 }
 
@@ -108,17 +119,21 @@ export async function updateProductAction(id: string, formData: FormData): Promi
   const parsed = productSchema.safeParse(raw)
   if (!parsed.success) return
 
-  await db
-    .update(products)
-    .set({ ...parsed.data, updatedAt: new Date() })
-    .where(eq(products.id, id))
+  const { pricePaise, imageUrl, ...rest } = parsed.data
+
+  await adminClient.from('products').update({
+    price_paise: pricePaise,
+    image_url: imageUrl || null,
+    updated_at: new Date().toISOString(),
+    ...rest,
+  }).eq('id', id)
 
   redirect('/admin/products')
 }
 
 export async function deleteProductAction(id: string): Promise<void> {
   await requireAdmin()
-  await db.delete(products).where(eq(products.id, id))
+  await adminClient.from('products').delete().eq('id', id)
   redirect('/admin/products')
 }
 
@@ -129,10 +144,10 @@ export async function updateUserRoleAction(userId: string, role: string): Promis
 
   if (!['GUEST', 'MEMBER', 'ADMIN'].includes(role)) return
 
-  await db
-    .update(userTable)
-    .set({ role, updatedAt: new Date() })
-    .where(eq(userTable.id, userId))
+  await adminClient.from('users').update({
+    role,
+    updated_at: new Date().toISOString(),
+  }).eq('id', userId)
 
   redirect('/admin/users')
 }

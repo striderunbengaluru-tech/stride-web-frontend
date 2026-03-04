@@ -1,14 +1,11 @@
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
-import { eq } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { user as userTable } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const form = await request.formData()
   const file = form.get('file') as File | null
@@ -22,12 +19,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Image must be under 5MB' }, { status: 400 })
   }
 
-  const blob = await put(`covers/${session.user.id}`, file, { access: 'public' })
+  const fileBuffer = await file.arrayBuffer()
+  const { error: uploadError } = await adminClient.storage
+    .from('covers')
+    .upload(user.id, fileBuffer, { contentType: file.type, upsert: true })
 
-  await db
-    .update(userTable)
-    .set({ coverUrl: blob.url, updatedAt: new Date() })
-    .where(eq(userTable.id, session.user.id))
+  if (uploadError) {
+    console.error('[Cover upload]', uploadError)
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+  }
 
-  return NextResponse.json({ url: blob.url })
+  const { data: { publicUrl } } = adminClient.storage.from('covers').getPublicUrl(user.id)
+
+  await adminClient
+    .from('users')
+    .update({ cover_url: publicUrl, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+
+  return NextResponse.json({ url: publicUrl })
 }

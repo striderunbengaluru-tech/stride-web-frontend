@@ -1,6 +1,4 @@
-import { desc } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { products } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { deleteProductAction } from '@/lib/actions/admin'
 
 export const metadata = { title: 'Products — Admin' }
@@ -12,17 +10,10 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default async function AdminProductsPage() {
-  const allProducts = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      slug: products.slug,
-      pricePaise: products.pricePaise,
-      stock: products.stock,
-      status: products.status,
-    })
-    .from(products)
-    .orderBy(desc(products.createdAt))
+  const { data: allProducts } = await adminClient
+    .from('products')
+    .select('id, name, slug, price_paise, stock, status')
+    .order('created_at', { ascending: false })
 
   return (
     <div>
@@ -36,7 +27,7 @@ export default async function AdminProductsPage() {
         </a>
       </div>
 
-      {allProducts.length === 0 ? (
+      {!allProducts || allProducts.length === 0 ? (
         <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-12 text-center'>
           <p className='text-white/40'>No products yet. Create your first product.</p>
         </div>
@@ -59,7 +50,7 @@ export default async function AdminProductsPage() {
                     <p className='text-white font-medium line-clamp-1'>{product.name}</p>
                     <p className='text-white/40 text-xs mt-0.5'>{product.slug}</p>
                   </td>
-                  <td className='px-6 py-4 text-white/60'>₹{product.pricePaise / 100}</td>
+                  <td className='px-6 py-4 text-white/60'>₹{product.price_paise / 100}</td>
                   <td className='px-6 py-4 text-white/60'>{product.stock}</td>
                   <td className='px-6 py-4'>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${STATUS_STYLES[product.status] ?? 'bg-white/10 text-white/60'}`}>

@@ -1,6 +1,4 @@
-import { desc } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { user as userTable } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 
 export const metadata = { title: 'Users — Admin' }
@@ -12,17 +10,10 @@ const ROLE_STYLES: Record<string, string> = {
 }
 
 export default async function AdminUsersPage() {
-  const users = await db
-    .select({
-      id: userTable.id,
-      name: userTable.name,
-      email: userTable.email,
-      username: userTable.username,
-      role: userTable.role,
-      createdAt: userTable.createdAt,
-    })
-    .from(userTable)
-    .orderBy(desc(userTable.createdAt))
+  const { data: users } = await adminClient
+    .from('users')
+    .select('id, full_name, email, username, role, created_at')
+    .order('created_at', { ascending: false })
 
   return (
     <div>
@@ -39,15 +30,15 @@ export default async function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {(users ?? []).map((u) => (
               <tr key={u.id} className='border-b border-white/5 hover:bg-white/5 transition-colors'>
                 <td className='px-6 py-4'>
-                  <p className='text-white font-medium'>{u.name}</p>
+                  <p className='text-white font-medium'>{u.full_name}</p>
                   <p className='text-white/40 text-xs mt-0.5'>{u.email}</p>
                   {u.username && <p className='text-white/30 text-xs'>@{u.username}</p>}
                 </td>
                 <td className='px-6 py-4 text-white/60 text-xs'>
-                  {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </td>
                 <td className='px-6 py-4'>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${ROLE_STYLES[u.role] ?? 'bg-white/10 text-white/50'}`}>

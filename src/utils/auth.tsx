@@ -1,6 +1,6 @@
 'use client'
 
-import { authClient } from '@/lib/auth/client'
+import { createClient } from '@/lib/supabase/client'
 
 export function GoogleIcon() {
   return (
@@ -27,9 +27,12 @@ export function GoogleIcon() {
 
 export function GoogleSignInButton() {
   async function handleSignIn() {
-    await authClient.signIn.social({
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
       provider: 'google',
-      callbackURL: '/auth/post-login',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
   }
 

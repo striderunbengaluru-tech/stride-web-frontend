@@ -1,26 +1,21 @@
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { eq } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { user as userTable } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 import { AdminNav } from '@/components/admin/admin-nav'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect('/')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/')
 
-  // Always read role fresh from DB — cookieCache may hold a stale value
-  // if the role was changed after the session was created.
-  const [row] = await db
-    .select({ role: userTable.role })
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
-    .limit(1)
+  // Always read role fresh from DB — JWT claims may hold stale values.
+  const { data: row } = await adminClient
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  if (row?.role !== 'ADMIN') {
-    redirect('/')
-  }
+  if (row?.role !== 'ADMIN') redirect('/')
 
   return (
     <div className='min-h-screen bg-stride-purple-primary'>

@@ -1,6 +1,4 @@
-import { desc } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { events } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { deleteEventAction } from '@/lib/actions/admin'
 
 export const metadata = { title: 'Events — Admin' }
@@ -12,18 +10,10 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default async function AdminEventsPage() {
-  const allEvents = await db
-    .select({
-      id: events.id,
-      name: events.name,
-      slug: events.slug,
-      status: events.status,
-      eventDate: events.eventDate,
-      capacity: events.capacity,
-      pricePaise: events.pricePaise,
-    })
-    .from(events)
-    .orderBy(desc(events.createdAt))
+  const { data: allEvents } = await adminClient
+    .from('events')
+    .select('id, name, slug, status, event_date, capacity, price_paise')
+    .order('created_at', { ascending: false })
 
   return (
     <div>
@@ -37,7 +27,7 @@ export default async function AdminEventsPage() {
         </a>
       </div>
 
-      {allEvents.length === 0 ? (
+      {!allEvents || allEvents.length === 0 ? (
         <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-12 text-center'>
           <p className='text-white/40'>No events yet. Create your first event.</p>
         </div>
@@ -61,12 +51,12 @@ export default async function AdminEventsPage() {
                     <p className='text-white/40 text-xs mt-0.5'>{event.slug}</p>
                   </td>
                   <td className='px-6 py-4 text-white/60'>
-                    {event.eventDate
-                      ? new Date(event.eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                    {event.event_date
+                      ? new Date(event.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                       : '—'}
                   </td>
                   <td className='px-6 py-4 text-white/60'>
-                    {event.pricePaise === 0 ? 'Free' : `₹${event.pricePaise / 100}`}
+                    {event.price_paise === 0 ? 'Free' : `₹${event.price_paise / 100}`}
                   </td>
                   <td className='px-6 py-4'>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${STATUS_STYLES[event.status] ?? 'bg-white/10 text-white/60'}`}>

@@ -1,15 +1,13 @@
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { and, count, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
-import { auth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { events, eventRegistrations } from '@/lib/db/schema'
+import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
 
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
   const parsed = registerEventSchema.safeParse(body)
@@ -20,17 +18,23 @@ export async function POST(request: Request) {
   const { eventId } = parsed.data
 
   // Fetch the event
-  const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1)
+  const { data: event } = await adminClient
+    .from('events')
+    .select('id, name, slug, status, price_paise, capacity')
+    .eq('id', eventId)
+    .single()
+
   if (!event || event.status !== 'PUBLISHED') {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
   // Check for duplicate registration
-  const [existing] = await db
-    .select({ id: eventRegistrations.id })
-    .from(eventRegistrations)
-    .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.userId, session.user.id)))
-    .limit(1)
+  const { data: existing } = await adminClient
+    .from('event_registrations')
+    .select('id')
+    .eq('event_id', eventId)
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   if (existing) {
     return NextResponse.json({ error: 'Already registered' }, { status: 409 })
@@ -38,23 +42,23 @@ export async function POST(request: Request) {
 
   // Check capacity
   if (event.capacity) {
-    const [{ confirmedCount }] = await db
-      .select({ confirmedCount: count() })
-      .from(eventRegistrations)
-      .where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.status, 'CONFIRMED')))
+    const { count: confirmedCount } = await adminClient
+      .from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'CONFIRMED')
 
-    if (confirmedCount >= event.capacity) {
+    if ((confirmedCount ?? 0) >= event.capacity) {
       return NextResponse.json({ error: 'Event is full' }, { status: 409 })
     }
   }
 
   // Free event — confirm immediately
-  if (event.pricePaise === 0) {
-    const id = nanoid()
-    await db.insert(eventRegistrations).values({
-      id,
-      eventId,
-      userId: session.user.id,
+  if (event.price_paise === 0) {
+    await adminClient.from('event_registrations').insert({
+      id: nanoid(),
+      event_id: eventId,
+      user_id: user.id,
       status: 'CONFIRMED',
     })
     return NextResponse.json({ registered: true })
@@ -71,6 +75,13 @@ export async function POST(request: Request) {
       ? 'https://api.cashfree.com/pg'
       : 'https://sandbox.cashfree.com/pg'
 
+  // Fetch display name for Cashfree customer_name
+  const { data: profile } = await adminClient
+    .from('users')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+
   const orderRes = await fetch(`${cashfreeBase}/orders`, {
     method: 'POST',
     headers: {
@@ -81,12 +92,12 @@ export async function POST(request: Request) {
     },
     body: JSON.stringify({
       order_id: orderId,
-      order_amount: event.pricePaise / 100,
+      order_amount: event.price_paise / 100,
       order_currency: 'INR',
       customer_details: {
-        customer_id: session.user.id,
-        customer_name: session.user.name,
-        customer_email: session.user.email,
+        customer_id: user.id,
+        customer_name: profile?.full_name ?? user.email ?? 'Stride Member',
+        customer_email: user.email ?? '',
         customer_phone: '9999999999', // Cashfree requires phone; placeholder
       },
       order_meta: {
@@ -105,12 +116,12 @@ export async function POST(request: Request) {
   const orderData = await orderRes.json()
 
   // Create PENDING registration
-  await db.insert(eventRegistrations).values({
+  await adminClient.from('event_registrations').insert({
     id: nanoid(),
-    eventId,
-    userId: session.user.id,
+    event_id: eventId,
+    user_id: user.id,
     status: 'PENDING',
-    cashfreeOrderId: orderId,
+    cashfree_order_id: orderId,
   })
 
   return NextResponse.json({ paymentSessionId: orderData.payment_session_id, orderId })

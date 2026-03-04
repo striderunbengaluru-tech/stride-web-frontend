@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogOut, User } from 'lucide-react'
-import { authClient } from '@/lib/auth/client'
+import { createClient } from '@/lib/supabase/client'
 
 type Props = {
   username: string
@@ -29,14 +29,10 @@ export default function UserMenu({ username, firstName, avatarUrl }: Props) {
   }, [])
 
   async function handleSignOut() {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push('/login')
-          router.refresh()
-        },
-      },
-    })
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
   }
 
   return (

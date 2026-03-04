@@ -18,16 +18,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.cdninstagram.com',
       },
-      // Supabase Storage — logo still served from here until migrated to Vercel Blob
+      // Supabase Storage — app-managed assets (avatars, covers, event images)
       {
         protocol: 'https',
         hostname: 'ienotcjldormdxrzukpk.supabase.co',
         pathname: '/storage/v1/object/public/**',
-      },
-      // Vercel Blob — primary storage for app-managed assets going forward
-      {
-        protocol: 'https',
-        hostname: '*.public.blob.vercel-storage.com',
       },
     ],
   },

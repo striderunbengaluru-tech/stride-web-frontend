@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { products } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { ProductForm } from '@/components/admin/product-form'
 import { updateProductAction } from '@/lib/actions/admin'
 
@@ -12,7 +10,12 @@ export const metadata = { title: 'Edit Product — Admin' }
 export default async function EditProductPage({ params }: Props) {
   const { id } = await params
 
-  const [product] = await db.select().from(products).where(eq(products.id, id)).limit(1)
+  const { data: product } = await adminClient
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .single()
+
   if (!product) notFound()
 
   const action = updateProductAction.bind(null, id)
@@ -27,10 +30,10 @@ export default async function EditProductPage({ params }: Props) {
           defaultValues={{
             name: product.name,
             description: product.description ?? undefined,
-            pricePaise: product.pricePaise,
+            pricePaise: product.price_paise,
             stock: product.stock,
             status: (product.status as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED') ?? 'DRAFT',
-            imageUrl: product.imageUrl ?? undefined,
+            imageUrl: product.image_url ?? undefined,
           }}
         />
       </div>

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { eventRegistrations } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
@@ -26,15 +24,19 @@ export async function POST(request: Request) {
   if (!orderId) return NextResponse.json({ ok: true })
 
   if (eventType === 'PAYMENT_SUCCESS_WEBHOOK') {
-    await db
-      .update(eventRegistrations)
-      .set({ status: 'CONFIRMED', cashfreePaymentId: String(paymentId), updatedAt: new Date() })
-      .where(eq(eventRegistrations.cashfreeOrderId, orderId))
+    await adminClient
+      .from('event_registrations')
+      .update({
+        status: 'CONFIRMED',
+        cashfree_payment_id: String(paymentId),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('cashfree_order_id', orderId)
   } else if (eventType === 'PAYMENT_FAILED_WEBHOOK') {
-    await db
-      .update(eventRegistrations)
-      .set({ status: 'CANCELLED', updatedAt: new Date() })
-      .where(eq(eventRegistrations.cashfreeOrderId, orderId))
+    await adminClient
+      .from('event_registrations')
+      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+      .eq('cashfree_order_id', orderId)
   }
 
   return NextResponse.json({ ok: true })

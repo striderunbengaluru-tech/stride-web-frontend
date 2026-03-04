@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { events } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 import { EventForm } from '@/components/admin/event-form'
 import { updateEventAction } from '@/lib/actions/admin'
 
@@ -9,7 +7,7 @@ type Props = { params: Promise<{ id: string }> }
 
 export const metadata = { title: 'Edit Event — Admin' }
 
-function toDatetimeLocal(d: Date | null | undefined) {
+function toDatetimeLocal(d: string | null | undefined) {
   if (!d) return undefined
   return new Date(d).toISOString().slice(0, 16)
 }
@@ -17,7 +15,12 @@ function toDatetimeLocal(d: Date | null | undefined) {
 export default async function EditEventPage({ params }: Props) {
   const { id } = await params
 
-  const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1)
+  const { data: event } = await adminClient
+    .from('events')
+    .select('*')
+    .eq('id', id)
+    .single()
+
   if (!event) notFound()
 
   const action = updateEventAction.bind(null, id)
@@ -35,14 +38,14 @@ export default async function EditEventPage({ params }: Props) {
             description: event.description ?? undefined,
             details: event.details ?? undefined,
             location: event.location ?? undefined,
-            locationUrl: event.locationUrl ?? undefined,
-            stravaRouteUrl: event.stravaRouteUrl ?? undefined,
-            eventDate: toDatetimeLocal(event.eventDate),
-            endDate: toDatetimeLocal(event.endDate),
+            locationUrl: event.location_url ?? undefined,
+            stravaRouteUrl: event.strava_route_url ?? undefined,
+            eventDate: toDatetimeLocal(event.event_date),
+            endDate: toDatetimeLocal(event.end_date),
             capacity: event.capacity ?? undefined,
-            pricePaise: event.pricePaise,
+            pricePaise: event.price_paise,
             status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
-            coverUrl: event.coverUrl ?? undefined,
+            coverUrl: event.cover_url ?? undefined,
           }}
         />
       </div>

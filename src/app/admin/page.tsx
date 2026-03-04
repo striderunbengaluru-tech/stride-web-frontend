@@ -1,20 +1,22 @@
-import { count } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { events, products, user as userTable } from '@/lib/db/schema'
+import { adminClient } from '@/lib/supabase/admin'
 
 export const metadata = { title: 'Admin — Stride Run Club' }
 
 export default async function AdminDashboardPage() {
-  const [[{ eventCount }], [{ productCount }], [{ userCount }]] = await Promise.all([
-    db.select({ eventCount: count() }).from(events),
-    db.select({ productCount: count() }).from(products),
-    db.select({ userCount: count() }).from(userTable),
+  const [
+    { count: eventCount },
+    { count: productCount },
+    { count: userCount },
+  ] = await Promise.all([
+    adminClient.from('events').select('*', { count: 'exact', head: true }),
+    adminClient.from('products').select('*', { count: 'exact', head: true }),
+    adminClient.from('users').select('*', { count: 'exact', head: true }),
   ])
 
   const stats = [
-    { label: 'Events', count: eventCount, href: '/admin/events' },
-    { label: 'Products', count: productCount, href: '/admin/products' },
-    { label: 'Users', count: userCount, href: '/admin/users' },
+    { label: 'Events', count: eventCount ?? 0, href: '/admin/events' },
+    { label: 'Products', count: productCount ?? 0, href: '/admin/products' },
+    { label: 'Users', count: userCount ?? 0, href: '/admin/users' },
   ]
 
   return (
