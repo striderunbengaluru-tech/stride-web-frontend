@@ -3,6 +3,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { Camera, CameraOff, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react'
 
+// BarcodeDetector is a browser API not yet in TypeScript's lib.dom.d.ts
+declare class BarcodeDetector {
+  constructor(options?: { formats: string[] })
+  detect(source: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement): Promise<{ rawValue: string }[]>
+  static getSupportedFormats(): Promise<string[]>
+}
+
 type ScanResult = {
   success: boolean
   message: string
@@ -52,8 +59,7 @@ export function QrScanner() {
         await videoRef.current.play()
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      detectorRef.current = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
+      detectorRef.current = new BarcodeDetector({ formats: ['qr_code'] })
       setIsScanning(true)
       scanLoop()
     } catch (err) {
@@ -70,7 +76,7 @@ export function QrScanner() {
       return
     }
 
-    detector.detect(video).then((barcodes: { rawValue: string }[]) => {
+    detector.detect(video).then((barcodes) => {
       if (barcodes.length > 0) {
         const token = barcodes[0].rawValue
         if (token && token !== lastTokenRef.current && !processing) {
