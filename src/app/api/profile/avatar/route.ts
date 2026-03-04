@@ -21,15 +21,15 @@ export async function POST(request: Request) {
 
   const fileBuffer = await file.arrayBuffer()
   const { error: uploadError } = await adminClient.storage
-    .from('avatars')
-    .upload(user.id, fileBuffer, { contentType: file.type, upsert: true })
+    .from('stride-assets')
+    .upload(`images/avatars/${user.id}`, fileBuffer, { contentType: file.type, upsert: true })
 
   if (uploadError) {
     console.error('[Avatar upload]', uploadError)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 
-  const { data: { publicUrl } } = adminClient.storage.from('avatars').getPublicUrl(user.id)
+  const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(`images/avatars/${user.id}`)
 
   await adminClient
     .from('users')
