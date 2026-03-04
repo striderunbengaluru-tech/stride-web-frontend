@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Prompt } from '@/types/user'
+import { Spinner } from '@/components/ui/spinner'
 
 const PRESET_SKILLS = [
   '5K', '10K', 'Half Marathon', 'Marathon', 'Ultra',
@@ -239,9 +240,11 @@ export function EditProfileSheet({ initial }: Props) {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className='w-full bg-stride-yellow-accent text-stride-dark font-semibold py-3 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm disabled:opacity-50 min-h-11'
+                className='w-full bg-stride-yellow-accent text-copy-black font-semibold py-3 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm disabled:opacity-50 min-h-11'
               >
-                {saving ? 'Saving…' : 'Save changes'}
+                {saving ? (
+                  <span className='flex items-center justify-center gap-2'><Spinner /> Saving…</span>
+                ) : 'Save changes'}
               </button>
             </div>
           </div>

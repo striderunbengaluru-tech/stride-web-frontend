@@ -131,7 +131,7 @@ export function QrScanner() {
           </div>
           <button
             onClick={reset}
-            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
+            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
           >
             <RotateCcw size={16} />
             Scan Another
@@ -150,7 +150,7 @@ export function QrScanner() {
           <p className='text-red-300 font-bold text-lg'>{result.message}</p>
           <button
             onClick={reset}
-            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
+            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
           >
             <RotateCcw size={16} />
             Try Again

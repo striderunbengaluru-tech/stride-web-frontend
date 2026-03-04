@@ -1,6 +1,22 @@
 'use client'
 
+import { useFormStatus } from 'react-dom'
 import type { ProductFormData } from '@/lib/validations/admin'
+import { Spinner } from '@/components/ui/spinner'
+
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type='submit'
+      disabled={pending}
+      className='bg-stride-yellow-accent text-copy-black font-semibold px-6 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center gap-2 disabled:opacity-70'
+    >
+      {pending && <Spinner />}
+      {pending ? 'Saving…' : label}
+    </button>
+  )
+}
 
 type Props = {
   action: (formData: FormData) => Promise<void>
@@ -52,12 +68,7 @@ export function ProductForm({ action, defaultValues = {}, submitLabel }: Props) 
       <Field label='Image URL' name='imageUrl' defaultValue={defaultValues.imageUrl} />
 
       <div className='flex gap-3 pt-2'>
-        <button
-          type='submit'
-          className='bg-stride-yellow-accent text-stride-dark font-semibold px-6 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11'
-        >
-          {submitLabel}
-        </button>
+        <SubmitButton label={submitLabel} />
         <a
           href='/admin/products'
           className='text-white/60 hover:text-white px-6 py-2.5 rounded-md border border-white/15 hover:border-white/30 transition-colors text-sm min-h-11 flex items-center'

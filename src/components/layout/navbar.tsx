@@ -69,7 +69,7 @@ const Navbar = async () => {
               </Link>
               <Link
                 href='/register'
-                className='bg-stride-yellow-accent text-stride-dark font-bold text-sm px-5 py-2 rounded-md hover:opacity-90 transition-opacity'
+                className='bg-stride-yellow-accent text-copy-black font-bold text-sm px-5 py-2 rounded-md hover:opacity-90 transition-opacity'
               >
                 Register
               </Link>

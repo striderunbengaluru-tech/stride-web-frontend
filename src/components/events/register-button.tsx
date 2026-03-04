@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Spinner } from '@/components/ui/spinner'
 
 type Props = {
   eventId: string
@@ -41,7 +42,7 @@ export function RegisterButton({ eventId, pricePaise, isFull, isRegistered, isLo
     return (
       <a
         href='/login'
-        className='block w-full py-3.5 rounded-md bg-stride-yellow-accent text-stride-dark font-semibold text-sm text-center min-h-11 hover:bg-stride-yellow-accent/90 transition-colors'
+        className='block w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-semibold text-sm text-center min-h-11 hover:bg-stride-yellow-accent/90 transition-colors'
       >
         Sign in to Register
       </a>
@@ -78,9 +79,13 @@ export function RegisterButton({ eventId, pricePaise, isFull, isRegistered, isLo
     <button
       onClick={handleRegister}
       disabled={loading}
-      className='w-full py-3.5 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-60 min-h-11'
+      className='w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-60 min-h-11'
     >
-      {loading ? 'Processing…' : label}
+      {loading ? (
+        <span className='flex items-center justify-center gap-2'>
+          <Spinner /> Processing…
+        </span>
+      ) : label}
     </button>
   )
 }

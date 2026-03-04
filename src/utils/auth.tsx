@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Spinner } from '@/components/ui/spinner'
 
 export function GoogleIcon() {
   return (
@@ -26,7 +28,10 @@ export function GoogleIcon() {
 }
 
 export function GoogleSignInButton() {
+  const [loading, setLoading] = useState(false)
+
   async function handleSignIn() {
+    setLoading(true)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -34,16 +39,18 @@ export function GoogleSignInButton() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
+    // Page will redirect — no need to reset loading
   }
 
   return (
     <button
       type='button'
       onClick={handleSignIn}
-      className='w-full flex items-center justify-center gap-3 bg-white text-black cursor-pointer font-semibold text-sm px-5 py-3 rounded-md hover:bg-white/90 transition-opacity min-h-11'
+      disabled={loading}
+      className='w-full flex items-center justify-center gap-3 bg-white text-black cursor-pointer font-semibold text-sm px-5 py-3 rounded-md hover:bg-white/90 transition-opacity disabled:opacity-60 min-h-11'
     >
-      <GoogleIcon />
-      Continue with Google
+      {loading ? <Spinner className='w-4 h-4 text-black' /> : <GoogleIcon />}
+      {loading ? 'Redirecting…' : 'Continue with Google'}
     </button>
   )
 }

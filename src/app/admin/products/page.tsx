@@ -1,5 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { deleteProductAction } from '@/lib/actions/admin'
+import { PendingButton } from '@/components/admin/pending-button'
 
 export const metadata = { title: 'Products — Admin' }
 
@@ -21,7 +22,7 @@ export default async function AdminProductsPage() {
         <h1 className='text-3xl font-bold text-white'>Products</h1>
         <a
           href='/admin/products/new'
-          className='bg-stride-yellow-accent text-stride-dark font-semibold px-5 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center'
+          className='bg-stride-yellow-accent text-copy-black font-semibold px-5 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center'
         >
           + New Product
         </a>
@@ -63,9 +64,9 @@ export default async function AdminProductsPage() {
                         Edit
                       </a>
                       <form action={deleteProductAction.bind(null, product.id)}>
-                        <button type='submit' className='text-red-400 hover:underline text-xs'>
+                        <PendingButton className='text-red-400 hover:underline text-xs' pendingLabel='Deleting…'>
                           Delete
-                        </button>
+                        </PendingButton>
                       </form>
                     </div>
                   </td>

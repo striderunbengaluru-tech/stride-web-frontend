@@ -1,9 +1,25 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
+import { Spinner } from '@/components/ui/spinner'
+
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type='submit'
+      disabled={pending}
+      className='bg-stride-yellow-accent text-copy-black font-semibold px-6 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center gap-2 disabled:opacity-70'
+    >
+      {pending && <Spinner />}
+      {pending ? 'Saving…' : label}
+    </button>
+  )
+}
 
 type Props = {
   action: (formData: FormData) => Promise<void>
@@ -146,12 +162,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
       </div>
 
       <div className='flex gap-3 pt-2'>
-        <button
-          type='submit'
-          className='bg-stride-yellow-accent text-stride-dark font-semibold px-6 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11'
-        >
-          {submitLabel}
-        </button>
+        <SubmitButton label={submitLabel} />
         <a
           href='/admin/events'
           className='text-white/60 hover:text-white px-6 py-2.5 rounded-md border border-white/15 hover:border-white/30 transition-colors text-sm min-h-11 flex items-center'

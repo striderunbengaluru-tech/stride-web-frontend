@@ -1,5 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { updateUserRoleAction } from '@/lib/actions/admin'
+import { PendingButton } from '@/components/admin/pending-button'
 
 export const metadata = { title: 'Users — Admin' }
 
@@ -47,9 +48,9 @@ export default async function AdminUsersPage() {
                 </td>
                 <td className='px-6 py-4'>
                   <form action={updateUserRoleAction.bind(null, u.id, u.role === 'ADMIN' ? 'MEMBER' : 'ADMIN')}>
-                    <button type='submit' className='text-xs text-white/50 hover:text-stride-yellow-accent transition-colors'>
+                    <PendingButton className='text-xs text-white/50 hover:text-stride-yellow-accent transition-colors'>
                       {u.role === 'ADMIN' ? 'Remove Admin' : 'Make Admin'}
-                    </button>
+                    </PendingButton>
                   </form>
                 </td>
               </tr>

@@ -4,6 +4,7 @@ import { useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import ReactCrop, { centerCrop, makeAspectCrop, type Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { Spinner } from '@/components/ui/spinner'
 
 type Props = {
   currentUrl: string | null
@@ -129,9 +130,11 @@ export function AvatarUpload({ currentUrl, displayName }: Props) {
               <button
                 onClick={handleUpload}
                 disabled={uploading}
-                className='flex-1 bg-stride-yellow-accent text-stride-dark font-semibold py-2.5 rounded-md text-sm disabled:opacity-50'
+                className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2.5 rounded-md text-sm disabled:opacity-50'
               >
-                {uploading ? 'Uploading…' : 'Save photo'}
+                {uploading ? (
+                  <span className='flex items-center justify-center gap-2'><Spinner /> Uploading…</span>
+                ) : 'Save photo'}
               </button>
               <button
                 onClick={() => setSrc(null)}
