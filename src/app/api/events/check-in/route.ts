@@ -65,17 +65,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Check-in failed' }, { status: 500 })
   }
 
-  // Increment runs_completed on user
-  const { data: userData } = await adminClient
-    .from('users')
-    .select('runs_completed')
-    .eq('id', registration.user_id)
-    .single()
+  // Increment runs_completed on user and fetch profile + event name
+  const [{ data: userData }, { data: eventData }] = await Promise.all([
+    adminClient.from('users').select('full_name, runs_completed').eq('id', registration.user_id).single(),
+    adminClient.from('events').select('name').eq('id', registration.event_id).single(),
+  ])
 
+  const newRunsCompleted = (userData?.runs_completed ?? 0) + 1
   await adminClient
     .from('users')
-    .update({ runs_completed: (userData?.runs_completed ?? 0) + 1 })
+    .update({ runs_completed: newRunsCompleted })
     .eq('id', registration.user_id)
 
-  return NextResponse.json({ success: true, checkedInAt: now })
+  return NextResponse.json({
+    success: true,
+    checkedInAt: now,
+    attendeeName: userData?.full_name ?? 'Attendee',
+    eventName: eventData?.name ?? '',
+    runsCompleted: newRunsCompleted,
+  })
 }

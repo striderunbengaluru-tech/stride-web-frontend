@@ -1,228 +1,210 @@
 'use client'
 
-import { useRef, useState, useEffect, useCallback } from 'react'
-import { Camera, CameraOff, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { useState, useCallback, type ComponentType, type CSSProperties } from 'react'
+import dynamic from 'next/dynamic'
+import { CheckCircle2, XCircle, AlertCircle, Loader2, ScanLine, RotateCcw } from 'lucide-react'
 
-// BarcodeDetector is a browser API not yet in TypeScript's lib.dom.d.ts
-declare class BarcodeDetector {
-  constructor(options?: { formats: string[] })
-  detect(source: HTMLVideoElement | HTMLImageElement | HTMLCanvasElement): Promise<{ rawValue: string }[]>
-  static getSupportedFormats(): Promise<string[]>
+type QrScanData = { text: string; canvas: HTMLCanvasElement }
+type QrScannerProps = {
+  onScan: (data: QrScanData | null) => void
+  onError: (error: Error) => void
+  constraints?: MediaStreamConstraints
+  style?: CSSProperties
 }
 
-type ScanResult = {
-  success: boolean
+// Dynamically import to avoid SSR issues with camera APIs
+const Scanner = dynamic<QrScannerProps>(
+  () => import('react-qr-scanner').then((m) => (m.default ?? m) as ComponentType<QrScannerProps>),
+  { ssr: false, loading: () => <ScannerPlaceholder label='Loading scanner…' /> }
+)
+
+type CheckInResult = {
+  success: true
+  checkedInAt: string
+  attendeeName: string
+  eventName: string
+  runsCompleted: number
+} | {
+  success: false
   message: string
   checkedInAt?: string
 }
 
+function ScannerPlaceholder({ label }: { label: string }) {
+  return (
+    <div className='w-full aspect-square flex flex-col items-center justify-center gap-3 bg-black/60 rounded-xl border border-white/15'>
+      <Loader2 size={36} className='text-stride-yellow-accent animate-spin' />
+      <p className='text-white/50 text-sm'>{label}</p>
+    </div>
+  )
+}
+
+function playSuccessBeep() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1)
+    gain.gain.setValueAtTime(0.4, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.4)
+  } catch {
+    // AudioContext not available — silent fallback
+  }
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export function QrScanner() {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isScanning, setIsScanning] = useState(false)
-  const [result, setResult] = useState<ScanResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<CheckInResult | null>(null)
   const [processing, setProcessing] = useState(false)
-  const streamRef = useRef<MediaStream | null>(null)
-  const detectorRef = useRef<BarcodeDetector | null>(null)
-  const animFrameRef = useRef<number | null>(null)
-  const lastTokenRef = useRef<string | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const lastTokenRef = { current: '' }
 
-  const stopCamera = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-    setIsScanning(false)
-  }, [])
-
-  useEffect(() => {
-    return () => { stopCamera() }
-  }, [stopCamera])
-
-  async function startCamera() {
-    setError(null)
-    setResult(null)
-    lastTokenRef.current = null
-
-    if (!('BarcodeDetector' in window)) {
-      setError('Your browser does not support native QR scanning. Please use Chrome 83+ or Safari 17+.')
-      return
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      })
-      streamRef.current = stream
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      detectorRef.current = new BarcodeDetector({ formats: ['qr_code'] })
-      setIsScanning(true)
-      scanLoop()
-    } catch (err) {
-      setError('Camera access denied. Please allow camera permissions and try again.')
-      console.error('[QrScanner] camera error', err)
-    }
-  }
-
-  function scanLoop() {
-    const video = videoRef.current
-    const detector = detectorRef.current
-    if (!video || !detector || video.readyState < 2) {
-      animFrameRef.current = requestAnimationFrame(scanLoop)
-      return
-    }
-
-    detector.detect(video).then((barcodes) => {
-      if (barcodes.length > 0) {
-        const token = barcodes[0].rawValue
-        if (token && token !== lastTokenRef.current && !processing) {
-          lastTokenRef.current = token
-          handleToken(token)
-        }
-      }
-      animFrameRef.current = requestAnimationFrame(scanLoop)
-    }).catch(() => {
-      animFrameRef.current = requestAnimationFrame(scanLoop)
-    })
-  }
-
-  async function handleToken(token: string) {
+  const handleScan = useCallback(async (data: QrScanData | null) => {
+    const token = data?.text ?? null
+    if (!token || processing || token === lastTokenRef.current) return
+    lastTokenRef.current = token
     setProcessing(true)
+    setScanError(null)
+
     try {
       const res = await fetch('/api/events/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       })
-      const data = await res.json()
+      const json = await res.json()
 
       if (res.ok) {
-        setResult({ success: true, message: 'Check-in successful!', checkedInAt: data.checkedInAt })
-        stopCamera()
+        playSuccessBeep()
+        setResult({
+          success: true,
+          checkedInAt: json.checkedInAt,
+          attendeeName: json.attendeeName,
+          eventName: json.eventName,
+          runsCompleted: json.runsCompleted,
+        })
       } else if (res.status === 409) {
-        setResult({ success: false, message: `Already checked in at ${new Date(data.checkedInAt).toLocaleTimeString('en-IN')}` })
-        stopCamera()
+        setResult({
+          success: false,
+          message: `Already checked in at ${formatTime(json.checkedInAt)}`,
+          checkedInAt: json.checkedInAt,
+        })
       } else {
-        setResult({ success: false, message: data.error ?? 'Check-in failed' })
-        // Allow rescanning after error
-        setTimeout(() => {
-          lastTokenRef.current = null
-          setResult(null)
-        }, 3000)
+        setResult({ success: false, message: json.error ?? 'Check-in failed' })
       }
     } catch {
       setResult({ success: false, message: 'Network error — try again' })
-      setTimeout(() => {
-        lastTokenRef.current = null
-        setResult(null)
-      }, 3000)
     } finally {
       setProcessing(false)
     }
-  }
+  }, [processing])
 
   function reset() {
     setResult(null)
-    setError(null)
-    lastTokenRef.current = null
-    startCamera()
+    setScanError(null)
+    lastTokenRef.current = ''
+  }
+
+  // Success screen
+  if (result?.success) {
+    return (
+      <div className='w-full max-w-md mx-auto'>
+        <div className='bg-green-500/10 border border-green-500/30 rounded-2xl p-8 flex flex-col items-center gap-5 text-center'>
+          <CheckCircle2 size={64} className='text-green-400' />
+          <div>
+            <p className='text-green-300 font-bold text-xl'>{result.attendeeName}</p>
+            <p className='text-white/60 text-sm mt-1'>{result.eventName}</p>
+          </div>
+
+          <div className='w-full grid grid-cols-2 gap-3'>
+            <div className='bg-white/5 rounded-xl p-3'>
+              <p className='text-white/40 text-xs uppercase tracking-wider mb-1'>Check-in Time</p>
+              <p className='text-white font-mono text-sm font-medium'>{formatTime(result.checkedInAt)}</p>
+            </div>
+            <div className='bg-white/5 rounded-xl p-3'>
+              <p className='text-white/40 text-xs uppercase tracking-wider mb-1'>Total Runs</p>
+              <p className='text-stride-yellow-accent font-bold text-xl'>{result.runsCompleted}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={reset}
+            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
+          >
+            <RotateCcw size={16} />
+            Scan Another
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Error/already-checked-in screen
+  if (result && !result.success) {
+    return (
+      <div className='w-full max-w-md mx-auto'>
+        <div className='bg-red-500/10 border border-red-500/30 rounded-2xl p-8 flex flex-col items-center gap-5 text-center'>
+          <XCircle size={64} className='text-red-400' />
+          <p className='text-red-300 font-bold text-lg'>{result.message}</p>
+          <button
+            onClick={reset}
+            className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
+          >
+            <RotateCcw size={16} />
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className='w-full max-w-md mx-auto space-y-5'>
-      {/* Camera viewport */}
-      <div className='relative bg-black rounded-xl overflow-hidden aspect-square border border-white/15'>
-        <video
-          ref={videoRef}
-          className='w-full h-full object-cover'
-          muted
-          playsInline
+    <div className='w-full max-w-md mx-auto space-y-4'>
+      {/* Scanner viewport */}
+      <div className='relative rounded-xl overflow-hidden border border-white/15'>
+        {processing && (
+          <div className='absolute inset-0 z-10 flex items-center justify-center bg-black/70'>
+            <Loader2 size={40} className='text-stride-yellow-accent animate-spin' />
+          </div>
+        )}
+        <Scanner
+          onScan={handleScan}
+          onError={(err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err)
+            if (!msg.toLowerCase().includes('no qr')) setScanError(msg)
+          }}
+          constraints={{ video: { facingMode: 'environment' } }}
+          style={{ width: '100%', display: 'block' }}
         />
-
-        {!isScanning && !result && !error && (
-          <div className='absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/60'>
-            <Camera size={48} className='text-white/40' />
-            <p className='text-white/50 text-sm'>Camera is off</p>
-          </div>
-        )}
-
-        {/* Scan overlay — corner brackets */}
-        {isScanning && (
-          <div className='absolute inset-0 pointer-events-none'>
-            <div className='absolute inset-8 border-2 border-stride-yellow-accent/50 rounded-lg' />
-            <div className='absolute top-8 left-8 w-6 h-6 border-t-4 border-l-4 border-stride-yellow-accent rounded-tl-md' />
-            <div className='absolute top-8 right-8 w-6 h-6 border-t-4 border-r-4 border-stride-yellow-accent rounded-tr-md' />
-            <div className='absolute bottom-8 left-8 w-6 h-6 border-b-4 border-l-4 border-stride-yellow-accent rounded-bl-md' />
-            <div className='absolute bottom-8 right-8 w-6 h-6 border-b-4 border-r-4 border-stride-yellow-accent rounded-br-md' />
-            {processing && (
-              <div className='absolute inset-0 flex items-center justify-center bg-black/50'>
-                <Loader2 size={40} className='text-stride-yellow-accent animate-spin' />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Result overlay */}
-        {result && (
-          <div className='absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 p-6'>
-            {result.success ? (
-              <CheckCircle2 size={56} className='text-green-400' />
-            ) : (
-              <XCircle size={56} className='text-red-400' />
-            )}
-            <p className={`text-lg font-bold text-center ${result.success ? 'text-green-300' : 'text-red-300'}`}>
-              {result.message}
-            </p>
-          </div>
-        )}
+        {/* Corner bracket overlay */}
+        <div className='absolute inset-0 pointer-events-none'>
+          <div className='absolute top-6 left-6 w-7 h-7 border-t-4 border-l-4 border-stride-yellow-accent rounded-tl-md' />
+          <div className='absolute top-6 right-6 w-7 h-7 border-t-4 border-r-4 border-stride-yellow-accent rounded-tr-md' />
+          <div className='absolute bottom-6 left-6 w-7 h-7 border-b-4 border-l-4 border-stride-yellow-accent rounded-bl-md' />
+          <div className='absolute bottom-6 right-6 w-7 h-7 border-b-4 border-r-4 border-stride-yellow-accent rounded-br-md' />
+        </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className='flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl p-4'>
-          <AlertCircle size={18} className='text-red-400 shrink-0 mt-0.5' />
-          <p className='text-red-300 text-sm'>{error}</p>
+      {scanError && (
+        <div className='flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3'>
+          <AlertCircle size={16} className='text-red-400 shrink-0 mt-0.5' />
+          <p className='text-red-300 text-sm'>{scanError}</p>
         </div>
       )}
 
-      {/* Action buttons */}
-      {!isScanning && !result && (
-        <button
-          onClick={startCamera}
-          className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
-        >
-          <Camera size={16} />
-          Start Scanning
-        </button>
-      )}
-
-      {isScanning && (
-        <button
-          onClick={stopCamera}
-          className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-white/10 border border-white/15 hover:bg-white/15 text-white text-sm font-medium transition-colors min-h-11'
-        >
-          <CameraOff size={16} />
-          Stop Camera
-        </button>
-      )}
-
-      {result && (
-        <button
-          onClick={reset}
-          className='w-full flex items-center justify-center gap-2 py-3 rounded-md bg-stride-yellow-accent text-stride-dark font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
-        >
-          <Camera size={16} />
-          Scan Another
-        </button>
-      )}
-
-      {isScanning && (
-        <p className='text-white/30 text-xs text-center'>Point the camera at a Stride QR ticket</p>
-      )}
+      <div className='flex items-center gap-2 justify-center text-white/30 text-xs'>
+        <ScanLine size={14} />
+        <span>Point camera at a Stride QR ticket</span>
+      </div>
     </div>
   )
 }
