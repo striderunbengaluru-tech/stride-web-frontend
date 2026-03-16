@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { UserProfile, Prompt } from '@/types/user'
+import type { StravaPBs, StravaActivity, OfficialRun } from '@/types/strava'
 import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { RoleBadge } from '@/utils/profile'
@@ -12,11 +13,15 @@ import { AvatarUpload } from '@/components/profile/avatar-upload'
 import { AvatarImage } from '@/components/profile/avatar-image'
 import { EditProfileSheet } from '@/components/profile/edit-profile-sheet'
 import { ShareButton } from '@/components/profile/share-button'
+import { StravaSection } from '@/components/profile/strava-section'
+import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import {
-  Linkedin, Instagram, Activity,
+  Linkedin, Instagram,
   Flag, Mountain, Trees, Zap, Heart, Sunrise, Moon, Clock, Star, Footprints,
   ChevronRight,
 } from 'lucide-react'
+
+const STRAVA_ICON = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/strava-icon.svg'
 
 type Props = { params: Promise<{ username: string }> }
 
@@ -96,7 +101,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, cover_url, location, skills, linkedin_url, instagram_url, strava_url, prompts, runs_completed')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, cover_url, location, skills, linkedin_url, instagram_url, strava_url, prompts, runs_completed, strava_connected, strava_pbs, strava_recent_activities, strava_synced_at')
     .eq('username', username)
     .single()
 
@@ -104,10 +109,30 @@ export default async function ProfilePage({ params }: Props) {
 
   const skills = parseJson<string[]>(row.skills, [])
   const prompts = parseJson<Prompt[]>(row.prompts, [])
-  const profile: UserProfile = { ...(row as unknown as UserProfile), skills, prompts }
+  const stravaPbs = parseJson<StravaPBs>(row.strava_pbs, { mile: null, '5k': null, '10k': null, half: null, full: null })
+  const stravaRecentActivities = parseJson<StravaActivity[]>(row.strava_recent_activities, [])
+  const profile: UserProfile = {
+    ...(row as unknown as UserProfile),
+    skills,
+    prompts,
+    strava_connected: row.strava_connected ?? false,
+    strava_pbs: stravaPbs,
+    strava_recent_activities: stravaRecentActivities,
+    strava_synced_at: row.strava_synced_at ?? null,
+  }
+
+  const [{ data: officialRunsRows }, supabase] = await Promise.all([
+    adminClient
+      .from('official_runs')
+      .select('id, user_id, race_name, distance_category, race_date, finish_time, strava_activity_url, is_upcoming, created_at')
+      .eq('user_id', row.id)
+      .order('race_date', { ascending: false, nullsFirst: false }),
+    createClient(),
+  ])
+
+  const officialRuns: OfficialRun[] = officialRunsRows ?? []
 
   // Profiles are public — session only controls edit visibility
-  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
@@ -228,8 +253,8 @@ export default async function ProfilePage({ params }: Props) {
             )}
             {profile.strava_url && (
               <a href={profile.strava_url} target='_blank' rel='noopener noreferrer'
-                className='text-white/40 hover:text-stride-yellow-accent transition-colors' aria-label='Strava'>
-                <Activity size={18} />
+                className='opacity-40 hover:opacity-100 transition-opacity' aria-label='Strava'>
+                <Image src={STRAVA_ICON} alt='Strava' width={18} height={18} />
               </a>
             )}
           </div>
@@ -317,6 +342,21 @@ export default async function ProfilePage({ params }: Props) {
             </div>
           </div>
         ) : null}
+
+        {/* Strava */}
+        <StravaSection
+          stravaConnected={profile.strava_connected}
+          stravaPbs={profile.strava_pbs}
+          stravaRecentActivities={profile.strava_recent_activities}
+          stravaSyncedAt={profile.strava_synced_at}
+          isOwnProfile={isOwnProfile}
+        />
+
+        {/* Official Runs */}
+        <OfficialRunsSection
+          initialRuns={officialRuns}
+          isOwnProfile={isOwnProfile}
+        />
 
         {/* Log out — own profile only, right-aligned */}
         {isOwnProfile && (

@@ -1,4 +1,5 @@
 import type { Role } from './auth'
+import type { StravaPBs, StravaActivity } from './strava'
 
 export type Prompt = {
   question: string
@@ -21,4 +22,8 @@ export type UserProfile = {
   strava_url: string | null
   prompts: Prompt[]
   runs_completed: number
+  strava_connected: boolean
+  strava_pbs: StravaPBs
+  strava_recent_activities: StravaActivity[]
+  strava_synced_at: string | null
 }

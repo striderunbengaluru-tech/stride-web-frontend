@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { label: 'Shop', href: '/shop' },
   { label: 'Leaderboard', href: '/leaderboard' },
   { label: 'Team', href: '/team' },
+  { label: 'Partnerships', href: '/partnerships' },
 ] as const
 
 export default function NavLinks() {
