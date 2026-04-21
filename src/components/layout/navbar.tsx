@@ -59,22 +59,7 @@ const Navbar = async () => {
               firstName={navUser.firstName}
               avatarUrl={navUser.avatarUrl}
             />
-          ) : (
-            <>
-              <Link
-                href='/login'
-                className='hidden sm:block text-copy-white/70 hover:text-copy-white text-sm font-medium transition-colors duration-150'
-              >
-                Login
-              </Link>
-              <Link
-                href='/register'
-                className='bg-stride-yellow-accent text-copy-black font-bold text-sm px-5 py-2 rounded-md hover:opacity-90 transition-opacity'
-              >
-                Register
-              </Link>
-            </>
-          )}
+          ) : null}
         </div>
       </nav>
     </div>

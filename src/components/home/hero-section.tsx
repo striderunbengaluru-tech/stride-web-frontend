@@ -18,7 +18,7 @@ const HeroSection = () => {
       headingAs='h1'
       titleLayout='single'
       titleClassName='font-bold !text-stride-yellow-accent text-5xl md:text-7xl lg:text-[114px] tracking-tight transition-none'
-      paneOverlay={<RunRegistrationOverlay />}
+      paneOverlay={undefined}
     >
       <HeroContent />
     </ScrollExpandMedia>

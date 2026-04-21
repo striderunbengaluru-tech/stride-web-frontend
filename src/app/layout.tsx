@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import "./globals.css";
 
@@ -45,8 +46,11 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Navbar />
-          {children}
-          <Footer />
+          <div className='pb-20 md:pb-0'>
+            {children}
+            <Footer />
+          </div>
+          <MobileBottomNav />
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
