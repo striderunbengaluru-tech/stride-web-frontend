@@ -12,7 +12,8 @@ import {
 } from './partners-data'
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-og.png'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stride-web-frontend.vercel.app'
+const SITE_ORIGIN = 'https://strideclub.in'
+const CANONICAL_URL = 'https://strideclub.in/partnerships/'
 
 export const metadata: Metadata = {
   title: "Partner With India's Fittest Running Community | Stride Run Club",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     title: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
       "52,000+ followers. 6,894 runners. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
-    url: `${SITE_URL}/partnerships`,
+    url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
       {
@@ -43,7 +44,10 @@ export const metadata: Metadata = {
     images: [OG_IMAGE],
   },
   alternates: {
-    canonical: `${SITE_URL}/partnerships`,
+    canonical: CANONICAL_URL,
+  },
+  other: {
+    'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
   },
 }
 
@@ -52,29 +56,29 @@ const schemaOrg = {
   '@graph': [
     {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}/partnerships#webpage`,
-      url: `${SITE_URL}/partnerships`,
+      '@id': `${CANONICAL_URL}#webpage`,
+      url: CANONICAL_URL,
       name: "Partner With India's Fittest Running Community | Stride Run Club",
       description:
         "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Authentic, high-ROI brand partnerships with Bengaluru's most engaged fitness community.",
       image: OG_IMAGE,
       inLanguage: 'en-IN',
-      isPartOf: { '@id': `${SITE_URL}/#website` },
-      about: { '@id': `${SITE_URL}/#organization` },
+      isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
+      about: { '@id': `${SITE_ORIGIN}/#organization` },
     },
     {
       '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
-      url: SITE_URL,
+      '@id': `${SITE_ORIGIN}/#website`,
+      url: SITE_ORIGIN,
       name: 'Stride Run Club',
-      publisher: { '@id': `${SITE_URL}/#organization` },
+      publisher: { '@id': `${SITE_ORIGIN}/#organization` },
     },
     {
       '@type': 'SportsOrganization',
-      '@id': `${SITE_URL}/#organization`,
+      '@id': `${SITE_ORIGIN}/#organization`,
       name: 'Stride Run Club Bengaluru',
       alternateName: 'Stride Run Club',
-      url: SITE_URL,
+      url: SITE_ORIGIN,
       logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
       description:
         "India's most engaged running community — 6,894 runners, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
@@ -99,7 +103,7 @@ const schemaOrg = {
         name: 'Brand Partnership Program',
         description:
           "Authentic brand partnerships with Bengaluru's most engaged running community. Offerings include event title sponsorships, UGC content collaborations, product sampling, WhatsApp community activations, and co-branded race kits.",
-        provider: { '@id': `${SITE_URL}/#organization` },
+        provider: { '@id': `${SITE_ORIGIN}/#organization` },
         areaServed: {
           '@type': 'City',
           name: 'Bengaluru',
