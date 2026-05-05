@@ -35,7 +35,7 @@ const Navbar = async () => {
         {/* Logo — centered on mobile, left on sm+ */}
         <Link
           href='/'
-          className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:static sm:inset-auto sm:transform-none shrink-0'
+          className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:static sm:left-auto sm:top-auto sm:translate-x-0 sm:translate-y-0 shrink-0'
           aria-label='Stride Run Club home'
         >
           <Image
