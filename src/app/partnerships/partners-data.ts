@@ -1,9 +1,9 @@
+const SUPABASE_LOGOS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos'
+
 export type Partner = {
   id: string
   name: string
-  /** Short tagline shown on the card */
   tagline?: string
-  /** Simple Icons CDN URL (white colour variant) or external SVG */
   logoUrl?: string
 }
 
@@ -14,57 +14,75 @@ export type PartnerCategory = {
   partners: Partner[]
 }
 
+export type WhyUsItem = {
+  id: string
+  title: string
+  body: string
+  badges?: string[]
+  brandLabel?: string
+}
+
 export const PARTNER_CATEGORIES: PartnerCategory[] = [
   {
-    id: 'fitness',
-    label: 'Fitness & Sports',
-    description: 'Performance gear and supplement brands reaching their highest-intent buyers.',
+    id: 'apparel',
+    label: 'Apparel',
+    description: 'From race-day kits to streetwear — runners are repeat buyers of quality apparel.',
     partners: [
-      { id: 'ua', name: 'Under Armour', tagline: 'Performance Apparel', logoUrl: 'https://cdn.simpleicons.org/underarmour/ffffff' },
-      { id: 'reebok', name: 'Reebok', tagline: 'Sport & Lifestyle', logoUrl: 'https://cdn.simpleicons.org/reebok/ffffff' },
-      { id: 'decathlon', name: 'Decathlon', tagline: 'Sports Equipment', logoUrl: 'https://cdn.simpleicons.org/decathlon/ffffff' },
-      { id: 'gnc', name: 'GNC', tagline: 'Sports Nutrition' },
-      { id: 'garmin', name: 'Garmin', tagline: 'GPS & Wearables', logoUrl: 'https://cdn.simpleicons.org/garmin/ffffff' },
-      { id: 'asics', name: 'ASICS', tagline: 'Running Shoes', logoUrl: 'https://cdn.simpleicons.org/asics/ffffff' },
+      { id: 'puma',        name: 'Puma',           logoUrl: `${SUPABASE_LOGOS}/puma-logo.svg` },
+      { id: 'ua',          name: 'Under Armour',   logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg` },
+      { id: 'reebok',      name: 'Reebok',         logoUrl: `${SUPABASE_LOGOS}/reebok-logo.svg` },
+      { id: 'boldfit',     name: 'Boldfit',        logoUrl: `${SUPABASE_LOGOS}/boldfit-logo.svg` },
+      { id: 'tenxyou',     name: 'TenxYou',        logoUrl: `${SUPABASE_LOGOS}/tenxu-logo.svg` },
+      { id: 'decathlon',   name: 'Decathlon',      logoUrl: `${SUPABASE_LOGOS}/decathlon-logo.svg` },
+      { id: 'fuaark',      name: 'Fuaark',         logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.svg` },
+      { id: 'bearhouse',   name: 'The Bear House', logoUrl: `${SUPABASE_LOGOS}/the-bear-house-logo.svg` },
+      { id: 'lifejam',     name: 'Life & Jam',     logoUrl: `${SUPABASE_LOGOS}/lifenjam-logo.svg` },
+      { id: 'dizzyduck',   name: 'DizzyDuck',      logoUrl: `${SUPABASE_LOGOS}/dizzy-duck-logo.svg` },
     ],
   },
   {
     id: 'fnb',
     label: 'Food & Beverage',
-    description: 'Fuel the run — before, during, and after. Runners eat, drink, and recover.',
+    description: 'Fuel before, during, and after the run — Stride runners eat out, caffeinate, and celebrate together.',
     partners: [
-      { id: 'mcdonalds', name: "McDonald's", tagline: 'Quick Service', logoUrl: 'https://cdn.simpleicons.org/mcdonalds/ffffff' },
-      { id: 'starbucks', name: 'Starbucks', tagline: 'Coffee & Beverages', logoUrl: 'https://cdn.simpleicons.org/starbucks/ffffff' },
-      { id: 'redbull', name: 'Red Bull', tagline: 'Energy Drinks', logoUrl: 'https://cdn.simpleicons.org/redbull/ffffff' },
-      { id: 'gatorade', name: 'Gatorade', tagline: 'Sports Hydration' },
-      { id: 'subway', name: 'Subway', tagline: 'Healthy Fast Food', logoUrl: 'https://cdn.simpleicons.org/subway/ffffff' },
-      { id: 'ragi', name: 'RagiCo', tagline: 'Health Snacks' },
+      { id: 'redbull',    name: 'Red Bull',         logoUrl: `${SUPABASE_LOGOS}/red-bull-logo.svg` },
+      { id: 'thirdwave',  name: 'Third Wave Coffee', logoUrl: `${SUPABASE_LOGOS}/third-wave-coffee-logo.svg` },
+      { id: 'social',     name: 'Social',            logoUrl: `${SUPABASE_LOGOS}/social-logo.svg` },
+      { id: 'mccafe',     name: 'McCafe',            logoUrl: `${SUPABASE_LOGOS}/mccafe-logo.svg` },
+      { id: 'timhortons', name: 'Tim Hortons',       logoUrl: `${SUPABASE_LOGOS}/tim-hortons-logo.svg` },
+      { id: 'one8',       name: 'One8Commune',       logoUrl: `${SUPABASE_LOGOS}/one8-commune-logo.svg` },
+      { id: 'paperpie',   name: 'Paper & Pie',       logoUrl: `${SUPABASE_LOGOS}/paper-n-pie-logo.svg` },
+      { id: 'flaxcafe',   name: 'Flax Cafe',         logoUrl: `${SUPABASE_LOGOS}/flax-cafe-logo.svg` },
+      { id: 'suzyq',      name: 'SuzyQ',             logoUrl: `${SUPABASE_LOGOS}/suzyq-logo.svg` },
+      { id: 'amadora',    name: 'Amadora',           logoUrl: `${SUPABASE_LOGOS}/amadora-logo.svg` },
+      { id: 'beanlore',   name: 'Beanlore',          logoUrl: `${SUPABASE_LOGOS}/beanlore-logo.svg` },
     ],
   },
   {
-    id: 'technology',
-    label: 'Technology',
-    description: 'Tech that powers performance — wearables, apps, and data-driven training.',
+    id: 'nutrition',
+    label: 'Nutrition',
+    description: 'Performance nutrition for athletes who train every week and demand results.',
     partners: [
-      { id: 'fitbit', name: 'Fitbit', tagline: 'Fitness Tracking', logoUrl: 'https://cdn.simpleicons.org/fitbit/ffffff' },
-      { id: 'whoop', name: 'WHOOP', tagline: 'Recovery Wearable' },
-      { id: 'polar', name: 'Polar', tagline: 'Heart Rate Monitors' },
-      { id: 'samsung', name: 'Samsung Health', tagline: 'Health Platform', logoUrl: 'https://cdn.simpleicons.org/samsung/ffffff' },
-      { id: 'nrc', name: 'Nike Run Club', tagline: 'Training App', logoUrl: 'https://cdn.simpleicons.org/nike/ffffff' },
-      { id: 'strava', name: 'Strava', tagline: 'Athlete Network', logoUrl: 'https://cdn.simpleicons.org/strava/ffffff' },
+      { id: 'fastup',      name: 'Fast&Up',     logoUrl: `${SUPABASE_LOGOS}/fast-n-up-logo.svg` },
+      { id: 'myprotein',   name: 'My Protein',  logoUrl: `${SUPABASE_LOGOS}/myprotein-logo.svg` },
+      { id: 'muscleblaze', name: 'Muscleblaze', logoUrl: `${SUPABASE_LOGOS}/muscleblaze-logo.svg` },
+      { id: 'gnc',         name: 'GNC',         logoUrl: `${SUPABASE_LOGOS}/gnc-logo.svg` },
+      { id: 'superyou',    name: 'Super You',   logoUrl: `${SUPABASE_LOGOS}/superyou-logo.svg` },
+      { id: 'trunativ',    name: 'Trunativ',    logoUrl: `${SUPABASE_LOGOS}/trunativ-logo.svg` },
+      { id: 'milld',       name: 'Milld',       logoUrl: `${SUPABASE_LOGOS}/milld-logo.svg` },
     ],
   },
   {
-    id: 'lifestyle',
-    label: 'Lifestyle & Wellness',
-    description: 'From recovery to daily rituals — brands that complement an active life.',
+    id: 'others',
+    label: 'Others',
+    description: "From GPS wearables to quick commerce — Stride's community lives an active, tech-forward lifestyle.",
     partners: [
-      { id: 'lululemon', name: 'lululemon', tagline: 'Athletic Wear', logoUrl: 'https://cdn.simpleicons.org/lululemon/ffffff' },
-      { id: 'brooks', name: 'Brooks', tagline: 'Running Footwear' },
-      { id: 'cult', name: 'Cult.fit', tagline: 'Fitness Studio' },
-      { id: 'healthify', name: 'HealthifyMe', tagline: 'Nutrition & Diet' },
-      { id: 'newbalance', name: 'New Balance', tagline: 'Running Gear', logoUrl: 'https://cdn.simpleicons.org/newbalance/ffffff' },
-      { id: 'onn', name: 'Onn.fit', tagline: 'Sportswear' },
+      { id: 'garmin',          name: 'Garmin',          logoUrl: 'https://cdn.simpleicons.org/garmin' },
+      { id: 'zepto',           name: 'Zepto',           logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg` },
+      { id: 'ponds',          name: "Pond's",          logoUrl: `${SUPABASE_LOGOS}/ponds-logo.svg` },
+      { id: 'narayana',       name: 'Narayana Clinic', logoUrl: `${SUPABASE_LOGOS}/narayana-clinic-logo.svg` },
+      { id: 'tribit',         name: 'Tribit',          logoUrl: `${SUPABASE_LOGOS}/tribit-logo.svg` },
+      { id: 'fourthfrontier', name: 'Fourth Frontier', logoUrl: `${SUPABASE_LOGOS}/fourth-frontier-logo.svg` },
     ],
   },
 ]
@@ -72,33 +90,30 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
 /** All partners flattened — used by the marquee */
 export const ALL_PARTNERS: Partner[] = PARTNER_CATEGORIES.flatMap((c) => c.partners)
 
-export const STATS = [
-  { value: '2,000+', label: 'Active Members' },
-  { value: '50+', label: 'Events Hosted' },
-  { value: '15+', label: 'Brand Partners' },
-  { value: '95%', label: 'Event Attendance' },
-]
-
-export const WHY_US = [
+export const WHY_US: WhyUsItem[] = [
   {
     id: 'audience',
     title: 'High-Intent Audience',
-    body: 'Our members are 25–45 year-old urban professionals who spend on fitness gear, nutrition, and recovery every single week. No passive scrollers — these are active buyers.',
+    body: 'Active buyers who spend on fitness gear, nutrition, and recovery every single week. No passive scrollers — these are people who take their health seriously.',
+    badges: ['22–35 yr urban professionals', 'Equal gender ratio'],
+  },
+  {
+    id: 'creators',
+    title: 'Pro Creator Community',
+    body: "We nurture an ecosystem of UGC fitness content creators who are regulars at our runs — producing authentic content that money can't manufacture.",
+    badges: ['50+ UGC creators', 'Organic reach'],
   },
   {
     id: 'irl',
     title: 'Real-World Brand Moments',
-    body: "Weekly group runs, monthly night runs, quarterly races. Your brand shows up where it matters — in the flesh, at the finish line, post-run when everyone's glowing.",
+    body: "Among the only social run clubs in India running three times a week across formats — beginner, intermediate, and advanced. Your brand shows up at every single one.",
+    badges: ['3 runs per week', 'All runner levels'],
   },
   {
-    id: 'trust',
-    title: 'Community-First Trust',
-    body: "Stride recommendations carry weight. When we back a brand, our community listens. This isn't an ad slot — it's a genuine endorsement from people who run together.",
-  },
-  {
-    id: 'reach',
-    title: 'Multi-Channel Reach',
-    body: "Instagram stories, WhatsApp communities, in-run mentions, and event presence — one partnership spans every touchpoint in a runner's daily life.",
+    id: 'women',
+    title: 'Women-Only Sub-Community',
+    body: 'A dedicated run & lifestyle club led by women, for women. Reach a highly engaged, underserved demographic at the intersection of fitness and lifestyle.',
+    brandLabel: 'Stride Like Women',
   },
 ]
 

@@ -30,12 +30,12 @@ const Navbar = async () => {
     <div className='fixed top-4 left-0 right-0 z-50 flex justify-center px-4'>
       <nav
         aria-label='Main navigation'
-        className='w-full max-w-6xl flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/30 px-5 py-3 backdrop-blur-xl'
+        className='relative w-full max-w-6xl min-h-[60px] flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/30 px-5 py-3 backdrop-blur-xl'
       >
-        {/* Logo */}
+        {/* Logo — centered on mobile, left on sm+ */}
         <Link
           href='/'
-          className='shrink-0'
+          className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:static sm:inset-auto sm:transform-none shrink-0'
           aria-label='Stride Run Club home'
         >
           <Image
@@ -52,7 +52,7 @@ const Navbar = async () => {
         <NavLinks />
 
         {/* Auth actions */}
-        <div className='flex items-center gap-3 shrink-0'>
+        <div className='flex items-center gap-3 shrink-0 ml-auto sm:ml-0'>
           {navUser ? (
             <UserMenu
               username={navUser.username}

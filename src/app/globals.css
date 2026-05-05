@@ -13,6 +13,10 @@
   --font-body: var(--font-roboto);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-roboto), sans-serif;
   background-color: rgba(75, 40, 98, 0.94); /* deep purple — stride brand */

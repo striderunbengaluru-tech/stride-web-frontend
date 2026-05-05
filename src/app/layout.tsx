@@ -43,6 +43,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${libreBaskerville.variable} ${roboto.variable} font-body antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <Navbar />

@@ -1,38 +1,42 @@
 import type { Metadata } from 'next'
-import { ArrowRight, Users, Calendar, Trophy, TrendingUp, Target, Zap, Heart, Radio, Sparkles } from 'lucide-react'
+import { ArrowRight, Share2, MessageCircle, Users, Calendar, Building2, Target, Video, Zap, Heart } from 'lucide-react'
 import { LogoMarquee } from '@/components/partnerships/logo-marquee'
 import ReelsCarousel from '@/components/partnerships/reels-carousel'
 import PartnerWithUsButton from '@/components/partnerships/partner-with-us-button'
+import PartnerGrid from '@/components/partnerships/partner-grid'
+import SmoothScrollLink from '@/components/ui/smooth-scroll-link'
 import {
   PARTNER_CATEGORIES,
   ALL_PARTNERS,
-  STATS,
   WHY_US,
-  WHATSAPP_LINK,
 } from './partners-data'
 
 export const metadata: Metadata = {
   title: 'Partner With Us — Stride Run Club',
   description:
-    'Get your brand in front of 51,000+ followers and 5,754 active runners in Bengaluru. Stride Run Club offers authentic brand partnerships across events, content, and community.',
+    'Get your brand in front of 52,000+ followers and 6,894 runners in Bengaluru. Stride Run Club offers authentic brand partnerships across events, content, and community.',
 }
 
 const UPDATED_STATS = [
-  { value: '51K+', label: 'Instagram Followers' },
-  { value: '5,754', label: 'Unique Runners in 2025' },
-  { value: '97+', label: 'Events per Year' },
-  { value: '15+', label: 'Brand Partners' },
+  { Icon: Share2,         value: '52K+',  label: 'Instagram Followers' },
+  { Icon: MessageCircle,  value: '6K+',   label: 'WhatsApp Community' },
+  { Icon: Users,          value: '6,894', label: 'Runners Impacted' },
+  { Icon: Calendar,       value: '97+',   label: 'Events per Year' },
+  { Icon: Building2,      value: '55+',   label: 'Brand Partners' },
 ]
 
-const STAT_ICONS = [Users, Calendar, Trophy, TrendingUp]
-const WHY_ICONS = [Target, Zap, Heart, Radio]
+const SUPABASE_LOGOS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos'
 
-const CREATOR_REELS = [
-  'https://www.instagram.com/p/DVEAnORkgge/',
-  'https://www.instagram.com/p/DU4_xTLkdKH/',
-  'https://www.instagram.com/p/DW29ahUkeP9/',
-  'https://www.instagram.com/p/DWW4GUOgeZL/',
-  'https://www.instagram.com/p/DXFRfBJgdCh/',
+const WHY_ICONS = [Target, Video, Zap, Heart]
+
+const SUPABASE_WEB_ASSETS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets'
+
+const PARTNERSHIP_REELS = [
+  { url: 'https://www.instagram.com/p/DW29ahUkeP9/',  title: 'A stellar partnership with Fuaark',        logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.svg`,     partnerHandle: '@fuaark_official',  thumbnailUrl: `${SUPABASE_WEB_ASSETS}/fuaark-insta-thumb.jpg` },
+  { url: 'https://www.instagram.com/p/DWmkXvok3p9/', title: "Declared India's fittest club by peakst8", logoUrl: `${SUPABASE_LOGOS}/peakst8-logo.svg`,     partnerHandle: '@peakst8',          thumbnailUrl: `${SUPABASE_WEB_ASSETS}/peakst8-insta-thumb.jpg`,   darkChip: true },
+  { url: 'https://www.instagram.com/p/DU2q0Iyj3rn/', title: 'Fittest collaboration with Puma & HYROX',  logoUrl: `${SUPABASE_LOGOS}/puma-hyrox-logo.svg`,  partnerHandle: '@pumaindia',        thumbnailUrl: `${SUPABASE_WEB_ASSETS}/puma-hyrox-insta-thumb.jpg` },
+  { url: 'https://www.instagram.com/p/DMu5SCTPXzG/', title: 'Ran hard, raved harder with Zepto',        logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg`,       partnerHandle: '@zeptoapp',         thumbnailUrl: `${SUPABASE_WEB_ASSETS}/zepto-insta-thumb.jpg` },
+  { url: 'https://www.instagram.com/p/DLo1vcfua88/', title: 'With Olympian Neeraj Chopra',              emoji: '🥇',                                        partnerHandle: '@neeraj____chopra', thumbnailUrl: `${SUPABASE_WEB_ASSETS}/neeraj-insta-thumb.jpg` },
 ]
 
 export default function PartnershipsPage() {
@@ -50,38 +54,35 @@ export default function PartnershipsPage() {
         </h1>
 
         <p className='text-white/60 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10'>
-          51,200+ followers. 5,754 runners. A city moving as one. Stride is Bengaluru&apos;s most engaged running
+          52,000+ followers. 6,894 runners. A city moving as one. Stride is Bengaluru&apos;s most engaged running
           community — high-intent, health-conscious members who show up every single week.
         </p>
 
         <div className='flex flex-col sm:flex-row gap-4 justify-center items-center'>
           <PartnerWithUsButton />
-          <a
-            href='#why-stride'
+          <SmoothScrollLink
+            targetId='why-stride'
             className='inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm'
           >
             See why brands choose Stride
             <ArrowRight size={14} />
-          </a>
+          </SmoothScrollLink>
         </div>
       </section>
 
       {/* ── STATS BAR ────────────────────────────────────────── */}
-      <section className='max-w-4xl mx-auto px-6 mb-20'>
-        <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
-          {UPDATED_STATS.map((stat, i) => {
-            const Icon = STAT_ICONS[i]
-            return (
-              <div
-                key={stat.label}
-                className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5 text-center'
-              >
-                <Icon size={18} className='text-stride-yellow-accent mx-auto mb-2' />
-                <p className='text-3xl font-bold text-white tabular-nums'>{stat.value}</p>
-                <p className='text-white/45 text-xs mt-1'>{stat.label}</p>
-              </div>
-            )
-          })}
+      <section className='max-w-5xl mx-auto px-6 mb-20'>
+        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4'>
+          {UPDATED_STATS.map((stat, i) => (
+            <div
+              key={stat.label}
+              className={`bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5 text-center${i === 4 ? ' col-span-2 sm:col-span-1' : ''}`}
+            >
+              <stat.Icon size={18} className='text-stride-yellow-accent mx-auto mb-2' />
+              <p className='text-3xl font-bold text-white tabular-nums'>{stat.value}</p>
+              <p className='text-white/45 text-xs mt-1'>{stat.label}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -98,7 +99,7 @@ export default function PartnershipsPage() {
       </section>
 
       {/* ── WHY STRIDE ───────────────────────────────────────── */}
-      <section id='why-stride' className='max-w-5xl mx-auto px-6 mb-24'>
+      <section id='why-stride' className='max-w-5xl mx-auto px-6 mb-16'>
         <div className='text-center mb-12'>
           <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
             Why Stride
@@ -118,69 +119,67 @@ export default function PartnershipsPage() {
             return (
               <div
                 key={item.id}
-                className='relative bg-white/5 border border-white/10 rounded-xl p-7 hover:border-stride-yellow-accent/25 hover:bg-white/10 transition-all group overflow-hidden'
+                className='relative bg-white/5 border border-white/10 rounded-xl p-7 hover:border-stride-yellow-accent/25 hover:bg-white/10 transition-all group overflow-hidden flex flex-col'
               >
-                <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-stride-yellow-accent/50 to-transparent' />
-                <span className='absolute top-5 right-6 text-6xl font-bold text-white/[0.04] font-libre leading-none select-none pointer-events-none'>
+                <div className='absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-stride-yellow-accent/50 to-transparent' />
+                <span className='absolute top-5 right-6 text-6xl font-bold text-white/4 font-libre leading-none select-none pointer-events-none'>
                   {String(index + 1).padStart(2, '0')}
                 </span>
+
                 <div className='w-11 h-11 rounded-lg bg-stride-yellow-accent/10 border border-stride-yellow-accent/20 flex items-center justify-center mb-5 group-hover:bg-stride-yellow-accent/15 group-hover:border-stride-yellow-accent/40 transition-colors'>
                   <Icon size={20} className='text-stride-yellow-accent' />
                 </div>
+
                 <h3 className='font-libre text-white font-bold text-xl mb-3'>{item.title}</h3>
                 <p className='text-white/55 text-sm leading-relaxed'>{item.body}</p>
+
+                {/* Badges */}
+                {item.badges && (
+                  <div className='flex flex-wrap gap-2 mt-4'>
+                    {item.badges.map((badge) => (
+                      <span
+                        key={badge}
+                        className='text-[11px] px-3 py-1 rounded-full bg-stride-yellow-accent/10 border border-stride-yellow-accent/20 text-stride-yellow-accent/80 font-medium'
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Brand label */}
+                {item.brandLabel && (
+                  <div className='mt-4'>
+                    <span className='inline-block text-xs px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/70 font-semibold tracking-wide'>
+                      {item.brandLabel}
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
       </section>
 
-      {/* ── STRIDE CREATOR PROGRAM ───────────────────────────── */}
-      <section className='max-w-5xl mx-auto px-6 mb-24'>
-        <div className='text-center mb-12'>
-          <div className='inline-flex items-center gap-2 text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
-            <Sparkles size={14} />
-            Stride Originals
-          </div>
-          <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre mb-4'>
-            Tap into a network of{' '}
-            <span className='text-stride-yellow-accent'>fitness creators.</span>
-          </h2>
-          <p className='text-white/55 mt-2 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed'>
-            The Stride Creator Program is a 4-week bootcamp that turns passionate runners into
-            content creators. Your brand gets featured authentically — woven into their journey,
-            not slapped on as an ad. Real people. Real runs. Real reach.
+      {/* ── MID-PAGE CTA ─────────────────────────────────────── */}
+      <section className='max-w-3xl mx-auto px-6 mb-24'>
+        <div className='relative overflow-hidden rounded-2xl bg-stride-yellow-accent p-8 sm:p-12 text-center'>
+          <div className='pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-copy-black/5' />
+          <div className='pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-copy-black/5' />
+
+          <p className='text-copy-black/60 text-xs font-semibold uppercase tracking-widest mb-4 relative'>
+            Let&apos;s build something together
           </p>
-        </div>
-
-        {/* Creator program benefits */}
-        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12'>
-          {[
-            { value: '51K+', label: 'Platform followers', sub: '@stride_runclub_bengaluru' },
-            { value: '4 weeks', label: 'Program duration', sub: 'Intensive bootcamp format' },
-            { value: 'Invite-only', label: 'Creator selection', sub: 'Curated, quality-first' },
-          ].map(({ value, label, sub }) => (
-            <div
-              key={label}
-              className='bg-white/5 border border-white/10 rounded-xl px-6 py-6 text-center'
-            >
-              <p className='text-2xl font-bold text-stride-yellow-accent font-libre mb-1'>{value}</p>
-              <p className='text-white font-semibold text-sm mb-1'>{label}</p>
-              <p className='text-white/40 text-xs'>{sub}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Negative margin breaks out of section px-6, giving the reels full width */}
-        <div className='-mx-6'>
-          <ReelsCarousel urls={CREATOR_REELS} />
-        </div>
-
-        <div className='text-center mt-10'>
+          <h2 className='text-copy-black text-3xl sm:text-4xl font-bold mb-4 relative font-libre leading-tight'>
+            Don&apos;t advertise to runners.<br />Run with them.
+          </h2>
+          <p className='text-copy-black/70 text-sm sm:text-base mb-8 max-w-sm mx-auto relative leading-relaxed'>
+            One partnership with Stride puts your brand at every finish line, in every post-run photo,
+            and across every WhatsApp group in Bengaluru&apos;s most active running community.
+          </p>
           <PartnerWithUsButton
-            label='Partner with Stride Creators'
-            showIcon={false}
-            className='inline-flex items-center gap-2 border border-stride-yellow-accent text-stride-yellow-accent font-bold px-8 py-3.5 rounded-md hover:bg-stride-yellow-accent hover:text-copy-black transition-all duration-200 text-sm'
+            label='Partner With Us'
+            className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
           />
         </div>
       </section>
@@ -189,45 +188,22 @@ export default function PartnershipsPage() {
       <section className='max-w-5xl mx-auto px-6 mb-24'>
         <div className='text-center mb-10'>
           <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
-            @stride_runclub_bengaluru
+            Real Partnerships. Real Impact.
           </p>
           <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre'>
             See it for yourself.
           </h2>
           <p className='text-white/50 mt-3 max-w-lg mx-auto'>
-            51,200 followers. A community that actually shows up. Scroll through and feel the energy.
+            Five partnerships. Real runs. Proof in every frame.
           </p>
         </div>
 
-        <div className='flex justify-center'>
-          <div className='w-full max-w-2xl rounded-2xl overflow-hidden border border-white/10'>
-            <iframe
-              src='https://www.instagram.com/stride_runclub_bengaluru/embed/'
-              width='100%'
-              height='600'
-              frameBorder='0'
-              scrolling='no'
-              allowTransparency={true}
-              title='Stride Run Club Instagram'
-              className='block'
-            />
-          </div>
-        </div>
-
-        <div className='text-center mt-8'>
-          <a
-            href='https://www.instagram.com/stride_runclub_bengaluru/'
-            target='_blank'
-            rel='noopener noreferrer'
-            className='inline-flex items-center gap-2 text-white/60 hover:text-stride-yellow-accent transition-colors text-sm'
-          >
-            Follow @stride_runclub_bengaluru
-            <ArrowRight size={14} />
-          </a>
+        <div className='-mx-6'>
+          <ReelsCarousel reels={PARTNERSHIP_REELS} />
         </div>
       </section>
 
-      {/* ── INDUSTRIES ───────────────────────────────────────── */}
+      {/* ── OUR PARTNERS ─────────────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 mb-24'>
         <div className='text-center mb-12'>
           <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
@@ -242,74 +218,7 @@ export default function PartnershipsPage() {
           </p>
         </div>
 
-        <div className='space-y-14'>
-          {PARTNER_CATEGORIES.map((category) => (
-            <div key={category.id}>
-              <div className='mb-6'>
-                <div className='flex items-center gap-3 mb-2'>
-                  <span className='inline-block w-0.5 h-7 bg-stride-yellow-accent rounded-full shrink-0' />
-                  <h3 className='font-libre text-2xl sm:text-3xl font-bold text-white'>{category.label}</h3>
-                </div>
-                <p className='text-white/40 text-sm pl-4'>{category.description}</p>
-              </div>
-
-              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3'>
-                {category.partners.map((partner) => (
-                  <div
-                    key={partner.id}
-                    className='bg-white/5 border border-white/10 rounded-xl px-4 py-5 flex flex-col items-center text-center hover:bg-white/10 hover:border-white/20 transition-colors group'
-                  >
-                    <div className='w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-3 group-hover:border-stride-yellow-accent/30 transition-colors'>
-                      {partner.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={partner.logoUrl}
-                          alt={partner.name}
-                          className='w-6 h-6 object-contain'
-                          loading='lazy'
-                        />
-                      ) : (
-                        <span className='text-stride-yellow-accent font-bold text-sm'>
-                          {partner.name.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                    <p className='text-white/75 font-semibold text-xs leading-tight mb-1 line-clamp-2'>{partner.name}</p>
-                    {partner.tagline && (
-                      <p className='text-white/30 text-[10px]'>{partner.tagline}</p>
-                    )}
-                  </div>
-                ))}
-
-                <a
-                  href={WHATSAPP_LINK}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  className='border border-dashed border-stride-yellow-accent/30 rounded-xl px-4 py-5 flex flex-col items-center text-center hover:border-stride-yellow-accent/70 hover:bg-stride-yellow-accent/5 transition-colors group'
-                >
-                  <div className='w-10 h-10 rounded-full border border-dashed border-stride-yellow-accent/30 flex items-center justify-center mb-3 group-hover:border-stride-yellow-accent/60 transition-colors'>
-                    <span className='text-stride-yellow-accent/50 text-lg group-hover:text-stride-yellow-accent transition-colors'>+</span>
-                  </div>
-                  <p className='text-stride-yellow-accent/50 font-semibold text-xs group-hover:text-stride-yellow-accent transition-colors'>Your Brand</p>
-                  <p className='text-white/25 text-[10px] mt-1 group-hover:text-white/40 transition-colors'>Join us</p>
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── SOCIAL PROOF QUOTE ───────────────────────────────── */}
-      <section className='max-w-3xl mx-auto px-6 mb-24'>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-8 sm:p-12 text-center'>
-          <p className='text-stride-yellow-accent text-4xl mb-6 font-bold'>&ldquo;</p>
-          <blockquote className='text-white text-xl sm:text-2xl font-medium leading-relaxed mb-6 font-libre italic'>
-            The Stride community doesn&apos;t just wear our gear —
-            they evangelize it. The ROI from one event beats
-            three months of digital ads.
-          </blockquote>
-          <p className='text-white/40 text-sm'>— A Fitness Brand Partner, 2024</p>
-        </div>
+        <PartnerGrid categories={PARTNER_CATEGORIES} />
       </section>
 
       {/* ── FINAL CTA ────────────────────────────────────────── */}
@@ -330,7 +239,7 @@ export default function PartnershipsPage() {
           </p>
           <PartnerWithUsButton
             label='Partner With Us'
-            className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 transition-colors text-base min-h-12'
+            className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
           />
           <p className='text-copy-black/50 text-xs mt-4 relative'>
             +91 95606 02019 · Typically replies within the hour
