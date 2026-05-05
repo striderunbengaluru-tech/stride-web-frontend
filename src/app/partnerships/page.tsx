@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   description:
     "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Put your brand at every finish line in Bengaluru. Stride Run Club delivers authentic, high-ROI partnerships with India's most engaged fitness community.",
   openGraph: {
-    title: "Partner With India's Fittest Running Community",
+    title: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
-      "52,000+ followers. 6,894 weekly runners. 55+ brand partners. Authentic event sponsorships, UGC content, and community activations with Bengaluru's most active running club.",
+      "52,000+ followers. 6,894 runners. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
     url: `${SITE_URL}/partnerships`,
     siteName: 'Stride Run Club',
     images: [
