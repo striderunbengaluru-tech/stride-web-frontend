@@ -11,10 +11,106 @@ import {
   WHY_US,
 } from './partners-data'
 
+const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-og.png'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stride-web-frontend.vercel.app'
+
 export const metadata: Metadata = {
-  title: 'Partner With Us — Stride Run Club',
+  title: "Partner With India's Fittest Running Community | Stride Run Club",
   description:
-    'Get your brand in front of 52,000+ followers and 6,894 runners in Bengaluru. Stride Run Club offers authentic brand partnerships across events, content, and community.',
+    "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Put your brand at every finish line in Bengaluru. Stride Run Club delivers authentic, high-ROI partnerships with India's most engaged fitness community.",
+  openGraph: {
+    title: "Partner With India's Fittest Running Community",
+    description:
+      "52,000+ followers. 6,894 weekly runners. 55+ brand partners. Authentic event sponsorships, UGC content, and community activations with Bengaluru's most active running club.",
+    url: `${SITE_URL}/partnerships`,
+    siteName: 'Stride Run Club',
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "Partner With Stride Run Club — India's Fittest Running Community",
+      },
+    ],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Partner With India's Fittest Running Community",
+    description:
+      "52,000+ followers. 6,894 runners. 55+ brands. Authentic partnerships with Bengaluru's most engaged fitness community.",
+    images: [OG_IMAGE],
+  },
+  alternates: {
+    canonical: `${SITE_URL}/partnerships`,
+  },
+}
+
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}/partnerships#webpage`,
+      url: `${SITE_URL}/partnerships`,
+      name: "Partner With India's Fittest Running Community | Stride Run Club",
+      description:
+        "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Authentic, high-ROI brand partnerships with Bengaluru's most engaged fitness community.",
+      image: OG_IMAGE,
+      inLanguage: 'en-IN',
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+      about: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: 'Stride Run Club',
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'SportsOrganization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Stride Run Club Bengaluru',
+      alternateName: 'Stride Run Club',
+      url: SITE_URL,
+      logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+      description:
+        "India's most engaged running community — 6,894 runners, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
+      location: {
+        '@type': 'Place',
+        name: 'Bengaluru, Karnataka, India',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Bengaluru',
+          addressRegion: 'Karnataka',
+          addressCountry: 'IN',
+        },
+      },
+      sameAs: ['https://www.instagram.com/stride_runclub_bengaluru/'],
+      numberOfEmployees: {
+        '@type': 'QuantitativeValue',
+        value: 6894,
+        unitText: 'community members',
+      },
+      offers: {
+        '@type': 'Service',
+        name: 'Brand Partnership Program',
+        description:
+          "Authentic brand partnerships with Bengaluru's most engaged running community. Offerings include event title sponsorships, UGC content collaborations, product sampling, WhatsApp community activations, and co-branded race kits.",
+        provider: { '@id': `${SITE_URL}/#organization` },
+        areaServed: {
+          '@type': 'City',
+          name: 'Bengaluru',
+        },
+        audience: {
+          '@type': 'Audience',
+          audienceType: 'Urban fitness enthusiasts, aged 22–35, equal gender ratio',
+        },
+      },
+    },
+  ],
 }
 
 const UPDATED_STATS = [
@@ -42,6 +138,10 @@ const PARTNERSHIP_REELS = [
 export default function PartnershipsPage() {
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-24 pb-24 overflow-x-hidden'>
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+      />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 pt-16 pb-20 text-center'>

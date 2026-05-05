@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stride Run Club — Web Frontend
 
-## Getting Started
+The official web app for **Stride Run Club Bengaluru** — India's most engaged running community with 52,000+ followers, 6,894 runners, and 97+ events per year.
 
-First, run the development server:
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org) (App Router, TypeScript strict) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com) |
+| Database & Auth | [Supabase](https://supabase.com) (PostgreSQL + Supabase Auth) |
+| Auth Provider | Google OAuth via Supabase (PKCE flow) |
+| Payments | [Cashfree](https://cashfree.com) (hosted checkout) |
+| Deployment | [Vercel](https://vercel.com) |
+| Analytics | Vercel Analytics + Speed Insights |
+| Package Manager | [Yarn](https://yarnpkg.com) |
+
+---
+
+## Local Setup
+
+### Prerequisites
+
+- Node.js 20+
+- Yarn (`npm install -g yarn`)
+- A Supabase project ([create one free](https://supabase.com))
+
+### 1. Clone the repo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/kush-1510/stride-web-frontend.git
+cd stride-web-frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+yarn install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Configure environment variables
 
-## Learn More
+Copy the example env file and fill in your values:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Required variables:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```env
+# Supabase — find these in your Supabase project settings
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+STRIDE_SUPABASE_SERVICE_ROLE_KEY=<service-role-key>   # server-only, never expose to client
 
-## Deploy on Vercel
+# App
+NEXT_PUBLIC_SITE_URL=http://localhost:3000             # use production URL on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Cashfree payments
+STRIDE_CASHFREE_APP_ID=<app-id>
+STRIDE_CASHFREE_SECRET_KEY=<secret-key>
+STRIDE_CASHFREE_ENV=sandbox                           # use 'production' on live
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# QR check-in (generate a random hex string)
+STRIDE_QR_SECRET=<random-hex-secret>
+```
+
+> **Note:** `STRIDE_SUPABASE_SERVICE_ROLE_KEY` bypasses Row Level Security — keep it strictly server-side and never commit it.
+
+### 4. Run the dev server
+
+```bash
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. The app hot-reloads as you edit files.
+
+### 5. Build for production
+
+```bash
+yarn build
+yarn start
+```
+
+---
+
+## Project Structure
+
+```
+src/
+├── app/                  # Next.js App Router pages & API routes
+│   ├── (auth)/           # Login, signup, OAuth callback
+│   ├── admin/            # Admin panel (role-gated)
+│   ├── events/           # Event listings, registration, QR confirmation
+│   ├── partnerships/     # Brand partnerships page
+│   ├── profile/          # Member profiles
+│   └── api/              # API route handlers
+├── components/
+│   ├── ui/               # Primitive reusable components
+│   ├── layout/           # Navbar, Footer, MobileBottomNav
+│   ├── events/           # Event-specific components
+│   ├── partnerships/     # Partnerships page components
+│   └── admin/            # Admin panel components
+├── lib/
+│   ├── supabase/         # Server, client, and admin Supabase clients
+│   ├── actions/          # Server Actions
+│   └── qr-token.ts       # HMAC-based QR check-in tokens
+└── types/                # Shared TypeScript domain types
+```
+
+---
+
+## Key Conventions
+
+- **Styling:** Tailwind utility classes only — no inline styles or CSS modules. Brand tokens: `stride-yellow-accent` (#E1D03F) and `stride-purple-primary` (#4B2862).
+- **Auth:** Supabase Auth with Google OAuth. Session managed via `@supabase/ssr` cookies. Always verify server-side.
+- **Data fetching:** Default to Server Components. Use `'use client'` only for interactivity.
+- **Package manager:** Always use `yarn`. Delete `package-lock.json` if it appears.
+
+---
+
+## Deployment
+
+The app is deployed on Vercel. Every push to `main` triggers a production deployment. Set all env vars under **Project → Settings → Environment Variables** in the Vercel dashboard.
