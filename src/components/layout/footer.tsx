@@ -2,9 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const FOOTER_LINKS = [
-  { title: 'Team', href: '/team' },
   { title: 'Partnerships', href: '/partnerships' },
-  { title: 'Stride Originals', href: '/originals/lake-hop-project' },
 ];
 
 const InstagramIcon = () => (

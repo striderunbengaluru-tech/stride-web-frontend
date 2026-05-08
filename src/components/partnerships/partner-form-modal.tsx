@@ -43,19 +43,19 @@ export default function PartnerFormModal({ open, onClose }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const lines = [
-      `Hi Stride! 👋`,
+      `Hi Stride Run Club!`,
       ``,
       `Brand: ${form.brandName}`,
       `Instagram: @${form.igHandle.replace(/^@/, '')}`,
       form.website ? `Website: ${form.website}` : null,
       `Open to commercial arrangement: ${form.commercial ? 'Yes' : 'No'}`,
       ``,
-      `I'd love to explore a brand partnership with Stride Run Club.`,
+      `I would love to explore a brand partnership with you.`,
     ]
       .filter((l) => l !== null)
       .join('\n')
 
-    const waUrl = `https://wa.me/919560602019?text=${encodeURIComponent(lines)}`
+    const waUrl = `https://wa.me/918368877289?text=${encodeURIComponent(lines)}`
     window.open(waUrl, '_blank', 'noopener,noreferrer')
     onClose()
   }

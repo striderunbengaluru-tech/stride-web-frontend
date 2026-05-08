@@ -346,7 +346,7 @@ export default function PartnershipsPage() {
             className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
           />
           <p className='text-copy-black/50 text-xs mt-4 relative'>
-            +91 95606 02019 · Typically replies within the hour
+            +91 83688 77289 · Typically replies within the hour
           </p>
         </div>
       </section>

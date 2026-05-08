@@ -41,7 +41,7 @@ function FeaturedArticleCard({ article }: { article: Article }) {
             <img
               src={article.publicationLogo}
               alt={article.publication}
-              className='h-5 w-auto object-contain'
+              className='h-10 w-auto object-contain'
             />
           </div>
         </div>

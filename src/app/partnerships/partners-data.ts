@@ -117,4 +117,4 @@ export const WHY_US: WhyUsItem[] = [
   },
 ]
 
-export const WHATSAPP_LINK = 'https://wa.me/919560602019?text=Hi%20Stride%2C%20I%27m%20interested%20in%20a%20brand%20partnership'
+export const WHATSAPP_LINK = 'https://wa.me/918368877289?text=Hi%20Stride%20Run%20Club!%20I%20am%20interested%20in%20exploring%20a%20brand%20partnership.%20Please%20share%20more%20details.'
