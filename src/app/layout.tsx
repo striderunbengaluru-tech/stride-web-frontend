@@ -22,8 +22,13 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Stride Run Club Bengaluru",
-  description: "Stride Run Club Bengaluru — Move as One.",
+  metadataBase: new URL('https://strideclub.in'),
+  title: {
+    default: 'Stride Run Club Bengaluru — Move as One',
+    template: '%s | Stride Run Club',
+  },
+  description:
+    "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year. Join Stride Run Club.",
   icons: {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
     icon: [
