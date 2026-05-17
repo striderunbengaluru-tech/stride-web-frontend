@@ -51,8 +51,14 @@ const Navbar = async () => {
         {/* Nav links — hidden on mobile, active state managed client-side */}
         <NavLinks />
 
-        {/* Auth actions */}
+        {/* Auth actions + Partner CTA */}
         <div className='flex items-center gap-3 shrink-0 ml-auto sm:ml-0'>
+          <Link
+            href='/partnerships'
+            className='hidden md:inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold px-4 py-2 rounded-md text-sm hover:scale-[1.03] hover:shadow-lg hover:shadow-stride-yellow-accent/25 active:scale-[0.97] transition-all duration-150'
+          >
+            Partner With Us
+          </Link>
           {navUser ? (
             <UserMenu
               username={navUser.username}

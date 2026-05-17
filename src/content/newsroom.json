@@ -11,7 +11,7 @@
       "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/deccan-herald-logo.svg",
       "title": "Free clubs to run and socialise in Bengaluru",
       "excerpt": "Running clubs in Bengaluru offer a vibrant mix of fitness, friendship, and community — and Stride is leading the charge with a growing pack of enthusiastic runners at Agara Lake.",
-      "image": "/assets/images/hero-main-featured.webp",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/article-newsroom-1.webp ",
       "author": "Barkha Kumari",
       "date": "2024-12-27",
       "url": "https://www.deccanherald.com/india/karnataka/bengaluru/free-clubs-to-run-and-socialise-in-bengaluru-3333168",
@@ -32,7 +32,7 @@
   ],
   "stats": [
     {
-      "value": "47K+",
+      "value": "52K+",
       "label": "Instagram followers",
       "href": "https://www.instagram.com/stride_runclub_bengaluru/"
     },

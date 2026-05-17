@@ -140,7 +140,7 @@ export default function HeroContent() {
         initial='hidden'
         whileInView='show'
         viewport={{ once: true, margin: '-60px' }}
-        className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 border-t border-copy-white/15 pt-12'
+        className='flex flex-wrap justify-center border-t border-copy-white/15 pt-12'
       >
         {STATS.map(({ Icon, to, suffix, formatLocale, label }, i) => (
           <motion.div
@@ -149,7 +149,7 @@ export default function HeroContent() {
             initial='hidden'
             whileInView='show'
             viewport={{ once: true, margin: '-60px' }}
-            className='flex flex-col items-center gap-1.5 py-4'
+            className='flex flex-col items-center gap-1.5 py-4 basis-1/2 sm:basis-1/3 lg:basis-1/5'
           >
             <Icon size={18} className='text-stride-yellow-accent mb-1' />
             <AnimatedCounter to={to} suffix={suffix} formatLocale={formatLocale} className='text-3xl lg:text-4xl font-bold text-white tabular-nums font-libre' />

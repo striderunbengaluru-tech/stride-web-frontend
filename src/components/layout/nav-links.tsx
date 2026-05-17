@@ -4,9 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 
-const NAV_LINKS = [
-  { label: 'Partnerships', href: '/partnerships' },
-] as const
+const NAV_LINKS = [] as const
 
 export default function NavLinks() {
   const pathname = usePathname()
