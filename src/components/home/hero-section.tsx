@@ -1,99 +1,71 @@
-import ScrollExpandMedia from '@/components/blocks/scroll-expansion-hero';
-import { HighlightedText } from '@/components/ui/highlighted-text';
-import heroData from '@/content/hero.json';
+import HeroContent from './hero-content'
+import heroData from '@/content/hero.json'
 
-// Background video — cheerful running footage via Pexels (Pressmaster)
 const BG_VIDEO_SRC =
-  'https://videos.pexels.com/video-files/3191289/3191289-uhd_2732_1440_25fps.mp4';
+  'https://videos.pexels.com/video-files/3191289/3191289-uhd_2732_1440_25fps.mp4'
 
 const HeroSection = () => {
-  const { title, scrollToExpand } = heroData;
-  return (
-    <ScrollExpandMedia
-      mediaType='image'
-      mediaSrc='/assets/images/hero-main-featured.webp'
-      bgVideoSrc={BG_VIDEO_SRC}
-      title={title}
-      scrollToExpand={scrollToExpand}
-      headingAs='h1'
-      titleLayout='single'
-      titleClassName='font-bold !text-stride-yellow-accent text-5xl md:text-7xl lg:text-[114px] tracking-tight transition-none'
-      paneOverlay={undefined}
-    >
-      <HeroContent />
-    </ScrollExpandMedia>
-  );
-};
+  const { title, scrollToExpand } = heroData
 
-const RunRegistrationOverlay = () => {
-  const { pretitle, eventName, eventDate, eventLocation, ctaLabel, ctaHref } = heroData.overlay;
   return (
-    <div className='flex flex-col items-center text-center px-6'>
-      <p className='text-copy-white/80 text-xs uppercase tracking-widest mb-3 font-medium'>
-        {pretitle}
-      </p>
-      <h2 className='font-bold text-stride-yellow-accent text-4xl md:text-5xl mb-4 leading-tight'>
-        {eventName}
-      </h2>
-      <div className='flex items-center gap-3 text-copy-white text-lg mb-8'>
-        <span>{eventDate}</span>
-        <span aria-hidden>·</span>
-        <span>{eventLocation}</span>
-      </div>
-      <a
-        href={ctaHref}
-        className='bg-stride-yellow-accent text-copy-black font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity text-lg'
-      >
-        {ctaLabel}
-      </a>
+    <div className='bg-stride-purple-primary'>
+
+      {/* ── Panel 1: Full-viewport title + video bg ── */}
+      <section className='relative flex flex-col items-center justify-center min-h-dvh overflow-hidden'>
+        <video
+          src={BG_VIDEO_SRC}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className='absolute inset-0 w-full h-full object-cover'
+        />
+        <div className='absolute inset-0 bg-stride-purple-primary/70' />
+
+        <h1
+          className='relative z-10 font-bold text-stride-yellow-accent text-5xl md:text-7xl lg:text-[114px] tracking-tight font-libre text-center px-4'
+          style={{ animation: 'hero-title-enter 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both' }}
+        >
+          {title}
+        </h1>
+
+        {/* Scroll hint */}
+        <div className='absolute bottom-10 z-10 flex flex-col items-center gap-3' style={{ animation: 'hero-scroll-hint-enter 0.8s ease-out 0.9s both' }}>
+          {/* Mouse-wheel SVG — dot rises from bottom to top */}
+          <svg width='22' height='36' viewBox='0 0 22 36' fill='none' aria-hidden='true'>
+            <rect x='1' y='1' width='20' height='34' rx='10' stroke='rgba(225,208,63,0.45)' strokeWidth='1.5' />
+            <line x1='11' y1='13' x2='11' y2='7' stroke='rgba(225,208,63,0.25)' strokeWidth='1' strokeLinecap='round' />
+            <circle className='scroll-dot' cx='11' cy='26' r='2.5' fill='#E1D03F' style={{ animation: 'hero-scroll-dot 1.8s ease-in-out infinite' }} />
+          </svg>
+          <span className='text-[10px] text-copy-white/45 font-medium tracking-[0.22em] uppercase'>
+            {scrollToExpand}
+          </span>
+        </div>
+      </section>
+
+      {/* ── Panel 2: Content ── */}
+      <section className='px-8 py-16 md:px-16 lg:py-24'>
+        <HeroContent />
+      </section>
+
+      <style>{`
+        @keyframes hero-scroll-dot {
+          0%   { transform: translateY(0);     opacity: 1; }
+          60%  { transform: translateY(-14px); opacity: 0; }
+          61%  { transform: translateY(0);     opacity: 0; }
+          100% { transform: translateY(0);     opacity: 1; }
+        }
+        @keyframes hero-title-enter {
+          from { opacity: 0; transform: translateY(40px); filter: blur(6px); }
+          to   { opacity: 1; transform: translateY(0);    filter: blur(0px); }
+        }
+        @keyframes hero-scroll-hint-enter {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
-  );
-};
+  )
+}
 
-const HeroContent = () => {
-  const { heading, subheading, ctas, stats } = heroData.content;
-  return (
-    <div className='max-w-6xl mx-auto text-center'>
-      <h2 className='text-4xl lg:text-5xl font-bold text-white mb-4'>
-        <HighlightedText text={heading} />
-      </h2>
-
-      <p className='text-base md:text-lg text-copy-white/75 mb-10 max-w-2xl mx-auto leading-relaxed'>
-        {subheading}
-      </p>
-
-      <div className='flex flex-col sm:flex-row items-center justify-center gap-4'>
-        {ctas.map((cta) =>
-          cta.variant === 'primary' ? (
-            <a
-              key={cta.label}
-              href={cta.href}
-              className='bg-stride-yellow-accent text-copy-black font-bold px-10 py-3.5 rounded-md hover:opacity-90 transition-opacity'
-            >
-              {cta.label}
-            </a>
-          ) : (
-            <a
-              key={cta.label}
-              href={cta.href}
-              className='border border-copy-white/60 text-copy-white font-semibold px-10 py-3.5 rounded-md hover:bg-copy-white/10 transition-colors'
-            >
-              {cta.label}
-            </a>
-          )
-        )}
-      </div>
-
-      <div className='grid grid-cols-3 gap-8 mt-16 border-t border-copy-white/20 pt-12'>
-        {stats.map((stat) => (
-          <div key={stat.label}>
-            <p className='text-4xl lg:text-5xl font-bold text-stride-yellow-accent font-libre'>{stat.value}</p>
-            <p className='text-copy-white/60 mt-1 text-sm uppercase tracking-wide'>{stat.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default HeroSection;
+export default HeroSection

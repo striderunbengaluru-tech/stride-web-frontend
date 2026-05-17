@@ -11,7 +11,8 @@
       "Bash(\"/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/strava/route.ts\":*)",
       "Bash(\"/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/types/user.ts\":*)",
       "Bash(python3:*)",
-      "WebFetch(domain:www.clay.com)"
+      "WebFetch(domain:www.clay.com)",
+      "WebFetch(domain:motion.dev)"
     ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",

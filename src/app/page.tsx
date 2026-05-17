@@ -1,5 +1,4 @@
 import HeroSection from '@/components/home/hero-section';
-import SocialSection from '@/components/home/social-section';
 import NewsroomSection from '@/components/home/newsroom-section';
 import SpotlightSection from '@/components/home/spotlight-section';
 import MerchSection from '@/components/home/merch-section';
@@ -9,7 +8,6 @@ export default function Home() {
   return (
     <main>
       <HeroSection />
-      <SocialSection />
       <NewsroomSection />
       <SpotlightSection />
       <div className='hidden'>

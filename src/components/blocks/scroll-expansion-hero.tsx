@@ -27,6 +27,8 @@ interface ScrollExpandMediaProps {
   titleLayout?: 'split' | 'single';
   /** Content rendered as an overlay centred on the expanding media pane. Fades in as the title fades out. */
   paneOverlay?: ReactNode;
+  /** Set to false to hide the scroll-expanding media pane entirely (background still shows). */
+  showMediaPane?: boolean;
   children?: ReactNode;
 }
 
@@ -47,6 +49,7 @@ const ScrollExpandMedia = ({
   headingAs = 'h2',
   titleLayout = 'split',
   paneOverlay,
+  showMediaPane = true,
   children,
 }: ScrollExpandMediaProps) => {
   const [scrollProgress, setScrollProgress] = useState<number>(0);
@@ -212,10 +215,16 @@ const ScrollExpandMedia = ({
           </motion.div>
 
           <div className='container mx-auto flex flex-col items-center justify-start relative z-10'>
-            <div className='flex flex-col items-center justify-center w-full h-dvh relative'>
+            <div
+              className='flex flex-col items-center justify-center w-full relative overflow-hidden'
+              style={{
+                height: mediaFullyExpanded ? '0' : '100dvh',
+                transition: 'height 0.35s ease-in-out',
+              }}
+            >
 
               {/* ── Expanding media pane ── */}
-              <div
+              {showMediaPane && <div
                 className='absolute z-0 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl'
                 style={{
                   width: `${mediaWidth}px`,
@@ -298,7 +307,7 @@ const ScrollExpandMedia = ({
                     <p className='text-xl text-stride-yellow-accent font-semibold'>{date}</p>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* ── Title — entrance via outer motion.div; scroll fade via inner div ── */}
               <motion.div
@@ -357,22 +366,22 @@ const ScrollExpandMedia = ({
               {scrollToExpand && (
                 <div className='absolute bottom-10 z-10' style={{ opacity: hintOpacity }}>
                   <motion.div
-                    className='flex flex-col items-center gap-2 cursor-default select-none'
+                    className='flex flex-col items-center gap-3 cursor-default select-none'
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.9, duration: 0.6, ease: 'easeOut' }}
-                    whileHover={{ scale: 1.12, transition: { duration: 0.15 } }}
                   >
-                    <span className='text-xs text-stride-yellow-accent font-medium tracking-widest uppercase'>
+                    {/* Mouse scroll wheel */}
+                    <div className='w-5 h-8 rounded-full border border-stride-yellow-accent/50 flex items-start justify-center pt-1.5 overflow-hidden'>
+                      <motion.div
+                        className='w-0.5 h-1.5 bg-stride-yellow-accent rounded-full'
+                        animate={{ y: [0, 14, 0], opacity: [1, 0, 1] }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </div>
+                    <span className='text-[10px] text-copy-white/50 font-medium tracking-[0.22em] uppercase'>
                       {scrollToExpand.replace(/\s*↓\s*$/, '')}
                     </span>
-                    <motion.span
-                      className='text-stride-yellow-accent text-base leading-none'
-                      animate={{ y: [0, 6, 0] }}
-                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                    >
-                      ↓
-                    </motion.span>
                   </motion.div>
                 </div>
               )}
@@ -383,7 +392,7 @@ const ScrollExpandMedia = ({
               className='flex flex-col w-full px-8 py-10 md:px-16 lg:py-20'
               initial={{ opacity: 0 }}
               animate={{ opacity: showContent ? 1 : 0 }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.35 }}
             >
               {children}
             </motion.section>

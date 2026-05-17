@@ -27,7 +27,7 @@ export default function NavLinks() {
               {label}
             </Link>
             {isActive && (
-              <span className='absolute -bottom-3.5 w-1.5 h-1.5 rounded-full bg-stride-yellow-accent glow-yellow' />
+              <span className='absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-stride-yellow-accent glow-yellow' />
             )}
           </li>
         )

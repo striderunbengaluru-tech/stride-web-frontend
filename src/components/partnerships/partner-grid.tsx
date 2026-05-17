@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import type { PartnerCategory } from '@/app/partnerships/partners-data'
-import PartnerFormModal from './partner-form-modal'
+import { WHATSAPP_LINK } from '@/app/partnerships/partners-data'
 
 type Props = {
   categories: PartnerCategory[]
@@ -11,7 +11,6 @@ type Props = {
 
 export default function PartnerGrid({ categories }: Props) {
   const [activeFilter, setActiveFilter] = useState<string>('all')
-  const [modalOpen, setModalOpen] = useState(false)
 
   const allPartners = categories.flatMap((c) =>
     c.partners.map((p) => ({ ...p, categoryId: c.id }))
@@ -93,10 +92,12 @@ export default function PartnerGrid({ categories }: Props) {
           </div>
         )}
 
-        {/* + Your Brand — opens partner form modal */}
-        <button
-          onClick={() => setModalOpen(true)}
-          className='border border-dashed border-stride-yellow-accent/30 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-stride-yellow-accent/70 hover:bg-stride-yellow-accent/5 transition-colors group cursor-pointer'
+        {/* + Your Brand — links to WhatsApp */}
+        <a
+          href={WHATSAPP_LINK}
+          target='_blank'
+          rel='noopener noreferrer'
+          className='border border-dashed border-stride-yellow-accent/30 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-stride-yellow-accent/70 hover:bg-stride-yellow-accent/5 transition-colors group'
         >
           <div className='w-full h-16 flex items-center justify-center mb-3'>
             <span className='text-stride-yellow-accent/50 text-3xl group-hover:text-stride-yellow-accent transition-colors leading-none'>
@@ -109,10 +110,8 @@ export default function PartnerGrid({ categories }: Props) {
           <p className='text-white/25 text-[10px] mt-0.5 group-hover:text-white/40 transition-colors'>
             Join us
           </p>
-        </button>
+        </a>
       </div>
-
-      <PartnerFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   )
 }
