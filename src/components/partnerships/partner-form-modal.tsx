@@ -13,7 +13,7 @@ type Props = {
 export default function PartnerFormModal({ open, onClose }: Props) {
   const [mounted, setMounted] = useState(false)
   const [name, setName] = useState('')
-  const [brand, setBrand] = useState('')
+  const [instagram, setInstagram] = useState('')
   const [website, setWebsite] = useState('')
   const [commercial, setCommercial] = useState<'yes' | 'no' | ''>('')
 
@@ -35,7 +35,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
     e.preventDefault()
     const commercialText = commercial === 'yes' ? 'Yes' : commercial === 'no' ? 'No' : 'Not specified'
     const msg = encodeURIComponent(
-      `Hi Stride Run Club! I'm interested in a brand partnership.\nName: ${name}\nBrand: ${brand}\nWebsite: ${website}\nCommercial arrangement: ${commercialText}`
+      `Hi Stride Run Club! I'm interested in a brand partnership.\nName: ${name}\nInstagram: ${instagram}\nWebsite: ${website}\nCommercial arrangement: ${commercialText}`
     )
     window.open(`https://wa.me/918368877289?text=${msg}`, '_blank', 'noopener,noreferrer')
     onClose()
@@ -101,15 +101,15 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <label htmlFor='p-brand' className='text-white/55 text-xs font-medium uppercase tracking-wide'>
-                Brand / Company
+              <label htmlFor='p-instagram' className='text-white/55 text-xs font-medium uppercase tracking-wide'>
+                Instagram Handle
               </label>
               <input
-                id='p-brand'
+                id='p-instagram'
                 type='text'
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder='Puma India'
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                placeholder='@pumaindia'
                 required
                 className='bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-stride-yellow-accent/50 focus:bg-white/8 transition-all duration-150'
               />
