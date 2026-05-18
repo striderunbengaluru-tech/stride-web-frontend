@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import clsx from 'clsx'
 import type { PartnerCategory } from '@/app/partnerships/partners-data'
-import { WHATSAPP_LINK } from '@/app/partnerships/partners-data'
+import PartnerWithUsButton from './partner-with-us-button'
 
 type Props = {
   categories: PartnerCategory[]
@@ -92,25 +92,22 @@ export default function PartnerGrid({ categories }: Props) {
           </div>
         )}
 
-        {/* + Your Brand — links to WhatsApp */}
-        <a
-          href={WHATSAPP_LINK}
-          target='_blank'
-          rel='noopener noreferrer'
-          className='border border-dashed border-stride-yellow-accent/30 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-stride-yellow-accent/70 hover:bg-stride-yellow-accent/5 transition-colors group'
-        >
+        {/* + Your Brand — opens partner form modal */}
+        <div className='border border-dashed border-stride-yellow-accent/30 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-stride-yellow-accent/70 hover:bg-stride-yellow-accent/5 transition-colors group'>
           <div className='w-full h-16 flex items-center justify-center mb-3'>
             <span className='text-stride-yellow-accent/50 text-3xl group-hover:text-stride-yellow-accent transition-colors leading-none'>
               +
             </span>
           </div>
-          <p className='text-stride-yellow-accent/50 font-semibold text-xs group-hover:text-stride-yellow-accent transition-colors'>
-            Your Brand
-          </p>
+          <PartnerWithUsButton
+            label='Your Brand'
+            showIcon={false}
+            className='text-stride-yellow-accent/50 font-semibold text-xs group-hover:text-stride-yellow-accent transition-colors cursor-pointer'
+          />
           <p className='text-white/25 text-[10px] mt-0.5 group-hover:text-white/40 transition-colors'>
             Join us
           </p>
-        </a>
+        </div>
       </div>
     </div>
   )

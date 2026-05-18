@@ -3,8 +3,8 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
+import PartnerWithUsButton from '@/components/partnerships/partner-with-us-button'
 import SmoothScrollLink from '@/components/ui/smooth-scroll-link'
-import { WHATSAPP_LINK } from '@/app/partnerships/partners-data'
 
 const ease = [0.22, 1, 0.36, 1] as [number, number, number, number]
 
@@ -65,15 +65,9 @@ export default function PartnershipsHero() {
         {...fadeUp(0.4)}
         className='flex flex-col sm:flex-row gap-4 justify-center items-center'
       >
-        <motion.a
-          href={WHATSAPP_LINK}
-          target='_blank'
-          rel='noopener noreferrer'
-          whileHover={{ scale: 1.03 }}
-          className='inline-flex items-center gap-2.5 bg-stride-yellow-accent text-copy-black font-bold px-8 py-4 rounded-md transition-all duration-150 text-base min-h-12 hover:shadow-lg hover:shadow-stride-yellow-accent/30 active:scale-[0.97]'
-        >
-          Partner With Us
-        </motion.a>
+        <motion.div whileHover={{ scale: 1.03 }}>
+          <PartnerWithUsButton />
+        </motion.div>
         <SmoothScrollLink
           targetId='why-stride'
           className='inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm'

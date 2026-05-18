@@ -5,12 +5,12 @@ import PartnerGrid from '@/components/partnerships/partner-grid'
 import PartnershipsHero from '@/components/partnerships/partnerships-hero'
 import AnimatedStatsBar from '@/components/partnerships/animated-stats-bar'
 import AnimatedWhyUs from '@/components/partnerships/animated-why-us'
+import PartnerWithUsButton from '@/components/partnerships/partner-with-us-button'
 import { SectionReveal } from '@/components/ui/section-reveal'
 import {
   PARTNER_CATEGORIES,
   ALL_PARTNERS,
   WHY_US,
-  WHATSAPP_LINK,
 } from './partners-data'
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-og.png'
@@ -193,14 +193,10 @@ export default function PartnershipsPage() {
             One partnership with Stride puts your brand at every finish line, in every post-run photo,
             and across every WhatsApp group in Bengaluru&apos;s most active running community.
           </p>
-          <a
-            href={WHATSAPP_LINK}
-            target='_blank'
-            rel='noopener noreferrer'
+          <PartnerWithUsButton
+            label='Partner With Us'
             className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
-          >
-            Partner With Us
-          </a>
+          />
         </div>
       </SectionReveal>
 
@@ -257,14 +253,10 @@ export default function PartnershipsPage() {
             Fill in a quick form and we&apos;ll put together a custom
             partnership package for your brand.
           </p>
-          <a
-            href={WHATSAPP_LINK}
-            target='_blank'
-            rel='noopener noreferrer'
+          <PartnerWithUsButton
+            label='Partner With Us'
             className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
-          >
-            Partner With Us
-          </a>
+          />
         </div>
       </SectionReveal>
 
