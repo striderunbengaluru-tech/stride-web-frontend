@@ -35,7 +35,7 @@ export default function Footer() {
 
         {/* Move as one tagline */}
         <p className='text-center font-libre font-bold text-stride-yellow-accent text-3xl md:text-4xl mb-3'>
-          Move as one.
+          Move as One.
         </p>
         <p className='text-center text-copy-white/50 text-sm mb-10'>
           Bengaluru&apos;s community for runners of all paces.

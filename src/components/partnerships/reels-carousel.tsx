@@ -165,7 +165,7 @@ export default function ReelsCarousel({ reels }: Props) {
           onClick={prev}
           disabled={!canPrev}
           aria-label='Previous reel'
-          className='flex items-center justify-center size-9 rounded-full bg-white/10 border border-white/15 text-copy-white/70 hover:bg-white/20 hover:text-copy-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer'
+          className='flex items-center justify-center size-9 rounded-md bg-white/10 border border-white/15 text-copy-white/70 hover:bg-white/20 hover:text-copy-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer'
         >
           <ChevronLeft className='size-4' />
         </button>
@@ -174,7 +174,7 @@ export default function ReelsCarousel({ reels }: Props) {
           onClick={next}
           disabled={!canNext}
           aria-label='Next reel'
-          className='flex items-center justify-center size-9 rounded-full bg-white/10 border border-white/15 text-copy-white/70 hover:bg-white/20 hover:text-copy-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer'
+          className='flex items-center justify-center size-9 rounded-md bg-white/10 border border-white/15 text-copy-white/70 hover:bg-white/20 hover:text-copy-white disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer'
         >
           <ChevronRight className='size-4' />
         </button>

@@ -12,7 +12,15 @@
       "Bash(\"/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/types/user.ts\":*)",
       "Bash(python3:*)",
       "WebFetch(domain:www.clay.com)",
-      "WebFetch(domain:motion.dev)"
+      "WebFetch(domain:motion.dev)",
+      "WebFetch(domain:www.thehindu.com)",
+      "WebFetch(domain:www.deccanherald.com)",
+      "WebFetch(domain:timesofindia.indiatimes.com)",
+      "WebFetch(domain:bangaloremirror.indiatimes.com)",
+      "WebFetch(domain:www.newindianexpress.com)",
+      "WebFetch(domain:economictimes.indiatimes.com)",
+      "WebFetch(domain:newskarnataka.com)",
+      "WebFetch(domain:www.passionateinmarketing.com)"
     ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",

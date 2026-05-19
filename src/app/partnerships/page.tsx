@@ -133,7 +133,7 @@ const PARTNERSHIP_REELS = [
 
 export default function PartnershipsPage() {
   return (
-    <main className='min-h-screen bg-stride-purple-primary pt-24 pb-24 overflow-x-hidden'>
+    <main className='min-h-screen bg-stride-purple-primary pt-16 md:pt-24 pb-24 overflow-x-hidden'>
       <script
         type='application/ld+json'
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
@@ -153,8 +153,8 @@ export default function PartnershipsPage() {
           Brands that have partnered with Stride
         </p>
         <div className='relative'>
-          <div className='pointer-events-none absolute inset-y-0 left-0 w-24 bg-linear-to-r from-stride-purple-primary to-transparent z-10' />
-          <div className='pointer-events-none absolute inset-y-0 right-0 w-24 bg-linear-to-l from-stride-purple-primary to-transparent z-10' />
+          <div className='pointer-events-none absolute inset-y-0 left-0 w-8 md:w-24 bg-linear-to-r from-stride-purple-primary to-transparent z-10' />
+          <div className='pointer-events-none absolute inset-y-0 right-0 w-8 md:w-24 bg-linear-to-l from-stride-purple-primary to-transparent z-10' />
           <LogoMarquee partners={ALL_PARTNERS} />
         </div>
       </section>

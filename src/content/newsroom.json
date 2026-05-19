@@ -6,46 +6,114 @@
   },
   "articles": [
     {
-      "id": "deccan-herald-2024",
-      "publication": "Deccan Herald",
-      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/deccan-herald-logo.svg",
-      "title": "Free clubs to run and socialise in Bengaluru",
-      "excerpt": "Running clubs in Bengaluru offer a vibrant mix of fitness, friendship, and community — and Stride is leading the charge with a growing pack of enthusiastic runners at Agara Lake.",
-      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/article-newsroom-1.webp ",
-      "author": "Barkha Kumari",
-      "date": "2024-12-27",
-      "url": "https://www.deccanherald.com/india/karnataka/bengaluru/free-clubs-to-run-and-socialise-in-bengaluru-3333168",
-      "featured": true
+      "id": "passionate-in-marketing-2026",
+      "publication": "Passionate In Marketing",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/pim-logo.svg",
+      "title": "Run, Hatch, Win: Pokémon GO Brings a Community Run Experience in Bengaluru",
+      "excerpt": "Pokémon GO partners with Stride Run Club for a community run event in Bengaluru where participants hatch in-game eggs while running and compete for merchandise rewards.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-10.webp",
+      "date": "19 May 2026",
+      "url": "https://www.passionateinmarketing.com/run-hatch-win-pokemon-go-brings-a-community-run-experience-in-bengaluru/"
+    },
+    {
+      "id": "economic-times-2025",
+      "publication": "Economic Times",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/the-economic-times-logo.svg",
+      "title": "Morning Brief Podcast: Why run clubs are exploding as India's latest social spaces",
+      "excerpt": "India’s metros are seeing an unexpected dawn ritual take hold. Before sunrise, thousands gather on streets and promenades not chasing medals, but community. Run clubs have quietly become one of the fastest-growing social forces in urban India, offering structure and belonging in cities where loneliness is rising. In this episode, host Pranav Varshney talks to Sidharth Yadav, founder of Stride and several runners to examine how these informal groups evolved from fitness meetups into “third spaces” that cut across age, profession, and athletic ability. The shift is striking: Gen Z is now more likely to meet people through workouts than night-outs, and social media has turned hyperlocal running groups into city-wide networks. Brands, too, are paying attention, positioning themselves where this new culture gathers. Beyond the hype, the trend reveals something deeper: a generation searching for routine, accountability, and real-world connection. This episode goes inside the movement reshaping mornings, habits, and social life across urban India. Tune in.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-1.webp",
+      "date": "20 Nov 2025",
+      "url": "https://economictimes.indiatimes.com/news/morning-brief-podcast/morning-brief-podcast-why-run-clubs-are-exploding-as-indias-latest-social-spaces/podcast/125450665.cms"
+    },
+    {
+      "id": "bangalore-mirror-2025",
+      "publication": "Bangalore Mirror",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/bangalore-mirror-logo.svg",
+      "title": "Vibe check: Run Bengaluru, run",
+      "excerpt": "The idea for Yadav was simple, to make mornings as exciting as nights out. The community runs across Cubbon Park, city lakesides, and even rooftops. Distances are kept flexible from 2.5 km jogs to 20–30 minute time-based sessions. “The point isn’t speed it’s energy,” he added.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-5.webp",
+      "date": "02 Nov 2025",
+      "url": "https://bangaloremirror.indiatimes.com/bangalore/others/vibe-check-run-bengaluru-run/articleshow/125024738.cms"
+    },
+    {
+      "id": "toi-bakery-hop-2025",
+      "publication": "Times of India",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/toi-logo.svg",
+      "title": "Bengaluru runners combine miles and muffins in a bakery hop through the city",
+      "excerpt": "In Bengaluru, Sunday morning runs come with a side of croissants and Swiss rolls. Take for instance, last week, over 100 runners dashed through Indira.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-4.webp",
+      "date": "24 Oct 2025",
+      "url": "https://timesofindia.indiatimes.com/entertainment/events/bangalore/bengaluru-runners-combine-miles-and-muffins-in-a-bakery-hop-through-the-city/articleshow/124758519.cms"
+    },
+    {
+      "id": "nie-fitness-raves-2025",
+      "publication": "New Indian Express",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/the-new-indian-express-logo.svg",
+      "title": "Fitness raves are catching on among Bengaluru's Gen Z fitness enthusiasts",
+      "excerpt": "Gen Z and young millennials are adding fun to their health-conscious routines, bringing raves, that were once limited to bars and clubs, to alcohol-free spaces ",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-3.webp",
+      "date": "06 Nov 2025",
+      "url": "https://www.newindianexpress.com/cities/bengaluru/2025/Nov/06/fitness-raves-are-catching-on-among-bengalurus-gen-z-fitness-enthusiasts"
+    },
+    {
+      "id": "toi-fitness-raves-2025",
+      "publication": "Times of India",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/toi-logo.svg",
+      "title": "Workouts find a new beat with fitness raves in Bengaluru",
+      "excerpt": "The line between nightlife and workouts is blurring with the popularity of fitness raves. Across Bengaluru, Mumbai, and Delhi, these events are gainin.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-2.webp",
+      "date": "30 May 2025",
+      "url": "https://timesofindia.indiatimes.com/entertainment/events/bangalore/workouts-find-a-new-beat-with-fitness-raves-in-bengaluru/articleshow/121486473.cms"
+    },
+    {
+      "id": "toi-what-runners-want-2025",
+      "publication": "Times of India",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/toi-logo.svg",
+      "title": "What Bengaluru runners want",
+      "excerpt": "Every time 26-year-old Vinay laces up his shoes for practice runs, he knows the road ahead… is going to test his athletic skills by making him jump ov.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-6.webp",
+      "date": "08 May 2025",
+      "url": "https://timesofindia.indiatimes.com/city/bengaluru/what-bengaluru-runners-want/articleshow/120997853.cms"
+    },
+    {
+      "id": "toi-strength-in-numbers-2025",
+      "publication": "Times of India",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/toi-logo.svg",
+      "title": "Bengaluru's runners find strength in numbers",
+      "excerpt": "In the wee hours of the morning, Bengaluru’s parks and streets come alive with the synchronised steps of runners. These runners aren’t running alone –.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-7.webp",
+      "date": "02 May 2025",
+      "url": "https://timesofindia.indiatimes.com/entertainment/events/bangalore/bengalurus-runners-find-strength-in-numbers/articleshow/120791672.cms"
+    },
+    {
+      "id": "the-hindu-2025",
+      "publication": "The Hindu",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/the-hindu-logo.svg",
+      "title": "This weekend run club in Bengaluru helps people to find new sole-mates",
+      "excerpt": "Stride Run Club in Bengaluru offers a social fitness experience to combat loneliness, welcoming all levels of participants",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-8.webp",
+      "date": "24 Nov 2024",
+      "url": "https://www.thehindu.com/news/cities/bangalore/this-weekend-run-club-in-bengaluru-helps-people-to-find-new-sole-mates/article68901224.ece"
     },
     {
       "id": "news-karnataka-2024",
       "publication": "News Karnataka",
-      "publicationLogo": "https://newskarnataka.com/newskarnataka-logo.svg",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newskarnataka-logo.svg",
       "title": "Bengaluru's social running clubs offer fun and fitness with a community twist",
-      "excerpt": "Social running clubs across Bengaluru are redefining fitness — turning early morning runs into lively community events that attract hundreds every weekend.",
-      "image": "/assets/images/hero-main-featured.webp",
-      "author": "News Karnataka",
-      "date": "2024-12-27",
-      "url": "https://newskarnataka.com/karnataka/bengaluru/bengalurus-social-running-clubs-offer-fun-and-fitness-with-a-community-twist/27122024",
-      "featured": false
-    }
-  ],
-  "stats": [
-    {
-      "value": "52K+",
-      "label": "Instagram followers",
-      "href": "https://www.instagram.com/stride_runclub_bengaluru/"
+      "excerpt": "In 2024, Bengaluru has seen the rise of running clubs that focus more on socialising than on marathon training. These clubs, which encourage participants to run short distances",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-9.webp",
+      "date": "27 Dec 2024",
+      "url": "https://newskarnataka.com/karnataka/bengaluru/bengalurus-social-running-clubs-offer-fun-and-fitness-with-a-community-twist/27122024"
     },
     {
-      "value": "6,894",
-      "label": "Runners impacted",
-      "href": "#"
+      "id": "deccan-herald-2024",
+      "publication": "Deccan Herald",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/deccan-herald-logo.svg",
+      "title": "Free clubs to run and socialise in Bengaluru",
+      "excerpt": "Metrolife profiles five free running clubs in Bengaluru where fitness enthusiasts gather in parks on weekends to run distances between 3.5 km and 10 km.",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/article-newsroom-1.webp",
+      "date": "27 Dec 2024",
+      "url": "https://www.deccanherald.com/india/karnataka/bengaluru/free-clubs-to-run-and-socialise-in-bengaluru-3333168"
     }
-  ],
-  "communityQuote": {
-    "text": "Joining Stride was the best decision I made this year. It's not just running — it's a family.",
-    "author": "Kushagra Gupta",
-    "location": "Bengaluru, India",
-    "authorImage": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/kushagra-testimonial.jpg"
-  }
+  ]
 }

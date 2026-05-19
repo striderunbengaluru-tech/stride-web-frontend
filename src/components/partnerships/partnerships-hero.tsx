@@ -22,7 +22,7 @@ export default function PartnershipsHero() {
   const parallaxY = useTransform(scrollY, [0, 300], ['0%', '-8%'])
 
   return (
-    <section ref={sectionRef} className='max-w-5xl mx-auto px-6 pt-16 pb-20 text-center'>
+    <section ref={sectionRef} className='max-w-5xl mx-auto px-6 pt-6 md:pt-16 pb-20 text-center'>
       {/* Pill badge */}
       <motion.span
         {...fadeUp(0)}

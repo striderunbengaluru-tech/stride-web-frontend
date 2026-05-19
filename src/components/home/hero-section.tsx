@@ -1,8 +1,6 @@
 import HeroContent from './hero-content'
+import { HeroBgSlideshow } from './hero-bg-slideshow'
 import heroData from '@/content/hero.json'
-
-const BG_VIDEO_SRC =
-  'https://videos.pexels.com/video-files/3191289/3191289-uhd_2732_1440_25fps.mp4'
 
 const HeroSection = () => {
   const { title, scrollToExpand } = heroData
@@ -10,16 +8,9 @@ const HeroSection = () => {
   return (
     <div className='bg-stride-purple-primary'>
 
-      {/* ── Panel 1: Full-viewport title + video bg ── */}
+      {/* ── Panel 1: Full-viewport title + cycling newsroom images ── */}
       <section className='relative flex flex-col items-center justify-center min-h-dvh overflow-hidden'>
-        <video
-          src={BG_VIDEO_SRC}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className='absolute inset-0 w-full h-full object-cover'
-        />
+        <HeroBgSlideshow />
         <div className='absolute inset-0 bg-stride-purple-primary/70' />
 
         <h1
