@@ -364,7 +364,7 @@ export function FocusRail({
                 href={activeItem.href}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='group flex items-center gap-2 rounded-md bg-stride-yellow-accent px-5 py-2.5 text-sm font-semibold text-copy-black transition-all hover:shadow-[0_0_24px_rgba(225,208,63,0.35)] hover:scale-[1.03] active:scale-95'
+                className='group flex items-center gap-2 rounded-md bg-stride-yellow-accent px-4 py-2.5 sm:px-5 text-xs sm:text-sm font-semibold text-copy-black transition-all hover:shadow-[0_0_24px_rgba(225,208,63,0.35)] hover:scale-[1.03] active:scale-95'
               >
                 Read the article
                 <ArrowUpRight className='h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5' />

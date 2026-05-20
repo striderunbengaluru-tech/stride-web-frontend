@@ -146,13 +146,21 @@ export function SpotlightVideo({
       </div>
 
       {/* Mute / unmute — bottom right */}
-      <button
-        onClick={toggleMute}
-        className='absolute bottom-4 right-4 flex items-center justify-center h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-all active:scale-90 z-10'
-        aria-label={isMuted ? 'Unmute' : 'Mute'}
-      >
-        {isMuted ? <VolumeX className='h-4 w-4' /> : <Volume2 className='h-4 w-4' />}
-      </button>
+      <div className='absolute bottom-4 right-4 flex flex-col items-end gap-1.5 z-10'>
+        {isMuted && (
+          <div className='flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 px-2.5 py-1 pointer-events-none animate-pulse'>
+            <Volume2 className='h-3 w-3 text-white/80' />
+            <span className='text-[10px] font-medium text-white/80 leading-none whitespace-nowrap'>Tap for audio</span>
+          </div>
+        )}
+        <button
+          onClick={toggleMute}
+          className='flex items-center justify-center h-9 w-9 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-all active:scale-90'
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? <VolumeX className='h-4 w-4' /> : <Volume2 className='h-4 w-4' />}
+        </button>
+      </div>
     </div>
   );
 }

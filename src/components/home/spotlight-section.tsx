@@ -47,7 +47,7 @@ export default function SpotlightSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [progress, setProgress] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const count = SPOTLIGHT_SLIDES.length;
 
   const goToSlide = useCallback(
