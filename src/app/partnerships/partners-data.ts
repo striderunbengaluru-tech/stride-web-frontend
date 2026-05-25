@@ -120,6 +120,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
       { id: 'neutrogena', name: 'Neutrogena', logoUrl: `${SUPABASE_LOGOS}/neutrogena-logo.svg` },
       { id: 'supertails', name: 'Supertails', logoUrl: `${SUPABASE_LOGOS}/supertails-logo.svg` },
       { id: 'myop', name: 'Make Your Own Perfume', logoUrl: `${SUPABASE_LOGOS}/myop-logo.svg` },
+      { id: 'niantic', name: 'Niantic', logoUrl: `${SUPABASE_LOGOS}/niantic-logo.svg` },
       { id: 'hyfit', name: 'Hyfit', logoUrl: `${SUPABASE_LOGOS}/hyfit-logo.svg` },
       { id: 'chakra', name: 'Chakra Athletica', logoUrl: `${SUPABASE_LOGOS}/chakra-logo.svg` },
       {

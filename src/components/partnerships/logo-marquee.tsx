@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import type { Partner } from '@/app/partnerships/partners-data'
 
 type Props = {
@@ -32,14 +32,60 @@ function MarqueeItem({ partner }: { partner: Partner }) {
 
 export function LogoMarquee({ partners }: Props) {
   const doubled = [...partners, ...partners]
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const rafRef = useRef<number | undefined>(undefined)
+  const isPausedRef = useRef(false)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const SPEED = 0.6 // px per frame at 60 fps ≈ 36 px/s
+
+    const tick = () => {
+      if (!isPausedRef.current) {
+        el.scrollLeft += SPEED
+        // Seamless loop: once we've scrolled the first copy, jump back to start
+        if (el.scrollLeft >= el.scrollWidth / 2) {
+          el.scrollLeft = 0
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [])
 
   return (
-    <div className='overflow-hidden w-full' aria-hidden='true'>
-      <div className='flex gap-4 animate-marquee w-max'>
-        {doubled.map((partner, i) => (
-          <MarqueeItem key={`${partner.id}-${i}`} partner={partner} />
-        ))}
+    <div className='w-full' aria-hidden='true'>
+
+      {/* Mobile: JS-driven auto-glide + manual swipe on touch */}
+      <div
+        ref={scrollRef}
+        className='md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden'
+        style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+        onTouchStart={() => { isPausedRef.current = true }}
+        onTouchEnd={() => { isPausedRef.current = false }}
+      >
+        <div className='flex gap-3 px-1 w-max'>
+          {doubled.map((partner, i) => (
+            <MarqueeItem key={`${partner.id}-${i}`} partner={partner} />
+          ))}
+        </div>
       </div>
+
+      {/* Desktop: CSS animation marquee */}
+      <div className='hidden md:block overflow-hidden'>
+        <div className='flex gap-4 animate-marquee w-max'>
+          {doubled.map((partner, i) => (
+            <MarqueeItem key={`${partner.id}-${i}`} partner={partner} />
+          ))}
+        </div>
+      </div>
+
     </div>
   )
 }

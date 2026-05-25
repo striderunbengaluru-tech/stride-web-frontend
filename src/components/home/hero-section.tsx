@@ -21,7 +21,7 @@ const HeroSection = () => {
         </h1>
 
         {/* Scroll hint */}
-        <div className='absolute bottom-10 z-10 flex flex-col items-center gap-3' style={{ animation: 'hero-scroll-hint-enter 0.8s ease-out 0.9s both' }}>
+        <div className='absolute bottom-28 md:bottom-10 z-10 flex flex-col items-center gap-3' style={{ animation: 'hero-scroll-hint-enter 0.8s ease-out 0.9s both' }}>
           {/* Mouse-wheel SVG — dot rises from bottom to top */}
           <svg width='22' height='36' viewBox='0 0 22 36' fill='none' aria-hidden='true'>
             <rect x='1' y='1' width='20' height='34' rx='10' stroke='rgba(225,208,63,0.45)' strokeWidth='1.5' />

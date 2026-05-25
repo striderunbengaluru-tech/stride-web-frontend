@@ -317,11 +317,11 @@ export function FocusRail({
           </AnimatePresence>
           </div>
 
-          {/* Controls + CTA + progress — static row */}
+          {/* Controls + CTA */}
           <div className='flex items-center gap-3'>
-            {/* Nav pill — glassmorphism, progress fused at bottom */}
-            <div className='flex flex-col rounded-t-xl bg-white/10 backdrop-blur-md border border-white/15 overflow-hidden'>
-              <div className='flex items-center gap-0 px-1 py-1'>
+            {/* Nav pill — progress bar is absolute so it doesn't shift flex alignment */}
+            <div className='relative'>
+              <div className='flex items-center gap-0 px-1 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/15'>
                 <button
                   onClick={handlePrev}
                   className='rounded-md p-2.5 text-copy-white/50 transition-all hover:bg-white/10 hover:text-copy-white active:scale-90'
@@ -350,10 +350,10 @@ export function FocusRail({
               </div>
 
               {autoPlay && (
-                <div className='h-[3px] w-full bg-white/10'>
+                <div className='absolute top-full mt-1.5 left-0 right-0 h-[2px] rounded-full bg-white/10 overflow-hidden'>
                   <motion.div
                     style={{ width: progressWidth }}
-                    className='h-full bg-stride-yellow-accent'
+                    className='h-full bg-stride-yellow-accent rounded-full'
                   />
                 </div>
               )}
@@ -364,10 +364,10 @@ export function FocusRail({
                 href={activeItem.href}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='group flex items-center gap-2 rounded-md bg-stride-yellow-accent px-4 py-2.5 sm:px-5 text-xs sm:text-sm font-semibold text-copy-black transition-all hover:shadow-[0_0_24px_rgba(225,208,63,0.35)] hover:scale-[1.03] active:scale-95'
+                className='group inline-flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-stride-yellow-accent/45 hover:bg-white/12 hover:text-white active:scale-95'
               >
                 Read the article
-                <ArrowUpRight className='h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5' />
+                <ArrowUpRight className='h-4 w-4 text-stride-yellow-accent opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5' />
               </Link>
             )}
           </div>

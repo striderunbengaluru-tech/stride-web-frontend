@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -46,15 +46,14 @@ function OriginalsBadge() {
 export default function SpotlightSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
-  const [progress, setProgress] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const touchStartX = useRef<number | null>(null);
   const count = SPOTLIGHT_SLIDES.length;
 
   const goToSlide = useCallback(
     (index: number, dir?: 'next' | 'prev') => {
       if (index === currentIndex) return;
       setDirection(dir ?? (index > currentIndex ? 'next' : 'prev'));
-      setProgress(0);
       setCurrentIndex(index);
     },
     [currentIndex]
@@ -70,11 +69,28 @@ export default function SpotlightSection() {
     [currentIndex, count, goToSlide]
   );
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? goNext() : goPrev();
+    }
+    touchStartX.current = null;
+  };
+
   const slide = SPOTLIGHT_SLIDES[currentIndex];
 
   return (
-    <section className='py-8 md:py-24 px-4 md:px-6'>
-      <div className='mx-auto max-w-5xl'>
+    <section
+      className='py-8 md:py-24 px-4 md:px-6'
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className='mx-auto max-w-6xl'>
 
         {/* Main layout:
             DOM order — text first, video second.
@@ -138,27 +154,46 @@ export default function SpotlightSection() {
               </AnimatePresence>
             </div>
 
-            {/* Nav arrows */}
-            <div className='flex gap-3 mt-8'>
-              <button
-                onClick={goPrev}
-                className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
-                aria-label='Previous spotlight'
-              >
-                <ArrowLeft className='h-4 w-4' />
-              </button>
-              <button
-                onClick={goNext}
-                className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
-                aria-label='Next spotlight'
-              >
-                <ArrowRight className='h-4 w-4' />
-              </button>
+            {/* Nav arrows + dot indicators */}
+            <div className='flex items-center gap-5 mt-8'>
+              <div className='flex gap-3'>
+                <button
+                  onClick={goPrev}
+                  className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+                  aria-label='Previous spotlight'
+                >
+                  <ArrowLeft className='h-4 w-4' />
+                </button>
+                <button
+                  onClick={goNext}
+                  className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+                  aria-label='Next spotlight'
+                >
+                  <ArrowRight className='h-4 w-4' />
+                </button>
+              </div>
+
+              {/* Dot indicators */}
+              <div className='flex gap-2 items-center'>
+                {SPOTLIGHT_SLIDES.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goToSlide(i)}
+                    className={cn(
+                      'h-1.5 rounded-full transition-all duration-300 cursor-pointer',
+                      i === currentIndex
+                        ? 'w-6 bg-stride-yellow-accent'
+                        : 'w-1.5 bg-white/25 hover:bg-white/45'
+                    )}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
           {/* ── Portrait video panel ── */}
-          <div className='flex justify-center md:justify-end md:flex-shrink-0'>
+          <div className='flex justify-center md:justify-end md:shrink-0'>
             <AnimatePresence mode='wait'>
               <motion.div
                 key={currentIndex}
@@ -166,63 +201,19 @@ export default function SpotlightSection() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: direction === 'next' ? -30 : 30 }}
                 transition={{ duration: 0.5, ease: EASE }}
-                className='relative w-[260px] sm:w-[300px] md:w-[320px] aspect-[9/16] rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white/5'
+                className='relative w-[260px] sm:w-[300px] md:w-[320px] aspect-9/16 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white/5'
               >
                 <SpotlightVideo
                   src={slide.videoUrl}
                   isMuted={isMuted}
                   onMuteChange={setIsMuted}
                   onEnded={goNext}
-                  onProgress={setProgress}
                 />
                 {/* Accent corner — top left */}
                 <div className='absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-stride-yellow-accent/50 rounded-tl-sm pointer-events-none z-20' />
               </motion.div>
             </AnimatePresence>
           </div>
-        </div>
-
-        {/* ── Progress indicators (video-driven) ── */}
-        <div className='grid grid-cols-2 md:flex gap-2 mt-6 md:mt-10'>
-          {SPOTLIGHT_SLIDES.map((s, i) => (
-            <button
-              key={s.slug}
-              onClick={() => goToSlide(i)}
-              className={cn(
-                'group flex flex-col gap-2.5 text-left rounded-xl px-3 py-3 transition-all duration-200 active:scale-[0.97] cursor-pointer md:flex-1',
-                i === currentIndex
-                  ? 'bg-white/8 border border-white/12'
-                  : 'border border-transparent hover:bg-white/5 hover:border-white/8'
-              )}
-              aria-label={`Go to ${s.title}`}
-            >
-              <div className='h-[2px] w-full bg-white/15 rounded-full overflow-hidden'>
-                <div
-                  className='h-full bg-stride-yellow-accent rounded-full'
-                  style={{
-                    width:
-                      i === currentIndex
-                        ? `${progress}%`
-                        : i < currentIndex
-                          ? '100%'
-                          : '0%',
-                    transition:
-                      i === currentIndex ? 'none' : 'width 0.3s ease',
-                  }}
-                />
-              </div>
-              <span
-                className={cn(
-                  'text-sm font-roboto font-medium transition-colors line-clamp-1',
-                  i === currentIndex
-                    ? 'text-copy-white'
-                    : 'text-copy-white/35 group-hover:text-copy-white/65'
-                )}
-              >
-                {s.title}
-              </span>
-            </button>
-          ))}
         </div>
 
       </div>
