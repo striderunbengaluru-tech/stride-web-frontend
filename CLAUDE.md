@@ -293,6 +293,7 @@ The majority of Stride's users are on mobile. Every component must be designed f
 | Never use the service role key in client-side code | Full DB bypass — critical security breach |
 | Never use `select('*')` in production queries | Overfetching, performance regression, data leakage |
 | Never use `dangerouslySetInnerHTML` without explicit sanitization | XSS vulnerability |
+| Never return a block-level element (`div`, `figure`, `SectionReveal`, etc.) from a `react-markdown` `p` component renderer without first checking if the paragraph wraps a block child (e.g. `img`) — if so, return a React fragment `<>{children}</>` instead of `<p>` | `<p><div/></p>` is invalid HTML and causes React hydration errors |
 | Never trust Cashfree client callbacks as payment confirmation | Payment fraud risk |
 | Never store card/payment instrument data locally | PCI compliance violation |
 | Never leave console.log statements in committed code | Noise and potential data leaks |

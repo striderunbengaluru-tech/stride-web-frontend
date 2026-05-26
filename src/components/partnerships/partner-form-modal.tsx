@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { WhatsAppIcon } from './partner-with-us-button'
+import { createClient } from '@/lib/supabase/client'
 
 type Props = {
   open: boolean
@@ -16,6 +17,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
   const [instagram, setInstagram] = useState('')
   const [website, setWebsite] = useState('')
   const [commercial, setCommercial] = useState<'yes' | 'no' | ''>('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -31,13 +33,29 @@ export default function PartnerFormModal({ open, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setLoading(true)
+
+    // Log submission to Supabase — fire-and-forget so a failure never blocks WhatsApp redirect
+    try {
+      const supabase = createClient()
+      await supabase.from('partnership_inquiries').insert({
+        name,
+        instagram,
+        website,
+        commercial: commercial || null,
+      })
+    } catch {
+      // intentionally silent — logging is best-effort
+    }
+
     const commercialText = commercial === 'yes' ? 'Yes' : commercial === 'no' ? 'No' : 'Not specified'
     const msg = encodeURIComponent(
       `Hi Stride Run Club! I'm interested in a brand partnership.\nName: ${name}\nInstagram: ${instagram}\nWebsite: ${website}\nCommercial arrangement: ${commercialText}`
     )
     window.open(`https://wa.me/918368877289?text=${msg}`, '_blank', 'noopener,noreferrer')
+    setLoading(false)
     onClose()
   }
 
@@ -155,10 +173,11 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             <div className='pt-1 flex flex-col gap-3'>
               <button
                 type='submit'
-                className='inline-flex items-center justify-center gap-2.5 bg-stride-yellow-accent text-copy-black font-bold px-6 py-3.5 rounded-md text-sm hover:scale-[1.02] hover:shadow-lg hover:shadow-stride-yellow-accent/30 active:scale-[0.97] transition-all duration-150 cursor-pointer'
+                disabled={loading}
+                className='inline-flex items-center justify-center gap-2.5 bg-stride-yellow-accent text-copy-black font-bold px-6 py-3.5 rounded-md text-sm hover:scale-[1.02] hover:shadow-lg hover:shadow-stride-yellow-accent/30 active:scale-[0.97] transition-all duration-150 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100'
               >
                 <WhatsAppIcon size={16} />
-                Continue on WhatsApp
+                {loading ? 'Connecting...' : 'Continue on WhatsApp'}
               </button>
               <p className='text-white/25 text-xs text-center'>
                 We typically respond within a few hours

@@ -32,22 +32,27 @@ function MarqueeItem({ partner }: { partner: Partner }) {
 
 export function LogoMarquee({ partners }: Props) {
   const doubled = [...partners, ...partners]
-  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Mobile: RAF + translateX (reliable on iOS; scrollLeft is not)
+  const mobileTrackRef = useRef<HTMLDivElement>(null)
+  const posRef = useRef(0)
+  const dragRef = useRef<{ startX: number; startPos: number } | null>(null)
+  const isDragging = useRef(false)
   const rafRef = useRef<number | undefined>(undefined)
-  const isPausedRef = useRef(false)
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
+    const track = mobileTrackRef.current
+    if (!track) return
 
-    const SPEED = 0.6 // px per frame at 60 fps ≈ 36 px/s
+    const SPEED = 0.6
 
     const tick = () => {
-      if (!isPausedRef.current) {
-        el.scrollLeft += SPEED
-        // Seamless loop: once we've scrolled the first copy, jump back to start
-        if (el.scrollLeft >= el.scrollWidth / 2) {
-          el.scrollLeft = 0
+      if (!isDragging.current) {
+        const half = track.scrollWidth / 2
+        if (half > 0) {
+          posRef.current += SPEED
+          if (posRef.current >= half) posRef.current -= half
+          track.style.transform = `translateX(-${posRef.current}px)`
         }
       }
       rafRef.current = requestAnimationFrame(tick)
@@ -59,18 +64,42 @@ export function LogoMarquee({ partners }: Props) {
     }
   }, [])
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    isDragging.current = true
+    dragRef.current = { startX: e.touches[0].clientX, startPos: posRef.current }
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const track = mobileTrackRef.current
+    if (!dragRef.current || !track) return
+    const half = track.scrollWidth / 2
+    if (half <= 0) return
+    const delta = dragRef.current.startX - e.touches[0].clientX
+    let newPos = dragRef.current.startPos + delta
+    newPos = ((newPos % half) + half) % half
+    posRef.current = newPos
+    track.style.transform = `translateX(-${newPos}px)`
+  }
+
+  const onTouchEnd = () => {
+    isDragging.current = false
+    dragRef.current = null
+  }
+
   return (
     <div className='w-full' aria-hidden='true'>
 
-      {/* Mobile: JS-driven auto-glide + manual swipe on touch */}
-      <div
-        ref={scrollRef}
-        className='md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden'
-        style={{ scrollbarWidth: 'none' } as React.CSSProperties}
-        onTouchStart={() => { isPausedRef.current = true }}
-        onTouchEnd={() => { isPausedRef.current = false }}
-      >
-        <div className='flex gap-3 px-1 w-max'>
+      {/* Mobile: JS transform marquee + touch drag */}
+      <div className='md:hidden overflow-hidden'>
+        <div
+          ref={mobileTrackRef}
+          className='flex gap-3 w-max'
+          style={{ willChange: 'transform' }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+        >
           {doubled.map((partner, i) => (
             <MarqueeItem key={`${partner.id}-${i}`} partner={partner} />
           ))}
