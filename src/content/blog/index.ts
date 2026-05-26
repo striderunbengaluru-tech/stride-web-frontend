@@ -14,6 +14,7 @@ export type BlogPost = {
   publishedAt: string
   author: BlogAuthor
   coverUrl: string
+  ogImageUrl?: string
   tags: string[]
   tldr: string[]
   readingTimeMin: number
@@ -34,6 +35,7 @@ export const BLOG_POSTS: BlogPost[] = [
       instagramUrl: 'https://www.instagram.com/the_sid_way/',
     },
     coverUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-2.jpg',
+    ogImageUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-og.jpg',
     tags: ['Community', 'Events', 'Collab'],
     tldr: [
       'Stride Home Club x Pokémon GO collab run on 23 May — starting and ending at Starbucks.',
