@@ -124,7 +124,7 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
   if (runs.length === 0 && !isOwnProfile) return null
 
   return (
-    <section className='mt-10'>
+    <section>
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center gap-2'>
           <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />

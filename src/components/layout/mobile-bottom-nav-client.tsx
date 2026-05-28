@@ -19,6 +19,9 @@ const STATIC_ITEMS = [
 export function MobileBottomNavClient({ navUser }: { navUser: NavUser | null }) {
   const pathname = usePathname()
 
+  // Hide on event detail pages — the sticky register bar is the primary mobile CTA there
+  if (/^\/events\/.+/.test(pathname)) return null
+
   return (
     <div className='fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:hidden'>
       <nav

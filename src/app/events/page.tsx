@@ -10,11 +10,20 @@ export const metadata: Metadata = {
 export default async function EventsPage() {
   const { data: allEvents } = await adminClient
     .from('events')
-    .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url')
+    .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images')
     .eq('status', 'PUBLISHED')
     .order('event_date', { ascending: true })
 
-  const events = allEvents ?? []
+  const events = (allEvents ?? []).map(event => {
+    let imageUrl: string | null = event.cover_url ?? null
+    if (event.banner_images) {
+      try {
+        const arr = JSON.parse(event.banner_images) as string[]
+        if (arr[0]) imageUrl = arr[0]
+      } catch { /* keep cover_url fallback */ }
+    }
+    return { ...event, imageUrl }
+  })
 
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-24 pb-20'>

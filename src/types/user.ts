@@ -6,6 +6,11 @@ export type Prompt = {
   answer: string
 }
 
+export type GalleryImage = {
+  url: string
+  caption?: string
+}
+
 export type UserProfile = {
   id: string
   username: string | null
@@ -21,6 +26,7 @@ export type UserProfile = {
   instagram_url: string | null
   strava_url: string | null
   prompts: Prompt[]
+  gallery_images: GalleryImage[]
   runs_completed: number
   runner_tag: string | null
   strava_connected: boolean

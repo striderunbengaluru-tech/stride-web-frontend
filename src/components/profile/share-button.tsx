@@ -41,11 +41,10 @@ export function ShareButton({ url, title, text }: Props) {
       <button
         type='button'
         onClick={handleShare}
-        className='flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm font-medium min-h-11 px-4 py-2 rounded-md border border-white/20 hover:border-stride-yellow-accent/50'
+        className='w-9 h-9 flex items-center justify-center rounded-full bg-white/6 border border-white/12 text-white/40 hover:text-white hover:border-white/25 transition-colors'
         aria-label='Share profile'
       >
-        <Share2 size={14} aria-hidden='true' />
-        <span>Share</span>
+        <Share2 size={15} aria-hidden='true' />
       </button>
 
       {showFallback && (

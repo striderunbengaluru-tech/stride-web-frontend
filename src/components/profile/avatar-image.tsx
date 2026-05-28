@@ -13,7 +13,7 @@ export function AvatarImage({ src, alt, className }: Props) {
 
   if (failed) {
     return (
-      <div className='w-32 h-32 rounded-full bg-stride-yellow-accent/20 border-4 border-stride-purple-primary border-stride-yellow-accent/40 flex items-center justify-center'>
+      <div className='w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-stride-yellow-accent/20 border-4 border-stride-purple-primary flex items-center justify-center'>
         <span className='text-stride-yellow-accent text-4xl font-bold'>
           {alt.charAt(0).toUpperCase()}
         </span>

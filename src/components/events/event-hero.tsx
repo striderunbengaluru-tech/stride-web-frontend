@@ -47,8 +47,7 @@ export function EventHero({ images, eventName, pricePaise }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      {/* Gradient overlays */}
-      <div className='absolute inset-0 bg-linear-to-t from-stride-purple-primary via-stride-purple-primary/15 to-transparent' />
+      {/* Top vignette for price badge legibility */}
       <div className='absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-transparent' />
 
       {/* Price badge */}
@@ -64,7 +63,7 @@ export function EventHero({ images, eventName, pricePaise }: Props) {
         )}
       </div>
 
-      {/* Carousel controls — desktop only */}
+      {/* Prev / next — desktop only */}
       {images.length > 1 && (
         <>
           <button
@@ -81,21 +80,23 @@ export function EventHero({ images, eventName, pricePaise }: Props) {
           >
             <ChevronRight size={16} />
           </button>
-
-          {/* Dot indicators */}
-          <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-1.5'>
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrent(i)}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  i === current ? 'w-6 bg-stride-yellow-accent' : 'w-1.5 bg-white/30'
-                }`}
-                aria-label={`Image ${i + 1}`}
-              />
-            ))}
-          </div>
         </>
+      )}
+
+      {/* Pagination dots — always shown when multiple images */}
+      {images.length > 1 && (
+        <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5'>
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              className={`rounded-full transition-all duration-300 ${
+                i === current ? 'w-5 h-1.5 bg-stride-yellow-accent' : 'w-1.5 h-1.5 bg-white/50'
+              }`}
+              aria-label={`Image ${i + 1}`}
+            />
+          ))}
+        </div>
       )}
     </div>
   )

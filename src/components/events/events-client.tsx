@@ -13,6 +13,7 @@ type Event = {
   location: string | null
   price_paise: number
   cover_url: string | null
+  imageUrl: string | null
 }
 
 type Filter = 'upcoming' | 'past' | 'all'
@@ -96,7 +97,7 @@ export function EventsClient({ events }: { events: Event[] }) {
                   eventDate={event.event_date ? new Date(event.event_date) : null}
                   location={event.location}
                   pricePaise={event.price_paise}
-                  coverUrl={event.cover_url}
+                  coverUrl={event.imageUrl}
                 />
               </motion.div>
             ))}

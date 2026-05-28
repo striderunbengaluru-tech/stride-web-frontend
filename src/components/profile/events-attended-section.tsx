@@ -28,7 +28,7 @@ export function EventsAttendedSection({ events }: Props) {
   if (events.length === 0) return null
 
   return (
-    <section className='mt-10'>
+    <section>
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center gap-2'>
           <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
@@ -51,7 +51,7 @@ export function EventsAttendedSection({ events }: Props) {
             <Link
               key={event.id}
               href={`/events/${event.slug}`}
-              className='group relative rounded-2xl overflow-hidden border border-white/10 hover:border-stride-yellow-accent/40 transition-all bg-white/5 aspect-[4/5] block'
+              className='group relative rounded-2xl overflow-hidden border border-white/10 hover:border-stride-yellow-accent/40 transition-all bg-white/5 aspect-4/5 block'
             >
               {/* Background image */}
               {bannerUrl ? (
