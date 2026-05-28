@@ -141,19 +141,17 @@ export default async function AdminRegistrationsPage() {
       <p className='text-white/40 text-sm mb-8'>Master list of all runners and per-event breakdown.</p>
 
       {/* Summary cards */}
-      <div className='grid grid-cols-3 gap-4 mb-8'>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5'>
-          <p className='text-white/50 text-xs uppercase tracking-widest'>Events</p>
-          <p className='text-3xl font-bold text-stride-yellow-accent mt-1'>{events.length}</p>
-        </div>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5'>
-          <p className='text-white/50 text-xs uppercase tracking-widest'>Unique Runners</p>
-          <p className='text-3xl font-bold text-stride-yellow-accent mt-1'>{totalUniqueRunners}</p>
-        </div>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5'>
-          <p className='text-white/50 text-xs uppercase tracking-widest'>Check-ins</p>
-          <p className='text-3xl font-bold text-stride-yellow-accent mt-1'>{totalCheckIns}</p>
-        </div>
+      <div className='grid grid-cols-3 gap-3 sm:gap-4 mb-8'>
+        {[
+          { label: 'Events', value: events.length },
+          { label: 'Unique runners', value: totalUniqueRunners },
+          { label: 'Check-ins', value: totalCheckIns },
+        ].map(stat => (
+          <div key={stat.label} className='bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5'>
+            <p className='text-white/40 text-xs sm:text-sm'>{stat.label}</p>
+            <p className='text-2xl sm:text-3xl font-bold text-stride-yellow-accent mt-1'>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
       <RegistrationsClient

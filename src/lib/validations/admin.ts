@@ -3,7 +3,6 @@ import { z } from 'zod'
 export const eventSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   subtitle: z.string().max(200).optional(),
-  description: z.string().max(500).optional(),
   details: z.string().optional(),
   location: z.string().max(200).optional(),
   locationUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
@@ -14,7 +13,6 @@ export const eventSchema = z.object({
   capacity: z.coerce.number().int().positive().optional(),
   pricePaise: z.coerce.number().int().min(0).default(0),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
-  coverUrl: z.string().optional(),
   confirmationText: z.string().max(2000).optional(),
   bannerImages: z.string().optional(), // JSON array of uploaded image URLs
 })

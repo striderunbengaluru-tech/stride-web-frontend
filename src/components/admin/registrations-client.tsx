@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Search, CheckCircle, Clock } from 'lucide-react'
 import type { RunnerRow, EventWithAttendees } from '@/app/admin/registrations/page'
+import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 
 type Props = {
   runners: RunnerRow[]
@@ -74,35 +75,35 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
     <div>
       {/* Tab bar + search */}
       <div className='flex flex-col sm:flex-row gap-3 mb-6'>
-        <div className='flex gap-1 bg-white/5 border border-white/10 rounded-lg p-1'>
+        <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1'>
           <button
             onClick={() => setTab('runners')}
-            className={`flex-1 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'runners' ? 'bg-stride-yellow-accent text-copy-black' : 'text-white/60 hover:text-white'
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === 'runners' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
             }`}
           >
-            All Runners
-            <span className='ml-1.5 text-xs opacity-70'>({runners.length})</span>
+            All runners
+            <span className='ml-1.5 text-xs opacity-60'>({runners.length})</span>
           </button>
           <button
             onClick={() => setTab('events')}
-            className={`flex-1 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              tab === 'events' ? 'bg-stride-yellow-accent text-copy-black' : 'text-white/60 hover:text-white'
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === 'events' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
             }`}
           >
-            By Event
-            <span className='ml-1.5 text-xs opacity-70'>({events.length})</span>
+            By event
+            <span className='ml-1.5 text-xs opacity-60'>({events.length})</span>
           </button>
         </div>
 
         <div className='relative flex-1 sm:max-w-xs'>
-          <Search size={14} className='absolute left-3 top-1/2 -translate-y-1/2 text-white/30' />
+          <Search size={15} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
           <input
             type='text'
             placeholder={tab === 'runners' ? 'Search name, email, tag…' : 'Search event name…'}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className='w-full bg-white/5 border border-white/15 rounded-lg pl-8 pr-4 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/50'
+            className='w-full bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
           />
         </div>
       </div>
@@ -133,9 +134,9 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                     {filteredRunners.map(r => (
                       <tr key={r.user_id} className='border-b border-white/5 hover:bg-white/[0.03] transition-colors'>
                         <td className='px-5 py-3.5'>
-                          <span className='font-mono font-bold text-stride-yellow-accent tracking-widest text-sm'>
-                            {r.runner_tag ?? '—'}
-                          </span>
+                          {r.runner_tag
+                            ? <RunnerTagBadge tag={r.runner_tag} size='sm' />
+                            : <span className='text-white/20 text-xs'>—</span>}
                         </td>
                         <td className='px-5 py-3.5'>
                           <p className='text-white font-medium'>{r.full_name ?? '—'}</p>
@@ -182,10 +183,10 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                   <div key={r.user_id} className='px-4 py-4'>
                     <div className='flex items-start justify-between gap-3'>
                       <div>
-                        <div className='flex items-center gap-2 mb-0.5'>
-                          <span className='font-mono font-bold text-stride-yellow-accent text-sm tracking-widest'>
-                            {r.runner_tag ?? '—'}
-                          </span>
+                        <div className='flex items-center gap-2 mb-1'>
+                          {r.runner_tag
+                            ? <RunnerTagBadge tag={r.runner_tag} size='xs' />
+                            : <span className='text-white/20 text-xs font-mono'>—</span>}
                           <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${ROLE_PILL[r.role] ?? ''}`}>
                             {r.role}
                           </span>
@@ -297,9 +298,9 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                                   {event.attendees.map(a => (
                                     <tr key={a.registration_id} className='border-b border-white/[0.04] hover:bg-white/[0.02]'>
                                       <td className='px-5 py-3'>
-                                        <span className='font-mono font-bold text-stride-yellow-accent tracking-widest text-xs'>
-                                          {a.runner_tag ?? '—'}
-                                        </span>
+                                        {a.runner_tag
+                                          ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
+                                          : <span className='text-white/20 text-xs'>—</span>}
                                       </td>
                                       <td className='px-5 py-3'>
                                         <p className='text-white/80 font-medium text-sm'>{a.full_name ?? '—'}</p>
@@ -333,9 +334,11 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                             <div className='md:hidden divide-y divide-white/5'>
                               {event.attendees.map(a => (
                                 <div key={a.registration_id} className='px-4 py-3 flex items-center gap-3'>
-                                  <span className='font-mono font-bold text-stride-yellow-accent text-sm tracking-widest shrink-0'>
-                                    {a.runner_tag ?? '—'}
-                                  </span>
+                                  <div className='shrink-0'>
+                                    {a.runner_tag
+                                      ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
+                                      : <span className='text-white/20 text-xs font-mono'>—</span>}
+                                  </div>
                                   <div className='flex-1 min-w-0'>
                                     <p className='text-white/80 text-sm font-medium truncate'>{a.full_name ?? '—'}</p>
                                     <p className='text-white/30 text-xs truncate'>{a.email}</p>

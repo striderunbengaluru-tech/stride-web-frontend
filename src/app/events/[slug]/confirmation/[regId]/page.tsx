@@ -43,7 +43,7 @@ export default async function ConfirmationPage({ params }: Props) {
   const [{ data: event }, { data: profile }] = await Promise.all([
     adminClient
       .from('events')
-      .select('id, name, event_date, location')
+      .select('id, name, event_date, location, banner_images')
       .eq('id', registration.event_id)
       .single(),
     adminClient
@@ -57,6 +57,12 @@ export default async function ConfirmationPage({ params }: Props) {
 
   const eventDate = formatDate(event.event_date)
 
+  let eventBannerUrl: string | null = null
+  try {
+    const banners = JSON.parse(event.banner_images ?? '[]') as string[]
+    eventBannerUrl = banners[0] ?? null
+  } catch {}
+
   return (
     <main className='min-h-screen bg-stride-purple-primary flex flex-col items-center pt-24 pb-16 px-4'>
       <RunnerTagTicket
@@ -66,6 +72,7 @@ export default async function ConfirmationPage({ params }: Props) {
         eventDate={eventDate}
         eventLocation={event.location ?? null}
         userName={profile?.full_name ?? user.email ?? ''}
+        eventBannerUrl={eventBannerUrl}
       />
     </main>
   )

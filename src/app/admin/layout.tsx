@@ -19,9 +19,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className='min-h-screen bg-stride-purple-primary'>
-      <div className='pt-20'>
+      {/* pt-28 clears the fixed main site navbar (top-4 + min-h-[60px] = 76px, +36px margin) */}
+      <div className='pt-28'>
         <AdminNav />
-        <main className='max-w-6xl mx-auto px-6 py-8'>{children}</main>
+        <main className='max-w-6xl mx-auto px-4 sm:px-6 py-8'>
+          {children}
+        </main>
       </div>
     </div>
   )

@@ -111,6 +111,7 @@ Stride is a community app — it must feel fast for every member, on any device,
 ### Images & Assets
 - Use `next/image` for **local assets and known static hostnames** (Supabase Storage, placehold.co, Instagram CDN) — configure `sizes` and `priority` appropriately
 - Use a plain `<img>` tag for **user-generated or external avatar URLs** (e.g. Google OAuth avatars from `lh3.googleusercontent.com`) where the hostname is not known at build time — always add `loading="lazy"` and `fetchPriority="low"` unless the image is above the fold; suppress the lint warning with `// eslint-disable-next-line @next/next/no-img-element`
+- **All uploaded images must be converted to WebP** before storage using the `sharp` npm package in the API route handler. Target quality: 85. Resize to appropriate dimensions per image type: event banners (no resize, quality 85), user avatars (400×400 cover crop), user covers (max 1920px wide). This applies to every upload endpoint — event images, user avatars, user cover photos, and shop/product images.
 - Optimize all static assets; use WebP/AVIF formats
 - SVGs used as icons must be inlined or loaded as components — not via `<img>` tags
 

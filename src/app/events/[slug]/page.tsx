@@ -8,7 +8,8 @@ import { createClient } from '@/lib/supabase/server'
 import { RegisterButton } from '@/components/events/register-button'
 import { EventHero } from '@/components/events/event-hero'
 import { SectionReveal } from '@/components/ui/section-reveal'
-import { ArrowLeft, Calendar, MapPin, Route, Users, Coffee } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Route, Coffee } from 'lucide-react'
+import { MapEmbed } from '@/components/events/map-embed'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -16,14 +17,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const { data: event } = await adminClient
     .from('events')
-    .select('name, description, cover_url')
+    .select('name, cover_url, banner_images')
     .eq('slug', slug)
     .single()
   if (!event) return {}
+
+  let ogImage = event.cover_url
+  if (!ogImage && event.banner_images) {
+    try { ogImage = (JSON.parse(event.banner_images) as string[])[0] ?? null } catch {}
+  }
+
   return {
     title: `${event.name} — Stride Run Club`,
-    description: event.description ?? undefined,
-    openGraph: event.cover_url ? { images: [event.cover_url] } : undefined,
+    openGraph: ogImage ? { images: [ogImage] } : undefined,
   }
 }
 
@@ -94,6 +100,7 @@ export default async function EventDetailPage({ params }: Props) {
     .eq('status', 'CONFIRMED')
 
   const isFull = !!event.capacity && (confirmedCount ?? 0) >= event.capacity
+  // confirmedCount used only for isFull — not shown to users
 
   // Current user registration
   let isRegistered = false
@@ -133,7 +140,6 @@ export default async function EventDetailPage({ params }: Props) {
   const startTime = formatTime(event.event_date)
   const endTime = formatTime(event.end_date)
   const eventStatus = getEventStatus(event.event_date)
-  const spotsLeft = event.capacity ? Math.max(0, event.capacity - (confirmedCount ?? 0)) : null
   const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/events/${slug}`
 
   return (
@@ -177,11 +183,6 @@ export default async function EventDetailPage({ params }: Props) {
             <span className={`text-xs font-bold px-3 py-1 rounded-full ${eventStatus.classes}`}>
               {eventStatus.label}
             </span>
-            {event.capacity && (
-              <span className='text-white/40 text-xs'>
-                {confirmedCount ?? 0} / {event.capacity} registered
-              </span>
-            )}
           </div>
         </SectionReveal>
 
@@ -223,12 +224,7 @@ export default async function EventDetailPage({ params }: Props) {
                   </div>
                 ))}
               </div>
-              <p className='text-white/50 text-sm'>
-                {confirmedCount ?? 0} runner{(confirmedCount ?? 0) !== 1 ? 's' : ''} registered
-                {spotsLeft !== null && spotsLeft > 0 && (
-                  <span className='text-white/30'> · {spotsLeft} spots left</span>
-                )}
-              </p>
+              <p className='text-white/50 text-sm'>People are joining</p>
             </div>
           </SectionReveal>
         )}
@@ -279,24 +275,19 @@ export default async function EventDetailPage({ params }: Props) {
 
             {/* Meeting point row */}
             {event.location && (
-              <div className='flex items-center gap-4 px-5 py-4 border-b border-white/10'>
-                <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
-                  <MapPin size={18} className='text-white/60' />
-                </div>
-                <div className='min-w-0'>
-                  <p className='text-white/40 text-xs'>Meeting Point</p>
-                  {event.location_url ? (
-                    <a
-                      href={event.location_url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='text-white font-semibold text-sm hover:text-stride-yellow-accent transition-colors underline underline-offset-2 block truncate'
-                    >
-                      {event.location}
-                    </a>
-                  ) : (
+              <div className='border-b border-white/10'>
+                <div className='flex items-center gap-4 px-5 py-4'>
+                  <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
+                    <MapPin size={18} className='text-white/60' />
+                  </div>
+                  <div className='min-w-0'>
+                    <p className='text-white/40 text-xs'>Meeting Point</p>
                     <p className='text-white font-semibold text-sm truncate'>{event.location}</p>
-                  )}
+                  </div>
+                </div>
+                {/* Embedded map */}
+                <div className='px-4 pb-4'>
+                  <MapEmbed locationName={event.location} locationUrl={event.location_url} />
                 </div>
               </div>
             )}
@@ -346,18 +337,11 @@ export default async function EventDetailPage({ params }: Props) {
         {/* Desktop registration card */}
         <SectionReveal delay={0.2}>
           <div className='mt-6 hidden sm:block bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-6'>
-            <div className='flex items-center justify-between mb-4'>
-              <div>
-                <p className='text-white/40 text-xs uppercase tracking-wider'>Registration</p>
-                <p className='text-3xl font-bold text-white'>
-                  {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
-                </p>
-              </div>
-              {spotsLeft !== null && (
-                <p className='text-white/40 text-xs text-right'>
-                  {spotsLeft > 0 ? `${spotsLeft} spots left` : 'Full'}
-                </p>
-              )}
+            <div className='mb-4'>
+              <p className='text-white/40 text-xs uppercase tracking-wider'>Registration</p>
+              <p className='text-3xl font-bold text-white mt-1'>
+                {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
+              </p>
             </div>
             <RegisterButton
               eventId={event.id}
@@ -370,21 +354,14 @@ export default async function EventDetailPage({ params }: Props) {
           </div>
         </SectionReveal>
 
-        {/* Event details / description */}
-        {(event.details || event.description) && (
+        {/* Event details */}
+        {event.details && (
           <SectionReveal delay={0.25}>
             <div className='mt-6 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-6'>
-              <h2 className='text-white font-bold text-lg mb-4 flex items-center gap-2'>
-                <Users size={16} className='text-stride-yellow-accent' />
-                Event Details
-              </h2>
-              {event.details ? (
-                <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/70 prose-headings:text-white prose-a:text-stride-yellow-accent prose-strong:text-white'>
-                  <ReactMarkdown>{event.details}</ReactMarkdown>
-                </div>
-              ) : (
-                <p className='text-white/70 text-sm leading-relaxed'>{event.description}</p>
-              )}
+              <h2 className='text-white font-bold text-lg mb-4'>Event Details</h2>
+              <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/70 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-2 prose-ol:my-2'>
+                <ReactMarkdown>{event.details}</ReactMarkdown>
+              </div>
             </div>
           </SectionReveal>
         )}
@@ -396,17 +373,17 @@ export default async function EventDetailPage({ params }: Props) {
               href={`https://wa.me/?text=${encodeURIComponent(`${event.name} — ${shareUrl}`)}`}
               target='_blank'
               rel='noopener noreferrer'
-              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/60 hover:border-green-500/50 hover:text-green-400 transition-colors text-sm'
+              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/50 hover:border-green-500/40 hover:text-green-400 transition-colors text-sm'
             >
-              Share on WhatsApp
+              WhatsApp
             </a>
             <a
               href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(event.name)}&url=${encodeURIComponent(shareUrl)}`}
               target='_blank'
               rel='noopener noreferrer'
-              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/60 hover:border-sky-500/50 hover:text-sky-400 transition-colors text-sm'
+              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/50 hover:border-sky-500/40 hover:text-sky-400 transition-colors text-sm'
             >
-              Share on X
+              X / Twitter
             </a>
           </div>
         </SectionReveal>

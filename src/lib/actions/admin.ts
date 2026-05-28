@@ -38,9 +38,19 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, coverUrl, confirmationText, bannerImages, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
+
+  const { data: existing } = await adminClient
+    .from('events')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (existing) {
+    redirect(`/admin/events/new?slug_error=${encodeURIComponent(`"${name}" is already taken — try a more specific name.`)}`)
+  }
 
   await adminClient.from('events').insert({
     id,
@@ -52,7 +62,6 @@ export async function createEventAction(formData: FormData): Promise<void> {
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
-    cover_url: coverUrl || null,
     confirmation_text: confirmationText || null,
     banner_images: bannerImages ?? '[]',
     ...rest,
@@ -68,7 +77,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, coverUrl, confirmationText, bannerImages, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, ...rest } = parsed.data
 
   await adminClient.from('events').update({
     name,
@@ -78,7 +87,6 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
-    cover_url: coverUrl || null,
     confirmation_text: confirmationText || null,
     banner_images: bannerImages ?? '[]',
     updated_at: new Date().toISOString(),

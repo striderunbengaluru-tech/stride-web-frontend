@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 
@@ -29,16 +30,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Image must be under 8MB' }, { status: 400 })
   }
 
-  const ext = file.name.split('.').pop() ?? 'jpg'
-  const path = `images/events/${Date.now()}.${ext}`
   const fileBuffer = await file.arrayBuffer()
+  const webpBuffer = await sharp(Buffer.from(fileBuffer))
+    .webp({ quality: 85 })
+    .toBuffer()
+
+  const path = `images/events/${Date.now()}.webp`
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
-    .upload(path, fileBuffer, { contentType: file.type, upsert: false })
+    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: false })
 
   if (uploadError) {
-    console.error('[Event cover upload]', uploadError)
+    console.error('[Event image upload]', uploadError)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 

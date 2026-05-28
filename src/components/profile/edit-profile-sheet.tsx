@@ -30,9 +30,11 @@ type Props = {
     stravaUrl: string
     prompts: Prompt[]
   }
+  triggerContent?: React.ReactNode
+  triggerClassName?: string
 }
 
-export function EditProfileSheet({ initial }: Props) {
+export function EditProfileSheet({ initial, triggerContent, triggerClassName }: Props) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState(initial.name)
@@ -110,9 +112,9 @@ export function EditProfileSheet({ initial }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className='text-sm font-medium px-4 py-2 rounded-md border border-white/20 text-white/80 hover:border-stride-yellow-accent/50 hover:text-white transition-colors min-h-11'
+        className={triggerClassName ?? 'text-sm font-medium px-4 py-2 rounded-md border border-white/20 text-white/80 hover:border-stride-yellow-accent/50 hover:text-white transition-colors min-h-11'}
       >
-        Edit Profile
+        {triggerContent ?? 'Edit Profile'}
       </button>
 
       {open && (

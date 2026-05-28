@@ -26,16 +26,15 @@ export default async function EditEventPage({ params }: Props) {
   const action = updateEventAction.bind(null, id)
 
   return (
-    <div className='max-w-2xl'>
+    <div>
       <h1 className='text-3xl font-bold text-white mb-8'>Edit Event</h1>
-      <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-8'>
+      <div className='bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8'>
         <EventForm
           action={action}
           submitLabel='Save Changes'
           defaultValues={{
             name: event.name ?? undefined,
             subtitle: event.subtitle ?? undefined,
-            description: event.description ?? undefined,
             details: event.details ?? undefined,
             location: event.location ?? undefined,
             locationUrl: event.location_url ?? undefined,
@@ -46,7 +45,6 @@ export default async function EditEventPage({ params }: Props) {
             capacity: event.capacity ?? undefined,
             pricePaise: event.price_paise,
             status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
-            coverUrl: event.cover_url ?? undefined,
             confirmationText: event.confirmation_text ?? undefined,
             bannerImages: event.banner_images ?? '[]',
           }}

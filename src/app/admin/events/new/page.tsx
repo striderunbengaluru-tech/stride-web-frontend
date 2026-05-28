@@ -3,12 +3,20 @@ import { createEventAction } from '@/lib/actions/admin'
 
 export const metadata = { title: 'New Event — Admin' }
 
-export default function NewEventPage() {
+type Props = { searchParams: Promise<{ slug_error?: string }> }
+
+export default async function NewEventPage({ searchParams }: Props) {
+  const { slug_error } = await searchParams
+
   return (
-    <div className='max-w-2xl'>
+    <div>
       <h1 className='text-3xl font-bold text-white mb-8'>New Event</h1>
-      <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-8'>
-        <EventForm action={createEventAction} submitLabel='Create Event' />
+      <div className='bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8'>
+        <EventForm
+          action={createEventAction}
+          submitLabel='Create Event'
+          errorMessage={slug_error}
+        />
       </div>
     </div>
   )

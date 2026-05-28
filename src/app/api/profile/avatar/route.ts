@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 
@@ -20,16 +21,23 @@ export async function POST(request: Request) {
   }
 
   const fileBuffer = await file.arrayBuffer()
+  const webpBuffer = await sharp(Buffer.from(fileBuffer))
+    .resize(400, 400, { fit: 'cover' })
+    .webp({ quality: 85 })
+    .toBuffer()
+
+  const path = `images/avatars/${user.id}.webp`
+
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
-    .upload(`images/avatars/${user.id}`, fileBuffer, { contentType: file.type, upsert: true })
+    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true })
 
   if (uploadError) {
     console.error('[Avatar upload]', uploadError)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 
-  const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(`images/avatars/${user.id}`)
+  const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(path)
 
   await adminClient
     .from('users')
