@@ -101,7 +101,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, cover_url, location, skills, linkedin_url, instagram_url, strava_url, prompts, runs_completed, strava_connected, strava_pbs, strava_recent_activities, strava_synced_at')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, cover_url, location, skills, linkedin_url, instagram_url, strava_url, prompts, runs_completed, runner_tag, strava_connected, strava_pbs, strava_recent_activities, strava_synced_at')
     .eq('username', username)
     .single()
 
@@ -115,6 +115,7 @@ export default async function ProfilePage({ params }: Props) {
     ...(row as unknown as UserProfile),
     skills,
     prompts,
+    runner_tag: row.runner_tag ?? null,
     strava_connected: row.strava_connected ?? false,
     strava_pbs: stravaPbs,
     strava_recent_activities: stravaRecentActivities,
@@ -257,6 +258,21 @@ export default async function ProfilePage({ params }: Props) {
                 <Image src={STRAVA_ICON} alt='Strava' width={18} height={18} />
               </a>
             )}
+          </div>
+        )}
+
+        {/* Runner Tag — only visible to the profile owner */}
+        {isOwnProfile && profile.runner_tag && (
+          <div className='mt-4 flex items-center gap-3 bg-stride-yellow-accent/8 border border-stride-yellow-accent/20 rounded-xl px-4 py-3'>
+            <div className='flex flex-col'>
+              <span className='text-white/40 text-xs uppercase tracking-widest mb-0.5'>Your Runner Tag</span>
+              <span className='text-stride-yellow-accent font-mono font-bold text-xl tracking-[0.25em]'>
+                {profile.runner_tag}
+              </span>
+            </div>
+            <p className='ml-auto text-white/30 text-xs leading-snug text-right max-w-[140px]'>
+              Share this with the admin at event check-in
+            </p>
           </div>
         )}
 

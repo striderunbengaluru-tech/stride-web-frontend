@@ -39,6 +39,7 @@ export default async function EditEventPage({ params }: Props) {
             details: event.details ?? undefined,
             location: event.location ?? undefined,
             locationUrl: event.location_url ?? undefined,
+            postRunLocationUrl: event.post_run_location_url ?? undefined,
             stravaRouteUrl: event.strava_route_url ?? undefined,
             eventDate: toDatetimeLocal(event.event_date),
             endDate: toDatetimeLocal(event.end_date),
@@ -46,6 +47,8 @@ export default async function EditEventPage({ params }: Props) {
             pricePaise: event.price_paise,
             status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
             coverUrl: event.cover_url ?? undefined,
+            confirmationText: event.confirmation_text ?? undefined,
+            bannerImages: event.banner_images ?? '[]',
           }}
         />
       </div>

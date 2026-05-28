@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import Image from 'next/image'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Plus } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -28,16 +28,25 @@ type Props = {
 }
 
 export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
+  // Cover image
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const hiddenCoverRef = useRef<HTMLInputElement>(null)
   const [coverPreview, setCoverPreview] = useState<string>(defaultValues.coverUrl ?? '')
-  const [uploading, setUploading] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+
+  // Banner images (JSON array)
+  const bannerFileRef = useRef<HTMLInputElement>(null)
+  const [bannerImages, setBannerImages] = useState<string[]>(() => {
+    try { return JSON.parse(defaultValues.bannerImages ?? '[]') as string[] }
+    catch { return [] }
+  })
+  const [uploadingBanner, setUploadingBanner] = useState(false)
 
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     setCoverPreview(URL.createObjectURL(file))
-    setUploading(true)
+    setUploadingCover(true)
     try {
       const form = new FormData()
       form.append('file', file)
@@ -51,21 +60,47 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
         setCoverPreview(defaultValues.coverUrl ?? '')
       }
     } finally {
-      setUploading(false)
+      setUploadingCover(false)
     }
   }
 
-  const hiddenCoverRef = useRef<HTMLInputElement>(null)
+  async function handleBannerAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || bannerImages.length >= 5) return
+    setUploadingBanner(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/admin/upload-event-cover', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setBannerImages(prev => [...prev, data.url])
+      } else {
+        alert(data.error ?? 'Upload failed')
+      }
+    } finally {
+      setUploadingBanner(false)
+      if (bannerFileRef.current) bannerFileRef.current.value = ''
+    }
+  }
+
+  function removeBannerImage(index: number) {
+    setBannerImages(prev => prev.filter((_, i) => i !== index))
+  }
 
   return (
     <form action={action} className='space-y-5'>
-      {/* Hidden field carries the uploaded URL */}
+      {/* Hidden fields */}
       <input ref={hiddenCoverRef} type='hidden' name='coverUrl' defaultValue={defaultValues.coverUrl ?? ''} />
+      <input type='hidden' name='bannerImages' value={JSON.stringify(bannerImages)} readOnly />
+
+      {/* Name + Subtitle */}
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-5'>
         <Field label='Event Name *' name='name' defaultValue={defaultValues.name} required />
         <Field label='Subtitle' name='subtitle' defaultValue={defaultValues.subtitle} />
       </div>
 
+      {/* Short description */}
       <Field
         label='Short Description'
         name='description'
@@ -74,6 +109,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
         rows={2}
       />
 
+      {/* Full details */}
       <Field
         label='Full Details (Markdown)'
         name='details'
@@ -82,18 +118,30 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
         rows={6}
       />
 
+      {/* Location + Meeting point map */}
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-5'>
-        <Field label='Location' name='location' defaultValue={defaultValues.location} />
-        <Field label='Google Maps URL' name='locationUrl' type='url' defaultValue={defaultValues.locationUrl} />
+        <Field label='Location Name' name='location' defaultValue={defaultValues.location} />
+        <Field label='Meeting Point — Google Maps URL' name='locationUrl' type='url' defaultValue={defaultValues.locationUrl} />
       </div>
 
-      <Field label='Strava Route URL' name='stravaRouteUrl' type='url' defaultValue={defaultValues.stravaRouteUrl} />
+      {/* Post-run gather point */}
+      <Field
+        label='Post Run Gather Point — Google Maps URL'
+        name='postRunLocationUrl'
+        type='url'
+        defaultValue={defaultValues.postRunLocationUrl}
+      />
 
+      {/* Run route */}
+      <Field label='Run Route URL (Strava / Komoot / etc.)' name='stravaRouteUrl' type='url' defaultValue={defaultValues.stravaRouteUrl} />
+
+      {/* Dates */}
       <div className='grid grid-cols-1 sm:grid-cols-2 gap-5'>
         <Field label='Start Date & Time' name='eventDate' type='datetime-local' defaultValue={defaultValues.eventDate} />
         <Field label='End Date & Time' name='endDate' type='datetime-local' defaultValue={defaultValues.endDate} />
       </div>
 
+      {/* Capacity / Price / Status */}
       <div className='grid grid-cols-1 sm:grid-cols-3 gap-5'>
         <Field label='Capacity' name='capacity' type='number' defaultValue={String(defaultValues.capacity ?? '')} />
         <Field
@@ -116,9 +164,64 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
         </div>
       </div>
 
-      {/* Cover image upload */}
+      {/* Confirmation text */}
+      <Field
+        label='Registration Confirmation Text (Markdown — shown after booking)'
+        name='confirmationText'
+        as='textarea'
+        defaultValue={defaultValues.confirmationText}
+        rows={3}
+      />
+
+      {/* Banner images */}
       <div className='flex flex-col gap-2'>
-        <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>Cover Image</label>
+        <div>
+          <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>
+            Banner Images
+          </label>
+          <p className='text-white/30 text-xs mt-0.5'>Square or 3:4 portrait · Up to 5 · Used in event carousel</p>
+        </div>
+        <div className='grid grid-cols-3 sm:grid-cols-5 gap-3'>
+          {bannerImages.map((url, i) => (
+            <div key={url} className='relative aspect-square rounded-lg overflow-hidden border border-white/15 group'>
+              <Image src={url} alt={`Banner ${i + 1}`} fill className='object-cover' sizes='160px' />
+              <button
+                type='button'
+                onClick={() => removeBannerImage(i)}
+                className='absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80'
+                aria-label='Remove image'
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {bannerImages.length < 5 && (
+            <button
+              type='button'
+              onClick={() => bannerFileRef.current?.click()}
+              disabled={uploadingBanner}
+              className='aspect-square rounded-lg border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/70 transition-colors flex flex-col items-center justify-center gap-1 disabled:opacity-50'
+            >
+              {uploadingBanner ? <Spinner /> : <Plus size={20} />}
+              <span className='text-xs'>{uploadingBanner ? 'Uploading…' : 'Add'}</span>
+            </button>
+          )}
+        </div>
+        <input
+          ref={bannerFileRef}
+          type='file'
+          accept='image/*'
+          onChange={handleBannerAdd}
+          className='hidden'
+        />
+      </div>
+
+      {/* Cover image */}
+      <div className='flex flex-col gap-2'>
+        <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>
+          Cover Image
+          <span className='text-white/30 normal-case tracking-normal font-normal ml-2'>(used for event card thumbnail)</span>
+        </label>
         {coverPreview ? (
           <div className='relative w-full aspect-video rounded-lg overflow-hidden border border-white/15'>
             <Image src={coverPreview} alt='Cover preview' fill className='object-cover' sizes='600px' />
@@ -134,7 +237,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
             >
               <X size={14} />
             </button>
-            {uploading && (
+            {uploadingCover && (
               <div className='absolute inset-0 flex items-center justify-center bg-black/50'>
                 <span className='text-white text-sm font-medium'>Uploading…</span>
               </div>
@@ -144,11 +247,11 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
           <button
             type='button'
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploadingCover}
             className='flex flex-col items-center justify-center gap-2 w-full aspect-video rounded-lg border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/70 transition-colors disabled:opacity-50'
           >
             <Upload size={24} />
-            <span className='text-sm'>{uploading ? 'Uploading…' : 'Click to upload cover image'}</span>
+            <span className='text-sm'>{uploadingCover ? 'Uploading…' : 'Click to upload cover image'}</span>
             <span className='text-xs text-white/30'>JPG, PNG, WebP — max 8MB</span>
           </button>
         )}

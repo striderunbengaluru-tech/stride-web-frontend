@@ -7,22 +7,25 @@ export default async function AdminDashboardPage() {
     { count: eventCount },
     { count: productCount },
     { count: userCount },
+    { count: registrationCount },
   ] = await Promise.all([
     adminClient.from('events').select('*', { count: 'exact', head: true }),
     adminClient.from('products').select('*', { count: 'exact', head: true }),
     adminClient.from('users').select('*', { count: 'exact', head: true }),
+    adminClient.from('event_registrations').select('*', { count: 'exact', head: true }).eq('status', 'CONFIRMED'),
   ])
 
   const stats = [
     { label: 'Events', count: eventCount ?? 0, href: '/admin/events' },
+    { label: 'Confirmed Registrations', count: registrationCount ?? 0, href: '/admin/registrations' },
+    { label: 'Runners', count: userCount ?? 0, href: '/admin/users' },
     { label: 'Products', count: productCount ?? 0, href: '/admin/products' },
-    { label: 'Users', count: userCount ?? 0, href: '/admin/users' },
   ]
 
   return (
     <div>
       <h1 className='text-3xl font-bold text-white mb-8'>Dashboard</h1>
-      <div className='grid grid-cols-1 sm:grid-cols-3 gap-6'>
+      <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         {stats.map((stat) => (
           <a
             key={stat.label}

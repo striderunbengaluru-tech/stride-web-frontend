@@ -2,10 +2,18 @@
   "mcpServers": {
     "neon": {
       "command": "npx",
-      "args": ["-y", "@neondatabase/mcp-server-neon", "start"],
+      "args": [
+        "-y",
+        "@neondatabase/mcp-server-neon",
+        "start"
+      ],
       "env": {
         "NEON_API_KEY": ""
       }
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=ienotcjldormdxrzukpk&features=storage%2Cbranching%2Cfunctions%2Cdevelopment%2Cdatabase%2Cdebugging%2Caccount%2Cdocs"
     }
   }
 }

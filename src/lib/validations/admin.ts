@@ -7,6 +7,7 @@ export const eventSchema = z.object({
   details: z.string().optional(),
   location: z.string().max(200).optional(),
   locationUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  postRunLocationUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   stravaRouteUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   eventDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -14,6 +15,8 @@ export const eventSchema = z.object({
   pricePaise: z.coerce.number().int().min(0).default(0),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   coverUrl: z.string().optional(),
+  confirmationText: z.string().max(2000).optional(),
+  bannerImages: z.string().optional(), // JSON array of uploaded image URLs
 })
 
 export type EventFormData = z.infer<typeof eventSchema>

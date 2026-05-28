@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
+import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
@@ -17,7 +18,6 @@ export async function POST(request: Request) {
 
   const { eventId } = parsed.data
 
-  // Fetch the event
   const { data: event } = await adminClient
     .from('events')
     .select('id, name, slug, status, price_paise, capacity')
@@ -28,7 +28,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
-  // Check for duplicate registration
   const { data: existing } = await adminClient
     .from('event_registrations')
     .select('id')
@@ -40,7 +39,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Already registered' }, { status: 409 })
   }
 
-  // Check capacity
   if (event.capacity) {
     const { count: confirmedCount } = await adminClient
       .from('event_registrations')
@@ -53,15 +51,60 @@ export async function POST(request: Request) {
     }
   }
 
-  // Confirm immediately — Cashfree payment integration is pending credentials.
-  // All registrations (free and paid) are confirmed at booking time for now.
   const registrationId = nanoid()
+
+  // Free event — confirm immediately
+  if (event.price_paise === 0) {
+    await adminClient.from('event_registrations').insert({
+      id: registrationId,
+      event_id: eventId,
+      user_id: user.id,
+      status: 'CONFIRMED',
+    })
+    return NextResponse.json({ registrationId, slug: event.slug })
+  }
+
+  // Paid event — create Razorpay order, hold seat as PENDING
+  const razorpay = new Razorpay({
+    key_id: process.env.STRIDE_RAZORPAY_KEY_ID ?? '',
+    key_secret: process.env.STRIDE_RAZORPAY_KEY_SECRET ?? '',
+  })
+
+  let order
+  try {
+    order = await razorpay.orders.create({
+      amount: event.price_paise,
+      currency: 'INR',
+      receipt: registrationId,
+    })
+  } catch (err) {
+    console.error('[Register] Razorpay order creation failed', err)
+    return NextResponse.json({ error: 'Payment initialisation failed' }, { status: 500 })
+  }
+
   await adminClient.from('event_registrations').insert({
     id: registrationId,
     event_id: eventId,
     user_id: user.id,
-    status: 'CONFIRMED',
+    status: 'PENDING',
+    razorpay_order_id: order.id,
   })
 
-  return NextResponse.json({ registrationId, slug: event.slug })
+  // Fetch user profile for Razorpay prefill
+  const { data: profile } = await adminClient
+    .from('users')
+    .select('full_name, email')
+    .eq('id', user.id)
+    .single()
+
+  return NextResponse.json({
+    registrationId,
+    slug: event.slug,
+    razorpayOrderId: order.id,
+    amount: event.price_paise,
+    currency: 'INR',
+    eventName: event.name,
+    userName: profile?.full_name ?? undefined,
+    userEmail: profile?.email ?? user.email,
+  })
 }

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-import { verifyQrToken } from '@/lib/qr-token'
 
 export async function POST(request: Request) {
-  // Admin-only endpoint
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,30 +17,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { token } = await request.json()
-  if (!token || typeof token !== 'string') {
-    return NextResponse.json({ error: 'Token required' }, { status: 400 })
+  const body = await request.json()
+  const runnerTag: string = (body.runner_tag ?? '').trim().toUpperCase()
+  const eventId: string = body.event_id ?? ''
+
+  if (!runnerTag || runnerTag.length !== 4) {
+    return NextResponse.json({ error: 'Runner Tag must be exactly 4 characters' }, { status: 400 })
+  }
+  if (!eventId) {
+    return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
   }
 
-  const payload = verifyQrToken(token)
-  if (!payload) {
-    return NextResponse.json({ error: 'Invalid or tampered QR code' }, { status: 400 })
+  // Look up the runner by their tag
+  const { data: runner } = await adminClient
+    .from('users')
+    .select('id, full_name, runs_completed')
+    .eq('runner_tag', runnerTag)
+    .single()
+
+  if (!runner) {
+    return NextResponse.json({ error: 'No runner found with this tag' }, { status: 404 })
   }
 
-  // Fetch the registration
+  // Find their registration for this event
   const { data: registration } = await adminClient
     .from('event_registrations')
-    .select('id, user_id, event_id, status, checked_in_at')
-    .eq('id', payload.registrationId)
+    .select('id, status, checked_in_at')
+    .eq('user_id', runner.id)
+    .eq('event_id', eventId)
     .single()
 
   if (!registration) {
-    return NextResponse.json({ error: 'Registration not found' }, { status: 404 })
-  }
-
-  // Cross-check payload fields against DB (prevent token reuse for different registrations)
-  if (registration.event_id !== payload.eventId || registration.user_id !== payload.userId) {
-    return NextResponse.json({ error: 'Token mismatch' }, { status: 400 })
+    return NextResponse.json({ error: 'Runner is not registered for this event' }, { status: 404 })
   }
 
   if (registration.status !== 'CONFIRMED') {
@@ -50,10 +56,12 @@ export async function POST(request: Request) {
   }
 
   if (registration.checked_in_at) {
-    return NextResponse.json({ error: 'Already checked in', checkedInAt: registration.checked_in_at }, { status: 409 })
+    return NextResponse.json(
+      { error: 'Already checked in', checkedInAt: registration.checked_in_at },
+      { status: 409 }
+    )
   }
 
-  // Mark as checked in
   const now = new Date().toISOString()
   const { error: updateError } = await adminClient
     .from('event_registrations')
@@ -61,26 +69,24 @@ export async function POST(request: Request) {
     .eq('id', registration.id)
 
   if (updateError) {
-    console.error('[Check-in] update registration error', updateError)
+    console.error('[Check-in] update error', updateError)
     return NextResponse.json({ error: 'Check-in failed' }, { status: 500 })
   }
 
-  // Increment runs_completed on user and fetch profile + event name
-  const [{ data: userData }, { data: eventData }] = await Promise.all([
-    adminClient.from('users').select('full_name, runs_completed').eq('id', registration.user_id).single(),
-    adminClient.from('events').select('name').eq('id', registration.event_id).single(),
+  const [{ data: eventData }] = await Promise.all([
+    adminClient.from('events').select('name').eq('id', eventId).single(),
   ])
 
-  const newRunsCompleted = (userData?.runs_completed ?? 0) + 1
+  const newRunsCompleted = (runner.runs_completed ?? 0) + 1
   await adminClient
     .from('users')
     .update({ runs_completed: newRunsCompleted })
-    .eq('id', registration.user_id)
+    .eq('id', runner.id)
 
   return NextResponse.json({
     success: true,
     checkedInAt: now,
-    attendeeName: userData?.full_name ?? 'Attendee',
+    attendeeName: runner.full_name ?? 'Runner',
     eventName: eventData?.name ?? '',
     runsCompleted: newRunsCompleted,
   })

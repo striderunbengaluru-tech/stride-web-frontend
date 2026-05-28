@@ -3,9 +3,10 @@ import Link from 'next/link'
 const navLinks = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/events', label: 'Events' },
+  { href: '/admin/registrations', label: 'Registrations' },
   { href: '/admin/products', label: 'Products' },
   { href: '/admin/users', label: 'Users' },
-  { href: '/admin/scan', label: 'Scan QR' },
+  { href: '/admin/check-in', label: 'Check-in' },
 ]
 
 export function AdminNav() {

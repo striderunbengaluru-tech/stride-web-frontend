@@ -38,7 +38,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, stravaRouteUrl, pricePaise, coverUrl, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, coverUrl, confirmationText, bannerImages, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -49,9 +49,12 @@ export async function createEventAction(formData: FormData): Promise<void> {
     event_date: eventDate ? new Date(eventDate).toISOString() : null,
     end_date: endDate ? new Date(endDate).toISOString() : null,
     location_url: locationUrl || null,
+    post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
     cover_url: coverUrl || null,
+    confirmation_text: confirmationText || null,
+    banner_images: bannerImages ?? '[]',
     ...rest,
   })
 
@@ -65,16 +68,19 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, stravaRouteUrl, pricePaise, coverUrl, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, coverUrl, confirmationText, bannerImages, ...rest } = parsed.data
 
   await adminClient.from('events').update({
     name,
     event_date: eventDate ? new Date(eventDate).toISOString() : null,
     end_date: endDate ? new Date(endDate).toISOString() : null,
     location_url: locationUrl || null,
+    post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
     cover_url: coverUrl || null,
+    confirmation_text: confirmationText || null,
+    banner_images: bannerImages ?? '[]',
     updated_at: new Date().toISOString(),
     ...rest,
   }).eq('id', id)

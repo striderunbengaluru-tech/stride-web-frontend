@@ -22,6 +22,7 @@ export type UserProfile = {
   strava_url: string | null
   prompts: Prompt[]
   runs_completed: number
+  runner_tag: string | null
   strava_connected: boolean
   strava_pbs: StravaPBs
   strava_recent_activities: StravaActivity[]

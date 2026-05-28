@@ -1,9 +1,21 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-const FOOTER_LINKS = [
+const EXPLORE_LINKS = [
+  { title: 'Events', href: '/events' },
   { title: 'Blog', href: '/blog' },
   { title: 'Partnerships', href: '/partnerships' },
+];
+
+const LEGAL_LINKS = [
+  { title: 'Privacy Policy', href: '/privacy-policy' },
+  { title: 'Terms of Service', href: '/terms-of-service' },
+  { title: 'Contact Us', href: '/contact-us' },
+];
+
+const ACCOUNT_LINKS = [
+  { title: 'Sign In', href: '/login' },
+  { title: 'Join Stride', href: '/register' },
 ];
 
 const INSTAGRAM_URL = 'https://www.instagram.com/stride_runclub_bengaluru/';
@@ -45,13 +57,13 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Nav */}
-          {FOOTER_LINKS.length > 0 && (
-            <nav aria-label='Footer navigation' className='flex flex-col gap-2.5'>
+          {/* Nav columns */}
+          <div className='flex gap-12'>
+            <nav aria-label='Explore links' className='flex flex-col gap-2.5'>
               <p className='text-[10px] uppercase tracking-[0.2em] text-white/30 font-roboto mb-0.5'>
-                Links
+                Explore
               </p>
-              {FOOTER_LINKS.map((link) => (
+              {EXPLORE_LINKS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -61,7 +73,37 @@ export default function Footer() {
                 </Link>
               ))}
             </nav>
-          )}
+
+            <nav aria-label='Account links' className='flex flex-col gap-2.5'>
+              <p className='text-[10px] uppercase tracking-[0.2em] text-white/30 font-roboto mb-0.5'>
+                Account
+              </p>
+              {ACCOUNT_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className='text-white/55 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-roboto'
+                >
+                  {link.title}
+                </Link>
+              ))}
+            </nav>
+
+            <nav aria-label='Legal links' className='flex flex-col gap-2.5'>
+              <p className='text-[10px] uppercase tracking-[0.2em] text-white/30 font-roboto mb-0.5'>
+                Legal
+              </p>
+              {LEGAL_LINKS.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className='text-white/55 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-roboto'
+                >
+                  {link.title}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
 
         {/* ── Divider ── */}
