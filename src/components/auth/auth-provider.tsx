@@ -6,8 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-// Listens for Supabase auth state changes and calls router.refresh() so
-// server components (Navbar, layouts) re-render with the latest session state.
+// sessionStorage key — cleared on sign-out so the next real sign-in shows the toast again
+const AUTHED_KEY = '_stride_authed'
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
@@ -16,15 +17,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
         router.refresh()
-        toast.success('Signed in successfully!', { toastId: 'signed-in' })
+        // Only toast on an actual new sign-in, not on every session restoration
+        if (!sessionStorage.getItem(AUTHED_KEY)) {
+          sessionStorage.setItem(AUTHED_KEY, '1')
+          toast.success('Signed in successfully!', { toastId: 'signed-in' })
+        }
       } else if (event === 'SIGNED_OUT') {
+        sessionStorage.removeItem(AUTHED_KEY)
         router.refresh()
-        toast.info('You have been signed out.', { toastId: 'signed-out' })
-      } else if (event === 'TOKEN_REFRESHED') {
-        // silent
+        toast.info('Signed out successfully.', { toastId: 'signed-out' })
       } else if (event === 'USER_UPDATED') {
         router.refresh()
       }
+      // TOKEN_REFRESHED — silent, no action needed
     })
     return () => subscription.unsubscribe()
   }, [router])

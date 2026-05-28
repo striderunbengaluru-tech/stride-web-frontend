@@ -14,8 +14,7 @@ const LEGAL_LINKS = [
 ];
 
 const ACCOUNT_LINKS = [
-  { title: 'Sign In', href: '/login' },
-  { title: 'Join Stride', href: '/register' },
+  { title: 'Sign In / Join', href: '/login' },
 ];
 
 const INSTAGRAM_URL = 'https://www.instagram.com/stride_runclub_bengaluru/';

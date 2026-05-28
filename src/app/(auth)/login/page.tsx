@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { GoogleSignInButton } from '@/utils/auth'
 
 export const metadata = {
-  title: 'Login — Stride Run Club',
+  title: 'Sign In — Stride Run Club',
 }
 
 export default function LoginPage() {
@@ -23,22 +23,24 @@ export default function LoginPage() {
         {/* Card */}
         <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-8 hover:border-stride-yellow-accent/50 transition-colors'>
           <h1 className='text-2xl font-bold text-white text-center mb-2'>
-            Welcome back
+            Welcome to Stride
           </h1>
           <p className='text-white/60 text-sm text-center mb-8'>
-            Sign in to your Stride account
+            Sign in or create your account — it&apos;s the same button.
           </p>
 
           <GoogleSignInButton />
 
-          <p className='text-white/40 text-xs text-center mt-6'>
-            Don&apos;t have an account?{' '}
-            <a
-              href='/register'
-              className='text-stride-yellow-accent hover:underline'
-            >
-              Register here
+          <p className='text-white/30 text-xs text-center mt-6 leading-relaxed'>
+            By continuing, you agree to our{' '}
+            <a href='/terms-of-service' className='text-stride-yellow-accent hover:underline'>
+              Terms
+            </a>{' '}
+            and{' '}
+            <a href='/privacy-policy' className='text-stride-yellow-accent hover:underline'>
+              Privacy Policy
             </a>
+            .
           </p>
         </div>
       </div>
