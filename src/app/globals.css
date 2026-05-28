@@ -51,6 +51,31 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+/* ── Login page animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+.animate-float-slow {
+  animation: floatSlow 7s ease-in-out infinite;
+}
+
+@keyframes pulseOrb {
+  0%, 100% { opacity: 0.12; }
+  50%       { opacity: 0.22; }
+}
+.animate-pulse-orb {
+  animation: pulseOrb 5s ease-in-out infinite;
+}
+
 /* ── Logo marquee — used on /partnerships ── */
 @keyframes marquee {
   0%   { transform: translateX(0); }
