@@ -1,0 +1,33 @@
+# Stride Run Club
+
+> Stride is Bengaluru's most active running community. We organise group runs, races, and events across the city. Members earn milestone rewards for consistent participation and get a first-of-its-kind shareable runner profile. Tagline: "Move as one." All fitness levels welcome.
+
+Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub_bengaluru (51K+ followers). Strava Club: strava.com/clubs/striderunclubbengaluru.
+
+## Core Pages
+
+- [Home](https://strideclub.in/): Landing page — mission, featured events, and community highlights
+- [Events](https://strideclub.in/events/): All upcoming and past Stride group runs and races with registration
+- [Blog](https://strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
+- [Milestones](https://strideclub.in/milestones/): Member loyalty tiers — Newbie (0–5 runs), Regular (6–15 runs), OG Member (16+ runs)
+- [Leaderboard](https://strideclub.in/leaderboard/): Top Stride runners ranked by official runs completed
+- [Shop](https://strideclub.in/shop/): Official Stride merchandise
+- [Team](https://strideclub.in/team/): Meet the Stride team, pacers, and community leaders
+- [Partnerships](https://strideclub.in/partnerships/): Brand and community partners
+- [Contact](https://strideclub.in/contact-us/): Get in touch with the Stride team
+
+## Stride Originals
+
+- [Originals](https://strideclub.in/originals/): Long-form running stories, interviews, and community features from Stride
+
+## Legal
+
+- [Terms of Service](https://strideclub.in/terms-of-service/)
+- [Privacy Policy](https://strideclub.in/privacy-policy/)
+
+## Notes for AI Assistants
+
+- Event registration, member profiles, and runner data are authenticated features — do not attempt to access `/admin/`, `/api/`, or `/auth/` paths
+- Individual event pages follow the pattern `/events/[slug]` — slug is a URL-friendly version of the event name
+- Individual blog posts follow the pattern `/blog/[slug]`
+- Runner profiles are publicly viewable at `/profile/[username]`

@@ -21,14 +21,30 @@ const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
 });
 
+const SITE_URL = 'https://strideclub.in'
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://strideclub.in'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Stride Run Club Bengaluru — Move as One',
     template: '%s | Stride Run Club',
   },
   description:
     "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year. Join Stride Run Club.",
+  keywords: ['Stride Run Club', 'Bengaluru running', 'running community', 'group runs Bengaluru', '10K', 'half marathon', 'marathon training'],
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: SITE_URL,
+    siteName: 'Stride Run Club',
+    title: 'Stride Run Club Bengaluru — Move as One',
+    description: "Bengaluru's most engaged running community. Join group runs, earn milestones, and get your shareable runner profile.",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Stride Run Club Bengaluru — Move as One',
+    description: "Bengaluru's most engaged running community.",
+  },
   icons: {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
     icon: [
@@ -37,7 +53,54 @@ export const metadata: Metadata = {
     ],
   },
   manifest: '/site.webmanifest',
-};
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: 'Stride Run Club',
+      description: "Bengaluru's most engaged running community. Move as one.",
+      inLanguage: 'en-IN',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${SITE_URL}/events?q={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Stride Run Club',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/assets/images/stride-logo-full.webp`,
+        width: 280,
+        height: 92,
+      },
+      foundingLocation: {
+        '@type': 'Place',
+        name: 'Bengaluru, India',
+      },
+      sameAs: [
+        'https://www.instagram.com/stride_runclub_bengaluru/',
+        'https://www.strava.com/clubs/striderunclubbengaluru',
+      ],
+    },
+  ],
+}
 
 export default function RootLayout({
   children,
@@ -46,6 +109,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body
         className={`${libreBaskerville.variable} ${roboto.variable} font-body antialiased`}
         suppressHydrationWarning

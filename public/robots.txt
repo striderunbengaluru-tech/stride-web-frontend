@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /events/*/confirmation/
+
+# Sitemap
+Sitemap: https://strideclub.in/sitemap.xml

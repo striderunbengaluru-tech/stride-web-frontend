@@ -304,6 +304,37 @@ The majority of Stride's users are on mobile. Every component must be designed f
 | Never install a library without checking its bundle size impact | Performance regression |
 | Never build UI without considering mobile first | UX failure |
 | Never use `rounded-full` on CTA buttons | Stride CTAs always use `rounded-md` |
+| Never add a new public-facing page without updating `public/llms.txt` | Breaks LLM and AI assistant discovery |
+| Never add admin, API, or auth routes to `public/llms.txt` or `public/robots.txt` Allow list | Security exposure — admin URLs must never be indexed or shared with AI crawlers |
+
+---
+
+## 🔍 SEO & AI Discovery
+
+Two static files in `public/` control how search engines and AI assistants see this site:
+
+### `public/robots.txt`
+Standard crawler instructions. Current rules:
+- `Allow: /` — all public pages crawlable by default
+- `Disallow: /admin/` — never expose admin routes
+- `Disallow: /api/` — API routes are not indexable content
+- `Disallow: /auth/` — OAuth callback routes
+- `Disallow: /events/*/confirmation/` — post-registration pages
+
+**When to update:** Any time a new route group needs to be blocked from crawlers (e.g. a new protected section). Never add admin routes to the Allow list.
+
+### `public/llms.txt`
+Follows the [llmstxt.org](https://llmstxt.org) convention — a structured Markdown file that helps AI assistants understand the site. Format:
+
+```markdown
+## Section Name
+
+- [Page Title](https://strideclub.in/path/): one-line description of the page's purpose
+```
+
+**When to update:** Every time a new public-facing page is added. Add it under the most relevant section. Write the description from the perspective of what an AI assistant would need to know to answer user questions about Stride.
+
+**Never add** to `llms.txt`: admin routes, API endpoints, auth callbacks, confirmation/receipt pages, or any URL that requires authentication to be meaningful.
 
 ---
 
