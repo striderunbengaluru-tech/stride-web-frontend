@@ -35,7 +35,15 @@ export async function POST(request: Request) {
     .webp({ quality: 85 })
     .toBuffer()
 
-  const path = `images/events/${Date.now()}.webp`
+  const rawName = (form.get('eventName') as string | null)?.trim() ?? ''
+  const slug = rawName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')   // collapse non-alphanum runs to hyphens
+    .replace(/^-|-$/g, '')          // trim leading/trailing hyphens
+    .slice(0, 48)                   // keep it readable in the DB path
+    || 'event'
+  const suffix = Date.now().toString(36)  // base-36 timestamp — short and unique
+  const path = `images/events/${slug}-${suffix}.webp`
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')

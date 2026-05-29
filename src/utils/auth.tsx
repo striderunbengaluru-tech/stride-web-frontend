@@ -27,17 +27,21 @@ export function GoogleIcon() {
   )
 }
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ nextUrl }: { nextUrl?: string } = {}) {
   const [loading, setLoading] = useState(false)
 
   async function handleSignIn() {
     setLoading(true)
     const supabase = createClient()
+    // Supabase's `redirectTo` query string isn't reliably forwarded across the
+    // OAuth roundtrip (URL allow-list often matches on path only). We persist
+    // the next URL in a short-lived cookie that survives the bounce.
+    if (nextUrl) {
+      document.cookie = `stride_next=${encodeURIComponent(nextUrl)}; path=/; max-age=600; samesite=lax`
+    }
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
     // Page will redirect — no need to reset loading
   }

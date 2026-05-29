@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.redirect(`${SITE_URL}/login`)
+  if (!user) return NextResponse.redirect(`${SITE_URL}/become-a-member`)
 
   // Exchange the authorization code for a one-time access token.
   // This token belongs to the athlete who just authenticated on Strava —

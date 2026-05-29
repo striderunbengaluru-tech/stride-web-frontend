@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
@@ -8,77 +7,74 @@ import { createClient } from '@/lib/supabase/server'
 import { RegisterButton } from '@/components/events/register-button'
 import { EventHero } from '@/components/events/event-hero'
 import { SectionReveal } from '@/components/ui/section-reveal'
-import { ArrowLeft, Calendar, MapPin, Route, Coffee } from 'lucide-react'
-import { MapEmbed } from '@/components/events/map-embed'
+import { ShareButton } from '@/components/events/share-button'
+import { ArrowLeft, MapPin, Route, Coffee, ExternalLink } from 'lucide-react'
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = {
+  params: Promise<{ slug: string }>
+  searchParams: Promise<{ register?: string }>
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const { data: event } = await adminClient
     .from('events')
-    .select('name, cover_url, banner_images')
+    .select('name, subtitle, cover_url, banner_images')
     .eq('slug', slug)
     .single()
   if (!event) return {}
 
-  let ogImage = event.cover_url
-  if (!ogImage && event.banner_images) {
+  // First carousel image is the OG image; fall back to cover_url if banners missing
+  let ogImage: string | null = null
+  if (event.banner_images) {
     try { ogImage = (JSON.parse(event.banner_images) as string[])[0] ?? null } catch {}
   }
+  if (!ogImage) ogImage = event.cover_url ?? null
+
+  const title = `${event.name} — Stride Run Club`
+  const description = event.subtitle ?? `Join us for ${event.name} with the Stride Run Club community in Bengaluru.`
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'}/events/${slug}`
 
   return {
-    title: `${event.name} — Stride Run Club`,
-    openGraph: ogImage ? { images: [ogImage] } : undefined,
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      type: 'website',
+      url: canonicalUrl,
+      siteName: 'Stride Run Club',
+      title,
+      description,
+      images: ogImage ? [{ url: ogImage, alt: event.name }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
   }
 }
 
-function formatDateLong(d: string | null) {
+function fmtDateLong(d: string | null) {
   if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
+  return new Date(d).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
-
-function formatTime(d: string | null) {
+function fmtTime(d: string | null) {
   if (!d) return null
   return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
-
-function formatDateChip(d: string | null) {
-  if (!d) return null
-  const dt = new Date(d)
-  return {
-    month: dt.toLocaleDateString('en-IN', { month: 'short' }).toUpperCase(),
-    day: dt.getDate(),
-  }
+function fmtMonth(d: string) {
+  return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()
+}
+function fmtDay(d: string) {
+  return new Date(d).getDate()
 }
 
-function getEventStatus(eventDate: string | null): { label: string; classes: string } {
-  if (!eventDate) return { label: 'Coming Soon', classes: 'bg-white/15 text-white/70' }
-  const diff = new Date(eventDate).getTime() - Date.now()
-  if (diff < 0) return { label: 'Completed', classes: 'bg-white/15 text-white/60' }
-  if (diff < 3_600_000) {
-    const mins = Math.floor(diff / 60_000)
-    return { label: `In ${mins}m`, classes: 'bg-stride-yellow-accent text-copy-black' }
-  }
-  if (diff < 86_400_000) {
-    const hrs = Math.floor(diff / 3_600_000)
-    return { label: `In ${hrs}h`, classes: 'bg-stride-yellow-accent text-copy-black' }
-  }
-  if (diff < 7 * 86_400_000) {
-    const days = Math.floor(diff / 86_400_000)
-    return { label: days === 1 ? 'Tomorrow' : `In ${days}d`, classes: 'bg-stride-yellow-accent text-copy-black' }
-  }
-  const days = Math.floor(diff / 86_400_000)
-  return { label: `${days} days away`, classes: 'bg-white/15 text-white/70' }
-}
-
-export default async function EventDetailPage({ params }: Props) {
+export default async function EventDetailPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const { register } = await searchParams
+  const autoOpenModal = register === '1'
 
   const { data: event } = await adminClient
     .from('events')
@@ -92,7 +88,6 @@ export default async function EventDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   const isLoggedIn = !!user
 
-  // Confirmed seat count
   const { count: confirmedCount } = await adminClient
     .from('event_registrations')
     .select('*', { count: 'exact', head: true })
@@ -100,21 +95,47 @@ export default async function EventDetailPage({ params }: Props) {
     .eq('status', 'CONFIRMED')
 
   const isFull = !!event.capacity && (confirmedCount ?? 0) >= event.capacity
-  // confirmedCount used only for isFull — not shown to users
 
-  // Current user registration
   let isRegistered = false
+  let participantInitial = {
+    fullName: null as string | null,
+    dateOfBirth: null as string | null,
+    gender: null as string | null,
+    contactNumber: null as string | null,
+    emergencyContactNumber: null as string | null,
+  }
   if (user) {
-    const { data: reg } = await adminClient
-      .from('event_registrations')
-      .select('status')
-      .eq('event_id', event.id)
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const [{ data: reg }, { data: profile }] = await Promise.all([
+      adminClient
+        .from('event_registrations')
+        .select('status')
+        .eq('event_id', event.id)
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      adminClient
+        .from('users')
+        .select('full_name, date_of_birth, gender, contact_number, emergency_contact_number')
+        .eq('id', user.id)
+        .maybeSingle(),
+    ])
     isRegistered = reg?.status === 'CONFIRMED'
+    // Fall back to Google OAuth metadata if users.full_name is empty for some reason
+    const oauthName = (user.user_metadata?.full_name as string | undefined)
+      ?? (user.user_metadata?.name as string | undefined)
+      ?? null
+    if (profile) {
+      participantInitial = {
+        fullName: profile.full_name ?? oauthName,
+        dateOfBirth: profile.date_of_birth ?? null,
+        gender: profile.gender ?? null,
+        contactNumber: profile.contact_number ?? null,
+        emergencyContactNumber: profile.emergency_contact_number ?? null,
+      }
+    } else {
+      participantInitial = { ...participantInitial, fullName: oauthName }
+    }
   }
 
-  // First 5 attendee avatars
   const { data: attendeeRows } = await adminClient
     .from('event_registrations')
     .select('users(avatar_url, full_name)')
@@ -128,79 +149,59 @@ export default async function EventDetailPage({ params }: Props) {
     .map(r => r.users)
     .filter(Boolean) as { avatar_url: string | null; full_name: string | null }[]
 
-  // Banner images (JSON array) + fallback to cover_url
   let bannerImages: string[] = []
   try { bannerImages = JSON.parse(event.banner_images ?? '[]') as string[] }
   catch { /* empty */ }
   if (bannerImages.length === 0 && event.cover_url) bannerImages = [event.cover_url]
 
   const hasBanners = bannerImages.length > 0
-  const dateChip = formatDateChip(event.event_date)
-  const dateLong = formatDateLong(event.event_date)
-  const startTime = formatTime(event.event_date)
-  const endTime = formatTime(event.end_date)
-  const eventStatus = getEventStatus(event.event_date)
-  const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/events/${slug}`
+  const dateLong  = fmtDateLong(event.event_date)
+  const startTime = fmtTime(event.event_date)
+  const endTime   = fmtTime(event.end_date)
+  const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
+  const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'}/events/${slug}`
+
+  const firstNames = attendees.slice(0, 2).map(a => a.full_name?.split(' ')[0] ?? 'Someone')
+  const othersCount = Math.max(0, (confirmedCount ?? 0) - 2)
 
   return (
-    <main className='min-h-screen bg-stride-purple-primary pb-32 sm:pb-20'>
+    <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden pb-32 sm:pb-20'>
 
-      {/* Hero */}
-      {hasBanners ? (
-        <div className='mt-16'>
-          <EventHero images={bannerImages} eventName={event.name} pricePaise={event.price_paise} />
-        </div>
-      ) : (
-        <div className='mt-16 w-full h-72 sm:h-96 bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/15 relative'>
-          <div className='absolute inset-0 bg-linear-to-t from-stride-purple-primary/90 to-transparent' />
-          {/* Price badge */}
-          <div className='absolute top-4 right-4'>
-            {event.price_paise === 0 ? (
-              <span className='bg-green-500/90 text-white text-xs font-bold px-3 py-1.5 rounded-full'>Free Event</span>
-            ) : (
-              <span className='bg-black/50 border border-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full'>
-                ₹{(event.price_paise / 100).toLocaleString('en-IN')}
-              </span>
-            )}
+      {/* Live ambient orbs */}
+      <div className='pointer-events-none absolute inset-0 overflow-hidden'>
+        <div className='absolute top-[-12%] left-[-8%] w-[44rem] h-[44rem] rounded-full bg-stride-yellow-accent/[0.09] blur-[130px] animate-pulse-orb' />
+        <div className='absolute top-[35%] right-[-10%] w-[36rem] h-[36rem] rounded-full bg-stride-yellow-accent/[0.06] blur-[120px] animate-pulse-orb' style={{ animationDelay: '2s' }} />
+        <div className='absolute bottom-[-15%] left-[20%] w-[40rem] h-[40rem] rounded-full bg-white/[0.05] blur-[150px] animate-pulse-orb' style={{ animationDelay: '4s' }} />
+      </div>
+
+      {/* Two-column layout */}
+      <div className='relative z-10 lg:flex lg:pt-28 lg:max-w-6xl lg:mx-auto lg:gap-10 lg:px-6'>
+
+        {/* ── LEFT: Image + Going section ── */}
+        <div className='w-full lg:w-[42%] shrink-0 pt-24 lg:pt-0'>
+
+          {/* Back link — mobile only */}
+          <div className='lg:hidden px-5 pb-3'>
+            <Link href='/events' className='inline-flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors group'>
+              <ArrowLeft size={14} className='group-hover:-translate-x-0.5 transition-transform' />
+              All Events
+            </Link>
           </div>
-        </div>
-      )}
 
-      <div className='max-w-2xl mx-auto px-4 -mt-2 relative z-10'>
-
-        {/* Back navigation */}
-        <Link
-          href='/events'
-          className='inline-flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors mb-6 group'
-        >
-          <ArrowLeft size={15} className='group-hover:-translate-x-0.5 transition-transform' />
-          All Events
-        </Link>
-
-        {/* Status + countdown chip */}
-        <SectionReveal>
-          <div className='flex items-center gap-3 mb-4'>
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${eventStatus.classes}`}>
-              {eventStatus.label}
-            </span>
-          </div>
-        </SectionReveal>
-
-        {/* Title + subtitle */}
-        <SectionReveal delay={0.05}>
-          <h1 className='text-3xl sm:text-4xl font-bold text-white leading-tight'>
-            {event.name}
-          </h1>
-          {event.subtitle && (
-            <p className='text-white/60 text-base mt-2'>{event.subtitle}</p>
+          {/* Carousel — clean, no bounding box */}
+          {hasBanners ? (
+            <EventHero images={bannerImages} eventName={event.name} />
+          ) : (
+            <div className='relative w-full aspect-square bg-white/5 flex items-center justify-center'>
+              <span className='text-white/10 text-7xl select-none'>🏃</span>
+            </div>
           )}
-        </SectionReveal>
 
-        {/* Attendee avatar stack */}
-        {attendees.length > 0 && (
-          <SectionReveal delay={0.1}>
-            <div className='flex items-center gap-3 mt-5'>
-              <div className='flex -space-x-2'>
+          {/* Going section — desktop */}
+          {attendees.length > 0 && (
+            <div className='hidden lg:block mt-6'>
+              <p className='text-white/40 text-xs uppercase tracking-widest mb-3'>Going</p>
+              <div className='flex -space-x-2 mb-2'>
                 {attendees.map((a, i) => (
                   <div
                     key={i}
@@ -209,13 +210,7 @@ export default async function EventDetailPage({ params }: Props) {
                   >
                     {a.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={a.avatar_url}
-                        alt={a.full_name ?? ''}
-                        className='w-full h-full object-cover'
-                        loading='lazy'
-                        fetchPriority='low'
-                      />
+                      <img src={a.avatar_url} alt={a.full_name ?? ''} className='w-full h-full object-cover' loading='lazy' fetchPriority='low' />
                     ) : (
                       <span className='text-stride-yellow-accent text-xs font-bold'>
                         {(a.full_name ?? '?').charAt(0).toUpperCase()}
@@ -224,188 +219,229 @@ export default async function EventDetailPage({ params }: Props) {
                   </div>
                 ))}
               </div>
-              <p className='text-white/50 text-sm'>People are joining</p>
-            </div>
-          </SectionReveal>
-        )}
-
-        {/* Info card */}
-        <SectionReveal delay={0.15}>
-          <div className='mt-6 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl overflow-hidden'>
-
-            {/* Fee row */}
-            <div className='flex items-center gap-4 px-5 py-4 border-b border-white/10'>
-              <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
-                <span className='text-stride-yellow-accent text-base font-bold'>₹</span>
-              </div>
-              <div>
-                <p className='text-white/40 text-xs'>Event Fee</p>
-                <p className='text-white font-semibold text-base'>
-                  {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
+              {firstNames.length > 0 && (
+                <p className='text-white/40 text-xs'>
+                  {firstNames.join(', ')}{othersCount > 0 ? ' and others' : ''}
                 </p>
-              </div>
+              )}
             </div>
+          )}
+        </div>
 
-            {/* Date row */}
-            {dateLong && (
-              <div className='flex items-center gap-4 px-5 py-4 border-b border-white/10'>
-                <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0 overflow-hidden'>
-                  {dateChip ? (
-                    <div className='text-center leading-none'>
-                      <p className='text-stride-yellow-accent text-[9px] font-bold uppercase tracking-widest'>
-                        {dateChip.month}
-                      </p>
-                      <p className='text-white font-bold text-base'>{dateChip.day}</p>
+        {/* ── RIGHT: Event content ── */}
+        <div className='flex-1 min-w-0 px-5 sm:px-8 lg:px-0 pt-6 lg:pt-0 lg:pb-20'>
+
+          {/* Back link — desktop only */}
+          <div className='hidden lg:block mb-6'>
+            <Link href='/events' className='inline-flex items-center gap-1.5 text-white/35 hover:text-white/80 text-sm transition-colors group'>
+              <ArrowLeft size={14} className='group-hover:-translate-x-0.5 transition-transform' />
+              All Events
+            </Link>
+          </div>
+
+          {/* Title */}
+          <SectionReveal delay={0.04}>
+            <h1 className='text-4xl sm:text-5xl font-bold text-white leading-[1.05] tracking-tight'>
+              {event.name}
+            </h1>
+            {event.subtitle && (
+              <p className='text-white/50 text-lg mt-3 leading-relaxed'>{event.subtitle}</p>
+            )}
+          </SectionReveal>
+
+          {/* ── When & Where (clubbed) ── */}
+          {(dateLong || event.location) && (
+            <SectionReveal delay={0.12}>
+              <div className='mt-7 rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
+                {dateLong && event.event_date && (
+                  <div className='flex items-start gap-4 px-5 py-4 border-b border-white/8'>
+                    {/* Mini calendar chip */}
+                    <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5 mt-0.5'>
+                      <span className='text-stride-yellow-accent text-[8px] font-black uppercase tracking-widest'>
+                        {fmtMonth(event.event_date)}
+                      </span>
+                      <span className='text-white font-bold text-base leading-none'>
+                        {fmtDay(event.event_date)}
+                      </span>
                     </div>
-                  ) : (
-                    <Calendar size={18} className='text-white/60' />
-                  )}
-                </div>
-                <div>
-                  <p className='text-white/40 text-xs'>Date</p>
-                  <p className='text-white font-semibold text-sm'>{dateLong}</p>
-                  {startTime && (
-                    <p className='text-white/50 text-xs mt-0.5'>
-                      {startTime}{endTime ? ` – ${endTime}` : ''}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Meeting point row */}
-            {event.location && (
-              <div className='border-b border-white/10'>
-                <div className='flex items-center gap-4 px-5 py-4'>
-                  <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
-                    <MapPin size={18} className='text-white/60' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>When</p>
+                      <p className='text-white font-semibold text-base'>{dateLong}</p>
+                      {startTime && (
+                        <p className='text-white/50 text-sm mt-0.5'>
+                          {startTime}{endTime ? ` – ${endTime}` : ''}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className='min-w-0'>
-                    <p className='text-white/40 text-xs'>Meeting Point</p>
-                    <p className='text-white font-semibold text-sm truncate'>{event.location}</p>
-                  </div>
-                </div>
-                {/* Embedded map */}
-                <div className='px-4 pb-4'>
-                  <MapEmbed locationName={event.location} locationUrl={event.location_url} />
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Post-run gather point row */}
-            {event.post_run_location_url && (
-              <div className='flex items-center gap-4 px-5 py-4 border-b border-white/10'>
-                <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
-                  <Coffee size={18} className='text-white/60' />
-                </div>
-                <div>
-                  <p className='text-white/40 text-xs'>Post-Run Gather Point</p>
+                {event.location && (
+                  <div className='flex items-start gap-4 px-5 py-4'>
+                    <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center shrink-0 mt-0.5'>
+                      <MapPin size={15} className='text-white/50' />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Where</p>
+                      {event.location_url ? (
+                        <a
+                          href={event.location_url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='inline-flex items-center gap-1.5 text-white font-semibold text-base hover:text-stride-yellow-accent transition-colors'
+                        >
+                          {event.location}
+                          <ExternalLink size={13} className='opacity-50 shrink-0' />
+                        </a>
+                      ) : (
+                        <p className='text-white font-semibold text-base'>{event.location}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionReveal>
+          )}
+
+          {/* ── Post-run + Route (clubbed) ── */}
+          {(event.post_run_location_url || event.strava_route_url) && (
+            <SectionReveal delay={0.16}>
+              <div className='mt-3 rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
+                {event.post_run_location_url && (
                   <a
                     href={event.post_run_location_url}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-white font-semibold text-sm hover:text-stride-yellow-accent transition-colors underline underline-offset-2'
+                    className='flex items-center gap-4 px-5 py-4 hover:bg-white/4 transition-colors group/row'
+                    style={event.strava_route_url ? { borderBottom: '1px solid rgba(255,255,255,0.08)' } : undefined}
                   >
-                    View on Maps
+                    <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center shrink-0'>
+                      <Coffee size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Post-run</p>
+                      <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
+                        Where we gather after the run
+                      </p>
+                    </div>
+                    <ExternalLink size={14} className='text-white/30 shrink-0 group-hover/row:text-stride-yellow-accent transition-colors' />
                   </a>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Route row */}
-            {event.strava_route_url && (
-              <div className='flex items-center gap-4 px-5 py-4'>
-                <div className='w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center shrink-0'>
-                  <Route size={18} className='text-white/60' />
-                </div>
-                <div>
-                  <p className='text-white/40 text-xs'>Route</p>
+                {event.strava_route_url && (
                   <a
                     href={event.strava_route_url}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='text-white font-semibold text-sm hover:text-stride-yellow-accent transition-colors underline underline-offset-2'
+                    className='flex items-center gap-4 px-5 py-4 hover:bg-white/4 transition-colors group/row'
                   >
-                    View Route
+                    <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center shrink-0'>
+                      <Route size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Route</p>
+                      <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
+                        View the run route on Strava
+                      </p>
+                    </div>
+                    <ExternalLink size={14} className='text-white/30 shrink-0 group-hover/row:text-stride-yellow-accent transition-colors' />
                   </a>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        </SectionReveal>
+            </SectionReveal>
+          )}
 
-        {/* Desktop registration card */}
-        <SectionReveal delay={0.2}>
-          <div className='mt-6 hidden sm:block bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-6'>
-            <div className='mb-4'>
-              <p className='text-white/40 text-xs uppercase tracking-wider'>Registration</p>
-              <p className='text-3xl font-bold text-white mt-1'>
-                {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
-              </p>
-            </div>
-            <RegisterButton
-              eventId={event.id}
-              pricePaise={event.price_paise}
-              isFull={isFull}
-              isRegistered={isRegistered}
-              isLoggedIn={isLoggedIn}
-              razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
-            />
-          </div>
-        </SectionReveal>
-
-        {/* Event details */}
-        {event.details && (
-          <SectionReveal delay={0.25}>
-            <div className='mt-6 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-6'>
-              <h2 className='text-white font-bold text-lg mb-4'>Event Details</h2>
-              <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/70 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-2 prose-ol:my-2'>
-                <ReactMarkdown>{event.details}</ReactMarkdown>
+          {/* ── Registration box (Luma-style) ── */}
+          <SectionReveal delay={0.18}>
+            <div className='hidden sm:block mt-5 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
+              <div className='px-5 py-3 border-b border-white/8 flex items-center justify-between'>
+                <p className='text-white/50 text-xs font-bold uppercase tracking-widest'>Registration</p>
+                <ShareButton title={event.name} url={shareUrl} />
+              </div>
+              <div className='px-5 py-5'>
+                <div className='flex items-center justify-between gap-4 mb-4'>
+                  <p className='text-white/60 text-sm'>
+                    {isRegistered
+                      ? "You're registered for this event."
+                      : isFull
+                      ? 'This event is full.'
+                      : 'Sign up and lace up — see you on the run.'}
+                  </p>
+                  <p className='text-2xl font-bold text-white shrink-0'>{priceLabel}</p>
+                </div>
+                <RegisterButton
+                  eventId={event.id}
+                  eventSlug={slug}
+                  pricePaise={event.price_paise}
+                  isFull={isFull}
+                  isRegistered={isRegistered}
+                  isLoggedIn={isLoggedIn}
+                  autoOpen={autoOpenModal}
+                  initial={participantInitial}
+                  razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+                />
               </div>
             </div>
           </SectionReveal>
-        )}
 
-        {/* Share */}
-        <SectionReveal delay={0.3}>
-          <div className='mt-6 flex gap-3'>
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(`${event.name} — ${shareUrl}`)}`}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/50 hover:border-green-500/40 hover:text-green-400 transition-colors text-sm'
-            >
-              WhatsApp
-            </a>
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(event.name)}&url=${encodeURIComponent(shareUrl)}`}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='flex-1 text-center py-2.5 rounded-xl border border-white/15 text-white/50 hover:border-sky-500/40 hover:text-sky-400 transition-colors text-sm'
-            >
-              X / Twitter
-            </a>
+          {/* Mobile: share button only — register is sticky at bottom */}
+          <div className='sm:hidden mt-5 flex justify-end'>
+            <ShareButton title={event.name} url={shareUrl} />
           </div>
-        </SectionReveal>
 
+          {/* Mobile: going count */}
+          {attendees.length > 0 && (
+            <SectionReveal delay={0.22}>
+              <div className='sm:hidden mt-4 flex items-center gap-3'>
+                <div className='flex -space-x-2'>
+                  {attendees.slice(0, 3).map((a, i) => (
+                    <div key={i} className='w-7 h-7 rounded-full border-2 border-stride-purple-primary overflow-hidden bg-stride-yellow-accent/20 flex items-center justify-center' style={{ zIndex: 3 - i }}>
+                      {a.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.avatar_url} alt='' className='w-full h-full object-cover' loading='lazy' />
+                      ) : (
+                        <span className='text-stride-yellow-accent text-[10px] font-bold'>{(a.full_name ?? '?').charAt(0)}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className='text-white/45 text-sm'>Runners going</p>
+              </div>
+            </SectionReveal>
+          )}
+
+          {/* About Event */}
+          {event.details && (
+            <SectionReveal delay={0.26}>
+              <div className='mt-8'>
+                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>About Event</p>
+                <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/75 prose-p:leading-relaxed prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
+                  <ReactMarkdown>{event.details}</ReactMarkdown>
+                </div>
+              </div>
+            </SectionReveal>
+          )}
+
+        </div>
       </div>
 
       {/* Sticky mobile registration bar */}
-      <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/10 px-4 py-4 z-50'>
+      <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/10 px-4 py-4 z-40'>
         <div className='flex items-center gap-4 max-w-lg mx-auto'>
           <div>
-            <p className='text-white/40 text-xs'>Registration</p>
-            <p className='text-white font-bold text-lg'>
-              {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
-            </p>
+            <p className='text-white/40 text-xs'>Entry fee</p>
+            <p className='text-white font-bold text-xl leading-none mt-0.5'>{priceLabel}</p>
           </div>
           <div className='flex-1'>
             <RegisterButton
               eventId={event.id}
+              eventSlug={slug}
               pricePaise={event.price_paise}
               isFull={isFull}
               isRegistered={isRegistered}
               isLoggedIn={isLoggedIn}
+              autoOpen={autoOpenModal}
+              initial={participantInitial}
               razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
             />
           </div>

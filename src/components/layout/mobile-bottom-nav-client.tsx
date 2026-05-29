@@ -80,16 +80,16 @@ export function MobileBottomNavClient({ navUser }: { navUser: NavUser | null }) 
           </Link>
         ) : (
           <Link
-            href='/login'
+            href='/become-a-member'
             className={clsx(
               'flex items-center gap-2 rounded-full px-4 py-2.5 transition-all duration-200 min-h-11',
-              pathname === '/login'
+              pathname === '/become-a-member'
                 ? 'bg-stride-yellow-accent text-copy-black'
                 : 'text-white/55 hover:text-white hover:bg-white/8'
             )}
           >
             <LogIn className='size-[18px] shrink-0' />
-            <span className='text-xs font-semibold whitespace-nowrap'>Sign In</span>
+            <span className='text-xs font-semibold whitespace-nowrap'>Join Us</span>
           </Link>
         )}
       </nav>

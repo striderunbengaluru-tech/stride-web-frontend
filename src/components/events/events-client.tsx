@@ -26,12 +26,12 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const container = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
+  show: { transition: { staggerChildren: 0.06 } },
 }
 
 const cardItem = {
-  hidden: { opacity: 0, y: 28 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 }
 
 export function EventsClient({ events }: { events: Event[] }) {
@@ -39,30 +39,35 @@ export function EventsClient({ events }: { events: Event[] }) {
   const now = useMemo(() => new Date(), [])
 
   const filtered = useMemo(() => {
-    if (filter === 'upcoming') {
-      return events.filter(e => !e.event_date || new Date(e.event_date) >= now)
-    }
-    if (filter === 'past') {
-      return events.filter(e => !!e.event_date && new Date(e.event_date) < now)
-    }
+    if (filter === 'upcoming') return events.filter(e => !e.event_date || new Date(e.event_date) >= now)
+    if (filter === 'past') return events.filter(e => !!e.event_date && new Date(e.event_date) < now)
     return events
   }, [events, filter, now])
+
+  const counts = useMemo(() => ({
+    upcoming: events.filter(e => !e.event_date || new Date(e.event_date) >= now).length,
+    past:     events.filter(e => !!e.event_date && new Date(e.event_date) < now).length,
+    all:      events.length,
+  }), [events, now])
 
   return (
     <div>
       {/* Filter tabs */}
-      <div className='flex gap-2 mb-10'>
+      <div className='flex gap-1.5 mb-10 bg-white/5 border border-white/8 rounded-2xl p-1.5 w-fit'>
         {FILTERS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+            className={`relative px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               filter === key
-                ? 'bg-stride-yellow-accent text-copy-black'
-                : 'bg-white/10 text-white/60 hover:bg-white/15 hover:text-white border border-white/10'
+                ? 'bg-stride-yellow-accent text-copy-black shadow-lg'
+                : 'text-white/50 hover:text-white/80'
             }`}
           >
             {label}
+            <span className={`ml-1.5 text-xs font-normal ${filter === key ? 'text-copy-black/60' : 'text-white/25'}`}>
+              {counts[key]}
+            </span>
           </button>
         ))}
       </div>
@@ -74,19 +79,19 @@ export function EventsClient({ events }: { events: Event[] }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-16 text-center'
+            className='py-20 text-center'
           >
-            <p className='text-white/40 text-lg'>No {filter === 'all' ? '' : filter} events right now.</p>
-            <p className='text-white/30 text-sm mt-2'>Check back soon — we run regularly!</p>
+            <p className='text-white/30 text-lg font-medium'>No {filter === 'all' ? '' : filter} events right now.</p>
+            <p className='text-white/20 text-sm mt-2'>Check back soon — we run regularly!</p>
           </motion.div>
         ) : (
           <motion.div
             key={filter}
-            className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
+            className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10'
             variants={container}
             initial='hidden'
             animate='show'
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
           >
             {filtered.map(event => (
               <motion.div key={event.id} variants={cardItem}>

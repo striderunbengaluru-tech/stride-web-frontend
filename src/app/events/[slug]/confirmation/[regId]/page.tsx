@@ -28,7 +28,7 @@ export default async function ConfirmationPage({ params }: Props) {
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/become-a-member')
 
   const { data: registration } = await adminClient
     .from('event_registrations')

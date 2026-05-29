@@ -96,8 +96,32 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   redirect('/admin/events')
 }
 
+const STORAGE_URL_PREFIX = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/'
+
 export async function deleteEventAction(id: string): Promise<void> {
   await requireAdmin()
+
+  // Fetch banner images before deleting the row so we can clean up storage
+  const { data: event } = await adminClient
+    .from('events')
+    .select('banner_images')
+    .eq('id', id)
+    .single()
+
+  const bannerUrls: string[] = (() => {
+    try { return JSON.parse(event?.banner_images ?? '[]') as string[] }
+    catch { return [] }
+  })()
+
+  const storagePaths = bannerUrls
+    .filter(url => url.startsWith(STORAGE_URL_PREFIX))
+    .map(url => url.slice(STORAGE_URL_PREFIX.length))
+    .filter(p => p.startsWith('images/events/'))
+
+  if (storagePaths.length > 0) {
+    await adminClient.storage.from('stride-assets').remove(storagePaths)
+  }
+
   await adminClient.from('events').delete().eq('id', id)
   redirect('/admin/events')
 }

@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PROTECTED_PREFIXES = ['/admin']
-const AUTH_PATHS = ['/login', '/register']
+const AUTH_PATHS = ['/become-a-member', '/login', '/register']
 
 export async function middleware(request: NextRequest) {
   // Supabase SSR requires refreshing the session on every request.
@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
+    loginUrl.pathname = '/become-a-member'
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }

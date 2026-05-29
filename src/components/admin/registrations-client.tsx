@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Search, CheckCircle, Clock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar } from 'lucide-react'
 import type { RunnerRow, EventWithAttendees } from '@/app/admin/registrations/page'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 
@@ -21,7 +21,7 @@ const ROLE_PILL: Record<string, string> = {
 
 const STATUS_PILL: Record<string, string> = {
   CONFIRMED: 'bg-green-500/15 text-green-400',
-  PENDING: 'bg-yellow-500/15 text-yellow-400',
+  PENDING:   'bg-yellow-500/15 text-yellow-400',
   CANCELLED: 'bg-red-500/15 text-red-400',
 }
 
@@ -36,12 +36,12 @@ function fmtTime(d: string | null) {
 }
 
 function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: number | null }) {
-  if (!capacity) return <span className='text-white/30 text-xs'>No limit</span>
+  if (!capacity) return <span className='text-white/30 text-xs tabular-nums'>{confirmed} registered</span>
   const pct = Math.min(100, Math.round((confirmed / capacity) * 100))
-  const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+  const color = pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-stride-yellow-accent' : 'bg-green-500'
   return (
     <div className='flex items-center gap-2'>
-      <div className='w-20 bg-white/10 rounded-full h-1.5 overflow-hidden'>
+      <div className='w-16 bg-white/10 rounded-full h-1.5 overflow-hidden'>
         <div className={`${color} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
       </div>
       <span className='text-white/50 text-xs tabular-nums'>{confirmed}/{capacity}</span>
@@ -75,10 +75,10 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
     <div>
       {/* Tab bar + search */}
       <div className='flex flex-col sm:flex-row gap-3 mb-6'>
-        <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1'>
+        <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 shrink-0'>
           <button
             onClick={() => setTab('runners')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               tab === 'runners' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
             }`}
           >
@@ -87,7 +87,7 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
           </button>
           <button
             onClick={() => setTab('events')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               tab === 'events' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
             }`}
           >
@@ -96,7 +96,7 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
           </button>
         </div>
 
-        <div className='relative flex-1 sm:max-w-xs'>
+        <div className='relative flex-1'>
           <Search size={15} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
           <input
             type='text'
@@ -108,103 +108,64 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
         </div>
       </div>
 
-      {/* ── Tab A: All Runners ── */}
+      {/* ── Tab A: All Runners — card list ── */}
       {tab === 'runners' && (
         <>
           {filteredRunners.length === 0 ? (
-            <div className='bg-white/10 border border-white/15 rounded-xl p-12 text-center'>
-              <p className='text-white/40'>{search ? 'No runners match your search.' : 'No registrations yet.'}</p>
+            <div className='bg-white/5 border border-white/10 rounded-2xl p-12 text-center'>
+              <p className='text-white/40 text-sm'>{search ? 'No runners match your search.' : 'No registrations yet.'}</p>
             </div>
           ) : (
-            <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl overflow-hidden'>
-              {/* Desktop table */}
-              <div className='hidden md:block overflow-x-auto'>
-                <table className='w-full text-sm'>
-                  <thead>
-                    <tr className='border-b border-white/10'>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Tag</th>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Runner</th>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Confirmed</th>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Checked In</th>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Last Event</th>
-                      <th className='text-left text-white/40 font-medium px-5 py-3.5 text-xs uppercase tracking-wider'>Role</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRunners.map(r => (
-                      <tr key={r.user_id} className='border-b border-white/5 hover:bg-white/[0.03] transition-colors'>
-                        <td className='px-5 py-3.5'>
-                          {r.runner_tag
-                            ? <RunnerTagBadge tag={r.runner_tag} size='sm' />
-                            : <span className='text-white/20 text-xs'>—</span>}
-                        </td>
-                        <td className='px-5 py-3.5'>
-                          <p className='text-white font-medium'>{r.full_name ?? '—'}</p>
-                          <p className='text-white/40 text-xs mt-0.5'>{r.email}</p>
-                          {r.username && <p className='text-white/25 text-xs'>@{r.username}</p>}
-                        </td>
-                        <td className='px-5 py-3.5'>
-                          <span className='text-white font-semibold tabular-nums'>{r.confirmed_count}</span>
-                          <span className='text-white/30 text-xs ml-1'>runs</span>
-                        </td>
-                        <td className='px-5 py-3.5'>
-                          <div className='flex items-center gap-1.5'>
-                            {r.checked_in_count > 0
-                              ? <CheckCircle size={12} className='text-green-400' />
-                              : <Clock size={12} className='text-white/20' />
-                            }
-                            <span className={`tabular-nums text-sm ${r.checked_in_count > 0 ? 'text-green-400' : 'text-white/30'}`}>
-                              {r.checked_in_count}
-                            </span>
-                          </div>
-                        </td>
-                        <td className='px-5 py-3.5'>
-                          {r.last_event_name ? (
-                            <>
-                              <p className='text-white/70 text-sm line-clamp-1'>{r.last_event_name}</p>
-                              <p className='text-white/30 text-xs mt-0.5'>{fmtDate(r.last_event_date)}</p>
-                            </>
-                          ) : <span className='text-white/20 text-xs'>—</span>}
-                        </td>
-                        <td className='px-5 py-3.5'>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${ROLE_PILL[r.role] ?? 'bg-white/10 text-white/50'}`}>
-                            {r.role}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className='space-y-2'>
+              {filteredRunners.map(r => (
+                <div key={r.user_id} className='bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 hover:border-white/20 transition-colors'>
 
-              {/* Mobile list */}
-              <div className='md:hidden divide-y divide-white/5'>
-                {filteredRunners.map(r => (
-                  <div key={r.user_id} className='px-4 py-4'>
-                    <div className='flex items-start justify-between gap-3'>
-                      <div>
-                        <div className='flex items-center gap-2 mb-1'>
-                          {r.runner_tag
-                            ? <RunnerTagBadge tag={r.runner_tag} size='xs' />
-                            : <span className='text-white/20 text-xs font-mono'>—</span>}
-                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${ROLE_PILL[r.role] ?? ''}`}>
-                            {r.role}
-                          </span>
-                        </div>
-                        <p className='text-white font-medium text-sm'>{r.full_name ?? '—'}</p>
-                        <p className='text-white/40 text-xs'>{r.email}</p>
+                  {/* Top row: tag + name + runs */}
+                  <div className='flex items-start gap-3'>
+                    {/* Runner info */}
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center gap-2 flex-wrap'>
+                        {r.runner_tag
+                          ? <RunnerTagBadge tag={r.runner_tag} size='xs' />
+                          : <span className='text-white/20 text-xs font-mono'>—</span>}
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${ROLE_PILL[r.role] ?? 'bg-white/10 text-white/50'}`}>
+                          {r.role}
+                        </span>
                       </div>
-                      <div className='text-right shrink-0'>
-                        <p className='text-white font-bold'>{r.confirmed_count}</p>
-                        <p className='text-white/30 text-xs'>runs</p>
+                      <p className='text-white font-semibold text-sm mt-1 truncate'>{r.full_name ?? '—'}</p>
+                      <p className='text-white/40 text-xs truncate'>{r.email}</p>
+                      {r.username && <p className='text-white/25 text-xs'>@{r.username}</p>}
+                    </div>
+
+                    {/* Stats */}
+                    <div className='flex gap-4 shrink-0 text-right'>
+                      <div>
+                        <p className='text-stride-yellow-accent font-bold text-lg tabular-nums leading-none'>{r.confirmed_count}</p>
+                        <p className='text-white/30 text-[10px] mt-0.5'>confirmed</p>
+                      </div>
+                      <div>
+                        <p className={`font-bold text-lg tabular-nums leading-none ${r.checked_in_count > 0 ? 'text-green-400' : 'text-white/20'}`}>
+                          {r.checked_in_count}
+                        </p>
+                        <p className='text-white/30 text-[10px] mt-0.5'>check-ins</p>
                       </div>
                     </div>
-                    {r.last_event_name && (
-                      <p className='text-white/30 text-xs mt-2'>Last: {r.last_event_name}</p>
-                    )}
                   </div>
-                ))}
-              </div>
+
+                  {/* Bottom row: last event + check-in indicator */}
+                  {r.last_event_name && (
+                    <div className='flex items-center gap-2 mt-2.5 pt-2.5 border-t border-white/5'>
+                      <Clock size={10} className='text-white/25 shrink-0' />
+                      <p className='text-white/35 text-xs truncate'>
+                        Last: <span className='text-white/55'>{r.last_event_name}</span>
+                      </p>
+                      {r.last_event_date && (
+                        <p className='text-white/25 text-xs shrink-0 ml-auto'>{fmtDate(r.last_event_date)}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </>
@@ -214,147 +175,133 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
       {tab === 'events' && (
         <>
           {filteredEvents.length === 0 ? (
-            <div className='bg-white/10 border border-white/15 rounded-xl p-12 text-center'>
-              <p className='text-white/40'>{search ? 'No events match your search.' : 'No events yet.'}</p>
+            <div className='bg-white/5 border border-white/10 rounded-2xl p-12 text-center'>
+              <p className='text-white/40 text-sm'>{search ? 'No events match your search.' : 'No events yet.'}</p>
             </div>
           ) : (
-            <div className='space-y-3'>
+            <div className='space-y-2'>
               {filteredEvents.map(event => {
                 const isExpanded = expandedEventId === event.id
                 const isPast = event.event_date ? new Date(event.event_date) < new Date() : false
 
                 return (
-                  <div key={event.id} className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl overflow-hidden'>
-                    {/* Event header row */}
+                  <div key={event.id} className='bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors'>
+
+                    {/* Event header — clickable to expand */}
                     <button
                       onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
-                      className='w-full flex items-center gap-4 px-5 py-4 hover:bg-white/[0.03] transition-colors text-left'
+                      className='w-full text-left'
                     >
-                      {/* Date chip */}
-                      <div className='w-10 h-10 shrink-0 rounded-lg bg-white/10 flex flex-col items-center justify-center leading-none'>
-                        {event.event_date ? (
-                          <>
-                            <span className='text-stride-yellow-accent text-[8px] font-bold uppercase tracking-widest'>
-                              {new Date(event.event_date).toLocaleDateString('en-IN', { month: 'short' })}
-                            </span>
-                            <span className='text-white font-bold text-sm'>
-                              {new Date(event.event_date).getDate()}
-                            </span>
-                          </>
-                        ) : <span className='text-white/30 text-xs'>—</span>}
-                      </div>
+                      <div className='flex items-center gap-3 px-4 py-3.5'>
 
-                      {/* Event info */}
-                      <div className='flex-1 min-w-0'>
-                        <div className='flex items-center gap-2 flex-wrap'>
-                          <p className='text-white font-semibold text-sm line-clamp-1'>{event.name}</p>
-                          {isPast && (
-                            <span className='text-white/30 text-xs bg-white/10 px-1.5 py-0.5 rounded'>Completed</span>
-                          )}
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${
-                            event.price_paise === 0 ? 'bg-green-500/15 text-green-400' : 'bg-white/10 text-white/50'
-                          }`}>
-                            {event.price_paise === 0 ? 'Free' : `₹${event.price_paise / 100}`}
-                          </span>
+                        {/* Date chip */}
+                        <div className='w-11 h-11 shrink-0 rounded-xl bg-white/8 border border-white/10 flex flex-col items-center justify-center leading-none'>
+                          {event.event_date ? (
+                            <>
+                              <span className='text-stride-yellow-accent text-[8px] font-bold uppercase tracking-widest'>
+                                {new Date(event.event_date).toLocaleDateString('en-IN', { month: 'short' })}
+                              </span>
+                              <span className='text-white font-bold text-sm'>
+                                {new Date(event.event_date).getDate()}
+                              </span>
+                            </>
+                          ) : <Calendar size={14} className='text-white/30' />}
                         </div>
-                        <div className='flex items-center gap-4 mt-1.5 flex-wrap'>
-                          <span className='text-white/50 text-xs'>
-                            {event.confirmed_count} confirmed
-                          </span>
-                          <span className='text-green-400 text-xs flex items-center gap-1'>
-                            <CheckCircle size={10} />
-                            {event.checked_in_count} checked in
-                          </span>
-                          <CapacityBar confirmed={event.confirmed_count} capacity={event.capacity} />
-                        </div>
-                      </div>
 
-                      {/* Expand chevron */}
-                      <div className='shrink-0 text-white/30'>
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        {/* Name + stats */}
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center gap-2 flex-wrap'>
+                            <p className='text-white font-semibold text-sm line-clamp-1'>{event.name}</p>
+                            {isPast && (
+                              <span className='text-[10px] px-1.5 py-0.5 rounded bg-white/8 text-white/30'>Completed</span>
+                            )}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              event.price_paise === 0 ? 'bg-green-500/15 text-green-400' : 'bg-white/8 text-white/50'
+                            }`}>
+                              {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
+                            </span>
+                          </div>
+
+                          {/* Stats row */}
+                          <div className='flex items-center gap-3 mt-1.5 flex-wrap'>
+                            <span className='flex items-center gap-1 text-white/45 text-xs'>
+                              <Users size={9} />
+                              {event.confirmed_count} confirmed
+                            </span>
+                            <span className='text-green-400 text-xs flex items-center gap-1'>
+                              <CheckCircle size={9} />
+                              {event.checked_in_count} checked in
+                            </span>
+                            <CapacityBar confirmed={event.confirmed_count} capacity={event.capacity} />
+                          </div>
+                        </div>
+
+                        {/* Actions — stop propagation so clicks don't toggle expand */}
+                        <div className='flex items-center gap-1 shrink-0' onClick={e => e.stopPropagation()}>
+                          <a
+                            href={`/admin/events/${event.id}/edit`}
+                            title='Edit event'
+                            className='p-1.5 rounded-lg text-white/25 hover:text-stride-yellow-accent hover:bg-white/5 transition-colors'
+                          >
+                            <Pencil size={13} />
+                          </a>
+                          <a
+                            href={`/events/${event.slug}`}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            title='View public page'
+                            className='p-1.5 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/5 transition-colors'
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        </div>
+
+                        <div className='text-white/30 shrink-0'>
+                          {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </div>
                       </div>
                     </button>
 
                     {/* Expanded attendee list */}
                     {isExpanded && (
-                      <div className='border-t border-white/10'>
+                      <div className='border-t border-white/8'>
                         {event.attendees.length === 0 ? (
-                          <p className='text-white/30 text-sm px-5 py-6 text-center'>No registrations for this event.</p>
+                          <p className='text-white/30 text-sm px-4 py-5 text-center'>No registrations for this event.</p>
                         ) : (
-                          <>
-                            {/* Desktop table */}
-                            <div className='hidden md:block overflow-x-auto'>
-                              <table className='w-full text-sm'>
-                                <thead>
-                                  <tr className='border-b border-white/5'>
-                                    <th className='text-left text-white/30 font-medium px-5 py-3 text-xs uppercase tracking-wider'>Tag</th>
-                                    <th className='text-left text-white/30 font-medium px-5 py-3 text-xs uppercase tracking-wider'>Runner</th>
-                                    <th className='text-left text-white/30 font-medium px-5 py-3 text-xs uppercase tracking-wider'>Status</th>
-                                    <th className='text-left text-white/30 font-medium px-5 py-3 text-xs uppercase tracking-wider'>Registered</th>
-                                    <th className='text-left text-white/30 font-medium px-5 py-3 text-xs uppercase tracking-wider'>Checked In</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {event.attendees.map(a => (
-                                    <tr key={a.registration_id} className='border-b border-white/[0.04] hover:bg-white/[0.02]'>
-                                      <td className='px-5 py-3'>
-                                        {a.runner_tag
-                                          ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
-                                          : <span className='text-white/20 text-xs'>—</span>}
-                                      </td>
-                                      <td className='px-5 py-3'>
-                                        <p className='text-white/80 font-medium text-sm'>{a.full_name ?? '—'}</p>
-                                        <p className='text-white/30 text-xs'>{a.email}</p>
-                                      </td>
-                                      <td className='px-5 py-3'>
-                                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${STATUS_PILL[a.status] ?? 'bg-white/10 text-white/50'}`}>
-                                          {a.status}
-                                        </span>
-                                      </td>
-                                      <td className='px-5 py-3 text-white/40 text-xs'>
-                                        {fmtDate(a.registered_at)}
-                                      </td>
-                                      <td className='px-5 py-3'>
-                                        {a.checked_in_at ? (
-                                          <span className='text-green-400 text-xs flex items-center gap-1'>
-                                            <CheckCircle size={11} />
-                                            {fmtTime(a.checked_in_at)}
-                                          </span>
-                                        ) : (
-                                          <span className='text-white/20 text-xs'>—</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                          <div className='divide-y divide-white/4'>
+                            {event.attendees.map(a => (
+                              <div key={a.registration_id} className='flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02]'>
 
-                            {/* Mobile list */}
-                            <div className='md:hidden divide-y divide-white/5'>
-                              {event.attendees.map(a => (
-                                <div key={a.registration_id} className='px-4 py-3 flex items-center gap-3'>
-                                  <div className='shrink-0'>
-                                    {a.runner_tag
-                                      ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
-                                      : <span className='text-white/20 text-xs font-mono'>—</span>}
-                                  </div>
-                                  <div className='flex-1 min-w-0'>
-                                    <p className='text-white/80 text-sm font-medium truncate'>{a.full_name ?? '—'}</p>
-                                    <p className='text-white/30 text-xs truncate'>{a.email}</p>
-                                  </div>
-                                  <div className='shrink-0 text-right'>
-                                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${STATUS_PILL[a.status] ?? ''}`}>
-                                      {a.status}
-                                    </span>
-                                    {a.checked_in_at && (
-                                      <p className='text-green-400 text-xs mt-0.5'>{fmtTime(a.checked_in_at)}</p>
-                                    )}
-                                  </div>
+                                {/* Tag */}
+                                <div className='shrink-0 w-14'>
+                                  {a.runner_tag
+                                    ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
+                                    : <span className='text-white/20 text-xs'>—</span>}
                                 </div>
-                              ))}
-                            </div>
-                          </>
+
+                                {/* Runner info */}
+                                <div className='flex-1 min-w-0'>
+                                  <p className='text-white/80 font-medium text-sm truncate'>{a.full_name ?? '—'}</p>
+                                  <p className='text-white/30 text-xs truncate'>{a.email}</p>
+                                </div>
+
+                                {/* Status + check-in */}
+                                <div className='shrink-0 text-right'>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${STATUS_PILL[a.status] ?? 'bg-white/10 text-white/50'}`}>
+                                    {a.status}
+                                  </span>
+                                  {a.checked_in_at ? (
+                                    <p className='text-green-400 text-xs mt-1 flex items-center justify-end gap-1'>
+                                      <CheckCircle size={9} />
+                                      {fmtTime(a.checked_in_at)}
+                                    </p>
+                                  ) : (
+                                    <p className='text-white/20 text-xs mt-1'>{fmtDate(a.registered_at)}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     )}

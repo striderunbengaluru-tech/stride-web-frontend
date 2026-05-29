@@ -27,29 +27,27 @@ export default async function EditEventPage({ params }: Props) {
 
   return (
     <div>
-      <h1 className='text-3xl font-bold text-white mb-8'>Edit Event</h1>
-      <div className='bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8'>
-        <EventForm
-          action={action}
-          submitLabel='Save Changes'
-          defaultValues={{
-            name: event.name ?? undefined,
-            subtitle: event.subtitle ?? undefined,
-            details: event.details ?? undefined,
-            location: event.location ?? undefined,
-            locationUrl: event.location_url ?? undefined,
-            postRunLocationUrl: event.post_run_location_url ?? undefined,
-            stravaRouteUrl: event.strava_route_url ?? undefined,
-            eventDate: toDatetimeLocal(event.event_date),
-            endDate: toDatetimeLocal(event.end_date),
-            capacity: event.capacity ?? undefined,
-            pricePaise: event.price_paise,
-            status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
-            confirmationText: event.confirmation_text ?? undefined,
-            bannerImages: event.banner_images ?? '[]',
-          }}
-        />
-      </div>
+      <h1 className='text-3xl font-bold text-white mb-6'>Edit Event</h1>
+      <EventForm
+        action={action}
+        submitLabel='Save Changes'
+        defaultValues={{
+          name: event.name ?? undefined,
+          subtitle: event.subtitle ?? undefined,
+          details: event.details ?? undefined,
+          location: event.location ?? undefined,
+          locationUrl: event.location_url ?? undefined,
+          postRunLocationUrl: event.post_run_location_url ?? undefined,
+          stravaRouteUrl: event.strava_route_url ?? undefined,
+          eventDate: toDatetimeLocal(event.event_date),
+          endDate: toDatetimeLocal(event.end_date),
+          capacity: event.capacity ?? undefined,
+          pricePaise: event.price_paise,
+          status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
+          confirmationText: event.confirmation_text ?? undefined,
+          bannerImages: event.banner_images ?? '[]',
+        }}
+      />
     </div>
   )
 }

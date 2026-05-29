@@ -124,7 +124,7 @@ export function EventPreview({ name, subtitle, pricePaise, eventDate, location, 
         {details && (
           <div className='mt-4 bg-white/10 border border-white/10 rounded-xl p-4'>
             <p className='text-white/50 text-xs font-medium uppercase tracking-wider mb-2'>Event Details</p>
-            <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/65 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/65 prose-ul:my-2 prose-ol:my-2'>
+            <div className='prose prose-invert prose-sm max-w-none prose-p:text-white prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-white [&_ol>li::marker]:text-white'>
               <ReactMarkdown>{details}</ReactMarkdown>
             </div>
           </div>

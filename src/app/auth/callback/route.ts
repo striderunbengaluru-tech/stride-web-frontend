@@ -1,12 +1,31 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 
 // Supabase redirects here after Google OAuth completes (PKCE flow).
-// Exchange the one-time code for a session, then forward to the user's profile.
+// Exchange the one-time code for a session, then forward to the user's profile
+// — or back to the page that initiated sign-in (stored in `stride_next` cookie).
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+
+  // Resolve next path from cookie first (most reliable), then fall back to ?next= query.
+  // Only relative paths are accepted to prevent open-redirect attacks.
+  const cookieStore = await cookies()
+  const cookieNext = cookieStore.get('stride_next')?.value
+  const decodedCookieNext = cookieNext ? decodeURIComponent(cookieNext) : null
+  const queryNext = searchParams.get('next')
+  const candidate = decodedCookieNext ?? queryNext
+  const nextPath = candidate && candidate.startsWith('/') && !candidate.startsWith('//') ? candidate : null
+
+  function redirectWithCleanup(url: string) {
+    const response = NextResponse.redirect(url)
+    if (cookieNext) {
+      response.cookies.set('stride_next', '', { path: '/', maxAge: 0 })
+    }
+    return response
+  }
 
   if (code) {
     const supabase = await createClient()
@@ -63,12 +82,16 @@ export async function GET(request: NextRequest) {
           profile = upserted
         }
 
+        // Prefer the validated next path if provided, else profile page
+        if (nextPath) {
+          return redirectWithCleanup(`${origin}${nextPath}`)
+        }
         if (profile?.username) {
-          return NextResponse.redirect(`${origin}/profile/${profile.username}`)
+          return redirectWithCleanup(`${origin}/profile/${profile.username}`)
         }
       }
     }
   }
 
-  return NextResponse.redirect(`${origin}/`)
+  return redirectWithCleanup(`${origin}/`)
 }

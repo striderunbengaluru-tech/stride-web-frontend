@@ -13,10 +13,29 @@ export async function POST(request: Request) {
   const body = await request.json()
   const parsed = registerEventSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber } = parsed.data
+
+  // Persist participant details on the user row — idempotent (re-running with
+  // the same values is a no-op). full_name overwrites any previous value so
+  // the user can correct typos at any time.
+  const { error: profileError } = await adminClient
+    .from('users')
+    .update({
+      full_name: fullName,
+      date_of_birth: dateOfBirth,
+      gender,
+      contact_number: contactNumber,
+      emergency_contact_number: emergencyContactNumber,
+    })
+    .eq('id', user.id)
+
+  if (profileError) {
+    console.error('[Register] Failed to save participant details', profileError)
+    return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 })
+  }
 
   const { data: event } = await adminClient
     .from('events')
@@ -90,13 +109,6 @@ export async function POST(request: Request) {
     razorpay_order_id: order.id,
   })
 
-  // Fetch user profile for Razorpay prefill
-  const { data: profile } = await adminClient
-    .from('users')
-    .select('full_name, email')
-    .eq('id', user.id)
-    .single()
-
   return NextResponse.json({
     registrationId,
     slug: event.slug,
@@ -104,7 +116,7 @@ export async function POST(request: Request) {
     amount: event.price_paise,
     currency: 'INR',
     eventName: event.name,
-    userName: profile?.full_name ?? undefined,
-    userEmail: profile?.email ?? user.email,
+    userName: fullName,
+    userEmail: user.email,
   })
 }
