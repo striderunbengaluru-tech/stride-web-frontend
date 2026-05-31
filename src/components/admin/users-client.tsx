@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Search, ExternalLink } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
@@ -18,7 +19,29 @@ export type UserRow = {
   avatar_url: string | null
   runner_tag: string | null
   runs_completed: number
+  gender: string | null
+  date_of_birth: string | null
+  contact_number: string | null
+  emergency_contact_number: string | null
+  location: string | null
+  bio: string | null
+  confirmed_count: number
+  last_active_at: string | null
   runs: Run[]
+}
+
+const GENDER_LABEL: Record<string, string> = {
+  MALE: 'Male',
+  FEMALE: 'Female',
+  OTHER: 'Other',
+  PREFER_NOT_TO_SAY: 'Prefer not to say',
+}
+
+function calcAge(dob: string | null): number | null {
+  if (!dob) return null
+  const ms = Date.now() - new Date(dob).getTime()
+  if (!Number.isFinite(ms) || ms <= 0) return null
+  return Math.floor(ms / (365.25 * 86_400_000))
 }
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'GUEST'
@@ -51,6 +74,10 @@ export function UsersClient({ users }: { users: UserRow[] }) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Pending role-change target — opens the confirmation modal
+  const [roleTarget, setRoleTarget] = useState<UserRow | null>(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const roleCounts = useMemo(() => ({
     ALL:   users.length,
@@ -71,8 +98,55 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     return result
   }, [users, search, roleFilter])
 
+  // ── Role-change confirmation modal ──
+  const makingAdmin = roleTarget?.role !== 'ADMIN'
+  const nextRole = makingAdmin ? 'ADMIN' : 'GUEST'
+  const modal = roleTarget && mounted ? createPortal(
+    <div className='fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4' onClick={() => setRoleTarget(null)}>
+      <div className='bg-stride-purple-primary border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl' onClick={e => e.stopPropagation()}>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${makingAdmin ? 'bg-stride-yellow-accent/15' : 'bg-white/8'}`}>
+          {makingAdmin
+            ? <ShieldCheck size={20} className='text-stride-yellow-accent' />
+            : <ShieldOff size={20} className='text-white/60' />}
+        </div>
+        <h2 className='text-white font-bold text-lg mb-1'>
+          {makingAdmin ? 'Make this user an admin?' : 'Remove admin access?'}
+        </h2>
+        <p className='text-white/60 text-sm mb-1'>
+          <span className='text-white font-medium'>{roleTarget.full_name ?? roleTarget.email ?? roleTarget.username ?? 'This user'}</span>
+          {makingAdmin
+            ? ' will gain full access to the admin panel — events, registrations, users, and all data.'
+            : ' will lose access to the admin panel.'}
+        </p>
+        <p className='text-white/40 text-xs mb-6'>You can change this back at any time.</p>
+        <div className='flex gap-3'>
+          <button
+            onClick={() => setRoleTarget(null)}
+            className='flex-1 py-2.5 rounded-xl border border-white/15 text-white/70 text-sm hover:border-white/30 transition-colors'
+          >
+            Cancel
+          </button>
+          <form action={updateUserRoleAction.bind(null, roleTarget.id, nextRole)} className='flex-1'>
+            <PendingButton
+              className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 ${
+                makingAdmin
+                  ? 'bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90'
+                  : 'bg-white/10 text-white hover:bg-white/15'
+              }`}
+              pendingLabel='Updating…'
+            >
+              {makingAdmin ? 'Yes, make admin' : 'Yes, remove'}
+            </PendingButton>
+          </form>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null
+
   return (
     <div className='space-y-4'>
+      {modal}
 
       {/* Search + role filter */}
       <div className='flex flex-col sm:flex-row gap-3'>
@@ -151,7 +225,11 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     {u.runner_tag && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
                   </div>
                   <p className='text-white/40 text-xs truncate mt-0.5'>{u.email}</p>
-                  {u.username && <p className='text-white/25 text-xs'>@{u.username}</p>}
+                  <p className='text-white/25 text-xs'>
+                    {u.username ? `@${u.username}` : '—'}
+                    {' · '}
+                    Joined {fmtDate(u.created_at)}
+                  </p>
                 </div>
 
                 {/* Runs — fixed width so alignment never shifts */}
@@ -168,26 +246,22 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 </div>
 
                 {/* Admin toggle — desktop */}
-                <form
-                  action={updateUserRoleAction.bind(null, u.id, u.role === 'ADMIN' ? 'GUEST' : 'ADMIN')}
-                  onClick={e => e.stopPropagation()}
-                  className='hidden sm:block shrink-0'
+                <button
+                  type='button'
+                  onClick={e => { e.stopPropagation(); setRoleTarget(u) }}
+                  className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
                 >
-                  <PendingButton className='text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'>
-                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                  </PendingButton>
-                </form>
+                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                </button>
 
-                {/* Expand button */}
-                {u.runs.length > 0 && (
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : u.id)}
-                    className='text-white/25 hover:text-white/60 transition-colors shrink-0 p-1.5 rounded-lg hover:bg-white/5'
-                    aria-label={isExpanded ? 'Hide run history' : 'Show run history'}
-                  >
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                )}
+                {/* Expand button — always available so admins can drill into any user */}
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : u.id)}
+                  className='text-white/25 hover:text-white/60 transition-colors shrink-0 p-1.5 rounded-lg hover:bg-white/5'
+                  aria-label={isExpanded ? 'Hide details' : 'Show details'}
+                >
+                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
               </div>
 
               {/* Mobile: role + admin action */}
@@ -195,31 +269,78 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${ROLE_STYLES[u.role] ?? 'bg-white/10 text-white/50'}`}>
                   {u.role}
                 </span>
-                <form
-                  action={updateUserRoleAction.bind(null, u.id, u.role === 'ADMIN' ? 'GUEST' : 'ADMIN')}
-                  className='ml-auto'
+                <button
+                  type='button'
+                  onClick={() => setRoleTarget(u)}
+                  className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
                 >
-                  <PendingButton className='text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'>
-                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                  </PendingButton>
-                </form>
+                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                </button>
               </div>
 
-              {/* Expanded run history */}
-              {isExpanded && u.runs.length > 0 && (
-                <div className='border-t border-white/8 px-4 py-3 space-y-2 bg-white/[0.02]'>
-                  <p className='text-white/25 text-[10px] uppercase tracking-widest mb-2.5'>Run history</p>
-                  {u.runs.map((run, i) => (
-                    <div key={i} className='flex items-center justify-between gap-3'>
-                      <p className='text-white/65 text-sm truncate'>{run.eventName}</p>
-                      <p className='text-white/25 text-xs shrink-0'>{fmtDate(run.checkedInAt)}</p>
+              {/* Expanded details — profile facts + run history */}
+              {isExpanded && (
+                <div className='border-t border-white/8 bg-white/2'>
+
+                  {/* Profile facts grid */}
+                  <div className='px-4 py-4'>
+                    <p className='text-white/25 text-[10px] uppercase tracking-widest mb-3'>Profile</p>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3'>
+                      <Fact icon={<CalendarPlus size={12} />} label='Joined' value={fmtDate(u.created_at)} />
+                      <Fact icon={<Activity size={12} />} label='Last active' value={u.last_active_at ? fmtDate(u.last_active_at) : '—'} />
+                      <Fact icon={<UserRound size={12} />} label='Gender' value={u.gender ? GENDER_LABEL[u.gender] ?? u.gender : '—'} />
+                      <Fact icon={<Cake size={12} />} label='Age' value={(() => {
+                        const age = calcAge(u.date_of_birth)
+                        return age !== null ? `${age} years` : '—'
+                      })()} />
+                      <Fact icon={<Phone size={12} />} label='Contact' value={u.contact_number ?? '—'} />
+                      <Fact icon={<AlertCircle size={12} />} label='Emergency contact' value={u.emergency_contact_number ?? '—'} />
+                      <Fact icon={<MapPin size={12} />} label='Location' value={u.location ?? '—'} />
+                      <Fact
+                        icon={<span className='text-stride-yellow-accent text-[11px] font-bold'>✓</span>}
+                        label='Confirmed registrations'
+                        value={`${u.confirmed_count} · ${u.runs.length} checked in`}
+                      />
                     </div>
-                  ))}
+                    {u.bio && (
+                      <div className='mt-4 pt-3 border-t border-white/5'>
+                        <p className='text-white/25 text-[10px] uppercase tracking-widest mb-1.5'>Bio</p>
+                        <p className='text-white/60 text-sm leading-snug line-clamp-3'>{u.bio}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Run history */}
+                  {u.runs.length > 0 && (
+                    <div className='px-4 py-3 border-t border-white/5 space-y-2'>
+                      <p className='text-white/25 text-[10px] uppercase tracking-widest mb-2.5'>Run history</p>
+                      {u.runs.map((run, i) => (
+                        <div key={i} className='flex items-center justify-between gap-3'>
+                          <p className='text-white/65 text-sm truncate'>{run.eventName}</p>
+                          <p className='text-white/25 text-xs shrink-0'>{fmtDate(run.checkedInAt)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className='flex items-start gap-2.5'>
+      <span className='shrink-0 mt-0.5 w-5 h-5 rounded-md bg-white/8 border border-white/10 flex items-center justify-center text-white/45'>
+        {icon}
+      </span>
+      <div className='min-w-0 flex-1'>
+        <p className='text-white/30 text-[10px] uppercase tracking-widest'>{label}</p>
+        <p className='text-white/75 text-sm truncate'>{value}</p>
       </div>
     </div>
   )

@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+export const additionalFieldSchema = z.object({
+  id:          z.string().min(1),
+  label:       z.string().trim().min(1).max(80),
+  type:        z.enum(['text', 'number', 'link']),
+  required:    z.boolean(),
+  placeholder: z.string().max(120).optional(),
+})
+
+export const additionalFieldsArraySchema = z.array(additionalFieldSchema)
+
 export const eventSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   subtitle: z.string().max(200).optional(),
@@ -11,10 +21,13 @@ export const eventSchema = z.object({
   eventDate: z.string().optional(),
   endDate: z.string().optional(),
   capacity: z.coerce.number().int().positive().optional(),
+  distanceKm: z.coerce.number().positive().max(500).optional(),
+  difficulty: z.string().max(60).optional(),
   pricePaise: z.coerce.number().int().min(0).default(0),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   bannerImages: z.string().optional(), // JSON array of uploaded image URLs
+  additionalFields: z.string().optional(), // JSON array of AdditionalField objects
 })
 
 export type EventFormData = z.infer<typeof eventSchema>

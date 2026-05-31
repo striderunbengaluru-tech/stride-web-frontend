@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ParticipantDetailsModal } from '@/components/events/participant-details-modal'
+import type { AdditionalField } from '@/types/event'
 
 type Props = {
   eventId: string
@@ -9,6 +10,7 @@ type Props = {
   pricePaise: number
   isFull: boolean
   isRegistered: boolean
+  isPast: boolean
   isLoggedIn: boolean
   autoOpen?: boolean
   initial: {
@@ -18,6 +20,7 @@ type Props = {
     contactNumber: string | null
     emergencyContactNumber: string | null
   }
+  additionalFields?: AdditionalField[]
   razorpayKeyId?: string
 }
 
@@ -27,13 +30,15 @@ export function RegisterButton({
   pricePaise,
   isFull,
   isRegistered,
+  isPast,
   isLoggedIn,
   autoOpen,
   initial,
+  additionalFields,
   razorpayKeyId,
 }: Props) {
-  // Modal mounts open if returning from login with ?register=1
-  const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !isRegistered && !isFull))
+  // Modal mounts open if returning from login with ?register=1 — never auto-open for past events
+  const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !isRegistered && !isFull && !isPast))
 
   if (isRegistered) {
     return (
@@ -42,6 +47,18 @@ export function RegisterButton({
         className='w-full py-3.5 rounded-md bg-white/10 text-white/50 font-semibold text-sm cursor-not-allowed min-h-11'
       >
         You&apos;re registered ✓
+      </button>
+    )
+  }
+
+  if (isPast) {
+    return (
+      <button
+        disabled
+        aria-disabled='true'
+        className='w-full py-3.5 rounded-md bg-white/8 text-white/35 font-semibold text-sm cursor-not-allowed min-h-11 border border-white/10'
+      >
+        Event Concluded
       </button>
     )
   }
@@ -90,6 +107,7 @@ export function RegisterButton({
         eventId={eventId}
         pricePaise={pricePaise}
         initial={initial}
+        additionalFields={additionalFields}
         razorpayKeyId={razorpayKeyId}
       />
     </>

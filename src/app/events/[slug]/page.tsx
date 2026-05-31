@@ -8,7 +8,10 @@ import { RegisterButton } from '@/components/events/register-button'
 import { EventHero } from '@/components/events/event-hero'
 import { SectionReveal } from '@/components/ui/section-reveal'
 import { ShareButton } from '@/components/events/share-button'
-import { ArrowLeft, MapPin, Route, Coffee, ExternalLink } from 'lucide-react'
+import { ArrowLeft, MapPin, Route, Coffee, ExternalLink, Gauge, Activity } from 'lucide-react'
+import type { AdditionalField } from '@/types/event'
+import { MapEmbed } from '@/components/events/map-embed'
+import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -95,6 +98,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     .eq('status', 'CONFIRMED')
 
   const isFull = !!event.capacity && (confirmedCount ?? 0) >= event.capacity
+  // Past events (start date has elapsed). Falls back to false for events without a date.
+  const isPast = !!event.event_date && new Date(event.event_date).getTime() < Date.now()
 
   let isRegistered = false
   let participantInitial = {
@@ -154,6 +159,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   catch { /* empty */ }
   if (bannerImages.length === 0 && event.cover_url) bannerImages = [event.cover_url]
 
+  // Custom additional fields the admin defined for this event
+  let additionalFields: AdditionalField[] = []
+  try { additionalFields = JSON.parse(event.additional_fields ?? '[]') as AdditionalField[] }
+  catch { additionalFields = [] }
+
   const hasBanners = bannerImages.length > 0
   const dateLong  = fmtDateLong(event.event_date)
   const startTime = fmtTime(event.event_date)
@@ -167,11 +177,15 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden pb-32 sm:pb-20'>
 
-      {/* Live ambient orbs */}
+      {/* Refresh on back/forward bfcache restore — so post-registration the page
+          can't show a stale "Register" CTA after the user hits browser back. */}
+      <BfcacheRefresh />
+
+      {/* Live ambient orbs — radial gradients with gentle drift */}
       <div className='pointer-events-none absolute inset-0 overflow-hidden'>
-        <div className='absolute top-[-12%] left-[-8%] w-[44rem] h-[44rem] rounded-full bg-stride-yellow-accent/[0.09] blur-[130px] animate-pulse-orb' />
-        <div className='absolute top-[35%] right-[-10%] w-[36rem] h-[36rem] rounded-full bg-stride-yellow-accent/[0.06] blur-[120px] animate-pulse-orb' style={{ animationDelay: '2s' }} />
-        <div className='absolute bottom-[-15%] left-[20%] w-[40rem] h-[40rem] rounded-full bg-white/[0.05] blur-[150px] animate-pulse-orb' style={{ animationDelay: '4s' }} />
+        <div className='orb orb-yellow animate-orb-drift top-[-14%] left-[-10%] w-[48rem] h-[48rem]' />
+        <div className='orb orb-yellow animate-orb-drift-reverse top-[28%] right-[-14%] w-[38rem] h-[38rem]' style={{ animationDelay: '3s' }} />
+        <div className='orb orb-white animate-orb-drift bottom-[-18%] left-[18%] w-[44rem] h-[44rem]' style={{ animationDelay: '6s' }} />
       </div>
 
       {/* Two-column layout */}
@@ -192,7 +206,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {hasBanners ? (
             <EventHero images={bannerImages} eventName={event.name} />
           ) : (
-            <div className='relative w-full aspect-square bg-white/5 flex items-center justify-center'>
+            <div className='relative w-full aspect-square rounded-md flex items-center justify-center'>
               <span className='text-white/10 text-7xl select-none'>🏃</span>
             </div>
           )}
@@ -247,6 +261,24 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             {event.subtitle && (
               <p className='text-white/50 text-lg mt-3 leading-relaxed'>{event.subtitle}</p>
             )}
+
+            {/* Distance + Difficulty pills */}
+            {(event.distance_km || event.difficulty) && (
+              <div className='flex flex-wrap gap-2 mt-4'>
+                {event.distance_km && (
+                  <span className='inline-flex items-center gap-1.5 bg-white/8 border border-white/15 rounded-full px-3 py-1 text-white/80 text-xs font-semibold'>
+                    <Gauge size={12} className='text-stride-yellow-accent' />
+                    {event.distance_km} km
+                  </span>
+                )}
+                {event.difficulty && (
+                  <span className='inline-flex items-center gap-1.5 bg-white/8 border border-white/15 rounded-full px-3 py-1 text-white/80 text-xs font-semibold'>
+                    <Activity size={12} className='text-stride-yellow-accent' />
+                    {event.difficulty}
+                  </span>
+                )}
+              </div>
+            )}
           </SectionReveal>
 
           {/* ── When & Where (clubbed) ── */}
@@ -267,10 +299,22 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                     <div className='flex-1 min-w-0'>
                       <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>When</p>
                       <p className='text-white font-semibold text-base'>{dateLong}</p>
-                      {startTime && (
-                        <p className='text-white/50 text-sm mt-0.5'>
-                          {startTime}{endTime ? ` – ${endTime}` : ''}
-                        </p>
+                      {(startTime || endTime) && (
+                        <div className='flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-sm'>
+                          {startTime && (
+                            <span className='text-white/70'>
+                              <span className='text-white/35 text-[10px] uppercase tracking-widest mr-1'>Starts</span>
+                              {startTime}
+                            </span>
+                          )}
+                          {startTime && endTime && <span className='text-white/20'>·</span>}
+                          {endTime && (
+                            <span className='text-white/70'>
+                              <span className='text-white/35 text-[10px] uppercase tracking-widest mr-1'>Ends</span>
+                              {endTime}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -363,6 +407,8 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   <p className='text-white/60 text-sm'>
                     {isRegistered
                       ? "You're registered for this event."
+                      : isPast
+                      ? 'This event has concluded.'
                       : isFull
                       ? 'This event is full.'
                       : 'Sign up and lace up — see you on the run.'}
@@ -375,9 +421,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   pricePaise={event.price_paise}
                   isFull={isFull}
                   isRegistered={isRegistered}
+                  isPast={isPast}
                   isLoggedIn={isLoggedIn}
                   autoOpen={autoOpenModal}
                   initial={participantInitial}
+                  additionalFields={additionalFields}
                   razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                 />
               </div>
@@ -422,6 +470,16 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </SectionReveal>
           )}
 
+          {/* Meeting-point map */}
+          {event.location && (
+            <SectionReveal delay={0.32}>
+              <div className='mt-8'>
+                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>Meet here</p>
+                <MapEmbed locationName={event.location} locationUrl={event.location_url} />
+              </div>
+            </SectionReveal>
+          )}
+
         </div>
       </div>
 
@@ -439,9 +497,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               pricePaise={event.price_paise}
               isFull={isFull}
               isRegistered={isRegistered}
+              isPast={isPast}
               isLoggedIn={isLoggedIn}
               autoOpen={autoOpenModal}
               initial={participantInitial}
+              additionalFields={additionalFields}
               razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
             />
           </div>

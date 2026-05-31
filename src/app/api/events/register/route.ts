@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
+import type { AdditionalField } from '@/types/event'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -16,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, customResponses } = parsed.data
 
   // Persist participant details on the user row — idempotent (re-running with
   // the same values is a no-op). full_name overwrites any previous value so
@@ -39,13 +41,54 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date')
     .eq('id', eventId)
     .single()
 
   if (!event || event.status !== 'PUBLISHED') {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
+
+  // Block registration for past events — defense in depth (UI also disables the button).
+  if (event.event_date && new Date(event.event_date).getTime() < Date.now()) {
+    return NextResponse.json({ error: 'This event has concluded.' }, { status: 409 })
+  }
+
+  // Validate dynamic custom fields against the event's schema.
+  let eventFields: AdditionalField[] = []
+  try { eventFields = JSON.parse(event.additional_fields ?? '[]') as AdditionalField[] }
+  catch { eventFields = [] }
+
+  const filteredResponses: Record<string, string | number> = {}
+  for (const field of eventFields) {
+    const raw = customResponses[field.id]
+    const isEmpty = raw === undefined || raw === null || String(raw).trim() === ''
+
+    if (field.required && isEmpty) {
+      return NextResponse.json({ error: `"${field.label}" is required`, fieldId: field.id }, { status: 400 })
+    }
+    if (isEmpty) continue
+
+    if (field.type === 'number') {
+      const num = Number(raw)
+      if (Number.isNaN(num)) {
+        return NextResponse.json({ error: `"${field.label}" must be a number`, fieldId: field.id }, { status: 400 })
+      }
+      filteredResponses[field.id] = num
+      continue
+    }
+    if (field.type === 'link') {
+      const str = String(raw).trim()
+      try { new URL(str) }
+      catch {
+        return NextResponse.json({ error: `"${field.label}" must be a valid URL (start with http:// or https://)`, fieldId: field.id }, { status: 400 })
+      }
+      filteredResponses[field.id] = str
+      continue
+    }
+    filteredResponses[field.id] = String(raw).trim()
+  }
+  const customResponsesJson = JSON.stringify(filteredResponses)
 
   const { data: existing } = await adminClient
     .from('event_registrations')
@@ -79,7 +122,11 @@ export async function POST(request: Request) {
       event_id: eventId,
       user_id: user.id,
       status: 'CONFIRMED',
+      custom_responses: customResponsesJson,
     })
+    // Bust the event page's server cache so back-navigation shows
+    // "You're registered ✓" instead of a stale Register CTA.
+    revalidatePath(`/events/${event.slug}`)
     return NextResponse.json({ registrationId, slug: event.slug })
   }
 
@@ -107,6 +154,7 @@ export async function POST(request: Request) {
     user_id: user.id,
     status: 'PENDING',
     razorpay_order_id: order.id,
+    custom_responses: customResponsesJson,
   })
 
   return NextResponse.json({

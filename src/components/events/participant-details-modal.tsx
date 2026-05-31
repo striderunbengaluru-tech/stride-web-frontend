@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
+import type { AdditionalField } from '@/types/event'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -39,10 +40,11 @@ type Props = {
     contactNumber: string | null
     emergencyContactNumber: string | null
   }
+  additionalFields?: AdditionalField[]
   razorpayKeyId?: string
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, razorpayKeyId }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], razorpayKeyId }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -52,6 +54,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   )
   const [contactNumber, setContactNumber] = useState(initial.contactNumber ?? '')
   const [emergencyContactNumber, setEmergencyContactNumber] = useState(initial.emergencyContactNumber ?? '')
+  const [customResponses, setCustomResponses] = useState<Record<string, string>>(
+    () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
+  )
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -91,6 +96,21 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     if (contactNumber.trim().length < 7) return setError('Please enter a valid contact number')
     if (emergencyContactNumber.trim().length < 7) return setError('Please enter a valid emergency contact number')
 
+    // Validate custom fields
+    for (const field of additionalFields) {
+      const v = (customResponses[field.id] ?? '').trim()
+      if (field.required && !v) return setError(`Please answer: ${field.label}`)
+      if (!v) continue
+      if (field.type === 'number' && Number.isNaN(Number(v))) {
+        return setError(`"${field.label}" must be a number`)
+      }
+      if (field.type === 'link') {
+        try { new URL(v) } catch {
+          return setError(`"${field.label}" must start with http:// or https://`)
+        }
+      }
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/events/register', {
@@ -103,6 +123,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
           gender,
           contactNumber: contactNumber.trim(),
           emergencyContactNumber: emergencyContactNumber.trim(),
+          customResponses,
         }),
       })
       const data = await res.json()
@@ -295,6 +316,53 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               />
               <p className='text-white/30 text-[11px] mt-1.5'>Someone we can reach if anything happens during the run.</p>
             </div>
+
+            {/* Event-specific custom fields */}
+            {additionalFields.length > 0 && (
+              <div className='pt-4 mt-2 border-t border-white/8 space-y-4'>
+                <div className='flex items-center gap-2'>
+                  <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
+                  <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-[0.2em]'>Event-specific questions</p>
+                </div>
+                {additionalFields.map(field => (
+                  <div key={field.id}>
+                    <label className='block text-white/70 text-xs font-medium mb-1.5'>
+                      {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
+                    </label>
+                    {field.type === 'number' ? (
+                      <input
+                        type='number'
+                        inputMode='numeric'
+                        value={customResponses[field.id] ?? ''}
+                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        placeholder={field.placeholder ?? ''}
+                        className={inputBase}
+                        required={field.required}
+                      />
+                    ) : field.type === 'link' ? (
+                      <input
+                        type='url'
+                        inputMode='url'
+                        value={customResponses[field.id] ?? ''}
+                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        placeholder={field.placeholder ?? 'https://...'}
+                        className={inputBase}
+                        required={field.required}
+                      />
+                    ) : (
+                      <input
+                        type='text'
+                        value={customResponses[field.id] ?? ''}
+                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        placeholder={field.placeholder ?? ''}
+                        className={inputBase}
+                        required={field.required}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Error */}
             {error && (

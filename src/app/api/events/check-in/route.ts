@@ -28,6 +28,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Event ID required' }, { status: 400 })
   }
 
+  // ── Enforce check-in window: open until 24h after end_date (or event_date if no end_date) ──
+  const { data: eventWindow } = await adminClient
+    .from('events')
+    .select('event_date, end_date, status')
+    .eq('id', eventId)
+    .single()
+
+  if (!eventWindow || eventWindow.status !== 'PUBLISHED') {
+    return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+
+  const endTs = eventWindow.end_date ?? eventWindow.event_date
+  if (endTs) {
+    const closesAt = new Date(endTs).getTime() + 24 * 60 * 60 * 1000
+    if (Date.now() > closesAt) {
+      return NextResponse.json({ error: 'Check-in window has closed for this event' }, { status: 409 })
+    }
+  }
+
   // Look up the runner by their tag
   const { data: runner } = await adminClient
     .from('users')

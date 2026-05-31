@@ -4,7 +4,19 @@ import { redirect } from 'next/navigation'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-import { eventSchema, productSchema } from '@/lib/validations/admin'
+import { eventSchema, productSchema, additionalFieldsArraySchema } from '@/lib/validations/admin'
+import { slugify } from '@/lib/utils/slug'
+
+// Validates the JSON-encoded additional fields string from the form.
+// Returns a canonical JSON string ('[]' on any error) — never blocks the save.
+function sanitiseAdditionalFields(raw: string | undefined): string {
+  if (!raw) return '[]'
+  try {
+    const parsed = JSON.parse(raw)
+    const result = additionalFieldsArraySchema.safeParse(parsed)
+    return result.success ? JSON.stringify(result.data) : '[]'
+  } catch { return '[]' }
+}
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -22,13 +34,6 @@ async function requireAdmin() {
   return user
 }
 
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-}
-
 // ── Events ───────────────────────────────────────────────────────────────────
 
 export async function createEventAction(formData: FormData): Promise<void> {
@@ -38,7 +43,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -64,6 +69,9 @@ export async function createEventAction(formData: FormData): Promise<void> {
     price_paise: pricePaise,
     confirmation_text: confirmationText || null,
     banner_images: bannerImages ?? '[]',
+    additional_fields: sanitiseAdditionalFields(additionalFields),
+    distance_km: distanceKm ?? null,
+    difficulty: difficulty?.trim() || null,
     ...rest,
   })
 
@@ -77,7 +85,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
 
   await adminClient.from('events').update({
     name,
@@ -89,6 +97,9 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     price_paise: pricePaise,
     confirmation_text: confirmationText || null,
     banner_images: bannerImages ?? '[]',
+    additional_fields: sanitiseAdditionalFields(additionalFields),
+    distance_km: distanceKm ?? null,
+    difficulty: difficulty?.trim() || null,
     updated_at: new Date().toISOString(),
     ...rest,
   }).eq('id', id)

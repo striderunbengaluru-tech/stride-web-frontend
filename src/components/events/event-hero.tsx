@@ -25,7 +25,9 @@ export function EventHero({ images, eventName }: Props) {
 
   return (
     // Mobile: portrait 3:4 | Tablet: 16:7 cinematic | Desktop: square in left column
-    <div className='relative w-full overflow-hidden bg-stride-purple-primary aspect-3/4 max-h-[88vw] sm:aspect-16/7 sm:max-h-none lg:aspect-square lg:max-h-none'>
+    // Transparent bg lets the page's ambient orbs bleed through the letterbox
+    // bars of object-contain — no visible rectangular edge around the image.
+    <div className='relative w-full overflow-hidden rounded-md aspect-3/4 max-h-[88vw] sm:aspect-16/7 sm:max-h-none lg:aspect-square lg:max-h-none'>
       <AnimatePresence mode='sync'>
         <motion.div
           key={src}

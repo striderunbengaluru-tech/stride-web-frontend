@@ -38,6 +38,17 @@ Security is never an afterthought. All code must be written defensively by defau
 - Role checks (admin, member, guest) must happen at the server boundary, not in UI components
 - Never expose user IDs, emails, or sensitive fields in client-visible URLs or props unless absolutely necessary
 
+### 🛡️ Admin Portal Security (Non-Negotiable)
+**The admin portal must be completely inaccessible to anyone who is not a verified admin — including any attempt to manipulate admin functionality via direct API calls when not logged in. Every admin entry point must independently enforce this.**
+
+- **Every admin page** under `/admin/*` is gated by `src/app/admin/layout.tsx` which calls `auth.getUser()` AND re-reads `users.role` from the DB via `adminClient`. No admin page may bypass this layout.
+- **Every server action** in `src/lib/actions/admin.ts` must call `requireAdmin()` as the FIRST line of its function body. No exceptions.
+- **Every API route** under `/api/admin/*` AND any other route performing admin-only operations (e.g. `/api/events/check-in`) must inline the same check: verify the Supabase session AND fresh DB role lookup. Return `401` if no session, `403` if role !== `ADMIN`.
+- **Always read role fresh from DB** via `adminClient` — never trust JWT claims (they can be stale after a role change).
+- **Never expose `STRIDE_SUPABASE_SERVICE_ROLE_KEY`** in client bundles — only use `adminClient` in server-only files (`'use server'`, route handlers, server components).
+- **`adminClient` bypasses RLS** — so any route that uses it MUST verify admin role BEFORE the first `adminClient` call, otherwise it becomes an open data leak.
+- **Before merging any new admin code path**, audit it explicitly: page → layout enforcement, action → `requireAdmin()`, route → inline auth + role check. If any of these is missing, the change is not done.
+
 ### Data & Input
 - All user input must be validated and sanitized server-side before any processing or storage — client-side validation is UX only
 - Use Zod schemas for all form data, API route inputs, and external data sources — define schemas adjacent to their usage

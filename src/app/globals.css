@@ -84,6 +84,57 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulseOrb 5s ease-in-out infinite;
 }
 
+/* ── Smooth ambient orbs (gradient-based, GPU-accelerated, no pixelation) ── */
+/* `.orb` is a base shape that uses a radial gradient for natural smooth falloff
+   instead of a solid-color circle with massive blur (which causes banding on
+   many displays). Apply a tone class (.orb-yellow / .orb-white) for colour. */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* tiny blur smooths sub-pixel gradient banding on lower-end GPUs */
+  filter: blur(28px);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+.orb-yellow {
+  background: radial-gradient(circle at center,
+    rgba(225, 208, 63, 0.35) 0%,
+    rgba(225, 208, 63, 0.14) 28%,
+    rgba(225, 208, 63, 0.05) 52%,
+    rgba(225, 208, 63, 0) 70%);
+}
+.orb-white {
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.08) 30%,
+    rgba(255, 255, 255, 0.03) 55%,
+    rgba(255, 255, 255, 0) 72%);
+}
+
+@keyframes orbDrift {
+  0%   { transform: translate3d(0, 0, 0)        scale(1);    opacity: 0.85; }
+  50%  { transform: translate3d(2%, -2.5%, 0)   scale(1.06); opacity: 1; }
+  100% { transform: translate3d(0, 0, 0)        scale(1);    opacity: 0.85; }
+}
+.animate-orb-drift {
+  animation: orbDrift 14s ease-in-out infinite;
+}
+@keyframes orbDriftReverse {
+  0%   { transform: translate3d(0, 0, 0)        scale(1.04); opacity: 1; }
+  50%  { transform: translate3d(-1.5%, 3%, 0)   scale(0.96); opacity: 0.8; }
+  100% { transform: translate3d(0, 0, 0)        scale(1.04); opacity: 1; }
+}
+.animate-orb-drift-reverse {
+  animation: orbDriftReverse 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-orb-drift, .animate-orb-drift-reverse { animation: none; }
+}
+
 /* ── Logo marquee — used on /partnerships ── */
 @keyframes marquee {
   0%   { transform: translateX(0); }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
@@ -29,10 +30,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 })
   }
 
-  // Verify the registration belongs to this user and is in PENDING state
+  // Verify the registration belongs to this user and is in PENDING state.
+  // Also pull the event slug so we can revalidate the event page on confirm.
   const { data: registration } = await adminClient
     .from('event_registrations')
-    .select('id, user_id, status, razorpay_order_id')
+    .select('id, user_id, status, razorpay_order_id, events(slug)')
     .eq('id', registrationId)
     .single()
 
@@ -44,8 +46,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Order ID mismatch' }, { status: 400 })
   }
 
+  const eventSlug = (registration.events as unknown as { slug: string } | null)?.slug ?? null
+
   // Idempotent: already confirmed is fine
   if (registration.status === 'CONFIRMED') {
+    if (eventSlug) revalidatePath(`/events/${eventSlug}`)
     return NextResponse.json({ success: true })
   }
 
@@ -66,6 +71,9 @@ export async function POST(request: Request) {
     console.error('[verify-payment] update error', error)
     return NextResponse.json({ error: 'Confirmation failed' }, { status: 500 })
   }
+
+  // Bust the event page's cache so back-navigation reflects the new CONFIRMED state.
+  if (eventSlug) revalidatePath(`/events/${eventSlug}`)
 
   return NextResponse.json({ success: true })
 }

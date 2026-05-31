@@ -10,6 +10,7 @@ export const participantDetailsSchema = z.object({
 
 export const registerEventSchema = z.object({
   eventId: z.string().min(1),
+  customResponses: z.record(z.string(), z.union([z.string(), z.number()])).optional().default({}),
 }).merge(participantDetailsSchema)
 
 export type RegisterEventInput = z.infer<typeof registerEventSchema>

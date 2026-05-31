@@ -46,6 +46,9 @@ export default async function EditEventPage({ params }: Props) {
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
           bannerImages: event.banner_images ?? '[]',
+          additionalFields: event.additional_fields ?? '[]',
+          distanceKm: event.distance_km ?? undefined,
+          difficulty: event.difficulty ?? undefined,
         }}
       />
     </div>

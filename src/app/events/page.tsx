@@ -28,11 +28,11 @@ export default async function EventsPage() {
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden'>
 
-      {/* ── Soft ambient orbs ── */}
+      {/* ── Soft ambient orbs — radial gradients with gentle drift ── */}
       <div className='pointer-events-none absolute inset-0 overflow-hidden'>
-        <div className='absolute top-[-10%] left-[-5%] w-[55rem] h-[55rem] rounded-full bg-stride-yellow-accent/[0.055] blur-[140px] animate-pulse-orb' />
-        <div className='absolute top-[30%] right-[-10%] w-[45rem] h-[45rem] rounded-full bg-white/[0.03] blur-[130px]' style={{ animationDelay: '1.5s' }} />
-        <div className='absolute bottom-[-15%] left-[25%] w-[50rem] h-[50rem] rounded-full bg-stride-yellow-accent/[0.03] blur-[160px] animate-pulse-orb' style={{ animationDelay: '3s' }} />
+        <div className='orb orb-yellow animate-orb-drift top-[-12%] left-[-6%] w-[60rem] h-[60rem]' />
+        <div className='orb orb-white  animate-orb-drift-reverse top-[28%] right-[-12%] w-[48rem] h-[48rem]' style={{ animationDelay: '3s' }} />
+        <div className='orb orb-yellow animate-orb-drift bottom-[-18%] left-[22%] w-[54rem] h-[54rem]' style={{ animationDelay: '7s' }} />
       </div>
 
       <section className='relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-24'>

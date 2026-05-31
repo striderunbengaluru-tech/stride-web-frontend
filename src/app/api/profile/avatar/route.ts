@@ -3,6 +3,8 @@ import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 
+const STORAGE_PUBLIC_PREFIX = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/'
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -28,6 +30,14 @@ export async function POST(request: Request) {
 
   const path = `images/avatars/${user.id}.webp`
 
+  // Fetch the previous avatar URL so we can clean up any old file in storage
+  // that isn't at the canonical path (e.g. legacy filenames, manual uploads).
+  const { data: prev } = await adminClient
+    .from('users')
+    .select('avatar_url')
+    .eq('id', user.id)
+    .single()
+
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
     .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true })
@@ -35,6 +45,16 @@ export async function POST(request: Request) {
   if (uploadError) {
     console.error('[Avatar upload]', uploadError)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+  }
+
+  // If the previous URL pointed to a different Supabase Storage path inside our
+  // avatars folder, delete it. Same-path overwrites are already handled by upsert.
+  const prevUrl = prev?.avatar_url
+  if (prevUrl?.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    const prevPath = prevUrl.slice(STORAGE_PUBLIC_PREFIX.length)
+    if (prevPath.startsWith('images/avatars/') && prevPath !== path) {
+      await adminClient.storage.from('stride-assets').remove([prevPath])
+    }
   }
 
   const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(path)

@@ -1,18 +1,31 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useFormStatus } from 'react-dom'
+import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
+import { nanoid } from 'nanoid'
 import ReactCrop, { type Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
-import { X, Plus, Eye, ChevronDown, Pencil } from 'lucide-react'
+import {
+  X, Plus, Eye, ChevronDown, Pencil, GripVertical, Trash2,
+  Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
+  CheckCircle2, PauseCircle, XCircle, Type, Gauge,
+  Hash, IndianRupee, Users, Link2, Coffee, Route, Clock, FileText,
+} from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
+import type { AdditionalField, AdditionalFieldType } from '@/types/event'
 import { Spinner } from '@/components/ui/spinner'
+import { HelpHint } from '@/components/ui/help-hint'
 import { EventPreview } from '@/components/admin/event-preview'
+import { slugify } from '@/lib/utils/slug'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
 
 const STORAGE_BASE = 'https://ienotcjldormdxrzukpk.supabase.co'
+
+type Status = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus()
@@ -36,6 +49,8 @@ type Props = {
 }
 
 export function EventForm({ action, defaultValues = {}, submitLabel, errorMessage }: Props) {
+  const router = useRouter()
+
   // Controlled state for live preview
   const [name, setName] = useState(defaultValues.name ?? '')
   const [subtitle, setSubtitle] = useState(defaultValues.subtitle ?? '')
@@ -44,6 +59,32 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   const [location, setLocation] = useState(defaultValues.location ?? '')
   const [pricePaise, setPricePaise] = useState(defaultValues.pricePaise ?? 0)
   const [eventDate, setEventDate] = useState(defaultValues.eventDate ?? '')
+  const [status, setStatus] = useState<Status>((defaultValues.status as Status) ?? 'DRAFT')
+  const [distanceKm, setDistanceKm] = useState<string>(
+    defaultValues.distanceKm !== undefined && defaultValues.distanceKm !== null
+      ? String(defaultValues.distanceKm)
+      : ''
+  )
+  const [difficulty, setDifficulty] = useState(defaultValues.difficulty ?? '')
+
+  // Cancel confirmation modal — `mounted` flag guards createPortal on SSR
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelModalMounted, setCancelModalMounted] = useState(false)
+  useEffect(() => { setCancelModalMounted(true) }, [])
+
+  // Unsaved-changes guard — once true, the browser shows its native
+  // "Are you sure you want to leave?" dialog on close/refresh/back.
+  const [isDirty, setIsDirty] = useState(false)
+  const markDirty = useCallback(() => { setIsDirty(prev => prev || true) }, [])
+  useEffect(() => {
+    if (!isDirty) return
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = '' // required for Chromium to show the native dialog
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty])
 
   // Banner images
   const bannerFileRef = useRef<HTMLInputElement>(null)
@@ -51,7 +92,6 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     try { return JSON.parse(defaultValues.bannerImages ?? '[]') as string[] }
     catch { return [] }
   })
-  // number of batch-upload jobs still in flight (0 = idle)
   const [uploadingCount, setUploadingCount] = useState(0)
 
   // Banner image cropper
@@ -64,6 +104,42 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   // Drag-to-reorder state for banner images
   const [imgDragSrc, setImgDragSrc] = useState<number | null>(null)
   const [imgDragOver, setImgDragOver] = useState<number | null>(null)
+
+  // Additional (custom) fields for the event
+  const [additionalFields, setAdditionalFields] = useState<AdditionalField[]>(() => {
+    try { return JSON.parse(defaultValues.additionalFields ?? '[]') as AdditionalField[] }
+    catch { return [] }
+  })
+  const [fieldDragSrc, setFieldDragSrc] = useState<number | null>(null)
+  const [fieldDragOver, setFieldDragOver] = useState<number | null>(null)
+
+  function addField() {
+    setAdditionalFields(prev => [...prev, { id: nanoid(8), label: '', type: 'text', required: false }])
+    markDirty()
+  }
+  function updateField(index: number, patch: Partial<AdditionalField>) {
+    setAdditionalFields(prev => prev.map((f, i) => i === index ? { ...f, ...patch } : f))
+    markDirty()
+  }
+  function removeField(index: number) {
+    setAdditionalFields(prev => prev.filter((_, i) => i !== index))
+    markDirty()
+  }
+  function handleFieldDragStart(i: number) { setFieldDragSrc(i) }
+  function handleFieldDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    if (i !== fieldDragOver) setFieldDragOver(i)
+  }
+  function handleFieldDrop(i: number) {
+    if (fieldDragSrc === null || fieldDragSrc === i) { resetFieldDrag(); return }
+    const next = [...additionalFields]
+    const [moved] = next.splice(fieldDragSrc, 1)
+    next.splice(i, 0, moved)
+    setAdditionalFields(next)
+    markDirty()
+    resetFieldDrag()
+  }
+  function resetFieldDrag() { setFieldDragSrc(null); setFieldDragOver(null) }
 
   // Draggable split pane
   const containerRef = useRef<HTMLDivElement>(null)
@@ -90,7 +166,6 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     bannerFileRef.current?.click()
   }
 
-  // Opens the crop modal directly with the already-uploaded image
   function openCropperForExistingImage(index: number) {
     cropReplacingIndexRef.current = index
     setCropSrc(bannerImages[index])
@@ -102,7 +177,6 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     e.target.value = ''
     if (files.length === 0) return
 
-    // Upload all selected files directly (no cropper for batch adds)
     const slots = 5 - bannerImages.length
     const toUpload = files.slice(0, slots)
     if (toUpload.length === 0) return
@@ -116,13 +190,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         if (name.trim()) form.append('eventName', name.trim())
         const res = await fetch('/api/admin/upload-event-cover', { method: 'POST', body: form })
         const data = await res.json() as { url?: string; error?: string }
-        if (res.ok && data.url) {
-          uploaded.push(data.url)
-        }
+        if (res.ok && data.url) uploaded.push(data.url)
         setUploadingCount(prev => prev - 1)
       }
       if (uploaded.length > 0) {
         setBannerImages(prev => [...prev, ...uploaded])
+        markDirty()
       }
     })()
   }
@@ -138,6 +211,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     const [moved] = next.splice(imgDragSrc, 1)
     next.splice(i, 0, moved)
     setBannerImages(next)
+    markDirty()
     resetImageDrag()
   }
   function resetImageDrag() { setImgDragSrc(null); setImgDragOver(null) }
@@ -147,9 +221,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     if (!img) return Promise.resolve(null)
 
     const canvas = document.createElement('canvas')
-
     if (!crop || crop.width === 0 || crop.height === 0) {
-      // No selection — use full natural image
       canvas.width = img.naturalWidth
       canvas.height = img.naturalHeight
       const ctx = canvas.getContext('2d')
@@ -180,7 +252,6 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     setCropUploading(true)
     try {
       const replacingIndex = cropReplacingIndexRef.current
-
       if (replacingIndex !== null) {
         const oldUrl = bannerImages[replacingIndex]
         if (oldUrl?.startsWith(STORAGE_BASE)) {
@@ -204,6 +275,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         } else {
           setBannerImages(prev => [...prev, data.url as string])
         }
+        markDirty()
       } else {
         alert((data as { error?: string }).error ?? 'Upload failed')
       }
@@ -216,6 +288,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   async function removeBannerImage(index: number) {
     const url = bannerImages[index]
     setBannerImages(prev => prev.filter((_, i) => i !== index))
+    markDirty()
     if (url?.startsWith(STORAGE_BASE)) {
       await fetch('/api/admin/delete-event-image', {
         method: 'DELETE',
@@ -226,10 +299,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   }
 
   function handlePreview() {
-    const previewData = { name, subtitle, pricePaise, eventDate, location, details, bannerImages }
+    const previewData = { name, subtitle, pricePaise, eventDate, location, details, bannerImages, distanceKm, difficulty }
     try { sessionStorage.setItem('event_form_preview', JSON.stringify(previewData)) } catch {}
     window.open('/admin/events/preview', '_blank')
   }
+
+  const previewSlug = name.trim() ? slugify(name) || 'your-event-name' : 'your-event-name'
 
   return (
     <>
@@ -251,18 +326,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
               </ReactCrop>
             </div>
             <div className='flex gap-2'>
-              <button
-                onClick={handleCropSave}
-                disabled={cropUploading}
-                className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2 rounded-md text-xs disabled:opacity-60 flex items-center justify-center gap-1.5'
-              >
+              <button onClick={handleCropSave} disabled={cropUploading} className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2 rounded-md text-xs disabled:opacity-60 flex items-center justify-center gap-1.5'>
                 {cropUploading ? <><Spinner /> Uploading…</> : 'Save image'}
               </button>
-              <button
-                onClick={() => setCropSrc(null)}
-                disabled={cropUploading}
-                className='px-3 py-2 rounded-md border border-white/15 text-white/70 text-xs hover:border-white/30 disabled:opacity-50'
-              >
+              <button onClick={() => setCropSrc(null)} disabled={cropUploading} className='px-3 py-2 rounded-md border border-white/15 text-white/70 text-xs hover:border-white/30 disabled:opacity-50'>
                 Cancel
               </button>
             </div>
@@ -270,12 +337,43 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         </div>
       )}
 
-      {/* ── Split pane container ── */}
-      <div ref={containerRef} className='flex items-start'>
+      {/* ── Cancel confirmation modal (portal) ── */}
+      {cancelModalOpen && cancelModalMounted && createPortal(
+        <div className='fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4' onClick={() => setCancelModalOpen(false)}>
+          <div className='bg-stride-purple-primary border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl' onClick={e => e.stopPropagation()}>
+            <div className='w-12 h-12 rounded-full bg-stride-yellow-accent/15 flex items-center justify-center mb-4'>
+              <AlertTriangle size={20} className='text-stride-yellow-accent' />
+            </div>
+            <h2 className='text-white font-bold text-lg mb-1'>Discard your changes?</h2>
+            <p className='text-white/60 text-sm mb-1'>Anything you&apos;ve typed here will be lost.</p>
+            <p className='text-white/40 text-xs mb-6'>This action cannot be undone.</p>
+            <div className='flex gap-3'>
+              <button onClick={() => setCancelModalOpen(false)} className='flex-1 py-2.5 rounded-xl border border-white/15 text-white/70 text-sm hover:border-white/30 transition-colors'>
+                Keep editing
+              </button>
+              <button onClick={() => router.push('/admin/events')} className='flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors'>
+                Yes, discard
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
-        {/* ── Left: Form ── */}
-        <div style={{ width: `${formWidthPct}%` }} className='min-w-0 shrink-0'>
-          <form action={action} className='space-y-5 pr-2'>
+      {/* ── Split pane container ── */}
+      <div ref={containerRef} className='flex items-start flex-col lg:flex-row'>
+
+        {/* ── Left: Form ── width=100% on mobile, dynamic % on lg+ */}
+        <div
+          style={{ ['--form-w' as string]: `${formWidthPct}%` } as React.CSSProperties}
+          className='w-full lg:w-(--form-w) lg:shrink-0 min-w-0'
+        >
+          <form
+            action={action}
+            onSubmit={() => setIsDirty(false)}
+            onInput={markDirty}
+            className='space-y-5 lg:pr-2'
+          >
 
             {errorMessage && (
               <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm'>
@@ -283,89 +381,244 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
               </div>
             )}
 
-            {/* Hidden fields for controlled markdown values */}
+            {/* Hidden inputs */}
             <input type='hidden' name='details' value={details} />
             <input type='hidden' name='confirmationText' value={confirmationText} />
             <input type='hidden' name='bannerImages' value={JSON.stringify(bannerImages)} readOnly />
+            <input type='hidden' name='additionalFields' value={JSON.stringify(additionalFields)} readOnly />
+            <input type='hidden' name='status' value={status} />
 
-            {/* Name + Subtitle */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <Field label='Event name *' name='name' value={name} onChange={setName} required />
-              <Field label='Subtitle' name='subtitle' value={subtitle} onChange={setSubtitle} />
-            </div>
-
-            {/* Full details — markdown editor */}
-            <div className='flex flex-col gap-1.5'>
-              <label className='text-white/70 text-sm font-medium'>Full details</label>
-              <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
-                <MDEditor value={details} onChange={(v) => setDetails(v ?? '')} height={280} preview='edit' className='bg-transparent!' />
+            {/* ── STATUS PILLS ── */}
+            <div className='bg-white/4 border border-white/10 rounded-2xl px-4 py-4 sm:px-5 sm:py-5'>
+              <div className='flex items-center gap-2 mb-3'>
+                <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest'>Event status</p>
+                <HelpHint text='PUBLISHED: visible to everyone on /events. DRAFT: visible only in admin. CANCELLED: shown in admin with a red badge, hidden from runners.' />
               </div>
-              <p className='text-white/30 text-xs'>Markdown supported — headings, bold, lists, links</p>
+              <div className='grid grid-cols-3 gap-2'>
+                <StatusPill value='PUBLISHED' active={status === 'PUBLISHED'} onClick={() => { setStatus('PUBLISHED'); markDirty() }}
+                  icon={<CheckCircle2 size={14} />} label='Published' tone='green' />
+                <StatusPill value='DRAFT' active={status === 'DRAFT'} onClick={() => { setStatus('DRAFT'); markDirty() }}
+                  icon={<PauseCircle size={14} />} label='Draft' tone='yellow' />
+                <StatusPill value='CANCELLED' active={status === 'CANCELLED'} onClick={() => { setStatus('CANCELLED'); markDirty() }}
+                  icon={<XCircle size={14} />} label='Cancelled' tone='red' />
+              </div>
             </div>
 
-            {/* Location + Meeting point URL */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <Field label='Location name' name='location' value={location} onChange={setLocation} />
-              <Field label='Meeting point — Google Maps URL' name='locationUrl' type='url' defaultValue={defaultValues.locationUrl} />
-            </div>
-
-            {/* Post-run gather point */}
-            <Field label='Post-run gather point — Google Maps URL' name='postRunLocationUrl' type='url' defaultValue={defaultValues.postRunLocationUrl} />
-
-            {/* Run route */}
-            <Field label='Run route URL (Strava / Komoot / etc.)' name='stravaRouteUrl' type='url' defaultValue={defaultValues.stravaRouteUrl} />
-
-            {/* Dates */}
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <Field label='Start date & time' name='eventDate' type='datetime-local' value={eventDate} onChange={setEventDate} />
-              <Field label='End date & time' name='endDate' type='datetime-local' defaultValue={defaultValues.endDate} />
-            </div>
-
-            {/* Capacity / Price / Status */}
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
-              <Field label='Capacity' name='capacity' type='number' defaultValue={String(defaultValues.capacity ?? '')} />
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-white/70 text-sm font-medium'>Price (paise) — 0 = free</label>
-                <input
-                  type='number'
-                  name='pricePaise'
-                  value={pricePaise}
-                  onChange={e => setPricePaise(Number(e.target.value))}
-                  className={inputBase}
+            {/* ── WHAT ── */}
+            <Widget icon={<Activity size={15} />} title='What'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <Field
+                  icon={<Type size={14} />} label='Event name' required
+                  name='name' value={name} onChange={setName}
+                  placeholder='e.g. Sunday Trail Run'
+                  help='The big public name runners see.'
+                />
+                <Field
+                  icon={<Hash size={14} />} label='Subtitle'
+                  name='subtitle' value={subtitle} onChange={setSubtitle}
+                  placeholder='e.g. 5K & 10K · Cubbon Park'
+                  help='Short tagline shown under the title.'
                 />
               </div>
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-white/70 text-sm font-medium'>Status</label>
-                <div className='relative'>
-                  <select
-                    name='status'
-                    defaultValue={defaultValues.status ?? 'DRAFT'}
-                    className={`${inputBase} appearance-none pr-9 cursor-pointer`}
-                  >
-                    <option value='DRAFT'>Draft</option>
-                    <option value='PUBLISHED'>Published</option>
-                    <option value='CANCELLED'>Cancelled</option>
-                  </select>
-                  <ChevronDown size={15} className='absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none' />
+
+              <div className='flex flex-col gap-1.5 mt-4'>
+                <div className='flex items-center gap-1.5'>
+                  <FileText size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Full details</label>
+                  <HelpHint text='The long-form description of the event. Supports headings, lists, links, bold. Shown in the "About Event" section on the public page.' />
+                </div>
+                <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
+                  <MDEditor value={details} onChange={(v) => { setDetails(v ?? ''); markDirty() }} height={260} preview='edit' className='bg-transparent!' />
                 </div>
               </div>
-            </div>
+            </Widget>
 
-            {/* Confirmation text — markdown editor */}
-            <div className='flex flex-col gap-1.5'>
-              <label className='text-white/70 text-sm font-medium'>Registration confirmation text</label>
-              <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
-                <MDEditor value={confirmationText} onChange={(v) => setConfirmationText(v ?? '')} height={180} preview='edit' className='bg-transparent!' />
+            {/* ── WHEN ── */}
+            <Widget icon={<Calendar size={15} />} title='When'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <Field
+                  icon={<Calendar size={14} />} label='Start date & time'
+                  name='eventDate' type='datetime-local' value={eventDate} onChange={setEventDate}
+                  help='When the run starts. Picked in your local timezone.'
+                />
+                <Field
+                  icon={<Clock size={14} />} label='End date & time'
+                  name='endDate' type='datetime-local' defaultValue={defaultValues.endDate}
+                  help='Roughly when the event wraps up. Used to mark runs as happening live or completed.'
+                />
               </div>
-              <p className='text-white/30 text-xs'>Markdown supported — shown to the member after booking</p>
-            </div>
 
-            {/* Banner images */}
-            <div className='flex flex-col gap-2'>
-              <div>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+                <Field
+                  icon={<Users size={14} />} label='Capacity'
+                  name='capacity' type='number' defaultValue={String(defaultValues.capacity ?? '')}
+                  placeholder='e.g. 50'
+                  help='Max number of runners. Leave blank for unlimited.'
+                />
+                <div className='flex flex-col gap-1.5'>
+                  <div className='flex items-center gap-1.5'>
+                    <IndianRupee size={14} className='text-white/40' />
+                    <label className='text-white/70 text-sm font-medium'>Price (paise)</label>
+                    <HelpHint text='Amount in paise. 100 paise = ₹1. Set to 0 for free events.' />
+                  </div>
+                  <input
+                    type='number'
+                    name='pricePaise'
+                    value={pricePaise}
+                    onChange={e => setPricePaise(Number(e.target.value))}
+                    placeholder='0 for free'
+                    className={`${inputBase} scheme-dark`}
+                  />
+                </div>
+              </div>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+                <Field
+                  icon={<Gauge size={14} />} label='Distance (km)'
+                  name='distanceKm' type='number' value={distanceKm} onChange={setDistanceKm}
+                  placeholder='e.g. 5'
+                  help='Total run distance in kilometres. Shown as a badge on the event page.'
+                />
+                <Field
+                  icon={<Activity size={14} />} label='Difficulty / pace'
+                  name='difficulty' value={difficulty} onChange={setDifficulty}
+                  placeholder='e.g. Beginner · 6:30/km'
+                  help='Brief skill or pace tag. Free text — anything that helps runners self-select.'
+                />
+              </div>
+            </Widget>
+
+            {/* ── WHERE ── */}
+            <Widget icon={<MapPin size={15} />} title='Where'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <Field
+                  icon={<MapPin size={14} />} label='Location name'
+                  name='location' value={location} onChange={setLocation}
+                  placeholder='e.g. Cubbon Park'
+                  help='The neighbourhood or park name shown on the event page.'
+                />
+                <Field
+                  icon={<Link2 size={14} />} label='Meeting point — Google Maps URL'
+                  name='locationUrl' type='url' defaultValue={defaultValues.locationUrl}
+                  placeholder='https://maps.google.com/...'
+                  help='Pin the exact start spot. Powers the embedded map on the event page.'
+                />
+              </div>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+                <Field
+                  icon={<Coffee size={14} />} label='Post-run gather URL'
+                  name='postRunLocationUrl' type='url' defaultValue={defaultValues.postRunLocationUrl}
+                  placeholder='https://maps.google.com/...'
+                  help='Where runners hang out after — café, breakfast spot, etc.'
+                />
+                <Field
+                  icon={<Route size={14} />} label='Run route URL'
+                  name='stravaRouteUrl' type='url' defaultValue={defaultValues.stravaRouteUrl}
+                  placeholder='Strava / Komoot route link'
+                  help='Embed-able route link. Shown as a clickable card on the event page.'
+                />
+              </div>
+            </Widget>
+
+            {/* ── REGISTRATION ── */}
+            <Widget icon={<Ticket size={15} />} title='Registration'>
+              <div className='flex flex-col gap-1.5'>
+                <div className='flex items-center gap-1.5'>
+                  <FileText size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Confirmation text</label>
+                  <HelpHint text='Shown to the runner after they finish registration. Markdown supported.' />
+                </div>
+                <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
+                  <MDEditor value={confirmationText} onChange={(v) => { setConfirmationText(v ?? ''); markDirty() }} height={160} preview='edit' className='bg-transparent!' />
+                </div>
+              </div>
+
+              {/* Additional fields */}
+              <div className='flex flex-col gap-2 mt-4'>
+                <div className='flex items-center gap-1.5'>
+                  <Plus size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Custom questions</label>
+                  <HelpHint text='Extra questions runners must answer to register — e.g. "T-shirt size", "Strava handle". Drag to reorder. Answers stored on each registration.' />
+                </div>
+
+                <div className='flex flex-col gap-2'>
+                  {additionalFields.map((field, i) => {
+                    const isOver = fieldDragOver === i && fieldDragSrc !== i
+                    const isDragging = fieldDragSrc === i
+                    return (
+                      <div
+                        key={field.id}
+                        draggable
+                        onDragStart={() => handleFieldDragStart(i)}
+                        onDragOver={e => handleFieldDragOver(e, i)}
+                        onDrop={() => handleFieldDrop(i)}
+                        onDragEnd={resetFieldDrag}
+                        className={`flex items-start gap-2 p-2 rounded-lg border transition-all ${
+                          isOver
+                            ? 'border-stride-yellow-accent bg-stride-yellow-accent/5'
+                            : isDragging
+                            ? 'border-white/10 opacity-40'
+                            : 'border-white/10 bg-white/5'
+                        }`}
+                      >
+                        <button type='button' className='shrink-0 mt-2.5 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing' aria-label='Drag to reorder'>
+                          <GripVertical size={16} />
+                        </button>
+
+                        <div className='flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2'>
+                          <input
+                            type='text'
+                            value={field.label}
+                            onChange={e => updateField(i, { label: e.target.value })}
+                            placeholder='e.g. T-shirt size'
+                            className={inputBase}
+                          />
+                          <div className='relative'>
+                            <select
+                              value={field.type}
+                              onChange={e => updateField(i, { type: e.target.value as AdditionalFieldType })}
+                              className={`${inputBase} appearance-none pr-8 cursor-pointer`}
+                            >
+                              <option value='text'>Text</option>
+                              <option value='number'>Number</option>
+                              <option value='link'>Link</option>
+                            </select>
+                            <ChevronDown size={14} className='absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none' />
+                          </div>
+                          <label className='flex items-center gap-2 px-3 rounded-lg border border-white/10 bg-white/5 cursor-pointer hover:border-white/20'>
+                            <input
+                              type='checkbox'
+                              checked={field.required}
+                              onChange={e => updateField(i, { required: e.target.checked })}
+                              className='accent-stride-yellow-accent w-3.5 h-3.5'
+                            />
+                            <span className='text-white/70 text-xs whitespace-nowrap'>Required</span>
+                          </label>
+                        </div>
+
+                        <button type='button' onClick={() => removeField(i)} className='shrink-0 mt-2 p-1.5 rounded-lg text-white/35 hover:text-red-400 hover:bg-red-500/10 transition-colors' aria-label='Remove field'>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <button type='button' onClick={addField} className='self-start flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/50 hover:text-white/80 text-xs transition-colors'>
+                  <Plus size={13} />
+                  Add field
+                </button>
+              </div>
+            </Widget>
+
+            {/* ── IMAGES ── */}
+            <Widget icon={<ImageIcon size={15} />} title='Images'>
+              <div className='flex items-center gap-1.5 mb-2'>
                 <label className='text-white/70 text-sm font-medium'>Banner images</label>
-                <p className='text-white/30 text-xs mt-0.5'>Select multiple at once · Up to 5 total · Drag to reorder · Pencil to crop</p>
+                <HelpHint text='Up to 5 images. First image is the thumbnail and Open Graph preview. Drag to reorder, pencil to crop, X to remove.' />
               </div>
+              <p className='text-white/30 text-xs mb-3'>Select multiple at once · Drag to reorder · Pencil to crop</p>
               <div className='flex flex-wrap gap-3 items-end'>
                 {bannerImages.map((url, i) => (
                   <div
@@ -385,27 +638,14 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Banner ${i + 1}`} className='h-28 w-auto max-w-[220px] block object-contain bg-white/5' />
-                    {/* Crop / edit pencil */}
-                    <button
-                      type='button'
-                      onClick={() => openCropperForExistingImage(i)}
-                      className='absolute top-1.5 left-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-stride-yellow-accent hover:text-copy-black'
-                      aria-label='Crop image'
-                    >
+                    <button type='button' onClick={() => openCropperForExistingImage(i)} className='absolute top-1.5 left-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-stride-yellow-accent hover:text-copy-black' aria-label='Crop image'>
                       <Pencil size={11} />
                     </button>
-                    {/* Remove */}
-                    <button
-                      type='button'
-                      onClick={() => removeBannerImage(i)}
-                      className='absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80'
-                      aria-label='Remove image'
-                    >
+                    <button type='button' onClick={() => removeBannerImage(i)} className='absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80' aria-label='Remove image'>
                       <X size={11} />
                     </button>
                   </div>
                 ))}
-                {/* Uploading placeholders */}
                 {Array.from({ length: uploadingCount }).map((_, i) => (
                   <div key={`uploading-${i}`} className='h-28 w-20 rounded-xl border border-white/15 bg-white/5 flex flex-col items-center justify-center gap-1 shrink-0'>
                     <Spinner />
@@ -413,41 +653,26 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   </div>
                 ))}
                 {bannerImages.length + uploadingCount < 5 && (
-                  <button
-                    type='button'
-                    onClick={openFilePickerForAdd}
-                    disabled={uploadingCount > 0}
-                    className='h-28 w-20 rounded-xl border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/60 transition-colors flex flex-col items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed'
-                  >
+                  <button type='button' onClick={openFilePickerForAdd} disabled={uploadingCount > 0} className='h-28 w-20 rounded-xl border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/60 transition-colors flex flex-col items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed'>
                     <Plus size={20} />
                     <span className='text-xs'>Add</span>
                   </button>
                 )}
               </div>
-              <input
-                ref={bannerFileRef}
-                type='file'
-                accept='image/*'
-                multiple
-                onChange={handleBannerFileSelect}
-                className='hidden'
-              />
-            </div>
+              <input ref={bannerFileRef} type='file' accept='image/*' multiple onChange={handleBannerFileSelect} className='hidden' />
+            </Widget>
 
             {/* Actions */}
             <div className='flex flex-wrap items-center gap-3 pt-2'>
               <SubmitButton label={submitLabel} />
-              <a
-                href='/admin/events'
+              <button
+                type='button'
+                onClick={() => setCancelModalOpen(true)}
                 className='text-white/60 hover:text-white px-5 py-3 rounded-md border border-white/15 hover:border-white/30 transition-colors text-sm min-h-11 flex items-center'
               >
                 Cancel
-              </a>
-              <button
-                type='button'
-                onClick={handlePreview}
-                className='lg:hidden ml-auto flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors'
-              >
+              </button>
+              <button type='button' onClick={handlePreview} className='lg:hidden ml-auto flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors'>
                 <Eye size={15} />
                 Preview
               </button>
@@ -466,7 +691,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         </div>
 
         {/* ── Right: Live Preview (desktop only) ── */}
-        <div style={{ width: `${100 - formWidthPct}%` }} className='hidden lg:block min-w-0 shrink-0 pl-1 sticky top-6 max-h-[calc(100vh-6rem)] overflow-y-auto'>
+        <div
+          style={{ ['--preview-w' as string]: `${100 - formWidthPct}%` } as React.CSSProperties}
+          className='hidden lg:block w-(--preview-w) min-w-0 shrink-0 pl-1 sticky top-6 max-h-[calc(100vh-6rem)] overflow-y-auto'
+        >
           <EventPreview
             name={name}
             subtitle={subtitle}
@@ -475,6 +703,9 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             location={location}
             details={details}
             bannerImages={bannerImages}
+            slug={previewSlug}
+            distanceKm={distanceKm}
+            difficulty={difficulty}
           />
         </div>
       </div>
@@ -482,10 +713,54 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   )
 }
 
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
 const inputBase =
-  'bg-white/8 border border-white/20 rounded-lg px-4 py-3 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/70 focus:bg-white/10 transition-colors w-full'
+  'bg-white/8 border border-white/20 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/70 focus:bg-white/10 transition-colors w-full'
+
+function Widget({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <section className='bg-white/4 border border-white/10 rounded-2xl px-4 py-4 sm:px-5 sm:py-5'>
+      <div className='flex items-center gap-2 mb-4'>
+        <span className='inline-flex w-7 h-7 rounded-lg bg-stride-yellow-accent/10 text-stride-yellow-accent items-center justify-center'>
+          {icon}
+        </span>
+        <h2 className='text-white font-bold text-sm uppercase tracking-widest'>{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function StatusPill({
+  active, onClick, icon, label, tone,
+}: { value: Status; active: boolean; onClick: () => void; icon: React.ReactNode; label: string; tone: 'green' | 'yellow' | 'red' }) {
+  const activeStyles =
+    tone === 'green'
+      ? 'bg-green-500/15 border-green-500 text-green-400 shadow-[0_0_0_3px_rgba(34,197,94,0.10)]'
+      : tone === 'yellow'
+      ? 'bg-stride-yellow-accent/15 border-stride-yellow-accent text-stride-yellow-accent shadow-[0_0_0_3px_rgba(225,208,63,0.10)]'
+      : 'bg-red-500/15 border-red-500 text-red-400 shadow-[0_0_0_3px_rgba(239,68,68,0.10)]'
+
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
+        active
+          ? activeStyles
+          : 'bg-white/5 border-white/15 text-white/55 hover:border-white/25 hover:text-white/85'
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  )
+}
 
 type FieldProps = {
+  icon?: React.ReactNode
   label: string
   name: string
   type?: string
@@ -495,13 +770,22 @@ type FieldProps = {
   onChange?: (v: string) => void
   required?: boolean
   rows?: number
+  placeholder?: string
+  help?: string
 }
 
-function Field({ label, name, type = 'text', as = 'input', defaultValue = '', value, onChange, required, rows }: FieldProps) {
+function Field({ icon, label, name, type = 'text', as = 'input', defaultValue = '', value, onChange, required, rows, placeholder, help }: FieldProps) {
   const controlled = value !== undefined && onChange !== undefined
   return (
-    <div className='flex flex-col gap-1.5'>
-      <label className='text-white/70 text-sm font-medium'>{label}</label>
+    <div className='flex flex-col gap-1.5 min-w-0'>
+      <div className='flex items-center gap-1.5'>
+        {icon && <span className='text-white/40'>{icon}</span>}
+        <label className='text-white/70 text-sm font-medium'>
+          {label}
+          {required && <span className='text-stride-yellow-accent ml-0.5'>*</span>}
+        </label>
+        {help && <HelpHint text={help} />}
+      </div>
       {as === 'textarea' ? (
         <textarea
           name={name}
@@ -510,6 +794,7 @@ function Field({ label, name, type = 'text', as = 'input', defaultValue = '', va
           onChange={controlled ? e => onChange(e.target.value) : undefined}
           required={required}
           rows={rows ?? 3}
+          placeholder={placeholder}
           className={inputBase}
         />
       ) : (
@@ -520,6 +805,7 @@ function Field({ label, name, type = 'text', as = 'input', defaultValue = '', va
           value={controlled ? value : undefined}
           onChange={controlled ? e => onChange(e.target.value) : undefined}
           required={required}
+          placeholder={placeholder}
           className={`${inputBase} scheme-dark`}
         />
       )}

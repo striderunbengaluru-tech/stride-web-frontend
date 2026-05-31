@@ -27,7 +27,15 @@ const Navbar = async () => {
   }
 
   return (
-    <div className='fixed top-4 left-0 right-0 z-50 flex justify-center px-4'>
+    <div className='fixed top-0 left-0 right-0 z-50'>
+      {/* Full-width glass backdrop — softens the gap around the floating pill
+          so page content doesn't bleed through above/around the navbar. */}
+      <div
+        aria-hidden='true'
+        className='pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-copy-black/55 via-copy-black/25 to-transparent backdrop-blur-md'
+      />
+
+      <div className='relative pt-4 flex justify-center px-4'>
       <nav
         aria-label='Main navigation'
         className='relative w-full max-w-6xl min-h-[60px] flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/30 px-5 py-3 backdrop-blur-xl'
@@ -68,6 +76,7 @@ const Navbar = async () => {
           ) : null}
         </div>
       </nav>
+      </div>
     </div>
   )
 }

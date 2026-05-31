@@ -64,7 +64,7 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
     >
       <Link
         href={`/events/${slug}`}
-        className='group block rounded-2xl border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
+        className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
       >
         {/* Image — clean, no overlays */}
         <div className='relative aspect-[4/5] bg-white/5'>

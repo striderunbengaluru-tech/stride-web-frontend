@@ -1,209 +1,196 @@
-'use client'
-
-import { useRef, useState } from 'react'
-import { Download } from 'lucide-react'
-
-type Props = {
-  eventName: string
-  eventDate: string | null
-  eventLocation: string | null
-  runnerTag: string | null
-  eventBannerUrl: string | null
-}
+// Utility — builds a 1080x1920 Instagram-Story-ready PNG of an event.
+// Used by the confirmation page's Share button (see share-confirmation.tsx).
+//
+// Layout: pure purple background, event image bounded in a rounded frame in
+// the lower half (no gradient overlay), big event name + date + location in
+// the upper half, Stride handle + URL at the bottom. No runner tag here —
+// that stays on the page itself.
 
 const CANVAS_W = 1080
 const CANVAS_H = 1920
 const BRAND_PURPLE = '#4B2862'
+const BRAND_PURPLE_DARK = '#2a1240'
 const BRAND_YELLOW = '#E1D03F'
+const PADDING = 80
+
+const SITE_HOST = 'strideclub.in'
+const STRIDE_HANDLE = '@stride_runclub_bengaluru'
+
+const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
 
 function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const radius = Math.min(r, w / 2, h / 2)
   ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
   ctx.closePath()
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number): number {
-  const words = text.split(' ')
-  let line = ''
-  let currentY = y
+// Word-wrap text into up to `maxLines` lines, ellipsing the last one if it overflows.
+function layoutWrappedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const words = text.split(/\s+/)
+  const lines: string[] = []
+  let current = ''
 
-  for (let n = 0; n < words.length; n++) {
-    const testLine = line + words[n] + ' '
-    const metrics = ctx.measureText(testLine)
-    if (metrics.width > maxWidth && n > 0) {
-      ctx.fillText(line.trim(), x, currentY)
-      line = words[n] + ' '
-      currentY += lineHeight
+  for (let i = 0; i < words.length; i++) {
+    const candidate = current ? `${current} ${words[i]}` : words[i]
+    if (ctx.measureText(candidate).width > maxWidth && current) {
+      lines.push(current)
+      current = words[i]
+      if (lines.length === maxLines - 1) {
+        // Last line: include the rest, ellipse if it overflows
+        let rest = words.slice(i).join(' ')
+        while (rest.length > 0 && ctx.measureText(rest + '…').width > maxWidth) {
+          rest = rest.slice(0, -1)
+        }
+        lines.push(rest + (rest === words.slice(i).join(' ') ? '' : '…'))
+        return lines
+      }
     } else {
-      line = testLine
+      current = candidate
     }
   }
-  ctx.fillText(line.trim(), x, currentY)
-  return currentY
+  if (current) lines.push(current)
+  return lines
 }
 
-export function StoryBannerDownload({ eventName, eventDate, eventLocation, runnerTag, eventBannerUrl }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [generating, setGenerating] = useState(false)
+function loadImage(url: string): Promise<HTMLImageElement | null> {
+  return new Promise(resolve => {
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
 
-  async function generate() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    setGenerating(true)
+export async function buildStoryCanvas(opts: {
+  eventName: string
+  eventDate: string | null     // already formatted, e.g. "Sat, 28 Jun · 7:15 AM"
+  eventLocation: string | null
+  eventBannerUrl: string | null
+  eventSlug: string
+}): Promise<Blob | null> {
+  const canvas = document.createElement('canvas')
+  canvas.width = CANVAS_W
+  canvas.height = CANVAS_H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) { setGenerating(false); return }
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
-    canvas.width = CANVAS_W
-    canvas.height = CANVAS_H
+  // ── Background — subtle vertical purple gradient ──
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
+  bgGrad.addColorStop(0, BRAND_PURPLE_DARK)
+  bgGrad.addColorStop(0.5, BRAND_PURPLE)
+  bgGrad.addColorStop(1, BRAND_PURPLE_DARK)
+  ctx.fillStyle = bgGrad
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
 
-    // ── Background gradient ──
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
-    bgGrad.addColorStop(0, '#2a1240')
-    bgGrad.addColorStop(0.5, BRAND_PURPLE)
-    bgGrad.addColorStop(1, '#1a0a2e')
-    ctx.fillStyle = bgGrad
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
+  // ── Brand block — STRIDE wordmark top-left ──
+  const brandY = 140
+  ctx.fillStyle = BRAND_YELLOW
+  ctx.font = `900 60px ${FONT_STACK}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText('STRIDE', PADDING, brandY)
 
-    // ── Subtle dot pattern ──
-    ctx.fillStyle = 'rgba(255,255,255,0.025)'
-    for (let x = 60; x < CANVAS_W; x += 80) {
-      for (let y = 60; y < CANVAS_H; y += 80) {
-        ctx.beginPath()
-        ctx.arc(x, y, 3, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
+  ctx.fillStyle = 'rgba(255,255,255,0.55)'
+  ctx.font = `500 30px ${FONT_STACK}`
+  ctx.fillText('Run Club · Bengaluru', PADDING, brandY + 44)
 
-    // ── Event image (top section) ──
-    const IMAGE_H = 1150
-    if (eventBannerUrl) {
-      try {
-        await new Promise<void>((resolve) => {
-          const img = new window.Image()
-          img.crossOrigin = 'anonymous'
-          img.onload = () => {
-            // Cover-fit: fill the top section
-            const scale = Math.max(CANVAS_W / img.naturalWidth, IMAGE_H / img.naturalHeight)
-            const sw = img.naturalWidth * scale
-            const sh = img.naturalHeight * scale
-            const sx = (CANVAS_W - sw) / 2
-            const sy = (IMAGE_H - sh) / 2
-            ctx.drawImage(img, sx, sy, sw, sh)
-            resolve()
-          }
-          img.onerror = () => resolve()
-          img.src = eventBannerUrl
-        })
-      } catch {}
-    }
+  // ── Eyebrow ──
+  ctx.fillStyle = BRAND_YELLOW
+  ctx.font = `700 34px ${FONT_STACK}`
+  ctx.letterSpacing = '4px'
+  ctx.fillText("I'M ATTENDING THIS RUN", PADDING, 320)
+  ctx.letterSpacing = '0px'
 
-    // ── Gradient overlay on image (purple fade in) ──
-    const imgFade = ctx.createLinearGradient(0, IMAGE_H * 0.4, 0, IMAGE_H + 40)
-    imgFade.addColorStop(0, 'rgba(75,40,98,0)')
-    imgFade.addColorStop(0.5, 'rgba(75,40,98,0.7)')
-    imgFade.addColorStop(1, 'rgba(75,40,98,1)')
-    ctx.fillStyle = imgFade
-    ctx.fillRect(0, 0, CANVAS_W, IMAGE_H + 40)
-
-    // ── "STRIDE" brand — top left ──
-    ctx.font = 'bold 52px Arial, sans-serif'
-    ctx.fillStyle = BRAND_YELLOW
-    ctx.letterSpacing = '8px'
-    ctx.fillText('STRIDE', 80, 110)
-
-    ctx.font = '28px Arial, sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'
-    ctx.fillText('Run Club · Bengaluru', 80, 158)
-    ctx.letterSpacing = '0px'
-
-    // ── "I'm running this!" section ──
-    const CONTENT_TOP = IMAGE_H + 60
-
-    ctx.font = 'bold 68px Arial, sans-serif'
-    ctx.fillStyle = '#FFFFFF'
-    ctx.fillText("I'm running this! 🏃", 80, CONTENT_TOP)
-
-    // ── Event name ──
-    ctx.font = 'bold 86px Arial, sans-serif'
-    ctx.fillStyle = '#FFFFFF'
-    const nameY = wrapText(ctx, eventName, 80, CONTENT_TOP + 100, CANVAS_W - 160, 100)
-
-    // ── Date & location ──
-    let detailY = nameY + 70
-    if (eventDate) {
-      ctx.font = '44px Arial, sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.65)'
-      ctx.fillText(`📅 ${eventDate}`, 80, detailY)
-      detailY += 65
-    }
-    if (eventLocation) {
-      ctx.font = '44px Arial, sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.65)'
-      ctx.fillText(`📍 ${eventLocation}`, 80, detailY)
-      detailY += 80
-    }
-
-    // ── Runner tag pill ──
-    if (runnerTag) {
-      const PILL_X = 80
-      const PILL_Y = detailY + 20
-      const PILL_H = 100
-      const PILL_W = 320
-
-      drawRoundedRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 50)
-      ctx.fillStyle = BRAND_YELLOW
-      ctx.fill()
-
-      ctx.font = 'bold 52px monospace'
-      ctx.fillStyle = '#010101'
-      ctx.textAlign = 'center'
-      ctx.fillText(runnerTag, PILL_X + PILL_W / 2, PILL_Y + 66)
-      ctx.textAlign = 'left'
-
-      ctx.font = '34px Arial, sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.5)'
-      ctx.fillText('My Runner Tag', PILL_X + PILL_W + 30, PILL_Y + 62)
-    }
-
-    // ── Bottom footer ──
-    ctx.font = '36px Arial, sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'
-    ctx.fillText('stride-web-frontend.vercel.app', 80, CANVAS_H - 80)
-
-    // ── Download ──
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `stride-story-${eventName.toLowerCase().replace(/\s+/g, '-')}.png`
-      a.click()
-      URL.revokeObjectURL(url)
-      setGenerating(false)
-    }, 'image/png')
+  // ── Event name — bold, wraps to max 2 lines ──
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = `800 80px ${FONT_STACK}`
+  const nameLines = layoutWrappedText(ctx, opts.eventName, CANVAS_W - PADDING * 2, 2)
+  let cursorY = 410
+  for (const line of nameLines) {
+    ctx.fillText(line, PADDING, cursorY)
+    cursorY += 96
   }
 
-  return (
-    <div className='mt-6'>
-      <canvas ref={canvasRef} className='hidden' aria-hidden='true' />
-      <button
-        onClick={generate}
-        disabled={generating}
-        className='w-full flex items-center justify-center gap-2.5 bg-stride-yellow-accent text-copy-black font-bold py-4 rounded-xl hover:bg-stride-yellow-accent/90 active:scale-[0.98] transition-all disabled:opacity-60 text-base'
-      >
-        <Download size={18} />
-        {generating ? 'Generating story…' : 'Download Instagram Story'}
-      </button>
-      <p className='text-white/25 text-xs text-center mt-2'>1080×1920 PNG — ready to share on Instagram Stories</p>
-    </div>
-  )
+  // ── Date + location ──
+  cursorY += 12
+  ctx.font = `500 40px ${FONT_STACK}`
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'
+  if (opts.eventDate) {
+    ctx.fillText(`📅  ${opts.eventDate}`, PADDING, cursorY)
+    cursorY += 62
+  }
+  if (opts.eventLocation) {
+    // Truncate location if very long
+    let loc = opts.eventLocation
+    while (ctx.measureText(`📍  ${loc}…`).width > CANVAS_W - PADDING * 2 && loc.length > 0) {
+      loc = loc.slice(0, -1)
+    }
+    const locText = loc === opts.eventLocation ? loc : `${loc}…`
+    ctx.fillText(`📍  ${locText}`, PADDING, cursorY)
+    cursorY += 62
+  }
+
+  // ── Event banner image — bounded rounded frame in the lower half ──
+  const FRAME_X = PADDING
+  const FRAME_W = CANVAS_W - PADDING * 2
+  const FRAME_Y = Math.max(cursorY + 40, 880)
+  const FRAME_H = 1700 - FRAME_Y // ends ~1700, leaving room for handle/URL footer
+
+  // Frame background (in case image fails to load)
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'
+  drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
+  ctx.fill()
+
+  if (opts.eventBannerUrl) {
+    const img = await loadImage(opts.eventBannerUrl)
+    if (img) {
+      ctx.save()
+      drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
+      ctx.clip()
+      // Cover-fit
+      const scale = Math.max(FRAME_W / img.naturalWidth, FRAME_H / img.naturalHeight)
+      const drawW = img.naturalWidth * scale
+      const drawH = img.naturalHeight * scale
+      const drawX = FRAME_X + (FRAME_W - drawW) / 2
+      const drawY = FRAME_Y + (FRAME_H - drawH) / 2
+      ctx.drawImage(img, drawX, drawY, drawW, drawH)
+      ctx.restore()
+    }
+  }
+
+  // Subtle border around the frame
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+  ctx.lineWidth = 2
+  drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
+  ctx.stroke()
+
+  // ── Footer — handle + URL ──
+  ctx.fillStyle = BRAND_YELLOW
+  ctx.font = `700 36px ${FONT_STACK}`
+  ctx.fillText(STRIDE_HANDLE, PADDING, 1780)
+
+  ctx.fillStyle = 'rgba(255,255,255,0.65)'
+  ctx.font = `500 30px ${FONT_STACK}`
+  ctx.fillText(`${SITE_HOST}/events/${opts.eventSlug}`, PADDING, 1830)
+
+  return new Promise<Blob | null>(resolve => {
+    canvas.toBlob(b => resolve(b), 'image/png')
+  })
 }

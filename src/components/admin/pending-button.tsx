@@ -12,13 +12,16 @@ type Props = {
 export function PendingButton({ children, className, pendingLabel }: Props) {
   const { pending } = useFormStatus()
   return (
-    <button type='submit' disabled={pending} className={className}>
-      {pending ? (
-        <span className='flex items-center gap-1.5'>
-          <Spinner className='w-3 h-3' />
-          {pendingLabel ?? children}
-        </span>
-      ) : children}
+    <button
+      type='submit'
+      disabled={pending}
+      // Always render as a centered flex container so both idle text and the
+      // (spinner + label) pending state stay horizontally centered when the
+      // button is wider than its content (e.g. inside a w-full / flex-1 form).
+      className={`${className ?? ''} inline-flex items-center justify-center gap-1.5`}
+    >
+      {pending && <Spinner className='w-3 h-3' />}
+      {pending ? (pendingLabel ?? children) : children}
     </button>
   )
 }
