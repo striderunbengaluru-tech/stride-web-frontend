@@ -7,6 +7,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { SignOutButton } from '@/components/profile/sign-out-button'
+import { DeleteAccountButton } from '@/components/profile/delete-account-button'
 import { AvatarUpload } from '@/components/profile/avatar-upload'
 import { AvatarImage } from '@/components/profile/avatar-image'
 import { ShareButton } from '@/components/profile/share-button'
@@ -71,11 +72,12 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, prompts, gallery_images, runs_completed, runner_tag')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, prompts, gallery_images, runs_completed, runner_tag, deleted_at')
     .eq('username', username)
     .single()
 
-  if (!row) notFound()
+  // Treat deactivated users as 404 so their public profile no longer resolves
+  if (!row || (row as { deleted_at: string | null }).deleted_at) notFound()
 
   const skills        = parseJson<string[]>    (row.skills,  [])
   const prompts       = parseJson<Prompt[]>    (row.prompts, [])
@@ -321,10 +323,11 @@ export default async function ProfilePage({ params }: Props) {
 
         </div>
 
-        {/* ── Sign out ── */}
+        {/* ── Account actions ── */}
         {isOwnProfile && (
-          <div className='mt-8 pt-6 border-t border-white/8 flex justify-center'>
+          <div className='mt-8 pt-6 border-t border-white/8 flex flex-col items-center gap-3'>
             <SignOutButton />
+            <DeleteAccountButton />
           </div>
         )}
       </div>

@@ -2,7 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
-import { CheckCircle2, Calendar, MapPin, ArrowRight } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import { CheckCircle2, MapPin, ArrowRight, MessageSquareText, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
@@ -65,7 +66,7 @@ export default async function ConfirmationPage({ params }: Props) {
   const [{ data: event }, { data: profile }] = await Promise.all([
     adminClient
       .from('events')
-      .select('id, name, slug, subtitle, event_date, end_date, location, location_url, banner_images, price_paise')
+      .select('id, name, slug, subtitle, event_date, end_date, location, location_url, banner_images, price_paise, confirmation_text')
       .eq('id', registration.event_id)
       .single(),
     adminClient
@@ -234,8 +235,23 @@ export default async function ConfirmationPage({ params }: Props) {
           </div>
         </SectionReveal>
 
+        {/* ── Admin confirmation message ── */}
+        {event.confirmation_text && event.confirmation_text.trim() && (
+          <SectionReveal delay={0.16}>
+            <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
+              <div className='flex items-center gap-2 mb-2'>
+                <MessageSquareText size={14} className='text-stride-yellow-accent shrink-0' />
+                <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest'>A note from Stride</p>
+              </div>
+              <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/85 prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
+                <ReactMarkdown>{event.confirmation_text}</ReactMarkdown>
+              </div>
+            </div>
+          </SectionReveal>
+        )}
+
         {/* ── Runner tag ── */}
-        <SectionReveal delay={0.18}>
+        <SectionReveal delay={0.2}>
           <RunnerTagTicket
             runnerTag={profile?.runner_tag ?? null}
             registrationId={registration.id}
@@ -247,7 +263,7 @@ export default async function ConfirmationPage({ params }: Props) {
         <SectionReveal delay={0.24}>
           <div>
             <div className='flex items-center gap-2 mb-3'>
-              <Calendar size={13} className='text-stride-yellow-accent' />
+              <Users size={13} className='text-stride-yellow-accent' />
               <p className='text-white/50 text-[10px] font-bold uppercase tracking-widest'>Tell your friends</p>
             </div>
             <ShareConfirmation
@@ -271,14 +287,14 @@ export default async function ConfirmationPage({ params }: Props) {
               <div className='pt-8 border-t border-white/8'>
                 <div className='flex items-end justify-between gap-4 mb-5'>
                   <div>
-                    <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest mb-1'>From the blog</p>
-                    <h3 className='text-white font-bold text-xl leading-tight'>Keep reading</h3>
+                    <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest mb-1.5'>Inside Stride</p>
+                    <h3 className='text-white font-bold text-xl leading-tight'>While you lace up — stories, run recaps &amp; what we&apos;re building.</h3>
                   </div>
                   <Link
                     href='/blog'
                     className='inline-flex items-center gap-1 text-white/40 hover:text-stride-yellow-accent text-sm font-medium transition-colors shrink-0'
                   >
-                    View all
+                    All stories
                     <ArrowRight size={13} />
                   </Link>
                 </div>

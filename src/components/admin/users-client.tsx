@@ -25,6 +25,7 @@ export type UserRow = {
   emergency_contact_number: string | null
   location: string | null
   bio: string | null
+  deleted_at: string | null
   confirmed_count: number
   last_active_at: string | null
   runs: Run[]
@@ -189,12 +190,17 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       <div className='space-y-2'>
         {filtered.map(u => {
           const isExpanded = expandedId === u.id
-          const profileHref = u.username ? `/profile/${u.username}` : null
+          const isDeactivated = !!u.deleted_at
+          // Don't link to /profile/<username> for deactivated users — that route 404s by design
+          const profileHref = u.username && !isDeactivated ? `/profile/${u.username}` : null
+          const displayName = isDeactivated ? 'Deactivated runner' : (u.full_name ?? '—')
 
           return (
             <div
               key={u.id}
-              className='bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors'
+              className={`bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors ${
+                isDeactivated ? 'opacity-60' : ''
+              }`}
             >
               {/* Main row */}
               <div className='flex items-center gap-3 px-4 py-3.5'>
@@ -208,7 +214,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     </div>
                   </a>
                 ) : (
-                  <Avatar url={u.avatar_url} name={u.full_name} />
+                  <Avatar url={isDeactivated ? null : u.avatar_url} name={displayName} />
                 )}
 
                 {/* Name + email + tag */}
@@ -217,18 +223,31 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     {profileHref ? (
                       <a href={profileHref} target='_blank' rel='noopener noreferrer' onClick={e => e.stopPropagation()}
                         className='text-white font-semibold text-sm hover:text-stride-yellow-accent transition-colors truncate max-w-[160px] sm:max-w-none'>
-                        {u.full_name ?? '—'}
+                        {displayName}
                       </a>
                     ) : (
-                      <p className='text-white font-semibold text-sm truncate'>{u.full_name ?? '—'}</p>
+                      <p className={`font-semibold text-sm truncate ${isDeactivated ? 'text-white/50 italic' : 'text-white'}`}>
+                        {displayName}
+                      </p>
                     )}
-                    {u.runner_tag && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
+                    {u.runner_tag && !isDeactivated && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
+                    {isDeactivated && (
+                      <span className='text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                        Deactivated
+                      </span>
+                    )}
                   </div>
-                  <p className='text-white/40 text-xs truncate mt-0.5'>{u.email}</p>
+                  <p className='text-white/40 text-xs truncate mt-0.5'>{isDeactivated ? '—' : u.email}</p>
                   <p className='text-white/25 text-xs'>
-                    {u.username ? `@${u.username}` : '—'}
-                    {' · '}
-                    Joined {fmtDate(u.created_at)}
+                    {isDeactivated
+                      ? `Deactivated ${u.deleted_at ? fmtDate(u.deleted_at) : ''}`
+                      : (
+                        <>
+                          {u.username ? `@${u.username}` : '—'}
+                          {' · '}
+                          Joined {fmtDate(u.created_at)}
+                        </>
+                      )}
                   </p>
                 </div>
 
@@ -245,14 +264,16 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   </span>
                 </div>
 
-                {/* Admin toggle — desktop */}
-                <button
-                  type='button'
-                  onClick={e => { e.stopPropagation(); setRoleTarget(u) }}
-                  className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
-                >
-                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                </button>
+                {/* Admin toggle — hidden for deactivated users */}
+                {!isDeactivated && (
+                  <button
+                    type='button'
+                    onClick={e => { e.stopPropagation(); setRoleTarget(u) }}
+                    className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
+                  >
+                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                  </button>
+                )}
 
                 {/* Expand button — always available so admins can drill into any user */}
                 <button
@@ -264,18 +285,20 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 </button>
               </div>
 
-              {/* Mobile: role + admin action */}
+              {/* Mobile: role + admin action — admin toggle hidden for deactivated users */}
               <div className='sm:hidden flex items-center gap-2 px-4 pb-3 -mt-1'>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${ROLE_STYLES[u.role] ?? 'bg-white/10 text-white/50'}`}>
                   {u.role}
                 </span>
-                <button
-                  type='button'
-                  onClick={() => setRoleTarget(u)}
-                  className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
-                >
-                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                </button>
+                {!isDeactivated && (
+                  <button
+                    type='button'
+                    onClick={() => setRoleTarget(u)}
+                    className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
+                  >
+                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                  </button>
+                )}
               </div>
 
               {/* Expanded details — profile facts + run history */}

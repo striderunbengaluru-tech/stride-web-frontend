@@ -49,6 +49,7 @@ export type RunnerRow = {
   checked_in_count: number
   last_event_name: string | null
   last_event_date: string | null
+  deactivated: boolean
 }
 
 export type EventWithAttendees = EventSummary & {
@@ -61,11 +62,12 @@ export type EventWithAttendees = EventSummary & {
     status: string
     registered_at: string
     checked_in_at: string | null
+    deactivated: boolean
   }[]
 }
 
 export default async function AdminRegistrationsPage() {
-  const [{ data: flatRows }, { data: eventSummaries }] = await Promise.all([
+  const [{ data: flatRows }, { data: eventSummaries }, { data: deactivatedUsers }] = await Promise.all([
     adminClient
       .from('admin_registrations_flat')
       .select('*')
@@ -74,9 +76,16 @@ export default async function AdminRegistrationsPage() {
       .from('admin_event_summary')
       .select('*')
       .order('event_date', { ascending: false }),
+    // The admin views don't expose deleted_at, so we pull the deactivated
+    // user ids in a small side query and merge them in below.
+    adminClient
+      .from('users')
+      .select('id')
+      .not('deleted_at', 'is', null),
   ])
 
   const rows = (flatRows ?? []) as FlatRow[]
+  const deactivatedIds = new Set((deactivatedUsers ?? []).map(u => u.id))
 
   // Build runner summaries (unique users with aggregate stats)
   const runnerMap = new Map<string, RunnerRow>()
@@ -94,6 +103,7 @@ export default async function AdminRegistrationsPage() {
         checked_in_count: 0,
         last_event_name: null,
         last_event_date: null,
+        deactivated: deactivatedIds.has(row.user_id),
       })
     }
     const runner = runnerMap.get(row.user_id)!
@@ -123,6 +133,7 @@ export default async function AdminRegistrationsPage() {
       status: row.status,
       registered_at: row.registered_at,
       checked_in_at: row.checked_in_at,
+      deactivated: deactivatedIds.has(row.user_id),
     })
   }
 

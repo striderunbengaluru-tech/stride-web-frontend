@@ -141,18 +141,21 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     }
   }
 
+  // Fetch a few extra so we can filter out deactivated users client-side
+  // and still end up with up to 5 to render.
   const { data: attendeeRows } = await adminClient
     .from('event_registrations')
-    .select('users(avatar_url, full_name)')
+    .select('users(avatar_url, full_name, deleted_at)')
     .eq('event_id', event.id)
     .eq('status', 'CONFIRMED')
     .order('created_at', { ascending: true })
-    .limit(5)
+    .limit(20)
 
-  type AttendeeRow = { users: { avatar_url: string | null; full_name: string | null } | null }
+  type AttendeeRow = { users: { avatar_url: string | null; full_name: string | null; deleted_at: string | null } | null }
   const attendees = ((attendeeRows ?? []) as unknown as AttendeeRow[])
     .map(r => r.users)
-    .filter(Boolean) as { avatar_url: string | null; full_name: string | null }[]
+    .filter(u => u && !u.deleted_at)
+    .slice(0, 5) as { avatar_url: string | null; full_name: string | null }[]
 
   let bannerImages: string[] = []
   try { bannerImages = JSON.parse(event.banner_images ?? '[]') as string[] }

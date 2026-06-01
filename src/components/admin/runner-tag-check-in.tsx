@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle, XCircle, ChevronDown, RotateCcw, Users, Clock, Calendar } from 'lucide-react'
+import {
+  CheckCircle, XCircle, ChevronDown, RotateCcw, Users, Clock, Calendar,
+  Search, Hash, UserRound, CheckCircle2,
+} from 'lucide-react'
 
 type Event = {
   id: string
@@ -12,14 +15,25 @@ type Event = {
 }
 type EventStats = { checkedIn: number; total: number }
 
+type Attendee = {
+  registrationId: string
+  userId: string | null
+  fullName: string | null
+  email: string | null
+  avatarUrl: string | null
+  runnerTag: string | null
+  checkedInAt: string | null
+}
+
 type CheckInState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'success'; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
   | { status: 'error'; message: string }
 
+type Mode = 'tag' | 'search'
+
 // Check-in is allowed from event_date - 6h up to end_date + 24h (or event_date + 24h if no end_date).
-// Lower bound lets admins pre-open the check-in screen ~6h before the run.
 const CHECKIN_PRE_WINDOW_MS = 6 * 60 * 60 * 1000
 const CHECKIN_POST_WINDOW_MS = 24 * 60 * 60 * 1000
 
@@ -47,9 +61,7 @@ function fmtDuration(ms: number): string {
 function fmtMonth(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()
 }
-function fmtDay(d: string) {
-  return new Date(d).getDate()
-}
+function fmtDay(d: string) { return new Date(d).getDate() }
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
 }
@@ -57,7 +69,6 @@ function fmtTime(d: string) {
   return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// "Status pill" — Open / Closing soon / Starts in X / Closed
 function statusFor(e: Event, nowMs: number): {
   label: string
   tone: 'green' | 'yellow' | 'orange' | 'grey'
@@ -91,10 +102,20 @@ export function RunnerTagCheckIn() {
   const [state, setState] = useState<CheckInState>({ status: 'idle' })
   const [now, setNow] = useState(() => Date.now())
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [mode, setMode] = useState<Mode>('tag')
+
+  // Search-mode state
+  const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [loadingAttendees, setLoadingAttendees] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  // Per-row check-in progress
+  const [rowLoadingId, setRowLoadingId] = useState<string | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const pickerRef = useRef<HTMLDivElement>(null)
 
-  // Live timer — re-render every second so countdowns stay fresh
+  // Live timer
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
@@ -119,7 +140,6 @@ export function RunnerTagCheckIn() {
         return w && now < w.closesAt
       })
       .sort((a, b) => {
-        // Sort: open-now first, then upcoming, by opensAt asc
         const wa = eventWindow(a)!
         const wb = eventWindow(b)!
         const aOpen = now >= wa.opensAt ? 0 : 1
@@ -177,62 +197,125 @@ export function RunnerTagCheckIn() {
     })
   }, [selectedEventId])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selectedEventId || runnerTag.length !== 4) return
-    setState({ status: 'loading' })
+  // Load attendees for search mode (admin-gated API)
+  const loadAttendees = useCallback(async (eventId: string) => {
+    setLoadingAttendees(true)
+    try {
+      const res = await fetch(`/api/admin/event-attendees?eventId=${encodeURIComponent(eventId)}`)
+      const data = await res.json() as { attendees?: Attendee[] }
+      if (res.ok && data.attendees) setAttendees(data.attendees)
+      else setAttendees([])
+    } catch {
+      setAttendees([])
+    } finally {
+      setLoadingAttendees(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedEventId) { setAttendees([]); return }
+    loadAttendees(selectedEventId)
+  }, [selectedEventId, loadAttendees])
+
+  // Local filter for the search input
+  const filteredAttendees = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return attendees
+    return attendees.filter(a =>
+      a.fullName?.toLowerCase().includes(q) ||
+      a.email?.toLowerCase().includes(q) ||
+      a.runnerTag?.toLowerCase().includes(q)
+    )
+  }, [attendees, searchQuery])
+
+  async function performCheckIn(tag: string, options?: { quiet?: boolean }) {
+    if (!selectedEventId || !tag || tag.length !== 4) return
+    if (!options?.quiet) setState({ status: 'loading' })
 
     try {
       const res = await fetch('/api/events/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runner_tag: runnerTag.toUpperCase(), event_id: selectedEventId }),
+        body: JSON.stringify({ runner_tag: tag.toUpperCase(), event_id: selectedEventId }),
       })
       const data = await res.json()
       if (!res.ok) {
         setState({ status: 'error', message: (data as { error?: string }).error ?? 'Check-in failed' })
-      } else {
-        const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
-        setState({
-          status: 'success',
-          attendeeName: d.attendeeName,
-          eventName: d.eventName,
-          runsCompleted: d.runsCompleted,
-          checkedInAt: d.checkedInAt,
-        })
-        setRunnerTag('')
-        setEventStats(prev => prev ? { ...prev, checkedIn: prev.checkedIn + 1 } : null)
-        setTimeout(() => inputRef.current?.focus(), 150)
+        return false
       }
+      const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
+      setState({
+        status: 'success',
+        attendeeName: d.attendeeName,
+        eventName: d.eventName,
+        runsCompleted: d.runsCompleted,
+        checkedInAt: d.checkedInAt,
+      })
+      setEventStats(prev => prev ? { ...prev, checkedIn: prev.checkedIn + 1 } : null)
+      // Optimistically mark in the search list
+      setAttendees(prev => prev.map(a => a.runnerTag?.toUpperCase() === tag.toUpperCase()
+        ? { ...a, checkedInAt: d.checkedInAt }
+        : a))
+      return true
     } catch {
       setState({ status: 'error', message: 'Network error — please try again' })
+      return false
     }
+  }
+
+  async function handleTagSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const ok = await performCheckIn(runnerTag)
+    if (ok) {
+      setRunnerTag('')
+      setTimeout(() => inputRef.current?.focus(), 150)
+    }
+  }
+
+  async function handleSearchCheckIn(attendee: Attendee) {
+    if (!attendee.runnerTag || attendee.checkedInAt) return
+    setRowLoadingId(attendee.registrationId)
+    await performCheckIn(attendee.runnerTag)
+    setRowLoadingId(null)
   }
 
   function handleReset() {
     setState({ status: 'idle' })
     setRunnerTag('')
-    setTimeout(() => inputRef.current?.focus(), 50)
+    if (mode === 'tag') setTimeout(() => inputRef.current?.focus(), 50)
+    else setTimeout(() => searchInputRef.current?.focus(), 50)
   }
 
   function pickEvent(id: string) {
     setSelectedEventId(id)
     setState({ status: 'idle' })
     setRunnerTag('')
+    setSearchQuery('')
     setPickerOpen(false)
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next)
+    setState({ status: 'idle' })
+    setRunnerTag('')
+    setSearchQuery('')
+    setTimeout(() => {
+      if (next === 'tag') inputRef.current?.focus()
+      else searchInputRef.current?.focus()
+    }, 50)
   }
 
   const checkinPct = eventStats && eventStats.total > 0
     ? Math.round((eventStats.checkedIn / eventStats.total) * 100)
     : 0
 
-  // Disabled if no eligible event selected OR the window has closed (defense in depth)
-  const checkinDisabled = !selectedEvent || (selectedStatus?.msToClose ?? 0) <= 0 || state.status === 'loading'
+  const windowClosed = (selectedStatus?.msToClose ?? 0) <= 0
+  const checkinDisabled = !selectedEvent || windowClosed || state.status === 'loading'
 
   return (
     <div className='space-y-6'>
 
-      {/* Event selector — custom rich dropdown */}
+      {/* Event selector */}
       <div className='flex flex-col gap-2'>
         <label className='text-white/70 text-sm font-medium'>Select event</label>
 
@@ -279,7 +362,7 @@ export function RunnerTagCheckIn() {
           )}
         </div>
 
-        {/* Live countdown timer for the selected event */}
+        {/* Countdown */}
         {selectedEvent && selectedStatus && (
           <div className={`mt-1 rounded-xl border px-3.5 py-2.5 flex items-center gap-2.5 text-xs ${TONE_CLASSES[selectedStatus.tone]}`}>
             <Clock size={13} className='shrink-0' />
@@ -301,7 +384,7 @@ export function RunnerTagCheckIn() {
           </div>
         )}
 
-        {/* Stats bar */}
+        {/* Stats */}
         {selectedEventId && (
           <div className='mt-1'>
             {loadingStats ? (
@@ -330,50 +413,203 @@ export function RunnerTagCheckIn() {
         )}
       </div>
 
-      {/* Tag input */}
-      <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
-        <label className='text-white/70 text-sm font-medium'>Runner tag</label>
-
-        <div className='bg-white/5 border-2 border-white/15 rounded-2xl p-4 flex flex-col items-center gap-3 focus-within:border-stride-yellow-accent/50 transition-colors'>
-          <p className='text-white/30 text-xs uppercase tracking-widest'>Enter 4-character tag</p>
-          <input
-            ref={inputRef}
-            type='text'
-            value={runnerTag}
-            onChange={e => {
-              setRunnerTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))
-              if (state.status !== 'idle') setState({ status: 'idle' })
-            }}
-            placeholder='K3X9'
-            maxLength={4}
-            autoComplete='off'
-            autoCorrect='off'
-            spellCheck={false}
-            className='w-full bg-transparent text-white text-5xl font-mono tracking-[0.5em] text-center focus:outline-none placeholder:text-white/15 disabled:opacity-40'
-            disabled={checkinDisabled}
-          />
-          <div className='flex gap-2'>
-            {[0, 1, 2, 3].map(i => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  runnerTag.length > i ? 'bg-stride-yellow-accent' : 'bg-white/15'
-                }`}
-              />
-            ))}
-          </div>
+      {/* Helper hint when no event has been picked yet — keeps the page from
+          looking empty without rendering an unusable tag input. */}
+      {!selectedEvent && eligibleEvents.length > 0 && (
+        <div className='rounded-xl border border-dashed border-white/15 bg-white/3 px-4 py-6 text-center'>
+          <p className='text-white/45 text-sm'>Pick an event above to start checking runners in.</p>
         </div>
+      )}
 
-        <button
-          type='submit'
-          disabled={checkinDisabled || runnerTag.length !== 4}
-          className='w-full py-3.5 bg-stride-yellow-accent text-copy-black font-bold rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stride-yellow-accent/90 active:scale-[0.98] transition-all text-base tracking-wide min-h-11'
-        >
-          {state.status === 'loading' ? 'Checking in…' : 'Check In →'}
-        </button>
-      </form>
+      {/* ── Mode toggle + body — only after an event is selected ── */}
+      {selectedEvent && (
+        <>
+          <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1'>
+            <button
+              type='button'
+              onClick={() => switchMode('tag')}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                mode === 'tag'
+                  ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
+                  : 'text-white/55 hover:text-white'
+              }`}
+            >
+              <Hash size={14} />
+              Tag entry
+            </button>
+            <button
+              type='button'
+              onClick={() => switchMode('search')}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                mode === 'search'
+                  ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
+                  : 'text-white/55 hover:text-white'
+              }`}
+            >
+              <Search size={14} />
+              Search by name
+            </button>
+          </div>
 
-      {/* Success */}
+      {/* ── Mode body ── */}
+      {mode === 'tag' ? (
+        <form onSubmit={handleTagSubmit} className='flex flex-col gap-3'>
+          <label className='text-white/70 text-sm font-medium'>Runner tag</label>
+          <div className='bg-white/5 border-2 border-white/15 rounded-2xl p-4 flex flex-col items-center gap-3 focus-within:border-stride-yellow-accent/50 transition-colors'>
+            <p className='text-white/30 text-xs uppercase tracking-widest'>Enter 4-character tag</p>
+            <input
+              ref={inputRef}
+              type='text'
+              value={runnerTag}
+              onChange={e => {
+                setRunnerTag(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))
+                if (state.status !== 'idle') setState({ status: 'idle' })
+              }}
+              placeholder='K3X9'
+              maxLength={4}
+              autoComplete='off'
+              autoCorrect='off'
+              spellCheck={false}
+              className='w-full bg-transparent text-white text-5xl font-mono tracking-[0.5em] text-center focus:outline-none placeholder:text-white/15 disabled:opacity-40'
+              disabled={checkinDisabled}
+            />
+            <div className='flex gap-2'>
+              {[0, 1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    runnerTag.length > i ? 'bg-stride-yellow-accent' : 'bg-white/15'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button
+            type='submit'
+            disabled={checkinDisabled || runnerTag.length !== 4}
+            className='w-full py-3.5 bg-stride-yellow-accent text-copy-black font-bold rounded-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stride-yellow-accent/90 active:scale-[0.98] transition-all text-base tracking-wide min-h-11'
+          >
+            {state.status === 'loading' ? 'Checking in…' : 'Check In →'}
+          </button>
+        </form>
+      ) : (
+        // ── Search mode ──
+        <div className='flex flex-col gap-3'>
+          <label className='text-white/70 text-sm font-medium'>Search the runners signed up for this event</label>
+
+          {/* Search input */}
+          <div className='relative'>
+            <Search size={15} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35 pointer-events-none' />
+            <input
+              ref={searchInputRef}
+              type='text'
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder='Search name, email, or tag…'
+              autoComplete='off'
+              autoCorrect='off'
+              spellCheck={false}
+              className='w-full bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors min-h-11'
+              disabled={!selectedEvent || windowClosed}
+            />
+          </div>
+
+          {/* Attendee list */}
+          {!selectedEvent ? (
+            <div className='rounded-xl border border-white/10 bg-white/3 px-4 py-8 text-center'>
+              <p className='text-white/35 text-sm'>Select an event above to search runners.</p>
+            </div>
+          ) : loadingAttendees ? (
+            <div className='space-y-2'>
+              {[0, 1, 2].map(i => (
+                <div key={i} className='h-14 bg-white/5 rounded-xl animate-pulse' />
+              ))}
+            </div>
+          ) : filteredAttendees.length === 0 ? (
+            <div className='rounded-xl border border-white/10 bg-white/3 px-4 py-8 text-center'>
+              <p className='text-white/35 text-sm'>
+                {searchQuery
+                  ? 'No runners match your search.'
+                  : 'No confirmed runners for this event yet.'}
+              </p>
+            </div>
+          ) : (
+            <div className='flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1 -mr-1'>
+              {filteredAttendees.map(a => {
+                const isCheckedIn = !!a.checkedInAt
+                const isRowLoading = rowLoadingId === a.registrationId
+                const initial = (a.fullName ?? '?').charAt(0).toUpperCase()
+
+                return (
+                  <div
+                    key={a.registrationId}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                      isCheckedIn
+                        ? 'bg-green-500/5 border-green-500/15'
+                        : 'bg-white/4 border-white/10'
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div className='shrink-0 w-10 h-10 rounded-full overflow-hidden bg-stride-yellow-accent/20 border border-white/10 flex items-center justify-center'>
+                      {a.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.avatarUrl} alt={a.fullName ?? ''} className='w-full h-full object-cover' loading='lazy' fetchPriority='low' referrerPolicy='no-referrer' />
+                      ) : (
+                        <UserRound size={16} className='text-stride-yellow-accent' />
+                      )}
+                    </div>
+
+                    {/* Name + email */}
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center gap-1.5'>
+                        <p className='text-white font-semibold text-sm truncate'>{a.fullName ?? '—'}</p>
+                        {a.runnerTag && (
+                          <span className='shrink-0 text-stride-yellow-accent text-[10px] font-bold font-mono tracking-wider bg-stride-yellow-accent/10 border border-stride-yellow-accent/20 rounded px-1.5 py-0.5'>
+                            {a.runnerTag}
+                          </span>
+                        )}
+                      </div>
+                      <p className='text-white/40 text-xs truncate'>{a.email}</p>
+                    </div>
+
+                    {/* Action */}
+                    <div className='shrink-0'>
+                      {isCheckedIn ? (
+                        <div className='flex items-center gap-1 text-green-400 text-xs font-medium px-2.5 py-1.5 rounded-md bg-green-500/10'>
+                          <CheckCircle2 size={13} />
+                          <span className='hidden sm:inline'>Checked in</span>
+                          <span className='sm:hidden tabular-nums'>{a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
+                          <span className='hidden sm:inline tabular-nums opacity-70'>· {a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
+                        </div>
+                      ) : (
+                        <button
+                          type='button'
+                          onClick={() => handleSearchCheckIn(a)}
+                          disabled={!a.runnerTag || isRowLoading || windowClosed}
+                          title={!a.runnerTag ? 'This runner has no tag assigned yet.' : undefined}
+                          className='inline-flex items-center gap-1.5 bg-stride-yellow-accent text-copy-black font-bold rounded-md px-3 py-2 text-xs hover:bg-stride-yellow-accent/90 active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-9'
+                        >
+                          {isRowLoading
+                            ? '…'
+                            : <>
+                                <CheckCircle size={13} />
+                                <span className='hidden sm:inline'>Check in</span>
+                              </>}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Success — shared across both modes */}
       {state.status === 'success' && (
         <div className='bg-green-500/10 border border-green-500/25 rounded-2xl p-5'>
           <div className='flex items-start gap-3 mb-4'>
@@ -405,7 +641,7 @@ export function RunnerTagCheckIn() {
         </div>
       )}
 
-      {/* Error */}
+      {/* Error — shared */}
       {state.status === 'error' && (
         <div className='bg-red-500/10 border border-red-500/25 rounded-2xl p-5 flex items-start gap-3'>
           <div className='w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0'>
@@ -440,7 +676,6 @@ function EventRow({
   const date = event.event_date
   return (
     <>
-      {/* Calendar chip */}
       <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5'>
         {date ? (
           <>

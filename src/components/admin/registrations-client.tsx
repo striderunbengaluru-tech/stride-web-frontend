@@ -118,23 +118,35 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
           ) : (
             <div className='space-y-2'>
               {filteredRunners.map(r => (
-                <div key={r.user_id} className='bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 hover:border-white/20 transition-colors'>
+                <div
+                  key={r.user_id}
+                  className={`bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 hover:border-white/20 transition-colors ${
+                    r.deactivated ? 'opacity-60' : ''
+                  }`}
+                >
 
                   {/* Top row: tag + name + runs */}
                   <div className='flex items-start gap-3'>
                     {/* Runner info */}
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2 flex-wrap'>
-                        {r.runner_tag
+                        {r.runner_tag && !r.deactivated
                           ? <RunnerTagBadge tag={r.runner_tag} size='xs' />
                           : <span className='text-white/20 text-xs font-mono'>—</span>}
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${ROLE_PILL[r.role] ?? 'bg-white/10 text-white/50'}`}>
                           {r.role}
                         </span>
+                        {r.deactivated && (
+                          <span className='text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                            Deactivated
+                          </span>
+                        )}
                       </div>
-                      <p className='text-white font-semibold text-sm mt-1 truncate'>{r.full_name ?? '—'}</p>
-                      <p className='text-white/40 text-xs truncate'>{r.email}</p>
-                      {r.username && <p className='text-white/25 text-xs'>@{r.username}</p>}
+                      <p className={`font-semibold text-sm mt-1 truncate ${r.deactivated ? 'text-white/50 italic' : 'text-white'}`}>
+                        {r.deactivated ? 'Deactivated runner' : (r.full_name ?? '—')}
+                      </p>
+                      <p className='text-white/40 text-xs truncate'>{r.deactivated ? '—' : r.email}</p>
+                      {!r.deactivated && r.username && <p className='text-white/25 text-xs'>@{r.username}</p>}
                     </div>
 
                     {/* Stats */}
@@ -270,19 +282,31 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                         ) : (
                           <div className='divide-y divide-white/4'>
                             {event.attendees.map(a => (
-                              <div key={a.registration_id} className='flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02]'>
+                              <div
+                                key={a.registration_id}
+                                className={`flex items-center gap-3 px-4 py-3 hover:bg-white/2 ${a.deactivated ? 'opacity-60' : ''}`}
+                              >
 
                                 {/* Tag */}
                                 <div className='shrink-0 w-14'>
-                                  {a.runner_tag
+                                  {a.runner_tag && !a.deactivated
                                     ? <RunnerTagBadge tag={a.runner_tag} size='xs' />
                                     : <span className='text-white/20 text-xs'>—</span>}
                                 </div>
 
                                 {/* Runner info */}
                                 <div className='flex-1 min-w-0'>
-                                  <p className='text-white/80 font-medium text-sm truncate'>{a.full_name ?? '—'}</p>
-                                  <p className='text-white/30 text-xs truncate'>{a.email}</p>
+                                  <div className='flex items-center gap-1.5 flex-wrap'>
+                                    <p className={`font-medium text-sm truncate ${a.deactivated ? 'text-white/50 italic' : 'text-white/80'}`}>
+                                      {a.deactivated ? 'Deactivated runner' : (a.full_name ?? '—')}
+                                    </p>
+                                    {a.deactivated && (
+                                      <span className='shrink-0 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                                        Deactivated
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className='text-white/30 text-xs truncate'>{a.deactivated ? '—' : a.email}</p>
                                 </div>
 
                                 {/* Status + check-in */}

@@ -3,6 +3,7 @@ import { Libre_Baskerville, Roboto } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/layout/navbar";
+import { NavbarGate } from "@/components/layout/navbar-gate";
 import Footer from "@/components/layout/footer";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { AuthProvider } from "@/components/auth/auth-provider";
@@ -120,12 +121,16 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
+          {/* Navbar always renders — internal pieces hide themselves on /admin */}
           <Navbar />
           <div className='pb-20 md:pb-0'>
             {children}
             <Footer />
           </div>
-          <MobileBottomNav />
+          {/* MobileBottomNav is a consumer-only nav, hidden entirely on /admin */}
+          <NavbarGate>
+            <MobileBottomNav />
+          </NavbarGate>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

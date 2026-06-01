@@ -3,17 +3,24 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import UserMenu from './user-menu'
 import NavLinks from './nav-links'
+import { HideOnAdminRoute } from './navbar-gate'
 
 const Navbar = async () => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let navUser: { username: string; firstName: string; avatarUrl: string | null } | null = null
+  let navUser: {
+    username: string
+    firstName: string
+    avatarUrl: string | null
+    isAdmin: boolean
+    email: string | null
+  } | null = null
 
   if (user) {
     const { data: profile } = await supabase
       .from('users')
-      .select('username, full_name, avatar_url')
+      .select('username, full_name, avatar_url, role')
       .eq('id', user.id)
       .single()
 
@@ -22,19 +29,16 @@ const Navbar = async () => {
         username: profile.username ?? user.id,
         firstName: profile.full_name?.split(' ')[0] ?? profile.username ?? 'You',
         avatarUrl: profile.avatar_url ?? null,
+        isAdmin: profile.role === 'ADMIN',
+        email: user.email ?? null,
       }
     }
   }
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50'>
-      {/* Full-width glass backdrop — softens the gap around the floating pill
-          so page content doesn't bleed through above/around the navbar. */}
-      <div
-        aria-hidden='true'
-        className='pointer-events-none absolute inset-x-0 top-0 h-24 bg-linear-to-b from-copy-black/55 via-copy-black/25 to-transparent backdrop-blur-md'
-      />
-
+      {/* The admin layout adds its own glassmorphic strip behind the navbar.
+          On public pages the floating pill stands on its own. */}
       <div className='relative pt-4 flex justify-center px-4'>
       <nav
         aria-label='Main navigation'
@@ -56,22 +60,31 @@ const Navbar = async () => {
           />
         </Link>
 
-        {/* Nav links — hidden on mobile, active state managed client-side */}
-        <NavLinks />
+        {/* Nav links — hidden on admin routes (kept simple there) */}
+        <HideOnAdminRoute>
+          <NavLinks />
+        </HideOnAdminRoute>
 
-        {/* Auth actions + Partner CTA */}
+        {/* Auth actions + Partner CTA — Partner CTA hidden once logged in
+            AND hidden on admin routes; user menu always shows */}
         <div className='flex items-center gap-3 shrink-0 ml-auto sm:ml-0'>
-          <Link
-            href='/partnerships'
-            className='hidden md:inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold px-4 py-2 rounded-md text-sm hover:scale-[1.03] hover:shadow-lg hover:shadow-stride-yellow-accent/25 active:scale-[0.97] transition-all duration-150'
-          >
-            Partner With Us
-          </Link>
+          {!navUser && (
+            <HideOnAdminRoute>
+              <Link
+                href='/partnerships'
+                className='hidden md:inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold px-4 py-2 rounded-md text-sm hover:scale-[1.03] hover:shadow-lg hover:shadow-stride-yellow-accent/25 active:scale-[0.97] transition-all duration-150'
+              >
+                Partner With Us
+              </Link>
+            </HideOnAdminRoute>
+          )}
           {navUser ? (
             <UserMenu
               username={navUser.username}
               firstName={navUser.firstName}
               avatarUrl={navUser.avatarUrl}
+              isAdmin={navUser.isAdmin}
+              email={navUser.email}
             />
           ) : null}
         </div>
