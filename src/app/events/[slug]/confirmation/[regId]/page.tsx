@@ -106,7 +106,10 @@ export default async function ConfirmationPage({ params }: Props) {
         <div className='absolute top-[40%] right-[-10%] w-xl h-144 rounded-full bg-green-400/4 blur-[120px]' />
       </div>
 
-      <div className='relative z-10 max-w-2xl mx-auto px-5 sm:px-8 pt-28 sm:pt-32 space-y-7'>
+      <div className='relative z-10 pt-28 sm:pt-32'>
+
+        {/* Top sections — narrower for comfortable reading width */}
+        <div className='max-w-2xl mx-auto px-5 sm:px-8 space-y-7'>
 
         {/* ── Success badge ── */}
         <SectionReveal>
@@ -258,32 +261,37 @@ export default async function ConfirmationPage({ params }: Props) {
           </div>
         </SectionReveal>
 
-        {/* ── Keep reading — blog cards ── */}
+        </div>
+        {/* End narrow column */}
+
+        {/* ── Keep reading — wider column so the 3-up grid breathes on desktop ── */}
         {blogPicks.length > 0 && (
-          <SectionReveal delay={0.32}>
-            <div className='pt-6 mt-4 border-t border-white/8'>
-              <div className='flex items-end justify-between gap-4 mb-5'>
-                <div>
-                  <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest mb-1'>From the blog</p>
-                  <h3 className='text-white font-bold text-xl leading-tight'>Keep reading</h3>
+          <div className='max-w-5xl mx-auto px-5 sm:px-8 mt-12 sm:mt-16'>
+            <SectionReveal delay={0.32}>
+              <div className='pt-8 border-t border-white/8'>
+                <div className='flex items-end justify-between gap-4 mb-5'>
+                  <div>
+                    <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest mb-1'>From the blog</p>
+                    <h3 className='text-white font-bold text-xl leading-tight'>Keep reading</h3>
+                  </div>
+                  <Link
+                    href='/blog'
+                    className='inline-flex items-center gap-1 text-white/40 hover:text-stride-yellow-accent text-sm font-medium transition-colors shrink-0'
+                  >
+                    View all
+                    <ArrowRight size={13} />
+                  </Link>
                 </div>
-                <Link
-                  href='/blog'
-                  className='inline-flex items-center gap-1 text-white/40 hover:text-stride-yellow-accent text-sm font-medium transition-colors shrink-0'
-                >
-                  View all
-                  <ArrowRight size={13} />
-                </Link>
+                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
+                  {blogPicks.map((post, i) => (
+                    <SectionReveal key={post.slug} delay={0.36 + i * 0.06}>
+                      <PostCard post={post} />
+                    </SectionReveal>
+                  ))}
+                </div>
               </div>
-              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
-                {blogPicks.map((post, i) => (
-                  <SectionReveal key={post.slug} delay={0.36 + i * 0.06}>
-                    <PostCard post={post} />
-                  </SectionReveal>
-                ))}
-              </div>
-            </div>
-          </SectionReveal>
+            </SectionReveal>
+          </div>
         )}
 
       </div>

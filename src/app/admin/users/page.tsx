@@ -7,10 +7,7 @@ export default async function AdminUsersPage() {
   const [{ data: users }, { data: registrations }] = await Promise.all([
     adminClient
       .from('users')
-      .select(
-        'id, full_name, email, username, role, created_at, avatar_url, runner_tag, runs_completed, ' +
-        'gender, date_of_birth, contact_number, emergency_contact_number, location, bio'
-      )
+      .select('id, full_name, email, username, role, created_at, avatar_url, runner_tag, runs_completed, gender, date_of_birth, contact_number, emergency_contact_number, location, bio')
       .order('created_at', { ascending: false }),
     // All registrations the user has — for confirmed count + run history
     adminClient
