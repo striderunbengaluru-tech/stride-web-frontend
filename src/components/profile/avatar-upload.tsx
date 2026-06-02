@@ -7,26 +7,39 @@ import ReactCrop, { centerCrop, makeAspectCrop, type Crop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css'
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
+import { UploadProgress } from '@/components/ui/upload-progress'
+import { uploadWithProgress } from '@/lib/utils/upload'
 
 type Props = {
   currentUrl: string | null
   displayName: string
+  /** Tier frame colour applied to the avatar border. */
+  frameColor?: string
 }
 
-export function AvatarUpload({ currentUrl, displayName }: Props) {
+type Status = 'idle' | 'uploading' | 'error'
+
+export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [src, setSrc] = useState<string | null>(null)
   const [crop, setCrop] = useState<Crop>()
-  const [uploading, setUploading] = useState(false)
+  const [status, setStatus] = useState<Status>('idle')
+  const [progress, setProgress] = useState(0)
+  const [errorMsg, setErrorMsg] = useState('')
   const [imgFailed, setImgFailed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const lastBlobRef = useRef<Blob | null>(null)
   useEffect(() => { setMounted(true) }, [])
   const router = useRouter()
+
+  const uploading = status === 'uploading'
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setStatus('idle')
+    setErrorMsg('')
     const reader = new FileReader()
     reader.onload = () => setSrc(reader.result as string)
     reader.readAsDataURL(file)
@@ -40,7 +53,9 @@ export function AvatarUpload({ currentUrl, displayName }: Props) {
 
   const getCroppedBlob = useCallback((): Promise<Blob | null> => {
     const img = imgRef.current
-    if (!img || !crop) return Promise.resolve(null)
+    // Bail if the image hasn't decoded yet — drawing a 0×0 source produces a
+    // blank canvas which, encoded as JPEG (no alpha), becomes a black image.
+    if (!img || !img.naturalWidth || !img.naturalHeight) return Promise.resolve(null)
 
     const canvas = document.createElement('canvas')
     const size = 400
@@ -51,33 +66,70 @@ export function AvatarUpload({ currentUrl, displayName }: Props) {
 
     const scaleX = img.naturalWidth / img.width
     const scaleY = img.naturalHeight / img.height
-    const pixelCrop = {
-      x: (crop.x / 100) * img.width * scaleX,
-      y: (crop.y / 100) * img.height * scaleY,
-      width: (crop.width / 100) * img.width * scaleX,
-      height: (crop.height / 100) * img.height * scaleY,
+
+    // Compute the source rect in natural pixels. ReactCrop's onChange yields a
+    // PIXEL crop after any drag but a '%' crop initially, so branch on the unit
+    // (dividing by 100 unconditionally was the old bug). Fall back to a centred
+    // square if the crop is missing or zero-sized.
+    let sx: number, sy: number, sw: number, sh: number
+    if (crop && crop.width > 0 && crop.height > 0) {
+      const unit = crop.unit ?? 'px'
+      const cropX = unit === '%' ? (crop.x / 100) * img.width : crop.x
+      const cropY = unit === '%' ? (crop.y / 100) * img.height : crop.y
+      const cropW = unit === '%' ? (crop.width / 100) * img.width : crop.width
+      const cropH = unit === '%' ? (crop.height / 100) * img.height : crop.height
+      sx = cropX * scaleX; sy = cropY * scaleY; sw = cropW * scaleX; sh = cropH * scaleY
+    } else {
+      const side = Math.min(img.naturalWidth, img.naturalHeight)
+      sx = (img.naturalWidth - side) / 2
+      sy = (img.naturalHeight - side) / 2
+      sw = side; sh = side
     }
 
-    ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, size, size)
+    // Clamp the source rect into the image's natural bounds so we never sample
+    // off-image area (which renders transparent → black in a JPEG).
+    sx = Math.max(0, Math.min(sx, img.naturalWidth - 1))
+    sy = Math.max(0, Math.min(sy, img.naturalHeight - 1))
+    sw = Math.max(1, Math.min(sw, img.naturalWidth - sx))
+    sh = Math.max(1, Math.min(sh, img.naturalHeight - sy))
+
+    // White backstop: guarantees a sane background even if drawing fails.
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, size, size)
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size)
 
     return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9))
   }, [crop])
 
+  const doUpload = useCallback(async (blob: Blob) => {
+    lastBlobRef.current = blob
+    setStatus('uploading')
+    setProgress(0)
+    setErrorMsg('')
+    try {
+      await uploadWithProgress({
+        url: '/api/profile/avatar',
+        file: blob,
+        fileName: 'avatar.jpg',
+        onProgress: setProgress,
+      })
+      setStatus('idle')
+      setSrc(null)
+      router.refresh()
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+      setStatus('error')
+    }
+  }, [router])
+
   async function handleUpload() {
     const blob = await getCroppedBlob()
     if (!blob) return
+    await doUpload(blob)
+  }
 
-    setUploading(true)
-    const form = new FormData()
-    form.append('file', blob, 'avatar.jpg')
-
-    const res = await fetch('/api/profile/avatar', { method: 'POST', body: form })
-    setUploading(false)
-
-    if (res.ok) {
-      setSrc(null)
-      router.refresh()
-    }
+  function handleRetry() {
+    if (lastBlobRef.current) void doUpload(lastBlobRef.current)
   }
 
   return (
@@ -94,20 +146,24 @@ export function AvatarUpload({ currentUrl, displayName }: Props) {
           <img
             src={currentUrl}
             alt={displayName}
-            className='w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border-4 border-stride-purple-primary'
+            className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg object-cover border-4 border-stride-purple-primary'
+            style={frameColor ? { borderColor: frameColor } : undefined}
             loading='lazy'
             fetchPriority='low'
             referrerPolicy='no-referrer'
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <div className='w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-stride-yellow-accent/20 border-4 border-stride-purple-primary flex items-center justify-center'>
-            <span className='text-stride-yellow-accent text-4xl font-bold'>
+          <div
+            className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg bg-stride-yellow-accent/20 border-4 border-stride-purple-primary flex items-center justify-center'
+            style={frameColor ? { borderColor: frameColor } : undefined}
+          >
+            <span className='text-stride-yellow-accent text-5xl font-bold'>
               {displayName.charAt(0).toUpperCase()}
             </span>
           </div>
         )}
-        <div className='absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center'>
+        <div className='absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center'>
           <span className='opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs text-center leading-tight'>
             Change
           </span>
@@ -163,23 +219,33 @@ export function AvatarUpload({ currentUrl, displayName }: Props) {
             </div>
 
             {/* Footer */}
-            <div className='shrink-0 flex gap-3 px-5 py-4 border-t border-white/10'>
-              <button
-                onClick={() => setSrc(null)}
-                disabled={uploading}
-                className='px-4 py-2.5 rounded-md border border-white/15 text-white/70 text-sm hover:border-white/30 disabled:opacity-50 min-h-11'
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2.5 rounded-md text-sm disabled:opacity-50 min-h-11 flex items-center justify-center gap-2'
-              >
-                {uploading
-                  ? <><Spinner /> Uploading…</>
-                  : 'Save photo'}
-              </button>
+            <div className='shrink-0 px-5 py-4 border-t border-white/10 space-y-3'>
+              {(status === 'uploading' || status === 'error') && (
+                <UploadProgress
+                  status={status === 'error' ? 'error' : 'uploading'}
+                  progress={progress}
+                  message={errorMsg}
+                  onRetry={handleRetry}
+                />
+              )}
+              <div className='flex gap-3'>
+                <button
+                  onClick={() => setSrc(null)}
+                  disabled={uploading}
+                  className='px-4 py-2.5 rounded-md border border-white/15 text-white/70 text-sm hover:border-white/30 disabled:opacity-50 min-h-11'
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2.5 rounded-md text-sm disabled:opacity-50 min-h-11 flex items-center justify-center gap-2'
+                >
+                  {uploading
+                    ? <><Spinner /> Uploading…</>
+                    : 'Save photo'}
+                </button>
+              </div>
             </div>
           </div>
         </div>,

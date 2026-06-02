@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, customResponses } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses } = parsed.data
 
   // Persist participant details on the user row — idempotent (re-running with
   // the same values is a no-op). full_name overwrites any previous value so
@@ -41,12 +41,17 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions')
     .eq('id', eventId)
     .single()
 
   if (!event || event.status !== 'PUBLISHED') {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+  }
+
+  // If the event has terms, acceptance is mandatory — defense in depth (UI also gates this).
+  if (event.terms_and_conditions && event.terms_and_conditions.trim().length > 0 && acceptedTerms !== true) {
+    return NextResponse.json({ error: 'You must accept the terms & conditions' }, { status: 400 })
   }
 
   // Block registration for past events — defense in depth (UI also disables the button).

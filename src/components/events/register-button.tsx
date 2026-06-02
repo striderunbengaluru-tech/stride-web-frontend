@@ -21,6 +21,7 @@ type Props = {
     emergencyContactNumber: string | null
   }
   additionalFields?: AdditionalField[]
+  termsAndConditions?: string | null
   razorpayKeyId?: string
 }
 
@@ -35,6 +36,7 @@ export function RegisterButton({
   autoOpen,
   initial,
   additionalFields,
+  termsAndConditions,
   razorpayKeyId,
 }: Props) {
   // Modal mounts open if returning from login with ?register=1 — never auto-open for past events
@@ -87,18 +89,14 @@ export function RegisterButton({
     )
   }
 
-  const label = pricePaise === 0
-    ? 'RSVP Free'
-    : `Register — ₹${(pricePaise / 100).toLocaleString('en-IN')}`
-
   return (
     <>
       <button
         type='button'
         onClick={() => setModalOpen(true)}
-        className='w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11'
+        className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'
       >
-        {label}
+        <span className='relative z-10'>Join the run</span>
       </button>
 
       <ParticipantDetailsModal
@@ -108,6 +106,7 @@ export function RegisterButton({
         pricePaise={pricePaise}
         initial={initial}
         additionalFields={additionalFields}
+        termsAndConditions={termsAndConditions}
         razorpayKeyId={razorpayKeyId}
       />
     </>

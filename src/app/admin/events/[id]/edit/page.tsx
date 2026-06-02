@@ -45,6 +45,7 @@ export default async function EditEventPage({ params }: Props) {
           pricePaise: event.price_paise,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
+          termsText: event.terms_and_conditions ?? undefined,
           bannerImages: event.banner_images ?? '[]',
           additionalFields: event.additional_fields ?? '[]',
           distanceKm: event.distance_km ?? undefined,

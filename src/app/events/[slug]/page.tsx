@@ -141,22 +141,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
     }
   }
 
-  // Fetch a few extra so we can filter out deactivated users client-side
-  // and still end up with up to 5 to render.
-  const { data: attendeeRows } = await adminClient
-    .from('event_registrations')
-    .select('users(avatar_url, full_name, deleted_at)')
-    .eq('event_id', event.id)
-    .eq('status', 'CONFIRMED')
-    .order('created_at', { ascending: true })
-    .limit(20)
-
-  type AttendeeRow = { users: { avatar_url: string | null; full_name: string | null; deleted_at: string | null } | null }
-  const attendees = ((attendeeRows ?? []) as unknown as AttendeeRow[])
-    .map(r => r.users)
-    .filter(u => u && !u.deleted_at)
-    .slice(0, 5) as { avatar_url: string | null; full_name: string | null }[]
-
   let bannerImages: string[] = []
   try { bannerImages = JSON.parse(event.banner_images ?? '[]') as string[] }
   catch { /* empty */ }
@@ -173,9 +157,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const endTime   = fmtTime(event.end_date)
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
-
-  const firstNames = attendees.slice(0, 2).map(a => a.full_name?.split(' ')[0] ?? 'Someone')
-  const othersCount = Math.max(0, (confirmedCount ?? 0) - 2)
 
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden pb-32 sm:pb-20'>
@@ -214,35 +195,6 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </div>
           )}
 
-          {/* Going section — desktop */}
-          {attendees.length > 0 && (
-            <div className='hidden lg:block mt-6'>
-              <p className='text-white/40 text-xs uppercase tracking-widest mb-3'>Going</p>
-              <div className='flex -space-x-2 mb-2'>
-                {attendees.map((a, i) => (
-                  <div
-                    key={i}
-                    className='w-8 h-8 rounded-full border-2 border-stride-purple-primary overflow-hidden bg-stride-yellow-accent/20 flex items-center justify-center'
-                    style={{ zIndex: attendees.length - i }}
-                  >
-                    {a.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={a.avatar_url} alt={a.full_name ?? ''} className='w-full h-full object-cover' loading='lazy' fetchPriority='low' />
-                    ) : (
-                      <span className='text-stride-yellow-accent text-xs font-bold'>
-                        {(a.full_name ?? '?').charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {firstNames.length > 0 && (
-                <p className='text-white/40 text-xs'>
-                  {firstNames.join(', ')}{othersCount > 0 ? ' and others' : ''}
-                </p>
-              )}
-            </div>
-          )}
         </div>
 
         {/* ── RIGHT: Event content ── */}
@@ -398,74 +350,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </SectionReveal>
           )}
 
-          {/* ── Registration box (Luma-style) ── */}
-          <SectionReveal delay={0.18}>
-            <div className='hidden sm:block mt-5 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
-              <div className='px-5 py-3 border-b border-white/8 flex items-center justify-between'>
-                <p className='text-white/50 text-xs font-bold uppercase tracking-widest'>Registration</p>
-                <ShareButton title={event.name} url={shareUrl} />
-              </div>
-              <div className='px-5 py-5'>
-                <div className='flex items-center justify-between gap-4 mb-4'>
-                  <p className='text-white/60 text-sm'>
-                    {isRegistered
-                      ? "You're registered for this event."
-                      : isPast
-                      ? 'This event has concluded.'
-                      : isFull
-                      ? 'This event is full.'
-                      : 'Sign up and lace up — see you on the run.'}
-                  </p>
-                  <p className='text-2xl font-bold text-white shrink-0'>{priceLabel}</p>
-                </div>
-                <RegisterButton
-                  eventId={event.id}
-                  eventSlug={slug}
-                  pricePaise={event.price_paise}
-                  isFull={isFull}
-                  isRegistered={isRegistered}
-                  isPast={isPast}
-                  isLoggedIn={isLoggedIn}
-                  autoOpen={autoOpenModal}
-                  initial={participantInitial}
-                  additionalFields={additionalFields}
-                  razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
-                />
-              </div>
-            </div>
-          </SectionReveal>
-
-          {/* Mobile: share button only — register is sticky at bottom */}
-          <div className='sm:hidden mt-5 flex justify-end'>
-            <ShareButton title={event.name} url={shareUrl} />
-          </div>
-
-          {/* Mobile: going count */}
-          {attendees.length > 0 && (
-            <SectionReveal delay={0.22}>
-              <div className='sm:hidden mt-4 flex items-center gap-3'>
-                <div className='flex -space-x-2'>
-                  {attendees.slice(0, 3).map((a, i) => (
-                    <div key={i} className='w-7 h-7 rounded-full border-2 border-stride-purple-primary overflow-hidden bg-stride-yellow-accent/20 flex items-center justify-center' style={{ zIndex: 3 - i }}>
-                      {a.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={a.avatar_url} alt='' className='w-full h-full object-cover' loading='lazy' />
-                      ) : (
-                        <span className='text-stride-yellow-accent text-[10px] font-bold'>{(a.full_name ?? '?').charAt(0)}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <p className='text-white/45 text-sm'>Runners going</p>
-              </div>
-            </SectionReveal>
-          )}
-
-          {/* About Event */}
+          {/* About the experience */}
           {event.details && (
             <SectionReveal delay={0.26}>
               <div className='mt-8'>
-                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>About Event</p>
+                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>About the experience</p>
                 <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/75 prose-p:leading-relaxed prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                   <ReactMarkdown>{event.details}</ReactMarkdown>
                 </div>
@@ -482,6 +371,48 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               </div>
             </SectionReveal>
           )}
+
+          {/* ── Registration box — bottom of page (desktop). Mobile uses the sticky bar below. ── */}
+          <SectionReveal delay={0.36}>
+            <div className='hidden sm:block mt-10 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
+              <div className='px-5 py-3 border-b border-white/8'>
+                <p className='text-white/50 text-xs font-bold uppercase tracking-widest'>Registration</p>
+              </div>
+              <div className='px-5 py-5'>
+                <div className='flex items-center justify-between gap-4 mb-4'>
+                  <p className='text-white/60 text-sm'>
+                    {isRegistered
+                      ? "You're registered for this event."
+                      : isPast
+                      ? 'This event has concluded.'
+                      : isFull
+                      ? 'This event is full.'
+                      : 'Secure your spot below.'}
+                  </p>
+                  <p className='text-2xl font-bold text-white shrink-0'>{priceLabel}</p>
+                </div>
+                <RegisterButton
+                  eventId={event.id}
+                  eventSlug={slug}
+                  pricePaise={event.price_paise}
+                  isFull={isFull}
+                  isRegistered={isRegistered}
+                  isPast={isPast}
+                  isLoggedIn={isLoggedIn}
+                  autoOpen={autoOpenModal}
+                  initial={participantInitial}
+                  additionalFields={additionalFields}
+                  termsAndConditions={event.terms_and_conditions}
+                  razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+                />
+              </div>
+            </div>
+          </SectionReveal>
+
+          {/* Share — very bottom of the page, both mobile and desktop */}
+          <div className='mt-6 flex justify-center sm:justify-end'>
+            <ShareButton title={event.name} url={shareUrl} />
+          </div>
 
         </div>
       </div>
@@ -505,6 +436,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               autoOpen={autoOpenModal}
               initial={participantInitial}
               additionalFields={additionalFields}
+              termsAndConditions={event.terms_and_conditions}
               razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
             />
           </div>

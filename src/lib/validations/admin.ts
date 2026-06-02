@@ -26,6 +26,7 @@ export const eventSchema = z.object({
   pricePaise: z.coerce.number().int().min(0).default(0),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
+  termsText: z.string().max(5000).optional(),
   bannerImages: z.string().optional(), // JSON array of uploaded image URLs
   additionalFields: z.string().optional(), // JSON array of AdditionalField objects
 })

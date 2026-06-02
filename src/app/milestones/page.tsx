@@ -2,55 +2,21 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, Check } from 'lucide-react'
 import { guardPreviewFeature } from '@/lib/feature-flags'
+import { MILESTONE_TIERS } from '@/lib/milestones'
 
 export const metadata: Metadata = {
   title: 'Milestones — Stride Run Club',
-  description: 'Earn badges and rewards as you run with Stride. Progress from Stride Newbie to OG Member.',
+  description: 'Earn badges and rewards as you run with Stride. Progress from Rookie to Legend.',
 }
 
-const MILESTONES = [
-  {
-    level: 'Stride Newbie',
-    threshold: '0–5 runs',
-    emoji: '🏃',
-    badgeClasses: 'text-green-400 border-green-400/40 bg-green-400/10',
-    barClasses: 'bg-green-400',
-    perks: [
-      'Exclusive Stride Newbie badge on your public profile',
-      'Access to the Stride members-only WhatsApp group',
-      'Early access to event announcements before public release',
-      'Priority support from the Stride team',
-    ],
-  },
-  {
-    level: 'Stride Regular',
-    threshold: '6–15 runs',
-    emoji: '⚡',
-    badgeClasses: 'text-blue-400 border-blue-400/40 bg-blue-400/10',
-    barClasses: 'bg-blue-400',
-    perks: [
-      'Stride Regular badge + all Newbie perks',
-      'Priority registration slot in high-demand events',
-      '10% discount on official Stride merchandise',
-      'Featured shoutout on the Stride Instagram page',
-      'Invite to exclusive Stride training sessions',
-    ],
-  },
-  {
-    level: 'Stride OG Member',
-    threshold: '16+ runs',
-    emoji: '🏆',
-    badgeClasses: 'text-stride-yellow-accent border-stride-yellow-accent/40 bg-stride-yellow-accent/10',
-    barClasses: 'bg-stride-yellow-accent',
-    perks: [
-      'Stride OG badge + all previous perks',
-      'Free registration for one annual Stride event',
-      'Exclusive OG edition Stride jersey',
-      'Lifetime Stride community recognition',
-      'Name on the Stride OG Member wall of fame',
-    ],
-  },
-]
+const MILESTONES = MILESTONE_TIERS.map(tier => ({
+  level: tier.label,
+  threshold: tier.nextAt ? `${tier.threshold}–${tier.nextAt - 1} runs` : `${tier.threshold}+ runs`,
+  emoji: tier.emoji,
+  badgeClasses: tier.chip,
+  barClasses: tier.dot,
+  perks: tier.perks,
+}))
 
 export default function MilestonesPage() {
   guardPreviewFeature()
@@ -102,7 +68,7 @@ export default function MilestonesPage() {
 
                   {/* Mini progress indicator */}
                   <div className='w-full bg-white/10 rounded-full h-1 mb-4'>
-                    <div className={`h-1 rounded-full ${m.barClasses}`} style={{ width: `${(idx + 1) / 3 * 100}%` }} />
+                    <div className={`h-1 rounded-full ${m.barClasses}`} style={{ width: `${(idx + 1) / MILESTONES.length * 100}%` }} />
                   </div>
 
                   {/* Perks */}

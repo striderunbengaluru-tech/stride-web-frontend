@@ -43,7 +43,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -68,6 +68,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
     confirmation_text: confirmationText || null,
+    terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
     additional_fields: sanitiseAdditionalFields(additionalFields),
     distance_km: distanceKm ?? null,
@@ -85,7 +86,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
 
   await adminClient.from('events').update({
     name,
@@ -96,6 +97,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
     confirmation_text: confirmationText || null,
+    terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
     additional_fields: sanitiseAdditionalFields(additionalFields),
     distance_km: distanceKm ?? null,

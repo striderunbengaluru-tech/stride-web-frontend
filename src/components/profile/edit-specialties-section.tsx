@@ -38,15 +38,17 @@ export function EditSpecialtiesSection({ skills: initialSkills, isOwnProfile }: 
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
+  const MAX_SKILLS = 3
+
   function toggle(skill: string) {
     setSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : prev.length < 12 ? [...prev, skill] : prev
+      prev.includes(skill) ? prev.filter(s => s !== skill) : prev.length < MAX_SKILLS ? [...prev, skill] : prev
     )
   }
 
   function addCustom() {
     const t = customSkill.trim()
-    if (t && !skills.includes(t) && skills.length < 12) {
+    if (t && !skills.includes(t) && skills.length < MAX_SKILLS) {
       setSkills(prev => [...prev, t])
       setCustomSkill('')
     }
@@ -64,12 +66,13 @@ export function EditSpecialtiesSection({ skills: initialSkills, isOwnProfile }: 
     router.refresh()
   }
 
-  if (initialSkills.length === 0 && !isOwnProfile) return null
-
   return (
     <div className='h-full bg-white/8 border border-white/10 rounded-2xl p-5 flex flex-col gap-3 hover:border-white/15 transition-colors'>
       <div className='flex items-center justify-between'>
-        <p className='text-white/40 text-[10px] uppercase tracking-widest font-medium'>Specialties</p>
+        <div className='flex items-center gap-2'>
+          <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
+          <h2 className='text-white font-semibold text-sm tracking-wide'>Specialties{editing ? ' · select up to 3' : ''}</h2>
+        </div>
         {isOwnProfile && !editing && (
           <button
             onClick={() => setEditing(true)}
@@ -146,13 +149,15 @@ export function EditSpecialtiesSection({ skills: initialSkills, isOwnProfile }: 
             </span>
           ))}
         </div>
-      ) : (
+      ) : isOwnProfile ? (
         <button
           onClick={() => setEditing(true)}
           className='text-left text-white/25 text-sm italic hover:text-white/40 transition-colors'
         >
           Add your running specialties...
         </button>
+      ) : (
+        <p className='text-white/25 text-sm italic'>No specialties added yet.</p>
       )}
     </div>
   )

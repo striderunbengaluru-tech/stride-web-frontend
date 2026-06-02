@@ -35,5 +35,6 @@ export type OfficialRun = {
   finish_time: string | null
   strava_activity_url: string | null
   is_upcoming: boolean
+  display_order: number
   created_at: string
 }
