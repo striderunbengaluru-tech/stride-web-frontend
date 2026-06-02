@@ -3,7 +3,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /auth/
-Disallow: /events/*/confirmation/
+Disallow: /events/
+Disallow: /become-a-member/
+Disallow: /milestones/
 Disallow: /login/
 Disallow: /register/
 

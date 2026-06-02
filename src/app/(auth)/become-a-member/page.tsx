@@ -1,4 +1,5 @@
 import { GoogleSignInButton } from '@/utils/auth'
+import { guardPreviewFeature } from '@/lib/feature-flags'
 
 export const metadata = {
   title: 'Become a Member — Stride Run Club',
@@ -42,6 +43,8 @@ type PageProps = {
 }
 
 export default async function BecomeAMemberPage({ searchParams }: PageProps) {
+  guardPreviewFeature()
+
   const { next } = await searchParams
   // Only accept relative-path next values to prevent open-redirect attacks
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : undefined

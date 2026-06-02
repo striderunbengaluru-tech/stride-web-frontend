@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, Check } from 'lucide-react'
+import { guardPreviewFeature } from '@/lib/feature-flags'
 
 export const metadata: Metadata = {
   title: 'Milestones — Stride Run Club',
@@ -52,6 +53,8 @@ const MILESTONES = [
 ]
 
 export default function MilestonesPage() {
+  guardPreviewFeature()
+
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-28 pb-16 px-4'>
       <div className='max-w-2xl mx-auto'>
