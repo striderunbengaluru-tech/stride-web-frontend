@@ -2,8 +2,9 @@ import type { MetadataRoute } from 'next'
 import { adminClient } from '@/lib/supabase/admin'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { ORIGINALS } from '@/content/originals'
+import { PREVIEW_FEATURES_ENABLED, isGatedRoute } from '@/lib/feature-flags'
 
-const SITE_URL = 'https://strideclub.in'
+const SITE_URL = 'https://www.strideclub.in'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString()
@@ -41,18 +42,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
-  // Published events (dynamic — from Supabase)
-  const { data: events } = await adminClient
-    .from('events')
-    .select('slug, updated_at')
-    .eq('status', 'PUBLISHED')
+  // Published events (dynamic — from Supabase). /events is gated on production,
+  // so skip the query and its URLs there to avoid advertising 404s to crawlers.
+  let eventRoutes: MetadataRoute.Sitemap = []
+  if (PREVIEW_FEATURES_ENABLED) {
+    const { data: events } = await adminClient
+      .from('events')
+      .select('slug, updated_at')
+      .eq('status', 'PUBLISHED')
 
-  const eventRoutes: MetadataRoute.Sitemap = (events ?? []).map(event => ({
-    url: `${SITE_URL}/events/${event.slug}`,
-    lastModified: event.updated_at ?? now,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
+    eventRoutes = (events ?? []).map(event => ({
+      url: `${SITE_URL}/events/${event.slug}`,
+      lastModified: event.updated_at ?? now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    }))
+  }
 
-  return [...staticRoutes, ...blogRoutes, ...originalsRoutes, ...eventRoutes]
+  const allRoutes = [...staticRoutes, ...blogRoutes, ...originalsRoutes, ...eventRoutes]
+
+  // On production, drop any route hidden by guardPreviewFeature() so the sitemap
+  // only lists pages that actually resolve.
+  if (PREVIEW_FEATURES_ENABLED) return allRoutes
+  return allRoutes.filter(entry => {
+    const path = entry.url.replace(SITE_URL, '') || '/'
+    return !isGatedRoute(path)
+  })
 }

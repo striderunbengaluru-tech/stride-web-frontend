@@ -32,13 +32,24 @@ feature/* ──▶ staging ──▶ main ──▶ 🚀 live site
           (Vercel Preview deploy)
 ```
 
+### Environments & URLs
+
+| Environment | Branch | Vercel env | URL |
+|---|---|---|---|
+| **Production** (live, external users) | `main` | Production | **https://www.strideclub.in** |
+| **Staging** (internal testing) | `staging` | Preview | https://staging.strideclub.in |
+
+- **Production Site URL is `https://www.strideclub.in`** — this is the canonical live URL. It is set as the Supabase **Site URL**, must be the value of `NEXT_PUBLIC_SITE_URL` in Production, and is the base used for canonical tags, OAuth redirects, and `llms.txt` links.
+- **Staging URL is `https://staging.strideclub.in`** — a Vercel custom domain bound to the `staging` branch (Preview). Set `NEXT_PUBLIC_SITE_URL` to this value for the Preview environment.
+- **Supabase → Authentication → URL Configuration → Redirect URLs** must allow both the production and staging callbacks (e.g. `https://www.strideclub.in/**` and `https://staging.strideclub.in/**`). Google OAuth needs only the fixed Supabase callback (`https://ienotcjldormdxrzukpk.supabase.co/auth/v1/callback`) — never the per-deploy Vercel URLs.
+
 ### Preview-feature gating (`NEXT_PUBLIC_VERCEL_ENV`)
 
 Some features are merged but must stay hidden from external users on the live site until launch. This is gated by deployment environment, **not** user role:
 
 - **Canonical mechanism:** `src/lib/feature-flags.ts` exports `PREVIEW_FEATURES_ENABLED` (true on every non-production deploy — staging, feature previews, local dev — and false only on the production deploy of `main`) and `guardPreviewFeature()` (call it as the first line of a Server Component/layout to return a hard `404` on production).
 - `NEXT_PUBLIC_VERCEL_ENV` is injected automatically by Vercel — **never set it manually**, and never gate features off raw user role for this purpose.
-- To hide an in-progress route from the live site: wrap its route group in a `layout.tsx` (or guard the page) with `guardPreviewFeature()`, and conditionally drop its nav/footer links behind `PREVIEW_FEATURES_ENABLED`. Remove it from `public/llms.txt` and add it to `public/robots.txt` `Disallow`.
+- To hide an in-progress route from the live site: wrap its route group in a `layout.tsx` (or guard the page) with `guardPreviewFeature()`, add its prefix to `GATED_ROUTE_PREFIXES` in `src/lib/feature-flags.ts` (this keeps it out of the production `sitemap.ts`), conditionally drop its nav/footer links behind `PREVIEW_FEATURES_ENABLED`, remove it from `public/llms.txt`, and add it to `public/robots.txt` `Disallow`. **To launch a gated route, reverse all of these** — most importantly remove it from `GATED_ROUTE_PREFIXES` so it re-enters the sitemap.
 - **Currently gated (404 on live, visible on staging):** `/events`, `/become-a-member`, `/milestones`, `/team`. Note: `/become-a-member` is the sign-in page, so login/admin access happens on the **staging URL** (which shares the same Supabase project/DB) while these features are gated.
 
 ---
@@ -418,4 +429,4 @@ A feature or change is only complete when:
 
 ---
 
-*Last updated: Feb 2026 — Maintained alongside the Stride Run Club codebase.*
+*Last updated: Jun 2026 — Maintained alongside the Stride Run Club codebase.*

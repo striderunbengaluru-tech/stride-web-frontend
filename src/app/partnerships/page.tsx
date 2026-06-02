@@ -14,8 +14,8 @@ import {
 } from './partners-data'
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-og.png'
-const SITE_ORIGIN = 'https://strideclub.in'
-const CANONICAL_URL = 'https://strideclub.in/partnerships/'
+const SITE_ORIGIN = 'https://www.strideclub.in'
+const CANONICAL_URL = 'https://www.strideclub.in/partnerships/'
 
 export const metadata: Metadata = {
   title: "Partner With India's Fittest Running Community | Stride Run Club",

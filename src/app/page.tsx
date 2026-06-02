@@ -7,8 +7,8 @@ import FaqSection from '@/components/home/faq-section';
 import SocialCtaSection from '@/components/home/social-cta-section';
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/homepage-og.png'
-const SITE_ORIGIN = 'https://strideclub.in'
-const CANONICAL_URL = 'https://strideclub.in/'
+const SITE_ORIGIN = 'https://www.strideclub.in'
+const CANONICAL_URL = 'https://www.strideclub.in/'
 
 export const metadata: Metadata = {
   title: 'Stride Run Club Bengaluru — Move as One',

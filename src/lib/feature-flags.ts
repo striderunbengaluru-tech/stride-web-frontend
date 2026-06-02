@@ -13,3 +13,21 @@ export const PREVIEW_FEATURES_ENABLED =
 export function guardPreviewFeature(): void {
   if (!PREVIEW_FEATURES_ENABLED) notFound()
 }
+
+// Single source of truth for the route prefixes that `guardPreviewFeature()`
+// hides on production. Used to keep the sitemap from advertising URLs that 404
+// on the live site. When a feature launches, remove its `guardPreviewFeature()`
+// call AND drop its prefix from this list so it re-enters the production sitemap.
+export const GATED_ROUTE_PREFIXES = [
+  '/events',
+  '/become-a-member',
+  '/milestones',
+  '/team',
+] as const
+
+// True when `path` is (or is nested under) a route hidden on production.
+export function isGatedRoute(path: string): boolean {
+  return GATED_ROUTE_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  )
+}
