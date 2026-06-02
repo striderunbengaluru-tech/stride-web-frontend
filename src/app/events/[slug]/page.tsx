@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `${event.name} — Stride Run Club`
   const description = event.subtitle ?? `Join us for ${event.name} with the Stride Run Club community in Bengaluru.`
-  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'}/events/${slug}`
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   return {
     title,
@@ -172,7 +172,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
   const startTime = fmtTime(event.event_date)
   const endTime   = fmtTime(event.end_date)
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
-  const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'}/events/${slug}`
+  const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   const firstNames = attendees.slice(0, 2).map(a => a.full_name?.split(' ')[0] ?? 'Someone')
   const othersCount = Math.max(0, (confirmedCount ?? 0) - 2)

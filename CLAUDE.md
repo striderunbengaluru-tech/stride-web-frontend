@@ -49,7 +49,7 @@ Some features are merged but must stay hidden from external users on the live si
 
 - **Canonical mechanism:** `src/lib/feature-flags.ts` exports `PREVIEW_FEATURES_ENABLED` (true on every non-production deploy — staging, feature previews, local dev — and false only on the production deploy of `main`) and `guardPreviewFeature()` (call it as the first line of a Server Component/layout to return a hard `404` on production).
 - `NEXT_PUBLIC_VERCEL_ENV` is injected automatically by Vercel — **never set it manually**, and never gate features off raw user role for this purpose.
-- To hide an in-progress route from the live site: wrap its route group in a `layout.tsx` (or guard the page) with `guardPreviewFeature()`, and conditionally drop its nav/footer links behind `PREVIEW_FEATURES_ENABLED`. Remove it from `public/llms.txt` and add it to `public/robots.txt` `Disallow`.
+- To hide an in-progress route from the live site: wrap its route group in a `layout.tsx` (or guard the page) with `guardPreviewFeature()`, add its prefix to `GATED_ROUTE_PREFIXES` in `src/lib/feature-flags.ts` (this keeps it out of the production `sitemap.ts`), conditionally drop its nav/footer links behind `PREVIEW_FEATURES_ENABLED`, remove it from `public/llms.txt`, and add it to `public/robots.txt` `Disallow`. **To launch a gated route, reverse all of these** — most importantly remove it from `GATED_ROUTE_PREFIXES` so it re-enters the sitemap.
 - **Currently gated (404 on live, visible on staging):** `/events`, `/become-a-member`, `/milestones`, `/team`. Note: `/become-a-member` is the sign-in page, so login/admin access happens on the **staging URL** (which shares the same Supabase project/DB) while these features are gated.
 
 ---

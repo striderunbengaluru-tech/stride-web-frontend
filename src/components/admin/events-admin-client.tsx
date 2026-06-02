@@ -29,7 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: 'bg-red-500/15 text-red-400',
 }
 
-const SITE_URL = 'https://strideclub.in'
+const SITE_URL = 'https://www.strideclub.in'
 
 function fmtDate(d: string | null) {
   if (!d) return null

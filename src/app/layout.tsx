@@ -22,7 +22,7 @@ const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
 });
 
-const SITE_URL = 'https://strideclub.in'
+const SITE_URL = 'https://www.strideclub.in'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

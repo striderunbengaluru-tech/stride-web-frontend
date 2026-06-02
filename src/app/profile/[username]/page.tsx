@@ -22,7 +22,7 @@ import { ChevronRight } from 'lucide-react'
 
 type Props = { params: Promise<{ username: string }> }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
 
 type MilestoneTier = { label: string; threshold: number; nextAt: number | null; color: string; dot: string }
 const MILESTONE_TIERS: MilestoneTier[] = [

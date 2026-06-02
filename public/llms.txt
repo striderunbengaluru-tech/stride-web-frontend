@@ -6,21 +6,21 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 
 ## Core Pages
 
-- [Home](https://strideclub.in/): Landing page — mission, featured events, and community highlights
-- [Blog](https://strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
-- [Leaderboard](https://strideclub.in/leaderboard/): Top Stride runners ranked by official runs completed
-- [Shop](https://strideclub.in/shop/): Official Stride merchandise
-- [Partnerships](https://strideclub.in/partnerships/): Brand and community partners
-- [Contact](https://strideclub.in/contact-us/): Get in touch with the Stride team
+- [Home](https://www.strideclub.in/): Landing page — mission, featured events, and community highlights
+- [Blog](https://www.strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
+- [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride runners ranked by official runs completed
+- [Shop](https://www.strideclub.in/shop/): Official Stride merchandise
+- [Partnerships](https://www.strideclub.in/partnerships/): Brand and community partners
+- [Contact](https://www.strideclub.in/contact-us/): Get in touch with the Stride team
 
 ## Stride Originals
 
-- [Originals](https://strideclub.in/originals/): Long-form running stories, interviews, and community features from Stride
+- [Originals](https://www.strideclub.in/originals/): Long-form running stories, interviews, and community features from Stride
 
 ## Legal
 
-- [Terms of Service](https://strideclub.in/terms-of-service/)
-- [Privacy Policy](https://strideclub.in/privacy-policy/)
+- [Terms of Service](https://www.strideclub.in/terms-of-service/)
+- [Privacy Policy](https://www.strideclub.in/privacy-policy/)
 
 ## Notes for AI Assistants
 

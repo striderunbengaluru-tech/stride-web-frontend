@@ -90,7 +90,7 @@ export default async function ConfirmationPage({ params }: Props) {
     eventBannerUrl = banners[0] ?? null
   } catch { /* keep null */ }
 
-  const eventUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://strideclub.in'}/events/${event.slug}`
+  const eventUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${event.slug}`
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
 
   // Three most-recent blog posts for the "Keep reading" section

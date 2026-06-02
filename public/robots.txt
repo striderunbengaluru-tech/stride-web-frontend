@@ -11,4 +11,4 @@ Disallow: /login/
 Disallow: /register/
 
 # Sitemap
-Sitemap: https://strideclub.in/sitemap.xml
+Sitemap: https://www.strideclub.in/sitemap.xml
