@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { UserProfile, Prompt, GalleryImage } from '@/types/user'
+import type { UserProfile, PromptImage } from '@/types/user'
 import type { OfficialRun } from '@/types/strava'
 import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { SignOutButton } from '@/components/profile/sign-out-button'
 import { DeleteAccountButton } from '@/components/profile/delete-account-button'
@@ -14,28 +15,14 @@ import { ShareButton } from '@/components/profile/share-button'
 import { EditHeaderSection } from '@/components/profile/edit-header-section'
 import { EditBioSection } from '@/components/profile/edit-bio-section'
 import { EditSpecialtiesSection } from '@/components/profile/edit-specialties-section'
-import { EditPromptsSection } from '@/components/profile/edit-prompts-section'
-import { GallerySection } from '@/components/profile/gallery-section'
+import { PromptImagesSection } from '@/components/profile/prompt-images-section'
 import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import { EventsAttendedSection } from '@/components/profile/events-attended-section'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ScanLine } from 'lucide-react'
 
 type Props = { params: Promise<{ username: string }> }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
-
-type MilestoneTier = { label: string; threshold: number; nextAt: number | null; color: string; dot: string }
-const MILESTONE_TIERS: MilestoneTier[] = [
-  { label: 'Newbie',    threshold: 0,  nextAt: 6,    color: 'text-emerald-400 border-emerald-400/40 bg-emerald-400/8',   dot: 'bg-emerald-400' },
-  { label: 'Regular',   threshold: 6,  nextAt: 16,   color: 'text-sky-400 border-sky-400/40 bg-sky-400/8',               dot: 'bg-sky-400' },
-  { label: 'OG Member', threshold: 16, nextAt: null, color: 'text-stride-yellow-accent border-stride-yellow-accent/40 bg-stride-yellow-accent/8', dot: 'bg-stride-yellow-accent' },
-]
-
-function getMilestone(runs: number) {
-  if (runs >= 16) return MILESTONE_TIERS[2]!
-  if (runs >= 6)  return MILESTONE_TIERS[1]!
-  return MILESTONE_TIERS[0]!
-}
 
 function parseJson<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback
@@ -50,19 +37,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq('username', username)
     .single()
 
-  if (!row) return { title: 'Profile not found — Stride Run Club' }
+  if (!row) return { title: 'Profile not found - Stride Run Club' }
 
   const displayName = row.full_name ?? username
-  const title = `${displayName} — Stride Run Club`
-  const description = (row.bio ?? '').slice(0, 160) || `${displayName} is a member of Stride Run Club Bengaluru.`
+  // Title: "<Runner name> - Stride Run Club"
+  const title = `${displayName} - Stride Run Club`
+  // Description: the runner's bio, or a generic fallback when none is set.
+  const description = (row.bio?.trim().slice(0, 160))
+    || `${displayName} is a runner with Stride Run Club, Bengaluru's community for runners. See their milestones, races and running story.`
+  // OG image: the runner's profile photo.
   const ogImage = row.avatar_url ?? undefined
 
   return {
-    title, description,
+    title,
+    description,
+    alternates: { canonical: `${SITE_URL}/profile/${username}` },
     openGraph: {
       title, description, type: 'profile',
       url: `${SITE_URL}/profile/${username}`,
+      siteName: 'Stride Run Club',
       ...(ogImage ? { images: [{ url: ogImage, width: 400, height: 400, alt: displayName }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   }
 }
@@ -72,21 +72,24 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, prompts, gallery_images, runs_completed, runner_tag, deleted_at')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompt_images, runs_completed, runner_tag, deleted_at')
     .eq('username', username)
     .single()
 
   // Treat deactivated users as 404 so their public profile no longer resolves
   if (!row || (row as { deleted_at: string | null }).deleted_at) notFound()
 
-  const skills        = parseJson<string[]>    (row.skills,  [])
-  const prompts       = parseJson<Prompt[]>    (row.prompts, [])
-  const galleryImages = parseJson<GalleryImage[]>((row as Record<string, string | null>).gallery_images, [])
+  const skills       = parseJson<string[]>     (row.skills, [])
+  const promptImages = parseJson<PromptImage[]>((row as Record<string, string | null>).prompt_images, [])
 
   const profile: UserProfile = {
     ...(row as unknown as UserProfile),
-    skills, prompts, gallery_images: galleryImages,
+    skills,
+    prompts: [],
+    gallery_images: [],
+    prompt_images: promptImages,
     cover_url: null,
+    x_url: row.x_url ?? null,
     runner_tag: row.runner_tag ?? null,
     strava_connected: false,
     strava_pbs: { mile: null, '5k': null, '10k': null, half: null, full: null },
@@ -97,9 +100,10 @@ export default async function ProfilePage({ params }: Props) {
   const [{ data: officialRunsRows }, { data: attendedRegs }, supabase] = await Promise.all([
     adminClient
       .from('official_runs')
-      .select('id, user_id, race_name, distance_category, race_date, finish_time, strava_activity_url, is_upcoming, created_at')
+      .select('id, user_id, race_name, distance_category, race_date, finish_time, strava_activity_url, is_upcoming, display_order, created_at')
       .eq('user_id', row.id)
-      .order('race_date', { ascending: false, nullsFirst: false }),
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true }),
     adminClient
       .from('event_registrations')
       .select('events(id, name, slug, event_date, location, banner_images)')
@@ -120,207 +124,200 @@ export default async function ProfilePage({ params }: Props) {
   const isOwnProfile = user?.id === profile.id
 
   const displayName   = profile.full_name ?? profile.username ?? username
-  const joinedYear    = new Date(profile.created_at).getFullYear()
+  const joinedLabel   = new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const runsCompleted = profile.runs_completed ?? 0
   const currentTier   = getMilestone(runsCompleted)
   const profileUrl    = `${SITE_URL}/profile/${username}`
 
-  const tierIndex      = MILESTONE_TIERS.findIndex(t => t.label === currentTier.label)
-  const prevThreshold  = MILESTONE_TIERS[tierIndex - 1]?.nextAt ?? 0
-  const nextThreshold  = currentTier.nextAt
-  const tierProgress   = nextThreshold
-    ? Math.min(((runsCompleted - prevThreshold) / (nextThreshold - prevThreshold)) * 100, 100)
+  const tierIndex     = MILESTONE_TIERS.findIndex(t => t.key === currentTier.key)
+  const nextThreshold = currentTier.nextAt
+  const tierProgress  = nextThreshold
+    ? Math.min(((runsCompleted - currentTier.threshold) / (nextThreshold - currentTier.threshold)) * 100, 100)
     : 100
 
   return (
     <main className='min-h-screen bg-stride-purple-primary pb-24'>
-      <div className='max-w-3xl mx-auto px-3 sm:px-4 pt-24 sm:pt-28'>
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+      <div className='max-w-5xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28'>
 
-          {/* ── Header card ── full width */}
-          <div className='lg:col-span-2 animate-fade-in-up' style={{ animationDelay: '0s' }}>
-            <div className='relative bg-white/8 border border-white/10 rounded-2xl px-5 py-5 hover:border-white/15 transition-colors'>
-              {/* Share button — top right */}
+        {/* ── Top: identity + details ── */}
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+
+          {/* Identity card */}
+          <div className='lg:col-span-1 animate-fade-in-up' style={{ animationDelay: '0s' }}>
+            <div className='relative h-full bg-white/8 border border-white/10 rounded-2xl px-5 py-6 hover:border-white/15 transition-colors flex flex-col items-center text-center'>
+              {/* Share — top right */}
               <div className='absolute top-4 right-4'>
                 <ShareButton url={profileUrl} title={`${displayName} — Stride Run Club`} text={profile.bio ?? undefined} />
               </div>
 
-              {/* Avatar + Info */}
-              <div className='flex items-start gap-4 pr-12'>
-                <div className='shrink-0'>
-                  {isOwnProfile ? (
-                    <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} />
-                  ) : profile.avatar_url ? (
-                    <AvatarImage
-                      src={profile.avatar_url}
-                      alt={displayName}
-                      className='w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover border-4 border-stride-purple-primary'
-                    />
-                  ) : (
-                    <div className='w-28 h-28 sm:w-32 sm:h-32 rounded-xl bg-stride-yellow-accent/20 border-4 border-stride-purple-primary flex items-center justify-center'>
-                      <span className='text-stride-yellow-accent text-4xl font-bold'>{displayName.charAt(0).toUpperCase()}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className='flex-1 min-w-0 pt-1'>
-                  <EditHeaderSection
-                    initialName={displayName}
-                    initialLocation={profile.location ?? ''}
-                    initialLinkedin={profile.linkedin_url ?? ''}
-                    initialInstagram={profile.instagram_url ?? ''}
-                    initialStrava={profile.strava_url ?? ''}
-                    username={profile.username ?? username}
-                    role={profile.role}
-                    joinedYear={joinedYear}
-                    isOwnProfile={isOwnProfile}
+              {/* Avatar (tier-coloured frame) */}
+              <div className='mt-2'>
+                {isOwnProfile ? (
+                  <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} />
+                ) : profile.avatar_url ? (
+                  <AvatarImage
+                    src={profile.avatar_url}
+                    alt={displayName}
+                    frameColor={currentTier.frame}
+                    className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg object-cover border-4'
                   />
-                </div>
+                ) : (
+                  <div
+                    className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg bg-stride-yellow-accent/20 border-4 flex items-center justify-center'
+                    style={{ borderColor: currentTier.frame }}
+                  >
+                    <span className='text-stride-yellow-accent text-5xl font-bold'>{displayName.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Runner tag */}
+              {/* Public milestone badge */}
+              <div className={`mt-4 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${currentTier.chip}`}>
+                <span aria-hidden='true'>{currentTier.emoji}</span>
+                {currentTier.label}
+              </div>
+
+              {/* Name / joined / socials */}
+              <div className='mt-3 w-full'>
+                <EditHeaderSection
+                  initialName={displayName}
+                  initialLocation={profile.location ?? ''}
+                  initialLinkedin={profile.linkedin_url ?? ''}
+                  initialInstagram={profile.instagram_url ?? ''}
+                  initialX={profile.x_url ?? ''}
+                  initialStrava={profile.strava_url ?? ''}
+                  username={profile.username ?? username}
+                  role={profile.role}
+                  joinedLabel={joinedLabel}
+                  isOwnProfile={isOwnProfile}
+                />
+              </div>
+
+              {/* Runner tag — own profile only */}
               {isOwnProfile && profile.runner_tag && (
-                <div className='mt-4 flex items-center justify-between bg-stride-yellow-accent/6 border border-stride-yellow-accent/20 rounded-xl px-4 py-3'>
-                  <div className='flex flex-col gap-1.5'>
-                    <span className='text-white/30 text-[9px] uppercase tracking-widest'>Your runner tag</span>
-                    <RunnerTagBadge tag={profile.runner_tag} size='lg' />
+                <div className='mt-5 w-full bg-stride-yellow-accent/6 border border-stride-yellow-accent/20 rounded-xl px-4 py-3.5 text-left'>
+                  <div className='flex items-center gap-2 mb-2'>
+                    <ScanLine size={13} className='text-stride-yellow-accent' />
+                    <span className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest'>Your runner tag</span>
                   </div>
-                  <p className='text-white/20 text-xs text-right max-w-[120px] leading-snug'>
-                    Show at event check-in
+                  <RunnerTagBadge tag={profile.runner_tag} size='lg' />
+                  <p className='text-white/35 text-[11px] leading-snug mt-2.5'>
+                    Your Runner Tag is your personal check-in code — show it to a Stride organiser at events to log your attendance and earn runs toward milestones.
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Milestone card ── full width */}
-          <div
-            className='lg:col-span-2 bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors animate-fade-in-up'
-            style={{ animationDelay: '0.08s' }}
-          >
-            <div className='flex items-center justify-between mb-5'>
-              <p className='text-white/40 text-[10px] uppercase tracking-widest font-medium'>Milestone</p>
-              <Link
-                href='/milestones'
-                className='flex items-center gap-1 text-stride-yellow-accent/60 hover:text-stride-yellow-accent text-xs transition-colors'
-              >
-                Explore milestones <ChevronRight size={12} />
-              </Link>
-            </div>
-
-            <div className='flex items-end justify-between mb-5'>
-              <div>
-                <div className='flex items-baseline gap-2'>
-                  <span className='text-5xl font-bold text-white tabular-nums leading-none'>{runsCompleted}</span>
-                  <span className='text-white/35 text-sm'>official runs</span>
-                </div>
-                <p className='text-white/30 text-xs mt-2'>
-                  {currentTier.nextAt
-                    ? `${currentTier.nextAt - runsCompleted} more to ${MILESTONE_TIERS[tierIndex + 1]?.label ?? ''}`
-                    : '🏆 Maximum tier reached'}
-                </p>
+          {/* Details card */}
+          <div className='lg:col-span-2 flex flex-col gap-4'>
+            {/* Milestone progress — owner only; public viewers see just the badge + frame */}
+            {isOwnProfile && (
+            <div
+              className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors animate-fade-in-up'
+              style={{ animationDelay: '0.06s' }}
+            >
+              <div className='flex items-center justify-between mb-5'>
+                <p className='text-white/40 text-[10px] uppercase tracking-widest font-medium'>Milestone</p>
+                <Link
+                  href='/milestones'
+                  className='flex items-center gap-1 text-stride-yellow-accent/60 hover:text-stride-yellow-accent text-xs transition-colors'
+                >
+                  Explore milestones <ChevronRight size={12} />
+                </Link>
               </div>
-              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${currentTier.color}`}>
-                {currentTier.label}
-              </span>
-            </div>
 
-            {/* Progress bar */}
-            <div className='mb-5 space-y-1.5'>
-              <div className='h-1.5 bg-white/8 rounded-full overflow-hidden'>
-                <div
-                  className='h-full bg-stride-yellow-accent rounded-full transition-all duration-700'
-                  style={{ width: `${tierProgress}%` }}
-                />
-              </div>
-              {currentTier.nextAt && (
-                <div className='flex justify-between'>
-                  <span className='text-white/20 text-[9px] tabular-nums'>{prevThreshold} runs</span>
-                  <span className='text-white/20 text-[9px] tabular-nums'>{currentTier.nextAt} runs</span>
+              <div className='flex items-end justify-between mb-5'>
+                <div>
+                  <div className='flex items-baseline gap-2'>
+                    <span className='text-5xl font-bold text-white tabular-nums leading-none'>{runsCompleted}</span>
+                    <span className='text-white/35 text-sm'>official runs</span>
+                  </div>
+                  <p className='text-white/30 text-xs mt-2'>
+                    {currentTier.nextAt
+                      ? `${currentTier.nextAt - runsCompleted} more to ${MILESTONE_TIERS[tierIndex + 1]?.label ?? ''}`
+                      : '👑 Maximum tier reached'}
+                  </p>
                 </div>
-              )}
-            </div>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${currentTier.chip}`}>
+                  <span aria-hidden='true'>{currentTier.emoji}</span>
+                  {currentTier.label}
+                </span>
+              </div>
 
-            {/* Tier chips */}
-            <div className='grid grid-cols-3 gap-2'>
-              {MILESTONE_TIERS.map((tier, i) => {
-                const isActive = currentTier.label === tier.label
-                const isPast   = tierIndex > i
-                return (
+              {/* Progress bar */}
+              <div className='mb-5 space-y-1.5'>
+                <div className='h-1.5 bg-white/8 rounded-full overflow-hidden'>
                   <div
-                    key={tier.label}
-                    className={`flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all ${
-                      isActive ? 'bg-stride-yellow-accent/8 border-stride-yellow-accent/30'
-                        : isPast ? 'bg-white/5 border-white/10'
-                        : 'bg-white/3 border-white/6'
-                    }`}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${isActive ? tier.dot : isPast ? 'bg-white/30' : 'bg-white/12'}`} />
-                    <div className='text-center'>
-                      <p className={`text-[10px] font-semibold leading-none ${
+                    className='h-full bg-stride-yellow-accent rounded-full transition-all duration-700'
+                    style={{ width: `${tierProgress}%` }}
+                  />
+                </div>
+                {currentTier.nextAt && (
+                  <div className='flex justify-between'>
+                    <span className='text-white/20 text-[9px] tabular-nums'>{currentTier.threshold} runs</span>
+                    <span className='text-white/20 text-[9px] tabular-nums'>{currentTier.nextAt} runs</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tier chips — 5 tiers */}
+              <div className='grid grid-cols-5 gap-1.5'>
+                {MILESTONE_TIERS.map((tier, i) => {
+                  const isActive = currentTier.key === tier.key
+                  const isPast   = tierIndex > i
+                  return (
+                    <div
+                      key={tier.key}
+                      className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl border transition-all ${
+                        isActive ? 'bg-stride-yellow-accent/8 border-stride-yellow-accent/30'
+                          : isPast ? 'bg-white/5 border-white/10'
+                          : 'bg-white/3 border-white/6'
+                      }`}
+                    >
+                      <span className={`text-base leading-none ${isActive || isPast ? '' : 'opacity-40 grayscale'}`} aria-hidden='true'>{tier.emoji}</span>
+                      <p className={`text-[9px] font-semibold leading-none text-center ${
                         isActive ? 'text-stride-yellow-accent' : isPast ? 'text-white/45' : 'text-white/20'
                       }`}>{tier.label}</p>
-                      <p className='text-white/15 text-[9px] mt-0.5'>{tier.threshold}+ runs</p>
                     </div>
-                    {isPast && (
-                      <svg className='w-3 h-3 text-white/30' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={2.5}>
-                        <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
-                      </svg>
-                    )}
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
+            )}
 
-          {/* ── Bio + Specialties ── two cols on desktop */}
-          {(!!profile.bio || isOwnProfile) && (
-            <div className='animate-fade-in-up' style={{ animationDelay: '0.14s' }}>
+            {/* About + Specialties — always shown (empty state for public viewers) */}
+            <div className='animate-fade-in-up' style={{ animationDelay: '0.12s' }}>
               <EditBioSection bio={profile.bio} isOwnProfile={isOwnProfile} />
             </div>
-          )}
-
-          {(skills.length > 0 || isOwnProfile) && (
-            <div
-              className={`animate-fade-in-up ${!profile.bio && !isOwnProfile ? 'lg:col-span-2' : ''}`}
-              style={{ animationDelay: '0.18s' }}
-            >
+            <div className='animate-fade-in-up' style={{ animationDelay: '0.16s' }}>
               <EditSpecialtiesSection skills={skills} isOwnProfile={isOwnProfile} />
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* ── Gallery ── full width */}
-          {(galleryImages.length > 0 || isOwnProfile) && (
-            <div className='lg:col-span-2 animate-fade-in-up' style={{ animationDelay: '0.22s' }}>
-              <GallerySection images={galleryImages} isOwnProfile={isOwnProfile} />
-            </div>
-          )}
+        {/* ── Prompt photos ── always shown (empty state for public viewers) */}
+        <div className='mt-4 animate-fade-in-up' style={{ animationDelay: '0.2s' }}>
+          <PromptImagesSection promptImages={promptImages} isOwnProfile={isOwnProfile} />
+        </div>
 
-          {/* ── Prompts ── full width */}
-          {(prompts.length > 0 || isOwnProfile) && (
-            <div className='lg:col-span-2 animate-fade-in-up' style={{ animationDelay: '0.26s' }}>
-              <EditPromptsSection prompts={prompts} isOwnProfile={isOwnProfile} />
-            </div>
-          )}
+        {/* ── Runs attended with Stride ── past 10; list when >10, mini cards otherwise */}
+        <div className='mt-4 animate-fade-in-up' style={{ animationDelay: '0.24s' }}>
+          <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
+            <EventsAttendedSection
+              events={attendedEvents.slice(0, 10)}
+              totalCount={attendedEvents.length}
+              asList={attendedEvents.length > 10}
+              isOwnProfile={isOwnProfile}
+            />
+          </div>
+        </div>
 
-          {/* ── Events attended ── full width */}
-          {attendedEvents.length > 0 && (
-            <div className='lg:col-span-2 animate-fade-in-up' style={{ animationDelay: '0.3s' }}>
-              <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
-                <EventsAttendedSection events={attendedEvents} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Official races ── full width */}
-          {(officialRuns.length > 0 || isOwnProfile) && (
-            <div className='lg:col-span-2 animate-fade-in-up' style={{ animationDelay: '0.34s' }}>
-              <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
-                <OfficialRunsSection initialRuns={officialRuns} isOwnProfile={isOwnProfile} />
-              </div>
-            </div>
-          )}
-
+        {/* ── Official races ── always shown (empty state for public viewers) */}
+        <div className='mt-4 animate-fade-in-up' style={{ animationDelay: '0.28s' }}>
+          <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
+            <OfficialRunsSection initialRuns={officialRuns} isOwnProfile={isOwnProfile} />
+          </div>
         </div>
 
         {/* ── Account actions ── */}

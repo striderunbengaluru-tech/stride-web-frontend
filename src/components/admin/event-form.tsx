@@ -12,14 +12,16 @@ import {
   X, Plus, Eye, ChevronDown, Pencil, GripVertical, Trash2,
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
-  Hash, IndianRupee, Users, Link2, Coffee, Route, Clock, FileText,
+  Hash, IndianRupee, Users, Link2, Coffee, Route, Clock, FileText, RotateCcw,
 } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
 import type { AdditionalField, AdditionalFieldType } from '@/types/event'
 import { Spinner } from '@/components/ui/spinner'
+import { UploadProgress } from '@/components/ui/upload-progress'
 import { HelpHint } from '@/components/ui/help-hint'
 import { EventPreview } from '@/components/admin/event-preview'
 import { slugify } from '@/lib/utils/slug'
+import { uploadWithProgress } from '@/lib/utils/upload'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
 
@@ -56,6 +58,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   const [subtitle, setSubtitle] = useState(defaultValues.subtitle ?? '')
   const [details, setDetails] = useState(defaultValues.details ?? '')
   const [confirmationText, setConfirmationText] = useState(defaultValues.confirmationText ?? '')
+  const [termsText, setTermsText] = useState(defaultValues.termsText ?? '')
   const [location, setLocation] = useState(defaultValues.location ?? '')
   const [pricePaise, setPricePaise] = useState(defaultValues.pricePaise ?? 0)
   const [eventDate, setEventDate] = useState(defaultValues.eventDate ?? '')
@@ -92,12 +95,18 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     try { return JSON.parse(defaultValues.bannerImages ?? '[]') as string[] }
     catch { return [] }
   })
-  const [uploadingCount, setUploadingCount] = useState(0)
+  // In-flight banner uploads — each tracks its own progress so we can render a
+  // per-image progress bar and a retry button if one fails.
+  const [pendingUploads, setPendingUploads] = useState<
+    { id: string; file: File; progress: number; status: 'uploading' | 'error'; error?: string }[]
+  >([])
 
   // Banner image cropper
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [crop, setCrop] = useState<Crop>()
-  const [cropUploading, setCropUploading] = useState(false)
+  const [cropStatus, setCropStatus] = useState<'idle' | 'uploading' | 'error'>('idle')
+  const [cropProgress, setCropProgress] = useState(0)
+  const [cropError, setCropError] = useState('')
   const cropImgRef = useRef<HTMLImageElement>(null)
   const cropReplacingIndexRef = useRef<number | null>(null)
 
@@ -170,6 +179,31 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     cropReplacingIndexRef.current = index
     setCropSrc(bannerImages[index])
     setCrop(undefined)
+    setCropStatus('idle')
+    setCropProgress(0)
+    setCropError('')
+  }
+
+  async function uploadBanner(id: string, file: File) {
+    setPendingUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'uploading', progress: 0, error: undefined } : u))
+    try {
+      const data = await uploadWithProgress<{ url?: string }>({
+        url: '/api/admin/upload-event-cover',
+        file,
+        fileName: file.name,
+        fields: name.trim() ? { eventName: name.trim() } : {},
+        onProgress: (p) => setPendingUploads(prev => prev.map(u => u.id === id ? { ...u, progress: p } : u)),
+      })
+      if (data.url) {
+        setBannerImages(prev => [...prev, data.url as string])
+        markDirty()
+      }
+      setPendingUploads(prev => prev.filter(u => u.id !== id))
+    } catch (err) {
+      setPendingUploads(prev => prev.map(u =>
+        u.id === id ? { ...u, status: 'error', error: err instanceof Error ? err.message : 'Upload failed' } : u
+      ))
+    }
   }
 
   function handleBannerFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -177,27 +211,17 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     e.target.value = ''
     if (files.length === 0) return
 
-    const slots = 5 - bannerImages.length
+    const slots = 5 - bannerImages.length - pendingUploads.length
     const toUpload = files.slice(0, slots)
     if (toUpload.length === 0) return
-    setUploadingCount(toUpload.length)
 
-    void (async () => {
-      const uploaded: string[] = []
-      for (const file of toUpload) {
-        const form = new FormData()
-        form.append('file', file)
-        if (name.trim()) form.append('eventName', name.trim())
-        const res = await fetch('/api/admin/upload-event-cover', { method: 'POST', body: form })
-        const data = await res.json() as { url?: string; error?: string }
-        if (res.ok && data.url) uploaded.push(data.url)
-        setUploadingCount(prev => prev - 1)
-      }
-      if (uploaded.length > 0) {
-        setBannerImages(prev => [...prev, ...uploaded])
-        markDirty()
-      }
-    })()
+    const entries = toUpload.map(file => ({ id: nanoid(8), file, progress: 0, status: 'uploading' as const }))
+    setPendingUploads(prev => [...prev, ...entries])
+    for (const entry of entries) void uploadBanner(entry.id, entry.file)
+  }
+
+  function dismissUpload(id: string) {
+    setPendingUploads(prev => prev.filter(u => u.id !== id))
   }
 
   function handleImageDragStart(i: number) { setImgDragSrc(i) }
@@ -246,10 +270,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92))
   }, [crop])
 
-  async function handleCropSave() {
-    const blob = await getCroppedBlob()
-    if (!blob) return
-    setCropUploading(true)
+  const cropBlobRef = useRef<Blob | null>(null)
+
+  async function uploadCropBlob(blob: Blob) {
+    setCropStatus('uploading')
+    setCropProgress(0)
+    setCropError('')
     try {
       const replacingIndex = cropReplacingIndexRef.current
       if (replacingIndex !== null) {
@@ -263,26 +289,39 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         }
       }
 
-      const form = new FormData()
-      form.append('file', blob, 'banner.jpg')
-      if (name.trim()) form.append('eventName', name.trim())
-      const res = await fetch('/api/admin/upload-event-cover', { method: 'POST', body: form })
-      const data = await res.json()
+      const data = await uploadWithProgress<{ url?: string }>({
+        url: '/api/admin/upload-event-cover',
+        file: blob,
+        fileName: 'banner.jpg',
+        fields: name.trim() ? { eventName: name.trim() } : {},
+        onProgress: setCropProgress,
+      })
 
-      if (res.ok && data.url) {
+      if (data.url) {
         if (replacingIndex !== null) {
           setBannerImages(prev => prev.map((u, i) => i === replacingIndex ? data.url as string : u))
         } else {
           setBannerImages(prev => [...prev, data.url as string])
         }
         markDirty()
-      } else {
-        alert((data as { error?: string }).error ?? 'Upload failed')
       }
-    } finally {
-      setCropUploading(false)
+      setCropStatus('idle')
       setCropSrc(null)
+    } catch (err) {
+      setCropError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+      setCropStatus('error')
     }
+  }
+
+  async function handleCropSave() {
+    const blob = await getCroppedBlob()
+    if (!blob) return
+    cropBlobRef.current = blob
+    await uploadCropBlob(blob)
+  }
+
+  function handleCropRetry() {
+    if (cropBlobRef.current) void uploadCropBlob(cropBlobRef.current)
   }
 
   async function removeBannerImage(index: number) {
@@ -325,11 +364,19 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                 />
               </ReactCrop>
             </div>
+            {(cropStatus === 'uploading' || cropStatus === 'error') && (
+              <UploadProgress
+                status={cropStatus === 'error' ? 'error' : 'uploading'}
+                progress={cropProgress}
+                message={cropError}
+                onRetry={handleCropRetry}
+              />
+            )}
             <div className='flex gap-2'>
-              <button onClick={handleCropSave} disabled={cropUploading} className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2 rounded-md text-xs disabled:opacity-60 flex items-center justify-center gap-1.5'>
-                {cropUploading ? <><Spinner /> Uploading…</> : 'Save image'}
+              <button onClick={handleCropSave} disabled={cropStatus === 'uploading'} className='flex-1 bg-stride-yellow-accent text-copy-black font-semibold py-2 rounded-md text-xs disabled:opacity-60 flex items-center justify-center gap-1.5'>
+                {cropStatus === 'uploading' ? <><Spinner /> Uploading…</> : 'Save image'}
               </button>
-              <button onClick={() => setCropSrc(null)} disabled={cropUploading} className='px-3 py-2 rounded-md border border-white/15 text-white/70 text-xs hover:border-white/30 disabled:opacity-50'>
+              <button onClick={() => setCropSrc(null)} disabled={cropStatus === 'uploading'} className='px-3 py-2 rounded-md border border-white/15 text-white/70 text-xs hover:border-white/30 disabled:opacity-50'>
                 Cancel
               </button>
             </div>
@@ -384,6 +431,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             {/* Hidden inputs */}
             <input type='hidden' name='details' value={details} />
             <input type='hidden' name='confirmationText' value={confirmationText} />
+            <input type='hidden' name='termsText' value={termsText} />
             <input type='hidden' name='bannerImages' value={JSON.stringify(bannerImages)} readOnly />
             <input type='hidden' name='additionalFields' value={JSON.stringify(additionalFields)} readOnly />
             <input type='hidden' name='status' value={status} />
@@ -425,7 +473,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                 <div className='flex items-center gap-1.5'>
                   <FileText size={14} className='text-white/40' />
                   <label className='text-white/70 text-sm font-medium'>Full details</label>
-                  <HelpHint text='The long-form description of the event. Supports headings, lists, links, bold. Shown in the "About Event" section on the public page.' />
+                  <HelpHint text='The long-form description of the event. Supports headings, lists, links, bold. Shown in the "About the experience" section on the public page.' />
                 </div>
                 <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
                   <MDEditor value={details} onChange={(v) => { setDetails(v ?? ''); markDirty() }} height={260} preview='edit' className='bg-transparent!' />
@@ -531,6 +579,18 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                 </div>
                 <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
                   <MDEditor value={confirmationText} onChange={(v) => { setConfirmationText(v ?? ''); markDirty() }} height={160} preview='edit' className='bg-transparent!' />
+                </div>
+              </div>
+
+              {/* Terms & conditions */}
+              <div className='flex flex-col gap-1.5 mt-4'>
+                <div className='flex items-center gap-1.5'>
+                  <FileText size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Terms &amp; conditions</label>
+                  <HelpHint text='Shown to runners above the confirm button when they register. They must tick a checkbox to accept before they can register. Markdown supported.' />
+                </div>
+                <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
+                  <MDEditor value={termsText} onChange={(v) => { setTermsText(v ?? ''); markDirty() }} height={160} preview='edit' className='bg-transparent!' />
                 </div>
               </div>
 
@@ -646,14 +706,35 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                     </button>
                   </div>
                 ))}
-                {Array.from({ length: uploadingCount }).map((_, i) => (
-                  <div key={`uploading-${i}`} className='h-28 w-20 rounded-xl border border-white/15 bg-white/5 flex flex-col items-center justify-center gap-1 shrink-0'>
-                    <Spinner />
-                    <span className='text-white/30 text-xs'>Uploading</span>
+                {pendingUploads.map((u) => (
+                  <div key={u.id} className='h-28 w-28 rounded-xl border border-white/15 bg-white/5 flex flex-col items-center justify-center gap-2 shrink-0 px-2'>
+                    {u.status === 'error' ? (
+                      <>
+                        <p className='text-red-400 text-[10px] text-center leading-tight line-clamp-2'>{u.error ?? 'Upload failed'}</p>
+                        <div className='flex gap-1.5'>
+                          <button type='button' onClick={() => uploadBanner(u.id, u.file)} className='inline-flex items-center gap-1 bg-stride-yellow-accent text-copy-black text-[10px] font-semibold px-2 py-1 rounded-md hover:bg-stride-yellow-accent/90'>
+                            <RotateCcw size={10} /> Retry
+                          </button>
+                          <button type='button' onClick={() => dismissUpload(u.id)} className='p-1 rounded-md text-white/40 hover:text-red-400' aria-label='Dismiss'>
+                            <X size={11} />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Spinner />
+                        <div className='w-full px-1'>
+                          <div className='h-1.5 rounded-full bg-white/10 overflow-hidden'>
+                            <div className='h-full bg-stride-yellow-accent rounded-full transition-[width] duration-200' style={{ width: `${u.progress}%` }} />
+                          </div>
+                          <span className='block text-white/40 text-[10px] text-center mt-1 tabular-nums'>{u.progress}%</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
-                {bannerImages.length + uploadingCount < 5 && (
-                  <button type='button' onClick={openFilePickerForAdd} disabled={uploadingCount > 0} className='h-28 w-20 rounded-xl border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/60 transition-colors flex flex-col items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed'>
+                {bannerImages.length + pendingUploads.length < 5 && (
+                  <button type='button' onClick={openFilePickerForAdd} disabled={pendingUploads.some(u => u.status === 'uploading')} className='h-28 w-20 rounded-xl border-2 border-dashed border-white/20 hover:border-stride-yellow-accent/50 text-white/40 hover:text-white/60 transition-colors flex flex-col items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed'>
                     <Plus size={20} />
                     <span className='text-xs'>Add</span>
                   </button>

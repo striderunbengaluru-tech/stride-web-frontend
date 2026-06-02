@@ -88,7 +88,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
             className='animate-fade-in-up text-white/55 text-lg leading-relaxed max-w-md font-roboto'
             style={{ animationDelay: '0.2s' }}
           >
-            Stride is Bengaluru&apos;s most rewarding running community. Become a member in one click — no forms, no hassle.
+            Become a member of Stride Run Club with just one click and take part in Stride Run Club&apos;s curated experiences.
           </p>
 
           {/* Feature list */}
@@ -127,7 +127,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
                 Your journey<br />starts here.
               </h2>
               <p className='text-white/50 text-sm leading-relaxed mb-8 font-roboto'>
-                Become a member with one click. Connect with Google and you&apos;re part of Stride.
+                Become a member with just one click — connect with Google and take part in Stride Run Club&apos;s curated experiences.
               </p>
 
               <GoogleSignInButton nextUrl={safeNext} />

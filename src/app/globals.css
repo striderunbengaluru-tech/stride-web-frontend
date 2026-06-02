@@ -135,6 +135,26 @@ h1, h2, h3, h4, h5, h6 {
   .animate-orb-drift, .animate-orb-drift-reverse { animation: none; }
 }
 
+/* ── CTA shimmer — a diagonal light sheen sweeping across a button ── */
+@keyframes ctaShimmer {
+  0%   { transform: translateX(-130%) skewX(-20deg); }
+  100% { transform: translateX(230%)  skewX(-20deg); }
+}
+.cta-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+  animation: ctaShimmer 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-shimmer::after { animation: none; display: none; }
+}
+
 /* ── Logo marquee — used on /partnerships ── */
 @keyframes marquee {
   0%   { transform: translateX(0); }

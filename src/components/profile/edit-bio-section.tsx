@@ -16,7 +16,10 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
+  const tooLong = value.length > 500
+
   async function save() {
+    if (tooLong) return
     setSaving(true)
     await fetch('/api/profile/update', {
       method: 'POST',
@@ -28,12 +31,13 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
     router.refresh()
   }
 
-  if (!bio && !isOwnProfile) return null
-
   return (
     <div className='h-full bg-white/8 border border-white/10 rounded-2xl p-5 flex flex-col gap-3 hover:border-white/15 transition-colors'>
       <div className='flex items-center justify-between'>
-        <p className='text-white/40 text-[10px] uppercase tracking-widest font-medium'>About</p>
+        <div className='flex items-center gap-2'>
+          <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
+          <h2 className='text-white font-semibold text-sm tracking-wide'>About</h2>
+        </div>
         {isOwnProfile && !editing && (
           <button
             onClick={() => setEditing(true)}
@@ -49,7 +53,6 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
         <div className='flex flex-col gap-3 flex-1'>
           <textarea
             className='flex-1 min-h-28 w-full bg-white/5 border border-white/15 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/50 resize-none transition-colors'
-            maxLength={300}
             value={value}
             onChange={e => setValue(e.target.value)}
             placeholder='Tell the community about your running journey...'
@@ -57,8 +60,8 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
           />
           <div className='flex items-center justify-between'>
             <div className='flex gap-2'>
-              <button onClick={save} disabled={saving}
-                className='flex items-center gap-1.5 bg-stride-yellow-accent text-copy-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-stride-yellow-accent/90 disabled:opacity-50 min-h-9'>
+              <button onClick={save} disabled={saving || tooLong}
+                className='flex items-center gap-1.5 bg-stride-yellow-accent text-copy-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-stride-yellow-accent/90 disabled:opacity-50 disabled:cursor-not-allowed min-h-9'>
                 {saving ? <Spinner className='w-3 h-3' /> : <Check size={12} />} Save
               </button>
               <button onClick={() => { setEditing(false); setValue(bio ?? '') }}
@@ -66,18 +69,20 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
                 <X size={12} /> Cancel
               </button>
             </div>
-            <span className='text-white/20 text-xs tabular-nums'>{value.length}/300</span>
+            <span className={`text-xs tabular-nums ${tooLong ? 'text-red-400 font-semibold' : 'text-white/20'}`}>{value.length}/500</span>
           </div>
         </div>
       ) : bio ? (
         <p className='text-white/65 text-sm leading-relaxed'>{bio}</p>
-      ) : (
+      ) : isOwnProfile ? (
         <button
           onClick={() => setEditing(true)}
           className='text-left text-white/25 text-sm italic hover:text-white/40 transition-colors'
         >
           Add a bio to tell people about your running journey...
         </button>
+      ) : (
+        <p className='text-white/25 text-sm italic'>No bio added yet.</p>
       )}
     </div>
   )

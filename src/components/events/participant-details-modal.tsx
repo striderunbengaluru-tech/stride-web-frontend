@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import ReactMarkdown from 'react-markdown'
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import type { AdditionalField } from '@/types/event'
@@ -41,10 +42,11 @@ type Props = {
     emergencyContactNumber: string | null
   }
   additionalFields?: AdditionalField[]
+  termsAndConditions?: string | null
   razorpayKeyId?: string
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], razorpayKeyId }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, razorpayKeyId }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -57,16 +59,19 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   const [customResponses, setCustomResponses] = useState<Record<string, string>>(
     () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
   )
+  const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const isPaid = pricePaise > 0
+  const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setError(null)
       setLoading(false)
+      setAccepted(false)
     }
   }, [open])
 
@@ -93,8 +98,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     if (fullName.trim().length < 2) return setError('Please enter your full name')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return setError('Please enter your date of birth')
     if (!gender) return setError('Please select your gender')
-    if (contactNumber.trim().length < 7) return setError('Please enter a valid contact number')
-    if (emergencyContactNumber.trim().length < 7) return setError('Please enter a valid emergency contact number')
+    if (!/^\d{10,11}$/.test(contactNumber)) return setError('Enter a valid 10 or 11 digit contact number (digits only)')
+    if (!/^\d{10,11}$/.test(emergencyContactNumber)) return setError('Enter a valid 10 or 11 digit emergency contact number (digits only)')
+    if (contactNumber === emergencyContactNumber) return setError('Emergency number must be different from your contact number')
 
     // Validate custom fields
     for (const field of additionalFields) {
@@ -111,6 +117,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       }
     }
 
+    if (hasTerms && !accepted) return setError('Please accept the terms & conditions to continue')
+
     setLoading(true)
     try {
       const res = await fetch('/api/events/register', {
@@ -123,6 +131,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
           gender,
           contactNumber: contactNumber.trim(),
           emergencyContactNumber: emergencyContactNumber.trim(),
+          acceptedTerms: hasTerms ? accepted : undefined,
           customResponses,
         }),
       })
@@ -219,7 +228,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                     Final step
                   </span>
                   <h2 className='text-white font-bold text-xl leading-tight'>Tell us about you</h2>
-                  <p className='text-white/50 text-sm mt-1 leading-snug'>Quick details before we lace up — saved for next time.</p>
+                  <p className='text-white/50 text-sm mt-1 leading-snug'>Quick details to join the run — saved for next time.</p>
                 </div>
                 <button
                   type='button'
@@ -294,9 +303,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='tel'
                 value={contactNumber}
-                onChange={e => setContactNumber(e.target.value)}
-                placeholder='98765 43210'
-                inputMode='tel'
+                onChange={e => setContactNumber(e.target.value.replace(/\D/g, ''))}
+                placeholder='9876543210'
+                inputMode='numeric'
+                pattern='\d*'
+                maxLength={11}
                 className={inputBase}
                 required
               />
@@ -308,9 +319,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='tel'
                 value={emergencyContactNumber}
-                onChange={e => setEmergencyContactNumber(e.target.value)}
-                placeholder='98765 43210'
-                inputMode='tel'
+                onChange={e => setEmergencyContactNumber(e.target.value.replace(/\D/g, ''))}
+                placeholder='9876543210'
+                inputMode='numeric'
+                pattern='\d*'
+                maxLength={11}
                 className={inputBase}
                 required
               />
@@ -364,6 +377,30 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               </div>
             )}
 
+            {/* Terms & conditions — required acceptance before registering */}
+            {hasTerms && (
+              <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
+                <div className='flex items-center gap-2'>
+                  <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
+                  <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
+                </div>
+                <div className='max-h-44 overflow-y-auto rounded-lg bg-white/5 border border-white/12 px-4 py-3 prose prose-invert prose-xs max-w-none prose-p:text-white/70 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-1.5 prose-ol:my-1.5 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
+                  <ReactMarkdown>{termsAndConditions ?? ''}</ReactMarkdown>
+                </div>
+                <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+                  <input
+                    type='checkbox'
+                    checked={accepted}
+                    onChange={e => setAccepted(e.target.checked)}
+                    className='mt-0.5 accent-stride-yellow-accent w-4 h-4 shrink-0'
+                  />
+                  <span className='text-white/70 text-xs leading-snug'>
+                    I have read and agree to the terms &amp; conditions for this event.
+                  </span>
+                </label>
+              </div>
+            )}
+
             {/* Error */}
             {error && (
               <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs'>
@@ -374,8 +411,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             {/* Submit */}
             <button
               type='submit'
-              disabled={loading}
-              className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-60 min-h-11 flex items-center justify-center gap-2'
+              disabled={loading || (hasTerms && !accepted)}
+              className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-11 flex items-center justify-center gap-2'
             >
               {loading
                 ? <><Spinner /> Processing…</>
