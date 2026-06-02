@@ -6,6 +6,7 @@ Disallow: /auth/
 Disallow: /events/
 Disallow: /become-a-member/
 Disallow: /milestones/
+Disallow: /team/
 Disallow: /login/
 Disallow: /register/
 
