@@ -32,6 +32,17 @@ feature/* ──▶ staging ──▶ main ──▶ 🚀 live site
           (Vercel Preview deploy)
 ```
 
+### Environments & URLs
+
+| Environment | Branch | Vercel env | URL |
+|---|---|---|---|
+| **Production** (live, external users) | `main` | Production | **https://www.strideclub.in** |
+| **Staging** (internal testing) | `staging` | Preview | https://staging.strideclub.in |
+
+- **Production Site URL is `https://www.strideclub.in`** — this is the canonical live URL. It is set as the Supabase **Site URL**, must be the value of `NEXT_PUBLIC_SITE_URL` in Production, and is the base used for canonical tags, OAuth redirects, and `llms.txt` links.
+- **Staging URL is `https://staging.strideclub.in`** — a Vercel custom domain bound to the `staging` branch (Preview). Set `NEXT_PUBLIC_SITE_URL` to this value for the Preview environment.
+- **Supabase → Authentication → URL Configuration → Redirect URLs** must allow both the production and staging callbacks (e.g. `https://www.strideclub.in/**` and `https://staging.strideclub.in/**`). Google OAuth needs only the fixed Supabase callback (`https://ienotcjldormdxrzukpk.supabase.co/auth/v1/callback`) — never the per-deploy Vercel URLs.
+
 ### Preview-feature gating (`NEXT_PUBLIC_VERCEL_ENV`)
 
 Some features are merged but must stay hidden from external users on the live site until launch. This is gated by deployment environment, **not** user role:
@@ -418,4 +429,4 @@ A feature or change is only complete when:
 
 ---
 
-*Last updated: Feb 2026 — Maintained alongside the Stride Run Club codebase.*
+*Last updated: Jun 2026 — Maintained alongside the Stride Run Club codebase.*
