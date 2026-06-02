@@ -1,4 +1,8 @@
+import { guardPreviewFeature } from '@/lib/feature-flags'
+
 export default function TeamPage() {
+  guardPreviewFeature()
+
   const team = [
     { role: 'Founder & Head Pacer', bio: 'Sets the pace, leads the pack.' },
     { role: 'Co-Founder', bio: 'Community builder and event organiser.' },
