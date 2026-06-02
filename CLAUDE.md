@@ -17,6 +17,32 @@
 
 ---
 
+## 🌿 Branching & Deployment Strategy
+
+> **The live site only ever reflects `main`. All in-progress work lives on `staging` until it is ready to ship.**
+
+- **`main`** — the production branch. It is the **only** branch Vercel deploys to the live domain. A change goes live exactly when it is merged into `main` (whether from `staging` or from a feature branch).
+- **`staging`** — the day-to-day working/integration branch, cut from `main`. Internal users test here. Vercel auto-deploys it as a **Preview** with a stable staging URL. **Do not commit feature work directly to `main`.**
+- **Feature branches** — cut from `staging` (or `main`), merged back into `staging` for internal testing, and promoted to `main` only when ready for the public.
+
+```
+feature/* ──▶ staging ──▶ main ──▶ 🚀 live site
+                  ▲                    (Vercel Production = main)
+            internal testing
+          (Vercel Preview deploy)
+```
+
+### Preview-feature gating (`NEXT_PUBLIC_VERCEL_ENV`)
+
+Some features are merged but must stay hidden from external users on the live site until launch. This is gated by deployment environment, **not** user role:
+
+- **Canonical mechanism:** `src/lib/feature-flags.ts` exports `PREVIEW_FEATURES_ENABLED` (true on every non-production deploy — staging, feature previews, local dev — and false only on the production deploy of `main`) and `guardPreviewFeature()` (call it as the first line of a Server Component/layout to return a hard `404` on production).
+- `NEXT_PUBLIC_VERCEL_ENV` is injected automatically by Vercel — **never set it manually**, and never gate features off raw user role for this purpose.
+- To hide an in-progress route from the live site: wrap its route group in a `layout.tsx` (or guard the page) with `guardPreviewFeature()`, and conditionally drop its nav/footer links behind `PREVIEW_FEATURES_ENABLED`. Remove it from `public/llms.txt` and add it to `public/robots.txt` `Disallow`.
+- **Currently gated (404 on live, visible on staging):** `/events`, `/become-a-member`, `/milestones`. Note: `/become-a-member` is the sign-in page, so login/admin access happens on the **staging URL** (which shares the same Supabase project/DB) while these features are gated.
+
+---
+
 ## ⚖️ Core Philosophy
 
 Code quality is non-negotiable. Every line written must be:
