@@ -34,7 +34,7 @@ export default function MilestonesPage() {
         </Link>
 
         <div className='mb-10 text-center'>
-          <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-2'>Community Rewards</p>
+          <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-2'>Community Rewards</p>
           <h1 className='text-3xl font-bold text-white mb-3'>Stride Milestones</h1>
           <p className='text-white/50 text-sm leading-relaxed max-w-sm mx-auto'>
             Run with us. Earn your badge. Unlock real rewards for showing up.

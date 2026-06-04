@@ -98,7 +98,7 @@ export default async function BlogPostPage({ params }: Props) {
           <div className='mb-10'>
             <Link
               href='/blog'
-              className='inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white font-roboto transition-colors duration-150 cursor-pointer'
+              className='inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white font-figtree transition-colors duration-150 cursor-pointer'
             >
               <ArrowLeft className='w-3.5 h-3.5' />
               Blog Hub
@@ -112,7 +112,7 @@ export default async function BlogPostPage({ params }: Props) {
               {post.tags.map((tag) => (
                 <span
                   key={tag}
-                  className='text-xs bg-stride-yellow-accent/10 text-stride-yellow-accent rounded-full px-2.5 py-0.5 border border-stride-yellow-accent/20 font-roboto'
+                  className='text-xs bg-stride-yellow-accent/10 text-stride-yellow-accent rounded-full px-2.5 py-0.5 border border-stride-yellow-accent/20 font-figtree'
                 >
                   {tag}
                 </span>
@@ -120,7 +120,7 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
 
             {/* Date */}
-            <p className='text-sm text-white/40 font-roboto mb-4 tracking-wide'>
+            <p className='text-sm text-white/40 font-figtree mb-4 tracking-wide'>
               {formatDate(post.publishedAt)}
             </p>
 
@@ -149,7 +149,7 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
 
           {/* ── Description ── */}
-          <p className='mt-8 text-white/60 font-roboto text-lg leading-relaxed'>
+          <p className='mt-8 text-white/60 font-figtree text-lg leading-relaxed'>
             {post.description}
           </p>
 
@@ -162,7 +162,7 @@ export default async function BlogPostPage({ params }: Props) {
           {/* ── End CTA ── */}
           <div className='mt-16 pt-12 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6'>
             <div>
-              <p className='text-xs uppercase tracking-[0.2em] text-stride-yellow-accent font-roboto mb-1'>
+              <p className='text-xs font-mono uppercase tracking-[0.2em] text-stride-yellow-accent mb-1'>
                 Run with us
               </p>
               <p className='font-libre text-2xl font-bold text-white'>
@@ -173,7 +173,7 @@ export default async function BlogPostPage({ params }: Props) {
               href='https://www.instagram.com/stride_runclub_bengaluru/'
               target='_blank'
               rel='noopener noreferrer'
-              className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-semibold text-sm px-6 py-3 rounded-md hover:bg-stride-yellow-accent/90 transition-colors font-roboto shrink-0'
+              className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-semibold text-sm px-6 py-3 rounded-md hover:bg-stride-yellow-accent/90 transition-colors font-figtree shrink-0'
             >
               See upcoming runs
             </Link>

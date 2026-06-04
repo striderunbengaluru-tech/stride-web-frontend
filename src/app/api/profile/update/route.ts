@@ -12,7 +12,7 @@ const httpUrl = z.string().url().refine(
 
 const schema = z.object({
   name: z.string().trim().min(1).max(500).regex(NAME_RE, 'Name can only contain letters').optional(),
-  bio: z.string().max(500).optional(),
+  bio: z.string().max(300).optional(),
   location: z.string().max(100).optional(),
   skills: z.array(z.string()).max(3).optional(),
   linkedinUrl: httpUrl.optional().or(z.literal('')),

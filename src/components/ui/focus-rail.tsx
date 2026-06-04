@@ -296,7 +296,7 @@ export function FocusRail({
                   )}
                 </div>
                 {activeItem.date && (
-                  <span className='text-xs font-medium uppercase tracking-wider text-stride-yellow-accent font-roboto'>
+                  <span className='text-xs font-medium font-mono uppercase tracking-wider text-stride-yellow-accent'>
                     {formatDate(activeItem.date)}
                   </span>
                 )}
@@ -309,7 +309,7 @@ export function FocusRail({
 
               {/* Subtitle */}
               {activeItem.subtitle && (
-                <p className='text-copy-white/60 text-sm font-roboto line-clamp-2'>
+                <p className='text-copy-white/60 text-sm font-figtree line-clamp-2'>
                   {activeItem.subtitle}
                 </p>
               )}

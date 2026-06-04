@@ -35,7 +35,7 @@ export function PostCard({ post, featured = false }: Props) {
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className='text-xs bg-stride-yellow-accent/15 text-stride-yellow-accent rounded-full px-2.5 py-0.5 backdrop-blur-sm border border-stride-yellow-accent/20 font-roboto'
+                className='text-xs bg-stride-yellow-accent/15 text-stride-yellow-accent rounded-full px-2.5 py-0.5 backdrop-blur-sm border border-stride-yellow-accent/20 font-figtree'
               >
                 {tag}
               </span>
@@ -44,8 +44,8 @@ export function PostCard({ post, featured = false }: Props) {
         </div>
 
         <div className='p-6 md:p-8'>
-          <div className='flex items-center gap-3 mb-3 text-xs text-white/40 font-roboto'>
-            <span className='uppercase tracking-wider'>{formatDate(post.publishedAt)}</span>
+          <div className='flex items-center gap-3 mb-3 text-xs text-white/40 font-figtree'>
+            <span className='font-mono uppercase tracking-wider'>{formatDate(post.publishedAt)}</span>
             <span className='text-white/20'>·</span>
             <span className='flex items-center gap-1'>
               <Clock className='w-3 h-3' />
@@ -55,10 +55,10 @@ export function PostCard({ post, featured = false }: Props) {
           <h2 className='font-libre text-2xl md:text-3xl font-bold text-white mb-3 leading-snug group-hover:text-stride-yellow-accent transition-colors duration-200'>
             {post.title}
           </h2>
-          <p className='text-white/55 font-roboto text-sm md:text-base leading-relaxed mb-6 line-clamp-2'>
+          <p className='text-white/55 font-figtree text-sm md:text-base leading-relaxed mb-6 line-clamp-2'>
             {post.description}
           </p>
-          <div className='inline-flex items-center gap-2 text-sm font-semibold text-stride-yellow-accent font-roboto'>
+          <div className='inline-flex items-center gap-2 text-sm font-semibold text-stride-yellow-accent font-figtree'>
             Read story
             <ArrowUpRight className='w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5' />
           </div>
@@ -88,7 +88,7 @@ export function PostCard({ post, featured = false }: Props) {
           {post.tags.map((tag) => (
             <span
               key={tag}
-              className='text-xs bg-stride-yellow-accent/10 text-stride-yellow-accent rounded-full px-2.5 py-0.5 font-roboto'
+              className='text-xs bg-stride-yellow-accent/10 text-stride-yellow-accent rounded-full px-2.5 py-0.5 font-figtree'
             >
               {tag}
             </span>
@@ -98,12 +98,12 @@ export function PostCard({ post, featured = false }: Props) {
         <h3 className='font-libre text-lg font-bold text-white mb-2 leading-snug line-clamp-2 group-hover:text-stride-yellow-accent transition-colors duration-200'>
           {post.title}
         </h3>
-        <p className='text-white/50 font-roboto text-sm leading-relaxed line-clamp-2 flex-1'>
+        <p className='text-white/50 font-figtree text-sm leading-relaxed line-clamp-2 flex-1'>
           {post.description}
         </p>
 
         <div className='flex items-center justify-between mt-4 pt-4 border-t border-white/8'>
-          <div className='flex items-center gap-2 text-xs text-white/35 font-roboto'>
+          <div className='flex items-center gap-2 text-xs text-white/35 font-figtree'>
             <Clock className='w-3 h-3' />
             <span>{post.readingTimeMin} min</span>
             <span className='text-white/20'>·</span>

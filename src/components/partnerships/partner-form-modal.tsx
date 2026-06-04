@@ -86,7 +86,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             >
               <X size={15} />
             </button>
-            <p className='text-stride-yellow-accent text-[10px] font-semibold uppercase tracking-[0.2em] mb-1.5'>
+            <p className='text-stride-yellow-accent text-[10px] font-semibold font-mono uppercase tracking-[0.2em] mb-1.5'>
               Let&apos;s build together
             </p>
             <h2 className='text-white text-2xl font-bold font-libre leading-tight'>
@@ -104,7 +104,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
           <form onSubmit={handleSubmit} className='px-7 pt-5 pb-7 flex flex-col gap-4 text-left'>
 
             <div className='flex flex-col gap-1.5'>
-              <label htmlFor='p-name' className='text-white/55 text-xs font-medium uppercase tracking-wide'>
+              <label htmlFor='p-name' className='text-white/55 text-xs font-medium font-mono uppercase tracking-wide'>
                 Your Name
               </label>
               <input
@@ -119,7 +119,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <label htmlFor='p-instagram' className='text-white/55 text-xs font-medium uppercase tracking-wide'>
+              <label htmlFor='p-instagram' className='text-white/55 text-xs font-medium font-mono uppercase tracking-wide'>
                 Instagram Handle
               </label>
               <input
@@ -134,7 +134,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <label htmlFor='p-website' className='text-white/55 text-xs font-medium uppercase tracking-wide'>
+              <label htmlFor='p-website' className='text-white/55 text-xs font-medium font-mono uppercase tracking-wide'>
                 Website Link
               </label>
               <input
@@ -149,7 +149,7 @@ export default function PartnerFormModal({ open, onClose }: Props) {
             </div>
 
             <div className='flex flex-col gap-2'>
-              <p className='text-white/55 text-xs font-medium uppercase tracking-wide'>
+              <p className='text-white/55 text-xs font-medium font-mono uppercase tracking-wide'>
                 Looking for a commercial arrangement?
               </p>
               <div className='flex gap-3'>

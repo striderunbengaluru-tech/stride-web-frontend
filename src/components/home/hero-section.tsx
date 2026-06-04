@@ -28,7 +28,7 @@ const HeroSection = () => {
             <line x1='11' y1='13' x2='11' y2='7' stroke='rgba(225,208,63,0.25)' strokeWidth='1' strokeLinecap='round' />
             <circle className='scroll-dot' cx='11' cy='26' r='2.5' fill='#E1D03F' style={{ animation: 'hero-scroll-dot 1.8s ease-in-out infinite' }} />
           </svg>
-          <span className='text-[10px] text-copy-white/45 font-medium tracking-[0.22em] uppercase'>
+          <span className='text-[10px] text-copy-white/45 font-medium tracking-[0.22em] font-mono uppercase'>
             {scrollToExpand}
           </span>
         </div>

@@ -50,7 +50,7 @@ export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccord
                       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     />
                     <motion.span
-                      className='relative z-10 text-sm font-medium tracking-wide font-roboto'
+                      className='relative z-10 text-sm font-medium tracking-wide font-figtree'
                       animate={{ color: isActive ? '#4B2862' : 'rgba(255,255,255,0.5)' }}
                       transition={{ duration: 0.2 }}
                     >
@@ -129,7 +129,7 @@ export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccord
                     className='overflow-hidden'
                   >
                     <motion.p
-                      className='pl-14 sm:pl-16 pr-10 py-5 text-copy-white/60 leading-relaxed text-sm sm:text-base font-roboto'
+                      className='pl-14 sm:pl-16 pr-10 py-5 text-copy-white/60 leading-relaxed text-sm sm:text-base font-figtree'
                       initial={{ y: -8 }}
                       animate={{ y: 0 }}
                       exit={{ y: -8 }}

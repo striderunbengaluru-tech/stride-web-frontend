@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, X, Check, MapPin, Linkedin, Instagram, Activity, User } from 'lucide-react'
+import { Pencil, X, Check, MapPin, User } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { RoleBadge } from '@/utils/profile'
+import { InstagramIcon, StravaIcon, LinkedInIcon, XIcon } from '@/components/ui/brand-icons'
+import { LocationSelect } from '@/components/profile/location-select'
 import type { UserProfile } from '@/types/user'
 
 type Props = {
@@ -18,15 +20,6 @@ type Props = {
   role: UserProfile['role']
   joinedLabel: string
   isOwnProfile: boolean
-}
-
-// X (Twitter) logo — lucide's Twitter is the old bird, so we inline the current mark.
-function XLogo({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox='0 0 24 24' fill='currentColor' aria-hidden='true'>
-      <path d='M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' />
-    </svg>
-  )
 }
 
 // Name must contain at least one letter and only letters / spaces / ' . - (no digits).
@@ -157,21 +150,22 @@ export function EditHeaderSection({
       <div className='mt-1 space-y-4 text-left'>
         {/* Identity */}
         <div className='space-y-2.5'>
-          <p className='text-white/30 text-[10px] font-semibold uppercase tracking-widest'>Details</p>
+          <p className='text-white/30 text-[10px] font-semibold font-mono uppercase tracking-widest'>Details</p>
           <div className='flex flex-col gap-2.5'>
             <IconInput icon={<User size={15} className='text-white/40' />} placeholder='Display name' value={name} onChange={setName} autoFocus />
-            <IconInput icon={<MapPin size={15} className='text-white/40' />} placeholder='Location (e.g. Bengaluru)' value={location} onChange={setLocation} />
+            <LocationSelect icon={<MapPin size={15} className='text-white/40' />} value={location} onChange={setLocation} />
           </div>
         </div>
 
-        {/* Social links — stacked full-width so long URLs stay readable */}
+        {/* Social links — stacked full-width so long URLs stay readable.
+            Order: Instagram · Strava · LinkedIn · X. */}
         <div className='space-y-2.5'>
-          <p className='text-white/30 text-[10px] font-semibold uppercase tracking-widest'>Social links</p>
+          <p className='text-white/30 text-[10px] font-semibold font-mono uppercase tracking-widest'>Social links</p>
           <div className='flex flex-col gap-2.5'>
-            <IconInput icon={<Linkedin size={15} className='text-[#0A66C2]' />} placeholder='LinkedIn URL' value={linkedin} onChange={setLinkedin} />
-            <IconInput icon={<Instagram size={15} className='text-[#E1306C]' />} placeholder='Instagram URL' value={instagram} onChange={setInstagram} />
-            <IconInput icon={<XLogo size={14} />} placeholder='X (Twitter) URL' value={x} onChange={setX} />
-            <IconInput icon={<Activity size={15} className='text-[#FC4C02]' />} placeholder='Strava URL' value={strava} onChange={setStrava} />
+            <IconInput icon={<InstagramIcon className='w-[15px] h-[15px] text-[#E1306C]' />} placeholder='Instagram URL' value={instagram} onChange={setInstagram} />
+            <IconInput icon={<StravaIcon className='w-[15px] h-[15px] text-[#FC4C02]' />} placeholder='Strava URL' value={strava} onChange={setStrava} />
+            <IconInput icon={<LinkedInIcon className='w-[15px] h-[15px] text-[#0A66C2]' />} placeholder='LinkedIn URL' value={linkedin} onChange={setLinkedin} />
+            <IconInput icon={<XIcon className='w-[14px] h-[14px] text-white' />} placeholder='X (Twitter) URL' value={x} onChange={setX} />
           </div>
         </div>
 
@@ -218,28 +212,28 @@ export function EditHeaderSection({
 
       {hasSocials && (
         <div className='flex gap-2.5 mt-4 justify-center'>
-          {linkedin && (
-            <a href={linkedin} target='_blank' rel='noopener noreferrer'
-              className={`${SOCIAL_BTN} hover:text-[#0A66C2] hover:border-[#0A66C2]/40`} aria-label='LinkedIn'>
-              <Linkedin size={16} />
-            </a>
-          )}
           {instagram && (
             <a href={instagram} target='_blank' rel='noopener noreferrer'
               className={`${SOCIAL_BTN} hover:text-[#E1306C] hover:border-[#E1306C]/40`} aria-label='Instagram'>
-              <Instagram size={16} />
-            </a>
-          )}
-          {x && (
-            <a href={x} target='_blank' rel='noopener noreferrer'
-              className={`${SOCIAL_BTN} hover:text-white hover:border-white/40`} aria-label='X (Twitter)'>
-              <XLogo size={15} />
+              <InstagramIcon className='w-4 h-4' />
             </a>
           )}
           {strava && (
             <a href={strava} target='_blank' rel='noopener noreferrer'
               className={`${SOCIAL_BTN} hover:text-[#FC4C02] hover:border-[#FC4C02]/40`} aria-label='Strava'>
-              <Activity size={16} />
+              <StravaIcon className='w-4 h-4' />
+            </a>
+          )}
+          {linkedin && (
+            <a href={linkedin} target='_blank' rel='noopener noreferrer'
+              className={`${SOCIAL_BTN} hover:text-[#0A66C2] hover:border-[#0A66C2]/40`} aria-label='LinkedIn'>
+              <LinkedInIcon className='w-4 h-4' />
+            </a>
+          )}
+          {x && (
+            <a href={x} target='_blank' rel='noopener noreferrer'
+              className={`${SOCIAL_BTN} hover:text-white hover:border-white/40`} aria-label='X (Twitter)'>
+              <XIcon className='w-[15px] h-[15px]' />
             </a>
           )}
         </div>

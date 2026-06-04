@@ -7,6 +7,7 @@ Disallow: /events/
 Disallow: /become-a-member/
 Disallow: /milestones/
 Disallow: /team/
+Disallow: /my-runs/
 Disallow: /login/
 Disallow: /register/
 

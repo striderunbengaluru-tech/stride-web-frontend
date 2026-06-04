@@ -95,7 +95,7 @@ function PodiumCard({
       </p>
 
       {/* Stat */}
-      <p className='text-white/50 text-xs'>
+      <p className='text-white/50 text-xs font-mono'>
         {statValue}
       </p>
 
@@ -183,9 +183,9 @@ export default function LeaderboardClient({
         {/* Table */}
         {tableRows.length > 0 && (
           <div className='bg-white/5 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden'>
-            <div className='grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_auto] px-5 py-3 border-b border-white/10 text-stride-yellow-accent text-xs font-bold uppercase tracking-widest'>
+            <div className='grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_auto] px-5 py-3 border-b border-white/10 text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-widest'>
               <span>Rank</span>
-              <span>Runner</span>
+              <span>Athlete</span>
               <span className='hidden sm:block text-right'>
                 {tab === 'runs' ? 'Runs' : 'Distance'}
               </span>
@@ -207,7 +207,7 @@ export default function LeaderboardClient({
                   href={`/profile/${user.username}`}
                   className='grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_auto] px-5 py-3.5 border-b border-white/5 hover:bg-white/5 transition-colors last:border-0 items-center'
                 >
-                  <span className='text-white/40 font-bold text-sm'>#{rank}</span>
+                  <span className='text-white/40 font-bold text-sm font-mono'>#{rank}</span>
                   <div className='flex items-center gap-3 min-w-0'>
                     <Avatar user={user} size='sm' />
                     <div className='min-w-0'>
@@ -217,7 +217,7 @@ export default function LeaderboardClient({
                       <p className='text-white/40 text-xs'>@{user.username}</p>
                     </div>
                   </div>
-                  <span className='text-white/70 text-sm font-semibold text-right'>{stat}</span>
+                  <span className='text-white/70 text-sm font-semibold text-right font-mono'>{stat}</span>
                 </Link>
               )
             })}
@@ -250,7 +250,7 @@ export default function LeaderboardClient({
         {list.length === 0 && (
           <div className='text-center py-20 text-white/40'>
             <Trophy className='w-12 h-12 mx-auto mb-4 opacity-30' />
-            <p>No runners yet. Be the first to show up!</p>
+            <p>No athletes yet. Be the first to show up!</p>
           </div>
         )}
       </section>

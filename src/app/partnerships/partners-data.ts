@@ -27,7 +27,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
   {
     id: 'apparel',
     label: 'Apparel',
-    description: 'From race-day kits to streetwear — runners are repeat buyers of quality apparel.',
+    description: 'From race-day kits to streetwear — athletes are repeat buyers of quality apparel.',
     partners: [
       { id: 'puma', name: 'Puma', logoUrl: `${SUPABASE_LOGOS}/puma-logo.svg` },
       { id: 'ua', name: 'Under Armour', logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg` },
@@ -49,7 +49,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
     id: 'fnb',
     label: 'Food & Beverage',
     description:
-      'Fuel before, during, and after the run — Stride runners eat out, caffeinate, and celebrate together.',
+      'Fuel before, during, and after the run — Stride athletes eat out, caffeinate, and celebrate together.',
     partners: [
       { id: 'redbull', name: 'Red Bull', logoUrl: `${SUPABASE_LOGOS}/red-bull-logo.svg` },
       {
@@ -152,7 +152,7 @@ export const WHY_US: WhyUsItem[] = [
     id: 'irl',
     title: 'Real-World Brand Moments',
     body: 'Among the only social run clubs in India running three times a week across formats — beginner, intermediate, and advanced. Your brand shows up at every single one.',
-    badges: ['3 runs per week', 'All runner levels'],
+    badges: ['3 runs per week', 'All athlete levels'],
   },
   {
     id: 'women',

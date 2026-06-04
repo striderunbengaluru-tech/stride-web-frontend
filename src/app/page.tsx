@@ -13,12 +13,12 @@ const CANONICAL_URL = 'https://www.strideclub.in/'
 export const metadata: Metadata = {
   title: 'Stride Run Club Bengaluru — Move as One',
   description:
-    "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here. Join Stride Run Club.",
+    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here. Join Stride Run Club.",
   keywords: [
     'Stride Run Club',
     'running club Bengaluru',
     'running club Bangalore',
-    'Bengaluru runners',
+    'Bengaluru athletes',
     'run club India',
     'community running',
     'beginner running',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here.",
+      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here.",
     url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year.",
+      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
     images: [OG_IMAGE],
   },
   alternates: {
@@ -68,7 +68,7 @@ const schemaOrg = {
       url: SITE_ORIGIN,
       name: 'Stride Run Club',
       description:
-        "Bengaluru's most engaged running community — 6,894 runners, 52,000+ Instagram followers, and 97+ events per year.",
+        "Bengaluru's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year.",
       publisher: { '@id': `${SITE_ORIGIN}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
@@ -85,7 +85,7 @@ const schemaOrg = {
       url: CANONICAL_URL,
       name: 'Stride Run Club Bengaluru — Move as One',
       description:
-        "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year.",
+        "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
       image: OG_IMAGE,
       inLanguage: 'en-IN',
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
@@ -116,7 +116,7 @@ const schemaOrg = {
       },
       image: OG_IMAGE,
       description:
-        "India's most engaged running community — 6,894 runners, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
+        "India's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
       foundingDate: '2022',
       location: {
         '@type': 'Place',

@@ -232,7 +232,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     )}
                     {u.runner_tag && !isDeactivated && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
                     {isDeactivated && (
-                      <span className='text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                      <span className='text-[10px] font-bold font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
                         Deactivated
                       </span>
                     )}
@@ -307,7 +307,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
 
                   {/* Profile facts grid */}
                   <div className='px-4 py-4'>
-                    <p className='text-white/25 text-[10px] uppercase tracking-widest mb-3'>Profile</p>
+                    <p className='text-white/25 text-[10px] font-mono uppercase tracking-widest mb-3'>Profile</p>
                     <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3'>
                       <Fact icon={<CalendarPlus size={12} />} label='Joined' value={fmtDate(u.created_at)} />
                       <Fact icon={<Activity size={12} />} label='Last active' value={u.last_active_at ? fmtDate(u.last_active_at) : '—'} />
@@ -327,7 +327,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     </div>
                     {u.bio && (
                       <div className='mt-4 pt-3 border-t border-white/5'>
-                        <p className='text-white/25 text-[10px] uppercase tracking-widest mb-1.5'>Bio</p>
+                        <p className='text-white/25 text-[10px] font-mono uppercase tracking-widest mb-1.5'>Bio</p>
                         <p className='text-white/60 text-sm leading-snug line-clamp-3'>{u.bio}</p>
                       </div>
                     )}
@@ -336,7 +336,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   {/* Run history */}
                   {u.runs.length > 0 && (
                     <div className='px-4 py-3 border-t border-white/5 space-y-2'>
-                      <p className='text-white/25 text-[10px] uppercase tracking-widest mb-2.5'>Run history</p>
+                      <p className='text-white/25 text-[10px] font-mono uppercase tracking-widest mb-2.5'>Run history</p>
                       {u.runs.map((run, i) => (
                         <div key={i} className='flex items-center justify-between gap-3'>
                           <p className='text-white/65 text-sm truncate'>{run.eventName}</p>
@@ -362,7 +362,7 @@ function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; va
         {icon}
       </span>
       <div className='min-w-0 flex-1'>
-        <p className='text-white/30 text-[10px] uppercase tracking-widest'>{label}</p>
+        <p className='text-white/30 text-[10px] font-mono uppercase tracking-widest'>{label}</p>
         <p className='text-white/75 text-sm truncate'>{value}</p>
       </div>
     </div>

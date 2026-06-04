@@ -10,14 +10,14 @@ export default function FaqSection() {
 
         {/* Section heading */}
         <div className='mb-8 md:mb-12'>
-          <p className='text-stride-yellow-accent text-xs font-medium tracking-widest uppercase mb-4 font-roboto'>
+          <p className='text-stride-yellow-accent text-xs font-medium tracking-widest font-mono uppercase mb-4'>
             Got questions?
           </p>
           <h2 className='font-libre text-4xl md:text-5xl font-bold text-copy-white mb-4 leading-tight'>
             Everything you need to{' '}
             <span className='text-stride-yellow-accent'>know</span>
           </h2>
-          <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-roboto'>
+          <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-figtree'>
             Before lacing up and joining the pack — here are answers to our most common questions.
           </p>
         </div>

@@ -9,9 +9,13 @@
   --color-copy-white: #ffffff;            /* Text on dark/purple surfaces */
   --color-copy-black: #010101;            /* Text on light/yellow surfaces */
 
-  /* ── Font Families ── */
+  /* ── Font Families ──
+     Titles → Libre Baskerville · Body → Figtree · Uppercase (eyebrows,
+     footer/metric headers) → Geist Mono. `--font-mono` is wired so the
+     Tailwind `font-mono` utility resolves to Geist Mono. */
   --font-heading: var(--font-libre-baskerville);
-  --font-body: var(--font-roboto);
+  --font-body: var(--font-figtree);
+  --font-mono: var(--font-geist-mono);
 }
 
 html {
@@ -27,7 +31,7 @@ button:disabled {
 }
 
 body {
-  font-family: var(--font-roboto), sans-serif;
+  font-family: var(--font-figtree), sans-serif;
   background-color: rgba(75, 40, 98, 0.94); /* deep purple — stride brand */
   color: #ffffff;
 }
@@ -41,8 +45,22 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-libre-baskerville), serif;
 }
 
-.font-roboto {
-  font-family: var(--font-roboto), sans-serif;
+.font-figtree {
+  font-family: var(--font-figtree), sans-serif;
+}
+
+/* Geist Mono for every `font-mono` usage (eyebrows, footer/metric headers).
+   Declared unlayered so it reliably beats Tailwind's layered `font-mono`
+   utility regardless of how the `--font-mono` theme token resolves. */
+.font-mono {
+  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Uppercase eyebrow / kicker / metric-label / footer-header style.
+   Use on small all-caps labels so they render in Geist Mono. */
+.font-eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  text-transform: uppercase;
 }
 
 /* ── Utility: yellow glow — used for active nav indicator dot ── */

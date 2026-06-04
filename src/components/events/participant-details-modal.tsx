@@ -223,7 +223,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             <div className='shrink-0 px-6 pt-6 pb-4 border-b border-white/8'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='min-w-0'>
-                  <span className='inline-flex items-center gap-2 text-stride-yellow-accent text-[10px] font-bold tracking-[0.2em] uppercase mb-2.5'>
+                  <span className='inline-flex items-center gap-2 text-stride-yellow-accent text-[10px] font-bold tracking-[0.2em] font-mono uppercase mb-2.5'>
                     <span className='w-1.5 h-1.5 rounded-full bg-stride-yellow-accent animate-pulse' />
                     Final step
                   </span>
@@ -335,7 +335,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <div className='pt-4 mt-2 border-t border-white/8 space-y-4'>
                 <div className='flex items-center gap-2'>
                   <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
-                  <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-[0.2em]'>Event-specific questions</p>
+                  <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Event-specific questions</p>
                 </div>
                 {additionalFields.map(field => (
                   <div key={field.id}>
@@ -382,7 +382,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
                 <div className='flex items-center gap-2'>
                   <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
-                  <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
+                  <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
                 </div>
                 <div className='max-h-44 overflow-y-auto rounded-lg bg-white/5 border border-white/12 px-4 py-3 prose prose-invert prose-xs max-w-none prose-p:text-white/70 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-1.5 prose-ol:my-1.5 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                   <ReactMarkdown>{termsAndConditions ?? ''}</ReactMarkdown>

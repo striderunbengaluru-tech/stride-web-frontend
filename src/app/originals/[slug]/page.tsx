@@ -47,7 +47,7 @@ export default async function OriginalsPage({ params }: Props) {
 
       {/* Hero */}
       <section className='px-6 py-10 md:py-16 max-w-5xl mx-auto'>
-        <span className='inline-block text-xs uppercase tracking-widest text-stride-yellow-accent font-medium mb-6 px-3 py-1 rounded-full border border-stride-yellow-accent/30 bg-stride-yellow-accent/10'>
+        <span className='inline-block text-xs font-mono uppercase tracking-widest text-stride-yellow-accent font-medium mb-6 px-3 py-1 rounded-full border border-stride-yellow-accent/30 bg-stride-yellow-accent/10'>
           {heroLabel}
         </span>
         <h1 className='text-4xl md:text-6xl lg:text-7xl font-bold font-libre text-copy-white mb-4 leading-tight'>
@@ -72,7 +72,7 @@ export default async function OriginalsPage({ params }: Props) {
               <p className='text-2xl md:text-3xl font-bold font-libre text-stride-yellow-accent mb-1'>
                 {value}
               </p>
-              <p className='text-copy-white/50 text-xs uppercase tracking-wide'>{label}</p>
+              <p className='text-copy-white/50 text-xs font-mono uppercase tracking-wide'>{label}</p>
             </div>
           ))}
         </div>
@@ -97,7 +97,7 @@ export default async function OriginalsPage({ params }: Props) {
 
       {/* Other originals */}
       <section className='px-6 py-10 max-w-5xl mx-auto'>
-        <p className='text-xs uppercase tracking-widest text-copy-white/40 font-medium mb-6'>
+        <p className='text-xs font-mono uppercase tracking-widest text-copy-white/40 font-medium mb-6'>
           More Originals
         </p>
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>

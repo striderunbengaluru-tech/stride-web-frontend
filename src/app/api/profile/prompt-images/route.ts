@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   if (!file.type.startsWith('image/')) return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
-  if (file.size > 8 * 1024 * 1024) return NextResponse.json({ error: 'Image must be under 8 MB' }, { status: 400 })
+  if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: 'Image too big — please try a smaller file (under 10 MB).' }, { status: 400 })
   if (!prompt) return NextResponse.json({ error: 'Please choose a prompt' }, { status: 400 })
   if (prompt.length > 80) return NextResponse.json({ error: 'Prompt is too long' }, { status: 400 })
 

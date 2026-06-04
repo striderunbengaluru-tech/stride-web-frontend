@@ -71,7 +71,7 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
   if (!stravaConnected) {
     return (
       <div className='mt-8'>
-        <p className='text-white/40 text-xs uppercase tracking-widest mb-3'>Strava</p>
+        <p className='text-white/40 text-xs font-mono uppercase tracking-widest mb-3'>Strava</p>
         <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5'>
           <div className='flex items-center gap-2 mb-2'>
             <Image src={STRAVA_ICON} alt='Strava' width={16} height={16} />
@@ -97,7 +97,7 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
     <div className='mt-8'>
       <div className='flex items-center justify-between mb-3'>
         <div className='flex items-center gap-2'>
-          <p className='text-white/40 text-xs uppercase tracking-widest'>Strava</p>
+          <p className='text-white/40 text-xs font-mono uppercase tracking-widest'>Strava</p>
           {stravaSyncedAt && (
             <span className='text-white/25 text-xs'>
               · {formatRelativeDate(stravaSyncedAt)}
@@ -130,7 +130,7 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
       {/* Personal Bests */}
       {hasPbs && (
         <div className='mb-5'>
-          <p className='text-white/30 text-xs uppercase tracking-wider mb-2'>Personal Bests</p>
+          <p className='text-white/30 text-xs font-mono uppercase tracking-wider mb-2'>Personal Bests</p>
           <div className='grid grid-cols-5 gap-2'>
             {PB_LABELS.map(({ key, label }) => {
               const pb = stravaPbs[key]
@@ -139,7 +139,7 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
                   key={key}
                   className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3 flex flex-col items-center text-center'
                 >
-                  <span className='text-white/40 text-[10px] uppercase tracking-wider mb-1'>{label}</span>
+                  <span className='text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1'>{label}</span>
                   {pb ? (
                     <>
                       <span className='text-white font-bold text-sm tabular-nums'>{formatTime(pb.time)}</span>
@@ -167,7 +167,7 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
       {/* Recent Workouts */}
       {hasActivities && (
         <div>
-          <p className='text-white/30 text-xs uppercase tracking-wider mb-2'>Recent Workouts</p>
+          <p className='text-white/30 text-xs font-mono uppercase tracking-wider mb-2'>Recent Workouts</p>
           <div className='space-y-2'>
             {stravaRecentActivities.map((act) => (
               <div

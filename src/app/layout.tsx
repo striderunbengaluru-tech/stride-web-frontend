@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Libre_Baskerville, Roboto } from "next/font/google";
+import { Libre_Baskerville, Figtree, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Navbar from "@/components/layout/navbar";
@@ -16,10 +16,16 @@ const libreBaskerville = Libre_Baskerville({
   style: ["normal", "italic"],
 });
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const SITE_URL = 'https://www.strideclub.in'
@@ -31,7 +37,7 @@ export const metadata: Metadata = {
     template: '%s | Stride Run Club',
   },
   description:
-    "Bengaluru's most engaged running community. 52,000+ followers, 6,894 runners, 97+ events a year. Join Stride Run Club.",
+    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Join Stride Run Club.",
   keywords: ['Stride Run Club', 'Bengaluru running', 'running community', 'group runs Bengaluru', '10K', 'half marathon', 'marathon training'],
   openGraph: {
     type: 'website',
@@ -39,7 +45,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: 'Stride Run Club',
     title: 'Stride Run Club Bengaluru — Move as One',
-    description: "Bengaluru's most engaged running community. Join group runs, earn milestones, and get your shareable runner profile.",
+    description: "Bengaluru's most engaged running community. Join group runs, earn milestones, and get your shareable athlete profile.",
   },
   twitter: {
     card: 'summary_large_image',
@@ -87,7 +93,7 @@ const jsonLd = {
       url: SITE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/assets/images/stride-logo-full.webp`,
+        url: `${SITE_URL}/assets/images/stride-logo-color-transparent.svg`,
         width: 280,
         height: 92,
       },
@@ -117,7 +123,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${libreBaskerville.variable} ${roboto.variable} font-body antialiased`}
+        className={`${libreBaskerville.variable} ${figtree.variable} ${geistMono.variable} font-body antialiased`}
         suppressHydrationWarning
       >
         <AuthProvider>

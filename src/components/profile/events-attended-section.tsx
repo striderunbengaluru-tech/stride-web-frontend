@@ -42,7 +42,7 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center gap-2'>
           <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
-          <h2 className='text-white font-semibold text-sm tracking-wide'>Runs with Stride</h2>
+          <h2 className='text-white font-semibold text-sm tracking-wide'>Runs with Stride Run Club</h2>
         </div>
         {totalCount > 0 && (
           <span className='text-white/30 text-xs'>
@@ -116,7 +116,7 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
                   ) : (
                     <div className='absolute inset-0 bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/20' />
                   )}
-                  <span className='absolute top-1.5 right-1.5 bg-stride-yellow-accent text-copy-black text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider'>
+                  <span className='absolute top-1.5 right-1.5 bg-stride-yellow-accent text-copy-black text-[8px] font-bold px-1.5 py-0.5 rounded-full font-mono uppercase tracking-wider'>
                     Attended
                   </span>
                 </div>

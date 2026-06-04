@@ -46,7 +46,7 @@ export const ORIGINALS: Record<string, Original> = {
     description:
       'For many women, the biggest barrier to running isn\'t fitness — it\'s safety. Stride Like a Woman creates a space that\'s intentionally designed for women to run free.',
     longDescription:
-      'Stride Like a Woman is our women-only running event series. Led by women, paced by women, powered by the belief that every woman deserves to feel safe on the roads. We\'ve hosted events at Cubbon Park, partnered with wellness brands, and created a community of runners who show up for each other every single time.',
+      'Stride Like a Woman is our women-only running event series. Led by women, paced by women, powered by the belief that every woman deserves to feel safe on the roads. We\'ve hosted events at Cubbon Park, partnered with wellness brands, and created a community of athletes who show up for each other every single time.',
     highlights: [
       { label: 'Women-only', value: '100%' },
       { label: 'Flagship venue', value: 'Cubbon Park' },
@@ -64,9 +64,9 @@ export const ORIGINALS: Record<string, Original> = {
     tagline: 'Run. Create. Inspire.',
     heroLabel: 'Stride Originals',
     description:
-      'A 4-week bootcamp for runners who want to start creating content. Build your personal brand while building your fitness — with professional photography, merch, and a community that amplifies you.',
+      'A 4-week bootcamp for athletes who want to start creating content. Build your personal brand while building your fitness — with professional photography, merch, and a community that amplifies you.',
     longDescription:
-      'The Stride Creator Program is invite-only. We pick runners who have a story to tell and teach them to tell it. Over 4 weeks, creators run with us, get professional photography sessions, receive Stride merchandise, and build a following. The best content earns bonus merch and shoutouts on our 51K+ platform.',
+      'The Stride Creator Program is invite-only. We pick athletes who have a story to tell and teach them to tell it. Over 4 weeks, creators run with us, get professional photography sessions, receive Stride merchandise, and build a following. The best content earns bonus merch and shoutouts on our 51K+ platform.',
     highlights: [
       { label: 'Duration', value: '4 weeks' },
       { label: 'Access', value: 'Invite-only' },

@@ -244,28 +244,28 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                   <div className='flex items-start gap-4 px-5 py-4 border-b border-white/8'>
                     {/* Mini calendar chip */}
                     <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5 mt-0.5'>
-                      <span className='text-stride-yellow-accent text-[8px] font-black uppercase tracking-widest'>
+                      <span className='text-stride-yellow-accent text-[8px] font-black font-mono uppercase tracking-widest'>
                         {fmtMonth(event.event_date)}
                       </span>
-                      <span className='text-white font-bold text-base leading-none'>
+                      <span className='text-white font-bold text-base leading-none font-mono'>
                         {fmtDay(event.event_date)}
                       </span>
                     </div>
                     <div className='flex-1 min-w-0'>
-                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>When</p>
-                      <p className='text-white font-semibold text-base'>{dateLong}</p>
+                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>When</p>
+                      <p className='text-white font-semibold text-base font-mono'>{dateLong}</p>
                       {(startTime || endTime) && (
                         <div className='flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-sm'>
                           {startTime && (
-                            <span className='text-white/70'>
-                              <span className='text-white/35 text-[10px] uppercase tracking-widest mr-1'>Starts</span>
+                            <span className='text-white/70 font-mono'>
+                              <span className='text-white/35 text-[10px] font-mono uppercase tracking-widest mr-1'>Starts</span>
                               {startTime}
                             </span>
                           )}
                           {startTime && endTime && <span className='text-white/20'>·</span>}
                           {endTime && (
-                            <span className='text-white/70'>
-                              <span className='text-white/35 text-[10px] uppercase tracking-widest mr-1'>Ends</span>
+                            <span className='text-white/70 font-mono'>
+                              <span className='text-white/35 text-[10px] font-mono uppercase tracking-widest mr-1'>Ends</span>
                               {endTime}
                             </span>
                           )}
@@ -281,7 +281,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                       <MapPin size={15} className='text-white/50' />
                     </div>
                     <div className='flex-1 min-w-0'>
-                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Where</p>
+                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Where</p>
                       {event.location_url ? (
                         <a
                           href={event.location_url}
@@ -318,7 +318,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                       <Coffee size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
                     </div>
                     <div className='flex-1 min-w-0'>
-                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Post-run</p>
+                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Post-run</p>
                       <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
                         Where we gather after the run
                       </p>
@@ -338,7 +338,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                       <Route size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
                     </div>
                     <div className='flex-1 min-w-0'>
-                      <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Route</p>
+                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Route</p>
                       <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
                         View the run route on Strava
                       </p>
@@ -354,7 +354,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {event.details && (
             <SectionReveal delay={0.26}>
               <div className='mt-8'>
-                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>About the experience</p>
+                <p className='text-white/40 text-xs font-bold font-mono uppercase tracking-widest mb-4'>About the experience</p>
                 <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/75 prose-p:leading-relaxed prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                   <ReactMarkdown>{event.details}</ReactMarkdown>
                 </div>
@@ -366,7 +366,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           {event.location && (
             <SectionReveal delay={0.32}>
               <div className='mt-8'>
-                <p className='text-white/40 text-xs font-bold uppercase tracking-widest mb-4'>Meet here</p>
+                <p className='text-white/40 text-xs font-bold font-mono uppercase tracking-widest mb-4'>Meet here</p>
                 <MapEmbed locationName={event.location} locationUrl={event.location_url} />
               </div>
             </SectionReveal>
@@ -376,7 +376,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           <SectionReveal delay={0.36}>
             <div className='hidden sm:block mt-10 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
               <div className='px-5 py-3 border-b border-white/8'>
-                <p className='text-white/50 text-xs font-bold uppercase tracking-widest'>Registration</p>
+                <p className='text-white/50 text-xs font-bold font-mono uppercase tracking-widest'>Registration</p>
               </div>
               <div className='px-5 py-5'>
                 <div className='flex items-center justify-between gap-4 mb-4'>
@@ -389,7 +389,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                       ? 'This event is full.'
                       : 'Secure your spot below.'}
                   </p>
-                  <p className='text-2xl font-bold text-white shrink-0'>{priceLabel}</p>
+                  <p className='text-2xl font-bold text-white shrink-0 font-mono'>{priceLabel}</p>
                 </div>
                 <RegisterButton
                   eventId={event.id}
@@ -422,7 +422,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
         <div className='flex items-center gap-4 max-w-lg mx-auto'>
           <div>
             <p className='text-white/40 text-xs'>Entry fee</p>
-            <p className='text-white font-bold text-xl leading-none mt-0.5'>{priceLabel}</p>
+            <p className='text-white font-bold text-xl leading-none mt-0.5 font-mono'>{priceLabel}</p>
           </div>
           <div className='flex-1'>
             <RegisterButton

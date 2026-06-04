@@ -36,7 +36,7 @@ function fmtTime(d: string | null) {
 }
 
 function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: number | null }) {
-  if (!capacity) return <span className='text-white/30 text-xs tabular-nums'>{confirmed} registered</span>
+  if (!capacity) return <span className='text-white/30 text-xs tabular-nums font-mono'>{confirmed} registered</span>
   const pct = Math.min(100, Math.round((confirmed / capacity) * 100))
   const color = pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-stride-yellow-accent' : 'bg-green-500'
   return (
@@ -44,7 +44,7 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
       <div className='w-16 bg-white/10 rounded-full h-1.5 overflow-hidden'>
         <div className={`${color} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <span className='text-white/50 text-xs tabular-nums'>{confirmed}/{capacity}</span>
+      <span className='text-white/50 text-xs tabular-nums font-mono'>{confirmed}/{capacity}</span>
     </div>
   )
 }
@@ -137,7 +137,7 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                           {r.role}
                         </span>
                         {r.deactivated && (
-                          <span className='text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                          <span className='text-[10px] font-bold font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
                             Deactivated
                           </span>
                         )}
@@ -152,11 +152,11 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                     {/* Stats */}
                     <div className='flex gap-4 shrink-0 text-right'>
                       <div>
-                        <p className='text-stride-yellow-accent font-bold text-lg tabular-nums leading-none'>{r.confirmed_count}</p>
+                        <p className='text-stride-yellow-accent font-bold text-lg tabular-nums leading-none font-mono'>{r.confirmed_count}</p>
                         <p className='text-white/30 text-[10px] mt-0.5'>confirmed</p>
                       </div>
                       <div>
-                        <p className={`font-bold text-lg tabular-nums leading-none ${r.checked_in_count > 0 ? 'text-green-400' : 'text-white/20'}`}>
+                        <p className={`font-bold text-lg tabular-nums leading-none font-mono ${r.checked_in_count > 0 ? 'text-green-400' : 'text-white/20'}`}>
                           {r.checked_in_count}
                         </p>
                         <p className='text-white/30 text-[10px] mt-0.5'>check-ins</p>
@@ -210,7 +210,7 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                         <div className='w-11 h-11 shrink-0 rounded-xl bg-white/8 border border-white/10 flex flex-col items-center justify-center leading-none'>
                           {event.event_date ? (
                             <>
-                              <span className='text-stride-yellow-accent text-[8px] font-bold uppercase tracking-widest'>
+                              <span className='text-stride-yellow-accent text-[8px] font-bold font-mono uppercase tracking-widest'>
                                 {new Date(event.event_date).toLocaleDateString('en-IN', { month: 'short' })}
                               </span>
                               <span className='text-white font-bold text-sm'>
@@ -301,7 +301,7 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                                       {a.deactivated ? 'Deactivated runner' : (a.full_name ?? '—')}
                                     </p>
                                     {a.deactivated && (
-                                      <span className='shrink-0 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
+                                      <span className='shrink-0 text-[9px] font-bold font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
                                         Deactivated
                                       </span>
                                     )}

@@ -16,7 +16,7 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
-  const tooLong = value.length > 500
+  const tooLong = value.length > 300
 
   async function save() {
     if (tooLong) return
@@ -69,7 +69,7 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
                 <X size={12} /> Cancel
               </button>
             </div>
-            <span className={`text-xs tabular-nums ${tooLong ? 'text-red-400 font-semibold' : 'text-white/20'}`}>{value.length}/500</span>
+            <span className={`text-xs tabular-nums ${tooLong ? 'text-red-400 font-semibold' : 'text-white/20'}`}>{value.length}/300</span>
           </div>
         </div>
       ) : bio ? (

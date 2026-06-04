@@ -93,11 +93,11 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
         {dateLong && (
           <div className='flex items-start gap-3 px-3.5 py-3 border-b border-white/8'>
             <div className='w-9 h-9 rounded-lg bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5'>
-              <span className='text-stride-yellow-accent text-[7px] font-black uppercase tracking-widest'>{formatMonth(eventDate)}</span>
+              <span className='text-stride-yellow-accent text-[7px] font-black font-mono uppercase tracking-widest'>{formatMonth(eventDate)}</span>
               <span className='text-white font-bold text-xs leading-none'>{formatDay(eventDate)}</span>
             </div>
             <div className='flex-1 min-w-0'>
-              <p className='text-white/40 text-[9px] font-bold uppercase tracking-widest mb-0.5'>When</p>
+              <p className='text-white/40 text-[9px] font-bold font-mono uppercase tracking-widest mb-0.5'>When</p>
               <p className='text-white font-semibold text-[13px] truncate'>{dateLong}</p>
               {startTime && <p className='text-white/50 text-[11px] mt-0.5'>{startTime}</p>}
             </div>
@@ -109,7 +109,7 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
               <MapPin size={13} className='text-white/50' />
             </div>
             <div className='flex-1 min-w-0'>
-              <p className='text-white/40 text-[9px] font-bold uppercase tracking-widest mb-0.5'>Where</p>
+              <p className='text-white/40 text-[9px] font-bold font-mono uppercase tracking-widest mb-0.5'>Where</p>
               <p className='text-white font-semibold text-[13px] truncate'>{location}</p>
             </div>
           </div>
@@ -119,7 +119,7 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
       {/* Registration mock */}
       <div className='mt-3 rounded-xl border border-white/15 bg-white/3 overflow-hidden'>
         <div className='px-3.5 py-2 border-b border-white/8 flex items-center justify-between'>
-          <span className='inline-flex items-center gap-1.5 text-white/50 text-[10px] font-bold uppercase tracking-widest'>
+          <span className='inline-flex items-center gap-1.5 text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest'>
             <Ticket size={11} /> Registration
           </span>
           <span className='text-white/30 text-[10px]'>Preview</span>
@@ -138,7 +138,7 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
       {/* About */}
       {details && (
         <div className='mt-5'>
-          <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-2'>About Event</p>
+          <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-2'>About Event</p>
           <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/75 prose-p:leading-relaxed prose-p:text-[12px] prose-headings:text-white prose-headings:font-bold prose-headings:text-sm prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-li:text-[12px] prose-ul:my-1.5 prose-ol:my-1.5 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
             <ReactMarkdown>{details}</ReactMarkdown>
           </div>

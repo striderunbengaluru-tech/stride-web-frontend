@@ -44,6 +44,10 @@ export function uploadWithProgress<T = unknown>(options: UploadOptions): Promise
         // Ensure progress lands on 100 even if no final progress event fired.
         onProgress?.(100)
         resolve(data as T)
+      } else if (xhr.status === 413) {
+        // Platform body-size limit (often returns a non-JSON HTML body) — give a
+        // clear, actionable message instead of "Upload failed".
+        reject(new Error('Image too big — please try a smaller file (under 10 MB).'))
       } else {
         const message = (data as { error?: string } | null)?.error ?? 'Upload failed. Please try again.'
         reject(new Error(message))

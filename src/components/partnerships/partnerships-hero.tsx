@@ -26,7 +26,7 @@ export default function PartnershipsHero() {
       {/* Pill badge */}
       <motion.span
         {...fadeUp(0)}
-        className='inline-block text-xs uppercase tracking-widest text-stride-yellow-accent font-medium mb-6 px-3 py-1 rounded-full border border-stride-yellow-accent/30 bg-stride-yellow-accent/10'
+        className='inline-block text-xs font-mono uppercase tracking-widest text-stride-yellow-accent font-medium mb-6 px-3 py-1 rounded-full border border-stride-yellow-accent/30 bg-stride-yellow-accent/10'
       >
         Brand Partnerships
       </motion.span>
@@ -56,7 +56,7 @@ export default function PartnershipsHero() {
         {...fadeUp(0.3)}
         className='text-white/60 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10'
       >
-        52,000+ followers. 6,894 runners. A city moving as one. Stride is Bengaluru&apos;s most engaged running
+        <span className='font-mono'>52,000+</span> followers. <span className='font-mono'>7,000+</span> athletes. A city moving as one. Stride is Bengaluru&apos;s most engaged running
         community — high-intent, health-conscious members who show up every single week.
       </motion.p>
 

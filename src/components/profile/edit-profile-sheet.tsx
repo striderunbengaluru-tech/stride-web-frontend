@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/spinner'
 const PRESET_SKILLS = [
   '5K', '10K', 'Half Marathon', 'Marathon', 'Ultra',
   'Trail Running', 'Speed Work', 'Recovery Runs',
-  'Morning Runner', 'Night Owl', 'Pacer', 'New Runner',
+  'Morning Athlete', 'Night Owl', 'Pacer', 'New Athlete',
 ]
 
 const PRESET_QUESTIONS = [
@@ -106,7 +106,7 @@ export function EditProfileSheet({ initial, triggerContent, triggerClassName }: 
   }
 
   const inputCls = 'w-full bg-white/5 border border-white/15 rounded-md px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-stride-yellow-accent/60'
-  const labelCls = 'text-white/60 text-xs font-medium uppercase tracking-wider block mb-1'
+  const labelCls = 'text-white/60 text-xs font-medium font-mono uppercase tracking-wider block mb-1'
 
   return (
     <>

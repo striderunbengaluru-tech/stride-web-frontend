@@ -14,11 +14,11 @@ export default function SocialSection() {
   return (
     <section className='py-14 md:py-20 px-6'>
       <div className='mx-auto max-w-3xl text-center'>
-        <p className='text-xs uppercase tracking-widest text-copy-white/40 font-medium mb-4'>
+        <p className='text-xs font-mono uppercase tracking-widest text-copy-white/40 font-medium mb-4'>
           Join the movement
         </p>
         <p className='text-copy-white/60 text-base md:text-lg mb-10'>
-          5,754 runners. 97 runs. Every week of 2025.
+          <span className='font-mono'>7,000+</span> athletes. <span className='font-mono'>97</span> runs. Every week of <span className='font-mono'>2025</span>.
         </p>
 
         <div className='flex flex-col sm:flex-row items-center justify-center gap-4'>

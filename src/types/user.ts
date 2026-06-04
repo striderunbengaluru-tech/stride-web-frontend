@@ -16,6 +16,17 @@ export type PromptImage = {
   url: string
 }
 
+// A user-entered race result. Stored as a JSON array on `users.official_runs`
+// (no dedicated table — mirrors the `prompt_images` pattern).
+export type OfficialRun = {
+  id: string
+  name: string
+  time: string | null      // free-form, e.g. "1:55:30"
+  distance: string | null  // free-form, e.g. "10K", "Half Marathon"
+  month: number | null     // 1–12
+  year: number | null      // e.g. 2025
+}
+
 export type UserProfile = {
   id: string
   username: string | null

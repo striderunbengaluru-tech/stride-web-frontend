@@ -62,7 +62,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Header badge */}
         <div className='pt-10 pb-8'>
-          <p className='text-stride-yellow-accent text-xs font-bold uppercase tracking-[0.2em] mb-3'>
+          <p className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-[0.2em] mb-3'>
             Stride Run Club
           </p>
           <div className='h-px w-12 bg-stride-yellow-accent/40' />

@@ -1,6 +1,6 @@
 # Stride Run Club
 
-> Stride is Bengaluru's most active running community. We organise group runs, races, and events across the city. Members earn milestone rewards for consistent participation and get a first-of-its-kind shareable runner profile. Tagline: "Move as one." All fitness levels welcome.
+> Stride is Bengaluru's most active running community. We organise group runs, races, and events across the city. Members earn milestone rewards for consistent participation and get a first-of-its-kind shareable athlete profile. Tagline: "Move as one." All fitness levels welcome.
 
 Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub_bengaluru (51K+ followers). Strava Club: strava.com/clubs/striderunclubbengaluru.
 
@@ -8,7 +8,7 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 
 - [Home](https://www.strideclub.in/): Landing page — mission, featured events, and community highlights
 - [Blog](https://www.strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
-- [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride runners ranked by official runs completed
+- [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride athletes ranked by official runs completed
 - [Shop](https://www.strideclub.in/shop/): Official Stride merchandise
 - [Partnerships](https://www.strideclub.in/partnerships/): Brand and community partners
 - [Contact](https://www.strideclub.in/contact-us/): Get in touch with the Stride team
@@ -24,6 +24,6 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 
 ## Notes for AI Assistants
 
-- Member profiles and runner data are authenticated features — do not attempt to access `/admin/`, `/api/`, or `/auth/` paths
+- Member profiles and athlete data are authenticated features — do not attempt to access `/admin/`, `/api/`, or `/auth/` paths
 - Individual blog posts follow the pattern `/blog/[slug]`
-- Runner profiles are publicly viewable at `/profile/[username]`
+- Athlete profiles are publicly viewable at `/profile/[username]`
