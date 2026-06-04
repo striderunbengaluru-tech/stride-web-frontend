@@ -11,6 +11,7 @@ import { uploadWithProgress } from '@/lib/utils/upload'
 import type { PromptImage } from '@/types/user'
 
 const MAX_IMAGES = 3
+const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB — keep in sync with the API route
 
 const PRESET_PROMPTS = [
   'On the start line',
@@ -84,6 +85,14 @@ export function PromptImagesSection({ promptImages: initial, isOwnProfile }: Pro
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    // Catch oversized files before uploading — avoids a confusing platform-level
+    // "payload too large" error and gives the user an actionable message.
+    if (file.size > MAX_FILE_BYTES) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1)
+      setStatus('error')
+      setErrorMsg(`That image is ${mb} MB — too big. Please choose a smaller file (under 10 MB).`)
+      return
+    }
     if (pending) URL.revokeObjectURL(pending.src)
     setPending({ src: URL.createObjectURL(file), file })
     setStatus('idle')

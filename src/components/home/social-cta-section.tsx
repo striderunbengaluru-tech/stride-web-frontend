@@ -35,14 +35,14 @@ export default function SocialCtaSection() {
 
           {/* Header */}
           <div className='px-8 md:px-12 pt-10 pb-8'>
-            <p className='text-xs uppercase tracking-[0.25em] text-stride-yellow-accent font-roboto mb-4'>
+            <p className='text-xs font-mono uppercase tracking-[0.25em] text-stride-yellow-accent mb-4'>
               Find us everywhere
             </p>
             <h2 className='font-libre text-3xl md:text-4xl font-bold text-white leading-snug mb-3'>
               The proof is<br />
               <span className='text-stride-yellow-accent'>in the miles.</span>
             </h2>
-            <p className='text-white/55 text-sm max-w-lg font-roboto leading-relaxed'>
+            <p className='text-white/55 text-sm max-w-lg font-figtree leading-relaxed'>
               Follow along on Instagram, track your runs with us on Strava, or see what the wider community has to say.
             </p>
           </div>
@@ -71,7 +71,7 @@ export default function SocialCtaSection() {
                 <p className='text-white/70 text-sm font-medium group-hover:text-white transition-colors duration-200'>
                   The Fittest Club in India
                 </p>
-                <p className='text-white/50 text-xs mt-0.5 font-roboto'>See what peakst8 has to say</p>
+                <p className='text-white/50 text-xs mt-0.5 font-figtree'>See what peakst8 has to say</p>
               </div>
               <ArrowUpRight
                 size={18}
@@ -91,7 +91,7 @@ export default function SocialCtaSection() {
                 <p className='text-white/70 text-sm font-medium group-hover:text-white transition-colors duration-200'>
                   Instagram
                 </p>
-                <p className='text-white/50 text-xs mt-0.5 font-roboto'>@stride_runclub_bengaluru</p>
+                <p className='text-white/50 text-xs mt-0.5 font-figtree'>@stride_runclub_bengaluru</p>
               </div>
               <ArrowUpRight
                 size={18}
@@ -117,7 +117,7 @@ export default function SocialCtaSection() {
                 <p className='text-white/70 text-sm font-medium group-hover:text-white transition-colors duration-200'>
                   Strava Club
                 </p>
-                <p className='text-white/50 text-xs mt-0.5 font-roboto'>Join and log your runs with us</p>
+                <p className='text-white/50 text-xs mt-0.5 font-figtree'>Join and log your runs with us</p>
               </div>
               <ArrowUpRight
                 size={18}

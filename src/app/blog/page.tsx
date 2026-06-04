@@ -61,15 +61,15 @@ export default function BlogPage() {
 
         {/* ── Header ── */}
         <SectionReveal className='mb-14 md:mb-20'>
-          <p className='text-xs uppercase tracking-[0.25em] text-stride-yellow-accent font-roboto mb-4'>
+          <p className='text-xs font-mono uppercase tracking-[0.25em] text-stride-yellow-accent mb-4'>
             From the Track
           </p>
           <h1 className='font-libre text-4xl md:text-6xl font-bold text-white leading-tight'>
             Stories that{' '}
             <span className='text-stride-yellow-accent'>move you.</span>
           </h1>
-          <p className='mt-4 text-white/55 font-roboto text-base md:text-lg max-w-xl leading-relaxed'>
-            Run reports, collabs, community moments. From the Stride crew to every runner who shows up.
+          <p className='mt-4 text-white/55 font-figtree text-base md:text-lg max-w-xl leading-relaxed'>
+            Run reports, collabs, community moments. From the Stride crew to every athlete who shows up.
           </p>
         </SectionReveal>
 
@@ -84,7 +84,7 @@ export default function BlogPage() {
         {rest.length > 0 && (
           <>
             <SectionReveal className='mb-6' delay={0.1}>
-              <p className='text-xs uppercase tracking-[0.2em] text-white/30 font-roboto'>
+              <p className='text-xs font-mono uppercase tracking-[0.2em] text-white/30'>
                 More stories
               </p>
             </SectionReveal>

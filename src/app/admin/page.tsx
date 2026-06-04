@@ -149,7 +149,7 @@ export default async function AdminDashboardPage() {
         </div>
         <div>
           <h1 className='text-3xl font-bold text-white leading-none'>Dashboard</h1>
-          <p className='text-white/40 text-xs mt-1.5 uppercase tracking-widest'>Snapshot of your community</p>
+          <p className='text-white/40 text-xs mt-1.5 font-mono uppercase tracking-widest'>Snapshot of your community</p>
         </div>
       </div>
 
@@ -170,8 +170,8 @@ export default async function AdminDashboardPage() {
                 className='text-white/20 group-hover:text-stride-yellow-accent group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all'
               />
             </div>
-            <p className='text-4xl font-bold text-white tabular-nums leading-none'>{stat.count}</p>
-            <p className='text-white/45 text-xs mt-2 uppercase tracking-wider'>{stat.label}</p>
+            <p className='text-4xl font-bold text-white tabular-nums leading-none font-mono'>{stat.count}</p>
+            <p className='text-white/45 text-xs mt-2 font-mono uppercase tracking-wider'>{stat.label}</p>
           </a>
         ))}
       </div>

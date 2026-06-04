@@ -24,10 +24,9 @@ export function EventHero({ images, eventName }: Props) {
   const src = images[current]
 
   return (
-    // Mobile: portrait 3:4 | Tablet: 16:7 cinematic | Desktop: square in left column
-    // Transparent bg lets the page's ambient orbs bleed through the letterbox
-    // bars of object-contain — no visible rectangular edge around the image.
-    <div className='relative w-full overflow-hidden rounded-md aspect-3/4 max-h-[88vw] sm:aspect-16/7 sm:max-h-none lg:aspect-square lg:max-h-none'>
+    // Posters are 3:4 everywhere (admin crops to 3:4), shown edge-to-edge with
+    // object-cover — full-bleed on mobile and in the desktop left column.
+    <div className='relative w-full overflow-hidden rounded-md aspect-3/4'>
       <AnimatePresence mode='sync'>
         <motion.div
           key={src}
@@ -41,7 +40,7 @@ export function EventHero({ images, eventName }: Props) {
             src={src}
             alt={eventName}
             fill
-            className='object-contain'
+            className='object-cover'
             priority
             sizes='(max-width: 1024px) 100vw, 44vw'
           />

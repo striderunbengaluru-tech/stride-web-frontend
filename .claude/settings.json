@@ -20,7 +20,9 @@
       "WebFetch(domain:www.newindianexpress.com)",
       "WebFetch(domain:economictimes.indiatimes.com)",
       "WebFetch(domain:newskarnataka.com)",
-      "WebFetch(domain:www.passionateinmarketing.com)"
+      "WebFetch(domain:www.passionateinmarketing.com)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql"
     ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",

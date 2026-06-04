@@ -26,7 +26,7 @@ export default function AnimatedWhyUs({ items }: AnimatedWhyUsProps) {
           >
             <SpotlightCard className='relative bg-white/5 border border-white/10 rounded-xl p-7 hover:border-stride-yellow-accent/25 hover:bg-white/10 transition-all group overflow-hidden flex flex-col h-full'>
               <div className='absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-stride-yellow-accent/50 to-transparent' />
-              <span className='absolute top-5 right-6 text-6xl font-bold text-white/4 font-libre leading-none select-none pointer-events-none'>
+              <span className='absolute top-5 right-6 text-6xl font-bold text-white/4 font-mono leading-none select-none pointer-events-none'>
                 {String(index + 1).padStart(2, '0')}
               </span>
 

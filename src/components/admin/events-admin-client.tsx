@@ -317,28 +317,28 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                 {isExpanded && (
                   <div className='border-t border-white/8 px-4 py-4 bg-white/[0.02] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs'>
                     <div>
-                      <p className='text-white/25 uppercase tracking-widest mb-1.5'>Slug</p>
+                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Slug</p>
                       <p className='text-white/60 font-mono'>{event.slug}</p>
                     </div>
                     {event.eventDate && (
                       <div>
-                        <p className='text-white/25 uppercase tracking-widest mb-1.5'>Date & Time</p>
+                        <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Date & Time</p>
                         <p className='text-white/60'>{fmtDate(event.eventDate)}{fmtTime(event.eventDate) ? `, ${fmtTime(event.eventDate)}` : ''}</p>
                         {event.endDate && <p className='text-white/30 mt-0.5'>Ends {fmtTime(event.endDate)}</p>}
                       </div>
                     )}
                     {event.location && (
                       <div>
-                        <p className='text-white/25 uppercase tracking-widest mb-1.5'>Location</p>
+                        <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Location</p>
                         <p className='text-white/60'>{event.location}</p>
                       </div>
                     )}
                     <div>
-                      <p className='text-white/25 uppercase tracking-widest mb-1.5'>Shareable link</p>
+                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Shareable link</p>
                       <p className='text-white/40 font-mono break-all'>{SITE_URL}/events/{event.slug}/</p>
                     </div>
                     <div>
-                      <p className='text-white/25 uppercase tracking-widest mb-1.5'>Created</p>
+                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Created</p>
                       <p className='text-white/40'>{fmtDate(event.createdAt)}</p>
                     </div>
                     <div className='sm:col-span-2 flex gap-2 pt-1'>

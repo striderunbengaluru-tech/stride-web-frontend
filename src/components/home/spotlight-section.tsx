@@ -36,7 +36,7 @@ function OriginalsBadge() {
         animate={{ opacity: [1, 0.3, 1], scale: [1, 0.7, 1] }}
         transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
       />
-      <span className='text-[10px] font-semibold uppercase tracking-widest text-stride-yellow-accent leading-none'>
+      <span className='text-[10px] font-semibold font-mono uppercase tracking-widest text-stride-yellow-accent leading-none'>
         Stride Originals
       </span>
     </motion.div>
@@ -101,14 +101,14 @@ export default function SpotlightSection() {
           {/* ── Text panel ── */}
           <div className='mt-5 md:mt-0 md:flex-1 flex flex-col justify-center'>
 
-            <p className='text-xs uppercase tracking-widest text-stride-yellow-accent font-medium mb-6 font-roboto'>
+            <p className='text-xs font-mono uppercase tracking-widest text-stride-yellow-accent font-medium mb-6'>
               Community voices
             </p>
 
             {/* Slide counter */}
             <div className='flex items-center gap-3 mb-5'>
               <span className='h-px w-8 bg-copy-white/20 shrink-0' />
-              <span className='text-copy-white/35 text-xs font-roboto tabular-nums'>
+              <span className='text-copy-white/35 text-xs font-figtree tabular-nums'>
                 {String(currentIndex + 1).padStart(2, '0')} /{' '}
                 {String(count).padStart(2, '0')}
               </span>
@@ -131,10 +131,10 @@ export default function SpotlightSection() {
                   <h2 className='font-libre text-3xl md:text-4xl font-bold text-copy-white leading-snug'>
                     {slide.title}
                   </h2>
-                  <p className='text-stride-yellow-accent text-xs font-medium font-roboto uppercase tracking-widest'>
+                  <p className='text-stride-yellow-accent text-xs font-medium font-mono uppercase tracking-widest'>
                     {slide.subtitle}
                   </p>
-                  <p className='text-copy-white/60 text-sm md:text-base font-roboto leading-relaxed line-clamp-4'>
+                  <p className='text-copy-white/60 text-sm md:text-base font-figtree leading-relaxed line-clamp-4'>
                     {slide.description}
                   </p>
                   {slide.handle && (

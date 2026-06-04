@@ -39,7 +39,7 @@ export default async function EventsPage() {
 
         {/* Header */}
         <div className='mb-12'>
-          <p className='text-stride-yellow-accent text-xs font-bold uppercase tracking-[0.25em] mb-4'>
+          <p className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-[0.25em] mb-4'>
             Stride Run Club · Bengaluru
           </p>
           <h1 className='text-6xl sm:text-7xl font-bold text-white leading-[0.95] tracking-tight'>

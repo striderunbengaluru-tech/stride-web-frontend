@@ -26,7 +26,7 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* Product info */}
         <div className='p-4 flex flex-col gap-1 flex-1'>
-          <p className='text-copy-white text-sm font-medium font-roboto line-clamp-1 group-hover:text-stride-yellow-accent transition-colors'>
+          <p className='text-copy-white text-sm font-medium font-figtree line-clamp-1 group-hover:text-stride-yellow-accent transition-colors'>
             {product.name}
           </p>
           <p className='text-stride-yellow-accent font-bold text-base font-libre'>
@@ -48,13 +48,13 @@ export default function MerchSection() {
         {/* Section heading */}
         <div className='max-w-6xl mx-auto mb-8 md:mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4'>
           <div>
-            <p className='text-stride-yellow-accent text-xs font-medium tracking-widest uppercase mb-4 font-roboto'>
+            <p className='text-stride-yellow-accent text-xs font-medium tracking-widest font-mono uppercase mb-4'>
               {heading.pretitle}
             </p>
             <h2 className='font-libre text-4xl md:text-5xl font-bold text-copy-white mb-3 leading-tight'>
               <HighlightedText text={heading.title} />
             </h2>
-            <p className='text-copy-white/60 text-base font-roboto max-w-md'>
+            <p className='text-copy-white/60 text-base font-figtree max-w-md'>
               {heading.subtitle}
             </p>
           </div>
@@ -62,7 +62,7 @@ export default function MerchSection() {
           {/* View all — visible on md+ alongside heading */}
           <Link
             href={viewAllHref}
-            className='hidden sm:inline-flex items-center gap-2 shrink-0 border border-copy-white/40 text-copy-white font-semibold px-6 py-3 rounded-md hover:bg-copy-white/10 transition-colors font-roboto text-sm'
+            className='hidden sm:inline-flex items-center gap-2 shrink-0 border border-copy-white/40 text-copy-white font-semibold px-6 py-3 rounded-md hover:bg-copy-white/10 transition-colors font-figtree text-sm'
           >
             View all merch
             <ArrowRight className='size-4' />
@@ -82,7 +82,7 @@ export default function MerchSection() {
         <div className='max-w-6xl mx-auto mt-8 flex justify-center sm:hidden'>
           <Link
             href={viewAllHref}
-            className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-bold px-8 py-3 rounded-md hover:opacity-90 transition-opacity font-roboto text-sm'
+            className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-bold px-8 py-3 rounded-md hover:opacity-90 transition-opacity font-figtree text-sm'
           >
             View all merch
             <ArrowRight className='size-4' />

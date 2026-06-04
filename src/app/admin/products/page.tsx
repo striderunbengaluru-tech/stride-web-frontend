@@ -37,10 +37,10 @@ export default async function AdminProductsPage() {
           <table className='w-full text-sm'>
             <thead>
               <tr className='border-b border-white/10'>
-                <th className='text-left text-white/50 font-medium px-6 py-4 uppercase tracking-wider text-xs'>Name</th>
-                <th className='text-left text-white/50 font-medium px-6 py-4 uppercase tracking-wider text-xs'>Price</th>
-                <th className='text-left text-white/50 font-medium px-6 py-4 uppercase tracking-wider text-xs'>Stock</th>
-                <th className='text-left text-white/50 font-medium px-6 py-4 uppercase tracking-wider text-xs'>Status</th>
+                <th className='text-left text-white/50 font-medium px-6 py-4 font-mono uppercase tracking-wider text-xs'>Name</th>
+                <th className='text-left text-white/50 font-medium px-6 py-4 font-mono uppercase tracking-wider text-xs'>Price</th>
+                <th className='text-left text-white/50 font-medium px-6 py-4 font-mono uppercase tracking-wider text-xs'>Stock</th>
+                <th className='text-left text-white/50 font-medium px-6 py-4 font-mono uppercase tracking-wider text-xs'>Status</th>
                 <th className='px-6 py-4' />
               </tr>
             </thead>

@@ -22,13 +22,13 @@ export default function NewsroomSection() {
     <section className='max-w-6xl mx-auto px-6 py-12 md:py-20'>
       {/* Section heading */}
       <div className='mb-8 md:mb-12'>
-        <p className='text-stride-yellow-accent text-xs font-medium tracking-widest uppercase mb-4 font-roboto'>
+        <p className='text-stride-yellow-accent text-xs font-medium tracking-widest font-mono uppercase mb-4'>
           {heading.pretitle}
         </p>
         <h2 className='font-libre text-4xl md:text-5xl font-bold text-copy-white mb-4 leading-tight'>
           <HighlightedText text={heading.title} />
         </h2>
-        <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-roboto'>
+        <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-figtree'>
           {heading.subtitle}
         </p>
       </div>

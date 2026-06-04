@@ -66,14 +66,14 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
         href={`/events/${slug}`}
         className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
       >
-        {/* Image — clean, no overlays */}
-        <div className='relative aspect-[4/5] bg-white/5'>
+        {/* Image — 3:4 poster, edge-to-edge */}
+        <div className='relative aspect-3/4 bg-white/5'>
           {coverUrl ? (
             <Image
               src={coverUrl}
               alt={name}
               fill
-              className='object-contain group-hover:scale-[1.02] transition-transform duration-500'
+              className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
               sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
             />
           ) : (
@@ -94,12 +94,12 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
           {(dateLabel || countdown) && (
             <div className='flex items-center gap-2 mb-1.5'>
               {dateLabel && (
-                <p className={`text-sm font-medium ${isPast ? 'text-white/30' : 'text-stride-yellow-accent'}`}>
+                <p className={`text-sm font-medium font-mono ${isPast ? 'text-white/30' : 'text-stride-yellow-accent'}`}>
                   {dateLabel}
                 </p>
               )}
               {!isPast && countdown && (
-                <span className='text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-stride-yellow-accent/15 text-stride-yellow-accent'>
+                <span className='text-[10px] font-black px-2 py-0.5 rounded-full font-mono uppercase tracking-wider bg-stride-yellow-accent/15 text-stride-yellow-accent'>
                   In {countdown}
                 </span>
               )}
@@ -124,7 +124,7 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
                 <span className='truncate'>{location}</span>
               </span>
             ) : <span />}
-            <span className={`text-sm font-bold shrink-0 ${pricePaise === 0 ? 'text-green-400' : 'text-white/70'}`}>
+            <span className={`text-sm font-bold shrink-0 font-mono ${pricePaise === 0 ? 'text-green-400' : 'text-white/70'}`}>
               {priceLabel}
             </span>
           </div>

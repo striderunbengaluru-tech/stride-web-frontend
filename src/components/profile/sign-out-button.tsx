@@ -14,7 +14,7 @@ export function SignOutButton() {
     <button
       type='button'
       onClick={handleSignOut}
-      className='flex items-center gap-2 text-white/50 hover:text-red-400 text-sm font-medium transition-colors min-h-11 px-4 rounded-md border border-white/15 hover:border-red-500/50'
+      className='flex-1 flex items-center justify-center gap-2 text-white/70 hover:text-white text-sm font-medium transition-colors min-h-11 px-4 rounded-lg border border-white/15 hover:border-white/30 hover:bg-white/5'
     >
       <LogOut size={15} aria-hidden='true' />
       Log out

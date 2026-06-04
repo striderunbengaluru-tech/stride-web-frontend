@@ -16,7 +16,22 @@ const PADDING = 80
 const SITE_HOST = 'strideclub.in'
 const STRIDE_HANDLE = '@stride_runclub_bengaluru'
 
-const FONT_STACK = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+// The Stride wordmark logo (same SVG used in the navbar/footer).
+const LOGO_URL = '/assets/images/stride-logo-color-transparent.svg'
+
+// Fallback stacks if the site fonts haven't loaded; the real families
+// (resolved from the page's CSS variables at draw time) match the website.
+const FALLBACK_BODY = 'system-ui, -apple-system, "Segoe UI", sans-serif'
+const FALLBACK_MONO = 'ui-monospace, "SF Mono", Menlo, monospace'
+const FALLBACK_TITLE = 'Georgia, "Times New Roman", serif'
+
+// Read a CSS custom property (e.g. `--font-figtree`) off the live document so
+// the canvas uses the exact same font families as the rendered site.
+function cssFont(varName: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback
+  const v = getComputedStyle(document.body).getPropertyValue(varName).trim()
+  return v ? `${v}, ${fallback}` : fallback
+}
 
 function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.min(r, w / 2, h / 2)
@@ -92,6 +107,13 @@ export async function buildStoryCanvas(opts: {
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
 
+  // Match the website's typography: Libre Baskerville (titles), Figtree (body),
+  // Geist Mono (eyebrow). Wait for the page fonts so canvas doesn't fall back.
+  try { await (document as Document & { fonts?: FontFaceSet }).fonts?.ready } catch { /* ignore */ }
+  const FONT_TITLE = cssFont('--font-libre-baskerville', FALLBACK_TITLE)
+  const FONT_BODY = cssFont('--font-figtree', FALLBACK_BODY)
+  const FONT_MONO = cssFont('--font-geist-mono', FALLBACK_MONO)
+
   // ── Background — subtle vertical purple gradient ──
   const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
   bgGrad.addColorStop(0, BRAND_PURPLE_DARK)
@@ -100,27 +122,27 @@ export async function buildStoryCanvas(opts: {
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
 
-  // ── Brand block — STRIDE wordmark top-left ──
-  const brandY = 140
-  ctx.fillStyle = BRAND_YELLOW
-  ctx.font = `900 60px ${FONT_STACK}`
+  // ── Brand block — Stride wordmark (SVG) top-left ──
+  const logo = await loadImage(LOGO_URL)
+  if (logo) {
+    const logoW = 300
+    const ratio = logo.naturalWidth ? logo.naturalHeight / logo.naturalWidth : 0.33
+    ctx.drawImage(logo, PADDING, 120, logoW, logoW * ratio)
+  }
+
+  // ── Eyebrow ── (Geist Mono uppercase to match the brand system)
   ctx.textBaseline = 'alphabetic'
-  ctx.fillText('STRIDE', PADDING, brandY)
-
-  ctx.fillStyle = 'rgba(255,255,255,0.55)'
-  ctx.font = `500 30px ${FONT_STACK}`
-  ctx.fillText('Run Club · Bengaluru', PADDING, brandY + 44)
-
-  // ── Eyebrow ──
   ctx.fillStyle = BRAND_YELLOW
-  ctx.font = `700 34px ${FONT_STACK}`
-  ctx.letterSpacing = '4px'
-  ctx.fillText("I'M ATTENDING THIS RUN", PADDING, 320)
+  ctx.font = `700 34px ${FONT_MONO}`
+  // Geist Mono is already a wide monospace face, so keep tracking minimal —
+  // extra letter-spacing here reads as gaps between every character.
+  ctx.letterSpacing = '1px'
+  ctx.fillText('I AM ATTENDING', PADDING, 320)
   ctx.letterSpacing = '0px'
 
-  // ── Event name — bold, wraps to max 2 lines ──
+  // ── Event name — title face (Libre Baskerville), wraps to max 2 lines ──
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = `800 80px ${FONT_STACK}`
+  ctx.font = `700 76px ${FONT_TITLE}`
   const nameLines = layoutWrappedText(ctx, opts.eventName, CANVAS_W - PADDING * 2, 2)
   let cursorY = 410
   for (const line of nameLines) {
@@ -130,7 +152,7 @@ export async function buildStoryCanvas(opts: {
 
   // ── Date + location ──
   cursorY += 12
-  ctx.font = `500 40px ${FONT_STACK}`
+  ctx.font = `500 40px ${FONT_BODY}`
   ctx.fillStyle = 'rgba(255,255,255,0.8)'
   if (opts.eventDate) {
     ctx.fillText(`📅  ${opts.eventDate}`, PADDING, cursorY)
@@ -164,8 +186,9 @@ export async function buildStoryCanvas(opts: {
       ctx.save()
       drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
       ctx.clip()
-      // Cover-fit
-      const scale = Math.max(FRAME_W / img.naturalWidth, FRAME_H / img.naturalHeight)
+      // Contain-fit — the whole poster stays visible inside the bounded frame
+      // (no cropping); the rounded frame acts as the bounding box.
+      const scale = Math.min(FRAME_W / img.naturalWidth, FRAME_H / img.naturalHeight)
       const drawW = img.naturalWidth * scale
       const drawH = img.naturalHeight * scale
       const drawX = FRAME_X + (FRAME_W - drawW) / 2
@@ -181,13 +204,13 @@ export async function buildStoryCanvas(opts: {
   drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
   ctx.stroke()
 
-  // ── Footer — handle + URL ──
+  // ── Footer — handle + URL (Geist Mono, matching the site's mono labels) ──
   ctx.fillStyle = BRAND_YELLOW
-  ctx.font = `700 36px ${FONT_STACK}`
+  ctx.font = `700 34px ${FONT_MONO}`
   ctx.fillText(STRIDE_HANDLE, PADDING, 1780)
 
   ctx.fillStyle = 'rgba(255,255,255,0.65)'
-  ctx.font = `500 30px ${FONT_STACK}`
+  ctx.font = `500 28px ${FONT_MONO}`
   ctx.fillText(`${SITE_HOST}/events/${opts.eventSlug}`, PADDING, 1830)
 
   return new Promise<Blob | null>(resolve => {

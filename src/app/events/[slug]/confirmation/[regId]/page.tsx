@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
-import { CheckCircle2, MapPin, ArrowRight, MessageSquareText, Users } from 'lucide-react'
+import { CheckCircle2, MapPin, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
@@ -23,12 +23,6 @@ export const metadata: Metadata = {
   description: 'Your event registration is confirmed.',
 }
 
-function formatDateLong(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
-}
 function formatDateShort(d: string | null) {
   if (!d) return null
   return new Date(d).toLocaleDateString('en-IN', {
@@ -38,12 +32,6 @@ function formatDateShort(d: string | null) {
 function formatTime(d: string | null) {
   if (!d) return null
   return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-}
-function formatMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()
-}
-function formatDay(d: string) {
-  return new Date(d).getDate().toString()
 }
 
 export default async function ConfirmationPage({ params }: Props) {
@@ -78,10 +66,8 @@ export default async function ConfirmationPage({ params }: Props) {
 
   if (!event) notFound()
 
-  const dateLong  = formatDateLong(event.event_date)
   const dateShort = formatDateShort(event.event_date)
   const startTime = formatTime(event.event_date)
-  const endTime   = formatTime(event.end_date)
   const compactDate = startTime && dateShort ? `${dateShort} · ${startTime}` : dateShort
 
   let eventBannerUrl: string | null = null
@@ -90,7 +76,6 @@ export default async function ConfirmationPage({ params }: Props) {
     eventBannerUrl = banners[0] ?? null
   } catch { /* keep null */ }
 
-  const eventUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${event.slug}`
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
 
   // Three most-recent blog posts for the "Keep reading" section
@@ -128,20 +113,31 @@ export default async function ConfirmationPage({ params }: Props) {
           </div>
         </SectionReveal>
 
+        {/* ── A note from Stride — field only, no label, sits right under the header ── */}
+        {event.confirmation_text && event.confirmation_text.trim() && (
+          <SectionReveal delay={0.04}>
+            <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
+              <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/85 prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
+                <ReactMarkdown>{event.confirmation_text}</ReactMarkdown>
+              </div>
+            </div>
+          </SectionReveal>
+        )}
+
         {/* ── Event card — clickable, mirrors the public event card ── */}
         <SectionReveal delay={0.06}>
           <Link
             href={`/events/${event.slug}`}
             className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
           >
-            {/* Image */}
-            <div className='relative aspect-4/3 bg-white/5'>
+            {/* Image — 3:4 poster, edge-to-edge */}
+            <div className='relative aspect-3/4 bg-white/5'>
               {eventBannerUrl ? (
                 <Image
                   src={eventBannerUrl}
                   alt={event.name}
                   fill
-                  className='object-contain group-hover:scale-[1.02] transition-transform duration-500'
+                  className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
                   sizes='(max-width: 640px) 100vw, 640px'
                 />
               ) : (
@@ -154,7 +150,7 @@ export default async function ConfirmationPage({ params }: Props) {
             {/* Body */}
             <div className='px-4 py-4'>
               {compactDate && (
-                <p className='text-stride-yellow-accent text-sm font-medium mb-1.5'>
+                <p className='text-stride-yellow-accent text-sm font-medium mb-1.5 font-mono'>
                   {compactDate}
                 </p>
               )}
@@ -185,72 +181,7 @@ export default async function ConfirmationPage({ params }: Props) {
           </Link>
         </SectionReveal>
 
-        {/* ── When + Where info card ── */}
-        <SectionReveal delay={0.12}>
-          <div className='rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
-            {dateLong && event.event_date && (
-              <div className='flex items-start gap-4 px-5 py-4 border-b border-white/8'>
-                <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5 mt-0.5'>
-                  <span className='text-stride-yellow-accent text-[8px] font-black uppercase tracking-widest'>
-                    {formatMonth(event.event_date)}
-                  </span>
-                  <span className='text-white font-bold text-base leading-none'>
-                    {formatDay(event.event_date)}
-                  </span>
-                </div>
-                <div className='flex-1 min-w-0'>
-                  <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>When</p>
-                  <p className='text-white font-semibold text-base'>{dateLong}</p>
-                  {startTime && (
-                    <p className='text-white/55 text-sm mt-0.5'>
-                      {startTime}{endTime ? ` – ${endTime}` : ''}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {event.location && (
-              <div className='flex items-start gap-4 px-5 py-4'>
-                <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center shrink-0 mt-0.5'>
-                  <MapPin size={15} className='text-white/50' />
-                </div>
-                <div className='flex-1 min-w-0'>
-                  <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest mb-0.5'>Where</p>
-                  {event.location_url ? (
-                    <a
-                      href={event.location_url}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      className='text-white font-semibold text-base hover:text-stride-yellow-accent transition-colors'
-                    >
-                      {event.location}
-                    </a>
-                  ) : (
-                    <p className='text-white font-semibold text-base'>{event.location}</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </SectionReveal>
-
-        {/* ── Admin confirmation message ── */}
-        {event.confirmation_text && event.confirmation_text.trim() && (
-          <SectionReveal delay={0.16}>
-            <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
-              <div className='flex items-center gap-2 mb-2'>
-                <MessageSquareText size={14} className='text-stride-yellow-accent shrink-0' />
-                <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest'>A note from Stride</p>
-              </div>
-              <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/85 prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
-                <ReactMarkdown>{event.confirmation_text}</ReactMarkdown>
-              </div>
-            </div>
-          </SectionReveal>
-        )}
-
-        {/* ── Runner tag ── */}
+        {/* ── Stride tag ── */}
         <SectionReveal delay={0.2}>
           <RunnerTagTicket
             runnerTag={profile?.runner_tag ?? null}
@@ -262,16 +193,12 @@ export default async function ConfirmationPage({ params }: Props) {
         {/* ── Share ── */}
         <SectionReveal delay={0.24}>
           <div>
-            <div className='flex items-center gap-2 mb-3'>
-              <Users size={13} className='text-stride-yellow-accent' />
-              <p className='text-white/50 text-[10px] font-bold uppercase tracking-widest'>Tell your friends</p>
-            </div>
+            <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Share</p>
             <ShareConfirmation
               eventName={event.name}
               eventDate={compactDate ?? null}
               eventLocation={event.location ?? null}
               eventSlug={event.slug}
-              eventUrl={eventUrl}
               eventBannerUrl={eventBannerUrl}
             />
           </div>
@@ -287,7 +214,7 @@ export default async function ConfirmationPage({ params }: Props) {
               <div className='pt-8 border-t border-white/8'>
                 <div className='flex items-end justify-between gap-4 mb-5'>
                   <div>
-                    <p className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest mb-1.5'>Inside Stride</p>
+                    <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-widest mb-1.5'>Inside Stride</p>
                     <h3 className='text-white font-bold text-xl leading-tight'>While you lace up — stories, run recaps &amp; what we&apos;re building.</h3>
                   </div>
                   <Link

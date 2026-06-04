@@ -6,7 +6,7 @@ import { AnimatedCounter } from '@/components/ui/animated-counter'
 const STATS = [
   { to: 52,   suffix: 'K+', formatLocale: false, label: 'Instagram Followers' },
   { to: 6,    suffix: 'K+', formatLocale: false, label: 'WhatsApp Community'  },
-  { to: 6894, suffix: '',   formatLocale: true,  label: 'Runners Impacted'    },
+  { to: 7000, suffix: '+',  formatLocale: true,  label: 'Athletes Impacted'   },
   { to: 97,   suffix: '+',  formatLocale: false, label: 'Events per Year'     },
   { to: 55,   suffix: '+',  formatLocale: false, label: 'Brand Partners'      },
 ]
@@ -34,7 +34,7 @@ export default function AnimatedStatsBar() {
       {/* Eyebrow */}
       <motion.p
         variants={fade(0)}
-        className='text-xs uppercase tracking-[0.25em] text-stride-yellow-accent font-roboto pt-10 mb-12 text-center'
+        className='text-xs font-mono uppercase tracking-[0.25em] text-stride-yellow-accent pt-10 mb-12 text-center'
       >
         By the numbers
       </motion.p>
@@ -51,10 +51,10 @@ export default function AnimatedStatsBar() {
               to={to}
               suffix={suffix}
               formatLocale={formatLocale}
-              className='text-4xl lg:text-5xl font-bold text-white tabular-nums font-libre leading-none'
+              className='text-4xl lg:text-5xl font-bold text-white tabular-nums font-mono leading-none'
             />
             <div className='w-6 h-px bg-stride-yellow-accent/50 my-3' />
-            <p className='text-white/55 text-xs uppercase tracking-[0.12em] font-roboto'>{label}</p>
+            <p className='text-white/55 text-xs font-mono uppercase tracking-[0.12em]'>{label}</p>
           </motion.div>
         ))}
       </div>

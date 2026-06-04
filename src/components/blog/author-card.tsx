@@ -34,11 +34,11 @@ export function AuthorCard({ author, publishedAt, readingTimeMin }: Props) {
 
       <div className='flex flex-col gap-0.5'>
         <div className='flex items-center gap-2 flex-wrap'>
-          <span className='text-sm font-semibold text-white font-roboto'>{author.name}</span>
+          <span className='text-sm font-semibold text-white font-figtree'>{author.name}</span>
           <span className='text-white/25 text-xs'>·</span>
-          <span className='text-xs text-white/45 font-roboto'>{author.role}</span>
+          <span className='text-xs text-white/45 font-figtree'>{author.role}</span>
         </div>
-        <div className='flex items-center gap-2 text-xs text-white/35 font-roboto'>
+        <div className='flex items-center gap-2 text-xs text-white/35 font-figtree'>
           <span>{formatDate(publishedAt)}</span>
           <span className='text-white/20'>·</span>
           <span>{readingTimeMin} min read</span>

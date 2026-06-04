@@ -57,9 +57,9 @@ export function DeleteAccountButton() {
       <button
         type='button'
         onClick={() => setOpen(true)}
-        className='inline-flex items-center gap-2 text-red-400/70 hover:text-red-400 text-xs font-medium transition-colors px-3 py-2 rounded-md border border-red-500/15 hover:border-red-500/40 hover:bg-red-500/5'
+        className='flex-1 flex items-center justify-center gap-2 text-red-400/80 hover:text-red-400 text-sm font-medium transition-colors min-h-11 px-4 rounded-lg border border-red-500/20 hover:border-red-500/45 hover:bg-red-500/5'
       >
-        <Trash2 size={13} />
+        <Trash2 size={15} />
         Delete account
       </button>
 
@@ -80,7 +80,7 @@ export function DeleteAccountButton() {
                 </div>
                 <div>
                   <h2 className='text-white font-bold text-lg leading-tight'>Delete your account?</h2>
-                  <p className='text-red-400/80 text-xs font-semibold uppercase tracking-widest mt-0.5'>This is irreversible</p>
+                  <p className='text-red-400/80 text-xs font-semibold font-mono uppercase tracking-widest mt-0.5'>This is irreversible</p>
                 </div>
               </div>
               <button
@@ -107,7 +107,7 @@ export function DeleteAccountButton() {
                   </li>
                   <li className='flex items-start gap-2'>
                     <span className='text-red-400 mt-0.5'>•</span>
-                    Your runner tag and all run history
+                    Your Stride Tag and all run history
                   </li>
                   <li className='flex items-start gap-2'>
                     <span className='text-red-400 mt-0.5'>•</span>

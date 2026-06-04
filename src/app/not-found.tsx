@@ -23,7 +23,7 @@ export default function NotFound() {
       <div className='relative z-10 max-w-md w-full flex flex-col items-center text-center'>
 
         {/* Eyebrow */}
-        <span className='inline-flex items-center gap-2 text-stride-yellow-accent text-[10px] font-bold tracking-[0.25em] uppercase mb-6'>
+        <span className='inline-flex items-center gap-2 text-stride-yellow-accent text-[10px] font-bold tracking-[0.25em] font-mono uppercase mb-6'>
           <span className='w-1.5 h-1.5 rounded-full bg-stride-yellow-accent animate-pulse' />
           Error 404
         </span>

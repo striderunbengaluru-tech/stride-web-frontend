@@ -52,7 +52,7 @@ export function ProductForm({ action, defaultValues = {}, submitLabel }: Props) 
           defaultValue={String(defaultValues.stock ?? 0)}
         />
         <div className='flex flex-col gap-1'>
-          <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>Status</label>
+          <label className='text-white/60 text-xs font-medium font-mono uppercase tracking-wider'>Status</label>
           <select
             name='status'
             defaultValue={defaultValues.status ?? 'DRAFT'}
@@ -96,7 +96,7 @@ function Field({ label, name, type = 'text', as = 'input', defaultValue = '', re
 
   return (
     <div className='flex flex-col gap-1'>
-      <label className='text-white/60 text-xs font-medium uppercase tracking-wider'>{label}</label>
+      <label className='text-white/60 text-xs font-medium font-mono uppercase tracking-wider'>{label}</label>
       {as === 'textarea' ? (
         <textarea
           name={name}

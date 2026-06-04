@@ -58,7 +58,7 @@ export function EventCountdown({ eventDate }: { eventDate: string }) {
               <span className='absolute -right-[9px] top-1/2 -translate-y-[55%] text-white/25 font-bold text-base select-none'>:</span>
             )}
           </div>
-          <p className='text-white/30 text-[9px] uppercase tracking-widest mt-1.5'>{label}</p>
+          <p className='text-white/30 text-[9px] font-mono uppercase tracking-widest mt-1.5'>{label}</p>
         </div>
       ))}
     </div>

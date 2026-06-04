@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { UserProfile, PromptImage } from '@/types/user'
-import type { OfficialRun } from '@/types/strava'
+import type { UserProfile, PromptImage, OfficialRun } from '@/types/user'
 import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
@@ -40,12 +39,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!row) return { title: 'Profile not found - Stride Run Club' }
 
   const displayName = row.full_name ?? username
-  // Title: "<Runner name> - Stride Run Club"
+  // Title: "<Athlete name> - Stride Run Club"
   const title = `${displayName} - Stride Run Club`
-  // Description: the runner's bio, or a generic fallback when none is set.
+  // Description: the athlete's bio, or a generic fallback when none is set.
   const description = (row.bio?.trim().slice(0, 160))
-    || `${displayName} is a runner with Stride Run Club, Bengaluru's community for runners. See their milestones, races and running story.`
-  // OG image: the runner's profile photo.
+    || `${displayName} is an athlete with Stride Run Club, Bengaluru's community for athletes. See their milestones, races and running story.`
+  // OG image: the athlete's profile photo.
   const ogImage = row.avatar_url ?? undefined
 
   return {
@@ -72,7 +71,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompt_images, runs_completed, runner_tag, deleted_at')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompt_images, official_runs, runs_completed, runner_tag, deleted_at')
     .eq('username', username)
     .single()
 
@@ -97,13 +96,9 @@ export default async function ProfilePage({ params }: Props) {
     strava_synced_at: null,
   }
 
-  const [{ data: officialRunsRows }, { data: attendedRegs }, supabase] = await Promise.all([
-    adminClient
-      .from('official_runs')
-      .select('id, user_id, race_name, distance_category, race_date, finish_time, strava_activity_url, is_upcoming, display_order, created_at')
-      .eq('user_id', row.id)
-      .order('display_order', { ascending: true })
-      .order('created_at', { ascending: true }),
+  const officialRuns = parseJson<OfficialRun[]>((row as Record<string, string | null>).official_runs, [])
+
+  const [{ data: attendedRegs }, supabase] = await Promise.all([
     adminClient
       .from('event_registrations')
       .select('events(id, name, slug, event_date, location, banner_images)')
@@ -112,8 +107,6 @@ export default async function ProfilePage({ params }: Props) {
       .order('checked_in_at', { ascending: false }),
     createClient(),
   ])
-
-  const officialRuns: OfficialRun[] = officialRunsRows ?? []
 
   type AttendedReg = { events: { id: string; name: string; slug: string; event_date: string | null; location: string | null; banner_images: string | null } | null }
   const attendedEvents = (attendedRegs ?? [] as unknown as AttendedReg[])
@@ -137,7 +130,7 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <main className='min-h-screen bg-stride-purple-primary pb-24'>
-      <div className='max-w-5xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28'>
+      <div className='max-w-6xl mx-auto px-4 pt-24 sm:pt-28'>
 
         {/* ── Top: identity + details ── */}
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
@@ -193,16 +186,16 @@ export default async function ProfilePage({ params }: Props) {
                 />
               </div>
 
-              {/* Runner tag — own profile only */}
+              {/* Stride Tag — own profile only (stored as runner_tag in DB) */}
               {isOwnProfile && profile.runner_tag && (
                 <div className='mt-5 w-full bg-stride-yellow-accent/6 border border-stride-yellow-accent/20 rounded-xl px-4 py-3.5 text-left'>
                   <div className='flex items-center gap-2 mb-2'>
                     <ScanLine size={13} className='text-stride-yellow-accent' />
-                    <span className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-widest'>Your runner tag</span>
+                    <span className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-widest'>Your Stride Tag</span>
                   </div>
                   <RunnerTagBadge tag={profile.runner_tag} size='lg' />
                   <p className='text-white/35 text-[11px] leading-snug mt-2.5'>
-                    Your Runner Tag is your personal check-in code — show it to a Stride organiser at events to log your attendance and earn runs toward milestones.
+                    Check in to club experiences using this code, reach milestones and earn rewards.
                   </p>
                 </div>
               )}
@@ -218,7 +211,7 @@ export default async function ProfilePage({ params }: Props) {
               style={{ animationDelay: '0.06s' }}
             >
               <div className='flex items-center justify-between mb-5'>
-                <p className='text-white/40 text-[10px] uppercase tracking-widest font-medium'>Milestone</p>
+                <p className='text-white/40 text-[10px] font-mono uppercase tracking-widest font-medium'>Milestone</p>
                 <Link
                   href='/milestones'
                   className='flex items-center gap-1 text-stride-yellow-accent/60 hover:text-stride-yellow-accent text-xs transition-colors'
@@ -230,7 +223,7 @@ export default async function ProfilePage({ params }: Props) {
               <div className='flex items-end justify-between mb-5'>
                 <div>
                   <div className='flex items-baseline gap-2'>
-                    <span className='text-5xl font-bold text-white tabular-nums leading-none'>{runsCompleted}</span>
+                    <span className='text-5xl font-bold text-white tabular-nums leading-none font-mono'>{runsCompleted}</span>
                     <span className='text-white/35 text-sm'>official runs</span>
                   </div>
                   <p className='text-white/30 text-xs mt-2'>
@@ -255,8 +248,8 @@ export default async function ProfilePage({ params }: Props) {
                 </div>
                 {currentTier.nextAt && (
                   <div className='flex justify-between'>
-                    <span className='text-white/20 text-[9px] tabular-nums'>{currentTier.threshold} runs</span>
-                    <span className='text-white/20 text-[9px] tabular-nums'>{currentTier.nextAt} runs</span>
+                    <span className='text-white/20 text-[9px] tabular-nums font-mono'>{currentTier.threshold} runs</span>
+                    <span className='text-white/20 text-[9px] tabular-nums font-mono'>{currentTier.nextAt} runs</span>
                   </div>
                 )}
               </div>
@@ -320,11 +313,20 @@ export default async function ProfilePage({ params }: Props) {
           </div>
         </div>
 
-        {/* ── Account actions ── */}
+        {/* ── Account settings ── */}
         {isOwnProfile && (
-          <div className='mt-8 pt-6 border-t border-white/8 flex flex-col items-center gap-3'>
-            <SignOutButton />
-            <DeleteAccountButton />
+          <div className='mt-8 animate-fade-in-up' style={{ animationDelay: '0.32s' }}>
+            <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
+              <div className='flex items-center gap-2 mb-1'>
+                <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
+                <h2 className='text-white font-semibold text-sm tracking-wide'>Account settings</h2>
+              </div>
+              <p className='text-white/40 text-xs mb-4 pl-3'>Manage your session, or permanently remove your account and data.</p>
+              <div className='flex flex-col sm:flex-row gap-2.5'>
+                <SignOutButton />
+                <DeleteAccountButton />
+              </div>
+            </div>
           </div>
         )}
       </div>

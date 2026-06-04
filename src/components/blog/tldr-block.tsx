@@ -17,7 +17,7 @@ export function TldrBlock({ bullets }: Props) {
     >
       <div className='flex items-center gap-2 mb-4'>
         <Zap className='w-4 h-4 text-stride-yellow-accent' fill='currentColor' />
-        <span className='text-xs uppercase tracking-[0.22em] text-stride-yellow-accent font-roboto font-semibold'>
+        <span className='text-xs font-mono uppercase tracking-[0.22em] text-stride-yellow-accent font-semibold'>
           TL;DR
         </span>
       </div>
@@ -28,7 +28,7 @@ export function TldrBlock({ bullets }: Props) {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.35 + i * 0.07 }}
-            className='flex items-start gap-2.5 text-sm text-white/75 font-roboto leading-relaxed'
+            className='flex items-start gap-2.5 text-sm text-white/75 font-figtree leading-relaxed'
           >
             <span className='shrink-0 mt-1.5 w-1 h-1 rounded-full bg-stride-yellow-accent' />
             {bullet}

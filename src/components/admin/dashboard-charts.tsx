@@ -149,7 +149,7 @@ export function DashboardCharts({ weeklyRegistrations, eventCheckIns, genderDist
                 <div key={slice.key}>
                   <div className='flex items-center justify-between text-xs mb-1.5'>
                     <span className='text-white/70'>{slice.label}</span>
-                    <span className='text-white/45 tabular-nums'>
+                    <span className='text-white/45 tabular-nums font-mono'>
                       <span className='text-white font-semibold'>{slice.value}</span>
                       {' '}<span className='text-white/35'>· {pct}%</span>
                     </span>

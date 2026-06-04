@@ -456,7 +456,7 @@ export function RunnerTagCheckIn() {
         <form onSubmit={handleTagSubmit} className='flex flex-col gap-3'>
           <label className='text-white/70 text-sm font-medium'>Runner tag</label>
           <div className='bg-white/5 border-2 border-white/15 rounded-2xl p-4 flex flex-col items-center gap-3 focus-within:border-stride-yellow-accent/50 transition-colors'>
-            <p className='text-white/30 text-xs uppercase tracking-widest'>Enter 4-character tag</p>
+            <p className='text-white/30 text-xs font-mono uppercase tracking-widest'>Enter 4-character tag</p>
             <input
               ref={inputRef}
               type='text'
@@ -679,7 +679,7 @@ function EventRow({
       <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5'>
         {date ? (
           <>
-            <span className='text-stride-yellow-accent text-[8px] font-black uppercase tracking-widest'>
+            <span className='text-stride-yellow-accent text-[8px] font-black font-mono uppercase tracking-widest'>
               {fmtMonth(date)}
             </span>
             <span className='text-white font-bold text-base leading-none'>
@@ -701,7 +701,7 @@ function EventRow({
       </div>
 
       {status && (
-        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md border ${TONE_CLASSES[status.tone]}`}>
+        <span className={`shrink-0 text-[10px] font-bold font-mono uppercase tracking-wider px-2 py-1 rounded-md border ${TONE_CLASSES[status.tone]}`}>
           {status.label}
         </span>
       )}

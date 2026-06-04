@@ -25,16 +25,3 @@ export type StravaActivity = {
   average_heartrate?: number
   pr_count?: number
 }
-
-export type OfficialRun = {
-  id: string
-  user_id: string
-  race_name: string
-  distance_category: string | null
-  race_date: string | null
-  finish_time: string | null
-  strava_activity_url: string | null
-  is_upcoming: boolean
-  display_order: number
-  created_at: string
-}

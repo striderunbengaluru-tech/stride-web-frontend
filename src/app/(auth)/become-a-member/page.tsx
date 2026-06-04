@@ -24,8 +24,8 @@ const features = [
         <circle cx='12' cy='8' r='5' /><path d='M20 21a8 8 0 1 0-16 0' />
       </svg>
     ),
-    title: 'A shareable runner profile',
-    desc: 'The first of its kind — a profile built for runners. Share your milestones, PRs, and story.',
+    title: 'A shareable athlete profile',
+    desc: 'The first of its kind — a profile built for athletes. Share your milestones, PRs, and story.',
   },
   {
     icon: (
@@ -65,7 +65,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
             className='animate-fade-in-up inline-flex'
             style={{ animationDelay: '0s' }}
           >
-            <span className='inline-flex items-center gap-2 border border-stride-yellow-accent/40 rounded-full px-4 py-1.5 text-stride-yellow-accent text-xs font-semibold tracking-widest uppercase'>
+            <span className='inline-flex items-center gap-2 border border-stride-yellow-accent/40 rounded-full px-4 py-1.5 text-stride-yellow-accent text-xs font-semibold tracking-widest font-mono uppercase'>
               <span className='w-1.5 h-1.5 rounded-full bg-stride-yellow-accent animate-pulse' />
               Become a member of Stride — It&apos;s free!
             </span>
@@ -85,7 +85,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
 
           {/* Sub-headline */}
           <p
-            className='animate-fade-in-up text-white/55 text-lg leading-relaxed max-w-md font-roboto'
+            className='animate-fade-in-up text-white/55 text-lg leading-relaxed max-w-md font-figtree'
             style={{ animationDelay: '0.2s' }}
           >
             Become a member of Stride Run Club with just one click and take part in Stride Run Club&apos;s curated experiences.
@@ -104,7 +104,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
                 </span>
                 <div>
                   <p className='text-white font-semibold text-sm'>{feature.title}</p>
-                  <p className='text-white/45 text-sm leading-relaxed mt-0.5 font-roboto'>{feature.desc}</p>
+                  <p className='text-white/45 text-sm leading-relaxed mt-0.5 font-figtree'>{feature.desc}</p>
                 </div>
               </li>
             ))}
@@ -126,7 +126,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
               <h2 className='text-3xl font-bold leading-snug mb-2'>
                 Your journey<br />starts here.
               </h2>
-              <p className='text-white/50 text-sm leading-relaxed mb-8 font-roboto'>
+              <p className='text-white/50 text-sm leading-relaxed mb-8 font-figtree'>
                 Become a member with just one click — connect with Google and take part in Stride Run Club&apos;s curated experiences.
               </p>
 
@@ -135,25 +135,25 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
               {/* Divider with label */}
               <div className='flex items-center gap-3 my-6'>
                 <div className='flex-1 h-px bg-white/10' />
-                <span className='text-white/25 text-xs font-roboto tracking-wide'>No password needed, ever</span>
+                <span className='text-white/25 text-xs font-figtree tracking-wide'>No password needed, ever</span>
                 <div className='flex-1 h-px bg-white/10' />
               </div>
 
               {/* Trust signals */}
               <div className='flex items-center justify-center gap-6'>
                 {[
-                  { value: '500+', label: 'runners' },
+                  { value: '7,000+', label: 'athletes' },
                   { value: '3 sec', label: 'to join' },
                   { value: 'Free', label: 'forever' },
                 ].map((stat) => (
                   <div key={stat.label} className='text-center'>
-                    <p className='text-stride-yellow-accent font-bold text-sm'>{stat.value}</p>
-                    <p className='text-white/30 text-xs font-roboto mt-0.5'>{stat.label}</p>
+                    <p className='text-stride-yellow-accent font-bold text-sm font-mono tabular-nums'>{stat.value}</p>
+                    <p className='text-white/30 text-xs font-figtree mt-0.5'>{stat.label}</p>
                   </div>
                 ))}
               </div>
 
-              <p className='text-white/20 text-xs text-center mt-6 leading-relaxed font-roboto'>
+              <p className='text-white/20 text-xs text-center mt-6 leading-relaxed font-figtree'>
                 By continuing, you agree to our{' '}
                 <a href='/terms-of-service' className='text-stride-yellow-accent/60 hover:text-stride-yellow-accent transition-colors'>
                   Terms

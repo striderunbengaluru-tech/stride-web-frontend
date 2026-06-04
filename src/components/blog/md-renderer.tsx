@@ -39,7 +39,7 @@ const components: Components = {
       return <>{children}</>
     }
     return (
-      <p className='text-white/70 font-roboto text-base md:text-lg leading-relaxed mb-6'>
+      <p className='text-white/70 font-figtree text-base md:text-lg leading-relaxed mb-6'>
         {children}
       </p>
     )
@@ -68,7 +68,7 @@ const components: Components = {
           loading='lazy'
         />
         {alt && (
-          <p className='text-center text-xs text-white/35 font-roboto mt-3 italic'>{alt}</p>
+          <p className='text-center text-xs text-white/35 font-figtree mt-3 italic'>{alt}</p>
         )}
       </SectionReveal>
     )
@@ -98,7 +98,7 @@ const components: Components = {
 
   li({ children }) {
     return (
-      <li className='flex items-start gap-2.5 text-white/70 font-roboto text-base leading-relaxed'>
+      <li className='flex items-start gap-2.5 text-white/70 font-figtree text-base leading-relaxed'>
         <span className='shrink-0 mt-2 w-1.5 h-1.5 rounded-sm bg-stride-yellow-accent/60 rotate-45' />
         <span>{children}</span>
       </li>

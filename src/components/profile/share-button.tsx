@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Share2, Copy, Check, X } from 'lucide-react'
 
 type Props = {
@@ -9,9 +9,15 @@ type Props = {
   text?: string
 }
 
-export function ShareButton({ url, title, text }: Props) {
+export function ShareButton({ url: initialUrl, title, text }: Props) {
   const [showFallback, setShowFallback] = useState(false)
   const [copied, setCopied] = useState(false)
+  // Prefer the live address-bar URL so shared links match the current
+  // environment (localhost / staging / production) rather than a baked-in host.
+  const [url, setUrl] = useState(initialUrl)
+  useEffect(() => {
+    setUrl(window.location.href)
+  }, [])
 
   async function handleShare() {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {

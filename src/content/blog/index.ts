@@ -39,7 +39,7 @@ export const BLOG_POSTS: BlogPost[] = [
     tags: ['Community', 'Events', 'Collab'],
     tldr: [
       'Stride Home Club x Pokémon GO collab run on 23 May — starting and ending at Starbucks.',
-      'Runners downloaded the app, got briefed on egg incubation, then ran 2km or 5km through Cubbon Park to hatch their Pokémon.',
+      'Athletes downloaded the app, got briefed on egg incubation, then ran 2km or 5km through Cubbon Park to hatch their Pokémon.',
       'Hatched egg = proof of run = entry into a lucky draw for Pikachu plushies.',
       'Four lucky draw winners + one Instagram story winner each took home a Pikachu plushie. Everyone got a free Starbucks beverage.',
     ],

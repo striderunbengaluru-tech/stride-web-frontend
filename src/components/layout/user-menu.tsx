@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck } from 'lucide-react'
+import { LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 
 type Props = {
   username: string
@@ -132,6 +133,18 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                 View profile
               </Link>
 
+              {PREVIEW_FEATURES_ENABLED && (
+                <Link
+                  href='/my-runs'
+                  role='menuitem'
+                  onClick={() => setOpen(false)}
+                  className='flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-copy-white/70 hover:text-copy-white hover:bg-copy-white/8 transition-colors text-sm'
+                >
+                  <Footprints size={15} className='shrink-0 text-copy-white/50' aria-hidden='true' />
+                  My Runs
+                </Link>
+              )}
+
               {isAdmin && (
                 <Link
                   href='/admin'
@@ -143,7 +156,7 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                     <LayoutDashboard size={15} className='shrink-0' aria-hidden='true' />
                     Admin dashboard
                   </span>
-                  <span className='text-[9px] font-bold uppercase tracking-widest bg-stride-yellow-accent/15 border border-stride-yellow-accent/30 rounded px-1.5 py-0.5'>
+                  <span className='text-[9px] font-bold font-mono uppercase tracking-widest bg-stride-yellow-accent/15 border border-stride-yellow-accent/30 rounded px-1.5 py-0.5'>
                     Admin
                   </span>
                 </Link>

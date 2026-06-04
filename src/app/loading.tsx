@@ -6,7 +6,7 @@ import { Zap } from 'lucide-react'
 
 const TIPS = [
   "Run your own race — comparison is the thief of joy on the track.",
-  "Easy runs should feel easy. Most runners go too hard, too often.",
+  "Easy runs should feel easy. Most athletes go too hard, too often.",
   "Hydration starts the night before, not the morning of your run.",
   "Your slowest run is still faster than sitting on the couch.",
   "Strength training twice a week reduces running injuries by up to 50%.",
@@ -99,7 +99,7 @@ export default function Loading() {
         <div className='max-w-xs w-full bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-5 py-4 text-center'>
           <div className='flex items-center justify-center gap-1.5 mb-3'>
             <Zap size={11} className='text-stride-yellow-accent fill-stride-yellow-accent' />
-            <span className='text-stride-yellow-accent text-[10px] font-bold uppercase tracking-[0.22em]'>
+            <span className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.22em]'>
               Running Tip
             </span>
           </div>

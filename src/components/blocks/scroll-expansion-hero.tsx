@@ -379,7 +379,7 @@ const ScrollExpandMedia = ({
                         transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     </div>
-                    <span className='text-[10px] text-copy-white/50 font-medium tracking-[0.22em] uppercase'>
+                    <span className='text-[10px] text-copy-white/50 font-medium tracking-[0.22em] font-mono uppercase'>
                       {scrollToExpand.replace(/\s*↓\s*$/, '')}
                     </span>
                   </motion.div>

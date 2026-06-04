@@ -23,6 +23,7 @@ export const GATED_ROUTE_PREFIXES = [
   '/become-a-member',
   '/milestones',
   '/team',
+  '/my-runs',
 ] as const
 
 // True when `path` is (or is nested under) a route hidden on production.

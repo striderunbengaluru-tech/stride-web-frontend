@@ -26,7 +26,7 @@ export function RunnerTagTicket({ runnerTag, registrationId, userName }: Props) 
     <div className='bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-5'>
       <div className='flex items-center gap-1.5 mb-1'>
         <Tag size={13} className='text-stride-yellow-accent' strokeWidth={2.5} />
-        <p className='text-white/40 text-xs font-medium uppercase tracking-widest'>Runner Tag</p>
+        <p className='text-white/40 text-xs font-medium font-mono uppercase tracking-widest'>Stride Tag</p>
       </div>
       <p className='text-white/40 text-xs mb-4'>Show this to the admin at check-in.</p>
 
@@ -35,7 +35,7 @@ export function RunnerTagTicket({ runnerTag, registrationId, userName }: Props) 
           type='button'
           onClick={copyTag}
           className='group w-full flex items-center justify-between bg-stride-yellow-accent/12 border border-stride-yellow-accent/35 rounded-xl px-5 py-4 hover:bg-stride-yellow-accent/20 hover:border-stride-yellow-accent/60 active:scale-[0.98] transition-all'
-          aria-label='Copy Runner Tag'
+          aria-label='Copy Stride Tag'
         >
           <span className='text-stride-yellow-accent font-mono font-black text-4xl sm:text-5xl tracking-[0.4em]'>
             {runnerTag}

@@ -1,11 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Share2, Check, Copy } from 'lucide-react'
 
 type Props = { title: string; url: string }
 
-export function ShareButton({ title, url }: Props) {
+// Re-point a baked-in URL at the live address-bar origin so shared/copied links
+// match the current environment (localhost / staging / production).
+function useLiveUrl(initial: string): string {
+  const [url, setUrl] = useState(initial)
+  useEffect(() => {
+    try {
+      const u = new URL(initial)
+      setUrl(`${window.location.origin}${u.pathname}${u.search}`)
+    } catch {
+      setUrl(initial)
+    }
+  }, [initial])
+  return url
+}
+
+export function ShareButton({ title, url: initialUrl }: Props) {
+  const url = useLiveUrl(initialUrl)
   const [state, setState] = useState<'idle' | 'copied'>('idle')
 
   async function handleShare() {
@@ -47,7 +63,8 @@ export function ShareButton({ title, url }: Props) {
 }
 
 // Separate copy-only button used in admin
-export function CopyLinkWidget({ url }: { url: string }) {
+export function CopyLinkWidget({ url: initialUrl }: { url: string }) {
+  const url = useLiveUrl(initialUrl)
   const [copied, setCopied] = useState(false)
   async function handleCopy() {
     try {

@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/spinner'
 const PRESET_SKILLS = [
   '5K', '10K', 'Half Marathon', 'Marathon', 'Ultra',
   'Trail Running', 'Speed Work', 'Recovery Runs',
-  'Morning Runner', 'Night Owl', 'Pacer', 'New Runner',
+  'Morning Athlete', 'Night Owl', 'Pacer', 'New Athlete',
 ]
 
 const SKILL_ICONS: Record<string, React.ReactNode> = {
@@ -20,10 +20,10 @@ const SKILL_ICONS: Record<string, React.ReactNode> = {
   'Trail Running':  <Trees size={11} aria-hidden='true' />,
   'Speed Work':     <Zap size={11} aria-hidden='true' />,
   'Recovery Runs':  <Heart size={11} aria-hidden='true' />,
-  'Morning Runner': <Sunrise size={11} aria-hidden='true' />,
-  'Night Owl':      <Moon size={11} aria-hidden='true' />,
-  'Pacer':          <Clock size={11} aria-hidden='true' />,
-  'New Runner':     <Star size={11} aria-hidden='true' />,
+  'Morning Athlete': <Sunrise size={11} aria-hidden='true' />,
+  'Night Owl':       <Moon size={11} aria-hidden='true' />,
+  'Pacer':           <Clock size={11} aria-hidden='true' />,
+  'New Athlete':     <Star size={11} aria-hidden='true' />,
 }
 
 type Props = {

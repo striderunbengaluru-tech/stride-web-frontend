@@ -20,11 +20,11 @@ const CANONICAL_URL = 'https://www.strideclub.in/partnerships/'
 export const metadata: Metadata = {
   title: "Partner With India's Fittest Running Community | Stride Run Club",
   description:
-    "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Put your brand at every finish line in Bengaluru. Stride Run Club delivers authentic, high-ROI partnerships with India's most engaged fitness community.",
+    "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Put your brand at every finish line in Bengaluru. Stride Run Club delivers authentic, high-ROI partnerships with India's most engaged fitness community.",
   openGraph: {
     title: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
-      "52,000+ followers. 6,894 runners. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
+      "52,000+ followers. 7,000+ athletes. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
     url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Partner With India's Fittest Running Community",
     description:
-      "52,000+ followers. 6,894 runners. 55+ brands. Authentic partnerships with Bengaluru's most engaged fitness community.",
+      "52,000+ followers. 7,000+ athletes. 55+ brands. Authentic partnerships with Bengaluru's most engaged fitness community.",
     images: [OG_IMAGE],
   },
   alternates: {
@@ -62,7 +62,7 @@ const schemaOrg = {
       url: CANONICAL_URL,
       name: "Partner With India's Fittest Running Community | Stride Run Club",
       description:
-        "52,000+ Instagram followers. 6,894 weekly runners. 55+ brand partners. Authentic, high-ROI brand partnerships with Bengaluru's most engaged fitness community.",
+        "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Authentic, high-ROI brand partnerships with Bengaluru's most engaged fitness community.",
       image: OG_IMAGE,
       inLanguage: 'en-IN',
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
@@ -83,7 +83,7 @@ const schemaOrg = {
       url: SITE_ORIGIN,
       logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
       description:
-        "India's most engaged running community — 6,894 runners, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
+        "India's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
       location: {
         '@type': 'Place',
         name: 'Bengaluru, Karnataka, India',
@@ -149,7 +149,7 @@ export default function PartnershipsPage() {
 
       {/* ── LOGO MARQUEE ─────────────────────────────────────── */}
       <section className='mb-20'>
-        <p className='text-center text-white/30 text-xs uppercase tracking-widest mb-8'>
+        <p className='text-center text-white/30 text-xs font-mono uppercase tracking-widest mb-8'>
           Brands that have partnered with Stride
         </p>
         <div className='relative'>
@@ -162,7 +162,7 @@ export default function PartnershipsPage() {
       {/* ── WHY STRIDE ───────────────────────────────────────── */}
       <section id='why-stride' className='max-w-5xl mx-auto px-6 mb-16'>
         <SectionReveal className='text-center mb-12'>
-          <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
+          <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Why Stride
           </p>
           <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre'>
@@ -183,11 +183,11 @@ export default function PartnershipsPage() {
           <div className='pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-copy-black/5' />
           <div className='pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-copy-black/5' />
 
-          <p className='text-copy-black/60 text-xs font-semibold uppercase tracking-widest mb-4 relative'>
+          <p className='text-copy-black/60 text-xs font-semibold font-mono uppercase tracking-widest mb-4 relative'>
             Let&apos;s build something together
           </p>
           <h2 className='text-copy-black text-3xl sm:text-4xl font-bold mb-4 relative font-libre leading-tight'>
-            Don&apos;t advertise to runners.<br />Run with them.
+            Don&apos;t advertise to athletes.<br />Run with them.
           </h2>
           <p className='text-copy-black/70 text-sm sm:text-base mb-8 max-w-sm mx-auto relative leading-relaxed'>
             One partnership with Stride puts your brand at every finish line, in every post-run photo,
@@ -203,7 +203,7 @@ export default function PartnershipsPage() {
       {/* ── SEE IT FOR YOURSELF ──────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 mb-24'>
         <SectionReveal className='text-center mb-10'>
-          <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
+          <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Real Partnerships. Real Impact.
           </p>
           <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre'>
@@ -222,7 +222,7 @@ export default function PartnershipsPage() {
       {/* ── OUR PARTNERS ─────────────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 mb-24'>
         <SectionReveal className='text-center mb-12'>
-          <p className='text-stride-yellow-accent text-xs font-semibold uppercase tracking-widest mb-3'>
+          <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Our Partners
           </p>
           <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre'>
@@ -243,7 +243,7 @@ export default function PartnershipsPage() {
           <div className='pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-copy-black/5' />
           <div className='pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-copy-black/5' />
 
-          <p className='text-copy-black/60 text-xs font-semibold uppercase tracking-widest mb-4 relative'>
+          <p className='text-copy-black/60 text-xs font-semibold font-mono uppercase tracking-widest mb-4 relative'>
             Let&apos;s build something together
           </p>
           <h2 className='text-copy-black text-4xl sm:text-5xl font-bold mb-4 relative font-libre'>

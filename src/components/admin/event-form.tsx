@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { nanoid } from 'nanoid'
-import ReactCrop, { type Crop } from 'react-image-crop'
+import ReactCrop, { centerCrop, makeAspectCrop, type Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import {
   X, Plus, Eye, ChevronDown, Pencil, GripVertical, Trash2,
@@ -240,6 +240,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   }
   function resetImageDrag() { setImgDragSrc(null); setImgDragOver(null) }
 
+  // Seed a centered 3:4 crop when the image loads (event posters are locked to 3:4).
+  function onCropImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget
+    setCrop(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, 3 / 4, width, height), width, height))
+  }
+
   const getCroppedBlob = useCallback((): Promise<Blob | null> => {
     const img = cropImgRef.current
     if (!img) return Promise.resolve(null)
@@ -351,15 +357,16 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
       {cropSrc && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6'>
           <div className='bg-stride-purple-primary border border-white/15 rounded-xl p-3 w-full max-w-sm flex flex-col gap-2.5'>
-            <p className='text-white/60 text-xs px-1'>Drag to crop · Save as-is for full image</p>
+            <p className='text-white/60 text-xs px-1'>Drag to reposition · Fixed 3:4 poster ratio</p>
             <div className='flex justify-center overflow-hidden rounded-lg'>
-              <ReactCrop crop={crop} onChange={setCrop} style={{ maxHeight: '50vh', maxWidth: '100%' }}>
+              <ReactCrop crop={crop} onChange={setCrop} aspect={3 / 4} keepSelection style={{ maxHeight: '50vh', maxWidth: '100%' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={cropImgRef}
                   src={cropSrc}
                   alt='Crop preview'
                   crossOrigin='anonymous'
+                  onLoad={onCropImageLoad}
                   style={{ maxHeight: '50vh', maxWidth: '100%', display: 'block' }}
                 />
               </ReactCrop>
@@ -439,7 +446,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             {/* ── STATUS PILLS ── */}
             <div className='bg-white/4 border border-white/10 rounded-2xl px-4 py-4 sm:px-5 sm:py-5'>
               <div className='flex items-center gap-2 mb-3'>
-                <p className='text-white/40 text-[10px] font-bold uppercase tracking-widest'>Event status</p>
+                <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest'>Event status</p>
                 <HelpHint text='PUBLISHED: visible to everyone on /events. DRAFT: visible only in admin. CANCELLED: shown in admin with a red badge, hidden from runners.' />
               </div>
               <div className='grid grid-cols-3 gap-2'>
@@ -806,7 +813,7 @@ function Widget({ icon, title, children }: { icon: React.ReactNode; title: strin
         <span className='inline-flex w-7 h-7 rounded-lg bg-stride-yellow-accent/10 text-stride-yellow-accent items-center justify-center'>
           {icon}
         </span>
-        <h2 className='text-white font-bold text-sm uppercase tracking-widest'>{title}</h2>
+        <h2 className='text-white font-bold text-sm font-mono uppercase tracking-widest'>{title}</h2>
       </div>
       {children}
     </section>

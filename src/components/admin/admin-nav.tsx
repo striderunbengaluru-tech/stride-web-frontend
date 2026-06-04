@@ -38,7 +38,7 @@ export function AdminNav() {
           <div className='flex items-center gap-1 h-12 overflow-x-auto scrollbar-hide'>
 
             {/* Admin badge */}
-            <span className='text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 px-2.5 py-1 rounded-md tracking-widest uppercase shrink-0 mr-2'>
+            <span className='text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 px-2.5 py-1 rounded-md tracking-widest font-mono uppercase shrink-0 mr-2'>
               Admin
             </span>
 
