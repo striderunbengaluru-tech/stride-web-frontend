@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   const { error: uploadError } = await adminClient.storage
     .from(BUCKET)
-    .upload(storagePath, webpBuffer, { contentType: 'image/webp', upsert: false })
+    .upload(storagePath, webpBuffer, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
 
   if (uploadError) {
     console.error('[Prompt image upload]', uploadError)

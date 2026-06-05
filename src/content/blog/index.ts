@@ -34,8 +34,8 @@ export const BLOG_POSTS: BlogPost[] = [
       avatarUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/sidharth-yadav-dp.png',
       instagramUrl: 'https://www.instagram.com/the_sid_way/',
     },
-    coverUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-2.jpg',
-    ogImageUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-og.jpg',
+    coverUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-2.webp',
+    ogImageUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-pokemon-og.webp',
     tags: ['Community', 'Events', 'Collab'],
     tldr: [
       'Stride Home Club x Pokémon GO collab run on 23 May — starting and ending at Starbucks.',

@@ -5,7 +5,7 @@ Saturday, 23 May. Starbucks. A bunch of athletes who had no idea they were about
 
 That was Stride x Pokemon GO and it was exactly as chaotic as it sounds.
 
-![Athletes gathered at Cubbon Park after the warm-up](${BLOGS}/blog-pokemon-2.jpg)
+![Athletes gathered at Cubbon Park after the warm-up](${BLOGS}/blog-pokemon-2.webp)
 
 ## The Brief
 
@@ -26,7 +26,7 @@ The vibe was different from a regular Stride run. Slower pace, more stopping, mo
 > "I came for the run. I stayed for the Pokemon. I'm downloading this game permanently."
 > - Naman Gupta
 
-![A lucky winner won a Pikachu plushie from the lucky draw](${BLOGS}/blog-pokemon-3.png)
+![A lucky winner won a Pikachu plushie from the lucky draw](${BLOGS}/blog-pokemon-3.webp)
 
 ## The Hatch
 
@@ -38,18 +38,18 @@ Once you showed your hatched Pokemon at Starbucks, your name went into the **luc
 
 ## Pikachu Plushies and Free Coffee
 
-![Picking up chits for the lucky draw](${BLOGS}/blog-pokemon-4.png)
+![Picking up chits for the lucky draw](${BLOGS}/blog-pokemon-4.webp)
 
 Four winners were picked from the lucky draw and each walked away with a **Pokemon Pikachu plushie**. But the fifth plushie? That one went to the athlete whose story, reposted on Stride's Instagram, got the most likes.
 
-![Five Pikachu plushies up for grabs](${BLOGS}/blog-pokemon-5.png)
+![Five Pikachu plushies up for grabs](${BLOGS}/blog-pokemon-5.webp)
 
 And everyone, winners or not, got a **free beverage from Starbucks** to close out the morning.
 
 > "I hatched a Snorlax, lost the lucky draw, but got a free cold brew. Honestly? Win."
 > - Jeel Makwana, Stride regular
 
-![Post-run at Starbucks: cold brews, plushies, and zero regrets](${BLOGS}/blog-pokemon-6.png)
+![Post-run at Starbucks: cold brews, plushies, and zero regrets](${BLOGS}/blog-pokemon-6.webp)
 
 ## Worth It?
 

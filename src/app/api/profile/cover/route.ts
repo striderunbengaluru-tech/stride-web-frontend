@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
-    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true })
+    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
 
   if (uploadError) {
     console.error('[Cover upload]', uploadError)
@@ -48,18 +48,20 @@ export async function POST(request: Request) {
 
   const prevUrl = prev?.cover_url
   if (prevUrl?.startsWith(STORAGE_PUBLIC_PREFIX)) {
-    const prevPath = prevUrl.slice(STORAGE_PUBLIC_PREFIX.length)
+    const prevPath = prevUrl.slice(STORAGE_PUBLIC_PREFIX.length).split('?')[0]
     if (prevPath.startsWith('images/covers/') && prevPath !== path) {
       await adminClient.storage.from('stride-assets').remove([prevPath])
     }
   }
 
   const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(path)
+  // Stable path + upsert + 1-year immutable cache → version param busts the cache on re-upload.
+  const versionedUrl = `${publicUrl}?v=${Date.now()}`
 
   await adminClient
     .from('users')
-    .update({ cover_url: publicUrl, updated_at: new Date().toISOString() })
+    .update({ cover_url: versionedUrl, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
-  return NextResponse.json({ url: publicUrl })
+  return NextResponse.json({ url: versionedUrl })
 }
