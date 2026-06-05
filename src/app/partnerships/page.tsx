@@ -124,11 +124,11 @@ const SUPABASE_LOGOS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/obje
 const SUPABASE_WEB_ASSETS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets'
 
 const PARTNERSHIP_REELS = [
-  { url: 'https://www.instagram.com/p/DW29ahUkeP9/',  title: 'A stellar partnership with Fuaark',        logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.svg`,     partnerHandle: '@fuaark_official',  thumbnailUrl: `${SUPABASE_WEB_ASSETS}/fuaark-insta-thumb.jpg` },
-  { url: 'https://www.instagram.com/p/DWmkXvok3p9/', title: "Declared India's fittest club by peakst8", logoUrl: `${SUPABASE_LOGOS}/peakst8-logo.svg`,     partnerHandle: '@peakst8',          thumbnailUrl: `${SUPABASE_WEB_ASSETS}/peakst8-insta-thumb.jpg`,   darkChip: true },
-  { url: 'https://www.instagram.com/p/DU2q0Iyj3rn/', title: 'Valentines Day partnership with PUMA and HYROX',  logoUrl: `${SUPABASE_LOGOS}/puma-hyrox-logo.svg`,  partnerHandle: '@pumaindia',        thumbnailUrl: `${SUPABASE_WEB_ASSETS}/puma-hyrox-insta-thumb.jpg` },
-  { url: 'https://www.instagram.com/p/DMu5SCTPXzG/', title: 'Ran hard, raved harder with Zepto',        logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg`,       partnerHandle: '@zeptoapp',         thumbnailUrl: `${SUPABASE_WEB_ASSETS}/zepto-insta-thumb.jpg` },
-  { url: 'https://www.instagram.com/p/DLo1vcfua88/', title: 'With Olympian Neeraj Chopra',              logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg`,  partnerHandle: '@underarmourind',   thumbnailUrl: `${SUPABASE_WEB_ASSETS}/neeraj-insta-thumb.jpg` },
+  { url: 'https://www.instagram.com/p/DW29ahUkeP9/',  title: 'A stellar partnership with Fuaark',        logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.svg`,     partnerHandle: '@fuaark_official',  thumbnailUrl: `${SUPABASE_WEB_ASSETS}/fuaark-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DWmkXvok3p9/', title: "Declared India's fittest club by peakst8", logoUrl: `${SUPABASE_LOGOS}/peakst8-logo.svg`,     partnerHandle: '@peakst8',          thumbnailUrl: `${SUPABASE_WEB_ASSETS}/peakst8-insta-thumb.webp`,   darkChip: true },
+  { url: 'https://www.instagram.com/p/DU2q0Iyj3rn/', title: 'Valentines Day partnership with PUMA and HYROX',  logoUrl: `${SUPABASE_LOGOS}/puma-hyrox-logo.svg`,  partnerHandle: '@pumaindia',        thumbnailUrl: `${SUPABASE_WEB_ASSETS}/puma-hyrox-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DMu5SCTPXzG/', title: 'Ran hard, raved harder with Zepto',        logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg`,       partnerHandle: '@zeptoapp',         thumbnailUrl: `${SUPABASE_WEB_ASSETS}/zepto-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DLo1vcfua88/', title: 'With Olympian Neeraj Chopra',              logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg`,  partnerHandle: '@underarmourind',   thumbnailUrl: `${SUPABASE_WEB_ASSETS}/neeraj-insta-thumb.webp` },
 ]
 
 export default function PartnershipsPage() {
