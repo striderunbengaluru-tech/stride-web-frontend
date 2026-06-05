@@ -138,7 +138,6 @@ const schemaOrg = {
         unitText: 'community members',
       },
       sport: 'Running',
-      membershipNumber: 6894,
     },
   ],
 }
