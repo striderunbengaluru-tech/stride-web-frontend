@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
-    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true })
+    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: true, cacheControl: '31536000' })
 
   if (uploadError) {
     console.error('[Avatar upload]', uploadError)
@@ -51,18 +51,21 @@ export async function POST(request: Request) {
   // avatars folder, delete it. Same-path overwrites are already handled by upsert.
   const prevUrl = prev?.avatar_url
   if (prevUrl?.startsWith(STORAGE_PUBLIC_PREFIX)) {
-    const prevPath = prevUrl.slice(STORAGE_PUBLIC_PREFIX.length)
+    const prevPath = prevUrl.slice(STORAGE_PUBLIC_PREFIX.length).split('?')[0]
     if (prevPath.startsWith('images/avatars/') && prevPath !== path) {
       await adminClient.storage.from('stride-assets').remove([prevPath])
     }
   }
 
   const { data: { publicUrl } } = adminClient.storage.from('stride-assets').getPublicUrl(path)
+  // The file is overwritten in place (stable path + upsert) and served with a 1-year
+  // immutable cache. A version query param busts that cache so a new upload is seen.
+  const versionedUrl = `${publicUrl}?v=${Date.now()}`
 
   await adminClient
     .from('users')
-    .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+    .update({ avatar_url: versionedUrl, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
-  return NextResponse.json({ url: publicUrl })
+  return NextResponse.json({ url: versionedUrl })
 }

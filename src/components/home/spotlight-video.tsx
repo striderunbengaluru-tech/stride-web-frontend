@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface SpotlightVideoProps {
   src: string;
+  poster?: string;
   isMuted: boolean;
   onMuteChange: (muted: boolean) => void;
   onEnded?: () => void;
@@ -14,6 +15,7 @@ interface SpotlightVideoProps {
 
 export function SpotlightVideo({
   src,
+  poster,
   isMuted,
   onMuteChange,
   onEnded,
@@ -21,18 +23,9 @@ export function SpotlightVideo({
 }: SpotlightVideoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  // Refs to avoid stale closures in IntersectionObserver
-  const isMutedRef = useRef(isMuted);
-  const onMuteChangeRef = useRef(onMuteChange);
-  const onEndedRef = useRef(onEnded);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [flashIcon, setFlashIcon] = useState<'play' | 'pause' | null>(null);
-
-  // Keep refs current
-  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
-  useEffect(() => { onMuteChangeRef.current = onMuteChange; }, [onMuteChange]);
-  useEffect(() => { onEndedRef.current = onEnded; }, [onEnded]);
 
   // Sync isMuted prop → video element (handles parent-driven mute changes)
   useEffect(() => {
@@ -40,7 +33,9 @@ export function SpotlightVideo({
     if (video) video.muted = isMuted;
   }, [isMuted]);
 
-  // IntersectionObserver: play with audio when scrolled in, pause when scrolled away
+  // IntersectionObserver: pause when scrolled away. We deliberately DO NOT auto-play
+  // — playback is user-initiated only (preload="none") so no video bytes are fetched
+  // from storage until the viewer actually taps play. This is the key egress saver.
   useEffect(() => {
     const container = containerRef.current;
     const video = videoRef.current;
@@ -48,18 +43,7 @@ export function SpotlightVideo({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !video.ended) {
-          video.muted = isMutedRef.current;
-          video.play().catch(() => {
-            // Browser blocked unmuted autoplay — fall back to muted
-            video.muted = true;
-            isMutedRef.current = true;
-            onMuteChangeRef.current(true);
-            video.play().catch(() => {});
-          });
-        } else {
-          video.pause();
-        }
+        if (!entry.isIntersecting) video.pause();
       },
       { threshold: 0.5 }
     );
@@ -117,6 +101,8 @@ export function SpotlightVideo({
       <video
         ref={videoRef}
         src={src}
+        poster={poster}
+        preload='none'
         playsInline
         className='absolute inset-0 h-full w-full object-cover'
         onPlay={() => setIsPlaying(true)}

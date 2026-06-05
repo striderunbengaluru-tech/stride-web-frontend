@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')
-    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: false })
+    .upload(path, webpBuffer, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
 
   if (uploadError) {
     console.error('[Event image upload]', uploadError)
