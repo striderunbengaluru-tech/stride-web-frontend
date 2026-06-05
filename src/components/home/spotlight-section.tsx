@@ -205,9 +205,9 @@ export default function SpotlightSection() {
               >
                 <SpotlightVideo
                   src={slide.videoUrl}
+                  poster={slide.poster}
                   isMuted={isMuted}
                   onMuteChange={setIsMuted}
-                  onEnded={goNext}
                 />
                 {/* Accent corner — top left */}
                 <div className='absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-stride-yellow-accent/50 rounded-tl-sm pointer-events-none z-20' />
