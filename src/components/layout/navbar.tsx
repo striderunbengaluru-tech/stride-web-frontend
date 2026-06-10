@@ -57,6 +57,7 @@ const Navbar = async () => {
             height={36}
             className='object-contain'
             priority
+            unoptimized
           />
         </Link>
 

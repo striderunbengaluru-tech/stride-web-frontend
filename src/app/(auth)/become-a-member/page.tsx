@@ -2,13 +2,13 @@ import { GoogleSignInButton } from '@/utils/auth'
 import { guardPreviewFeature } from '@/lib/feature-flags'
 
 export const metadata = {
-  title: 'Become a Member — Stride Run Club',
+  title: 'Become a Member | Stride Run Club',
 }
 
 const features = [
   {
     icon: (
-      <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
+      <svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
         <path d='M6 9H4.5a2.5 2.5 0 0 1 0-5H6' /><path d='M18 9h1.5a2.5 2.5 0 0 0 0-5H18' />
         <path d='M4 22h16' /><path d='M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' />
         <path d='M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' />
@@ -20,16 +20,16 @@ const features = [
   },
   {
     icon: (
-      <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
+      <svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
         <circle cx='12' cy='8' r='5' /><path d='M20 21a8 8 0 1 0-16 0' />
       </svg>
     ),
     title: 'A shareable athlete profile',
-    desc: 'The first of its kind — a profile built for athletes. Share your milestones, PRs, and story.',
+    desc: 'The first of its kind: a profile built for athletes. Share your milestones, PRs, and story.',
   },
   {
     icon: (
-      <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
+      <svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
         <path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z' />
       </svg>
     ),
@@ -67,7 +67,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
           >
             <span className='inline-flex items-center gap-2 border border-stride-yellow-accent/40 rounded-full px-4 py-1.5 text-stride-yellow-accent text-xs font-semibold tracking-widest font-mono uppercase'>
               <span className='w-1.5 h-1.5 rounded-full bg-stride-yellow-accent animate-pulse' />
-              Become a member of Stride — It&apos;s free!
+              Become a member of Stride. It&apos;s free!
             </span>
           </div>
 
@@ -99,10 +99,10 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
                 className='animate-fade-in-up flex items-start gap-4'
                 style={{ animationDelay: `${0.3 + i * 0.12}s` }}
               >
-                <span className='mt-0.5 shrink-0 w-9 h-9 rounded-lg bg-stride-yellow-accent/10 border border-stride-yellow-accent/20 flex items-center justify-center text-stride-yellow-accent'>
+                <span className='mt-0.5 shrink-0 text-stride-yellow-accent'>
                   {feature.icon}
                 </span>
-                <div>
+                <div className='border-l border-white/10 pl-4'>
                   <p className='text-white font-semibold text-sm'>{feature.title}</p>
                   <p className='text-white/45 text-sm leading-relaxed mt-0.5 font-figtree'>{feature.desc}</p>
                 </div>
@@ -127,7 +127,7 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
                 Your journey<br />starts here.
               </h2>
               <p className='text-white/50 text-sm leading-relaxed mb-8 font-figtree'>
-                Become a member with just one click — connect with Google and take part in Stride Run Club&apos;s curated experiences.
+                Become a member with just one click. Connect with Google and take part in Stride Run Club&apos;s curated experiences.
               </p>
 
               <GoogleSignInButton nextUrl={safeNext} />

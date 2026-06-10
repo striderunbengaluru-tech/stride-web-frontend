@@ -89,7 +89,7 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
           style={{ animationDuration: '180ms' }}
         >
           {/* Glass shell */}
-          <div className='bg-stride-purple-primary/85 backdrop-blur-2xl border border-copy-white/12 rounded-2xl'>
+          <div className='bg-stride-purple-primary border border-copy-white/12 rounded-2xl'>
 
             {/* Header — avatar + name + email */}
             <div className='px-4 pt-4 pb-3 flex items-center gap-3 border-b border-copy-white/8'>

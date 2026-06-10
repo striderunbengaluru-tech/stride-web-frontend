@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MessageCircle } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { InstagramIcon } from '@/components/ui/brand-icons'
+import { InstagramIcon, WhatsAppIcon } from '@/components/ui/brand-icons'
 import { buildStoryCanvas } from '@/components/events/story-banner-download'
 
 type Props = {
@@ -27,11 +26,11 @@ export function ShareConfirmation({
     setEventUrl(`${window.location.origin}/events/${eventSlug}`)
   }, [eventSlug])
 
-  // Clean message — no ZWJ emojis (older devices render them as garbage chars).
+  // Plain-text message, no emojis (older devices render them as garbage chars).
   const whatsappText =
     `I'm running ${eventName}` +
     (eventDate ? ` on ${eventDate}` : '') +
-    ` with Stride Run Club 🏃\n\n` +
+    ` with Stride Run Club.\n\n` +
     `Come run with me: ${eventUrl}`
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`
 
@@ -86,7 +85,7 @@ export function ShareConfirmation({
         aria-label='Share on WhatsApp'
         className='group w-12 h-12 rounded-xl border border-white/10 bg-white/4 hover:bg-white/8 hover:border-green-400/40 transition-all flex items-center justify-center'
       >
-        <MessageCircle size={20} className='text-green-400 group-hover:scale-110 transition-transform' strokeWidth={2.2} />
+        <WhatsAppIcon size={20} className='text-green-500 group-hover:scale-110 transition-transform' />
       </a>
 
       {/* Instagram */}
