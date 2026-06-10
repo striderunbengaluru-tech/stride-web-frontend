@@ -4,7 +4,6 @@ import NewsroomSection from '@/components/home/newsroom-section';
 import SpotlightSection from '@/components/home/spotlight-section';
 import MerchSection from '@/components/home/merch-section';
 import FaqSection from '@/components/home/faq-section';
-import SocialCtaSection from '@/components/home/social-cta-section';
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/homepage-og.png'
 const SITE_ORIGIN = 'https://www.strideclub.in'
@@ -156,7 +155,6 @@ export default function Home() {
         <MerchSection />
       </div>
       <FaqSection />
-      <SocialCtaSection />
     </main>
   );
 }

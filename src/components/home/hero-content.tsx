@@ -60,10 +60,7 @@ export default function HeroContent() {
         viewport={{ once: true, margin: '-60px' }}
         className='border-t border-white/10'
       >
-        <p className='text-xs font-mono uppercase tracking-[0.25em] text-stride-yellow-accent pt-10 mb-12'>
-          By the numbers
-        </p>
-        <div className='flex flex-wrap justify-center'>
+        <div className='flex flex-wrap justify-center pt-10'>
           {STATS.map(({ to, suffix, formatLocale, label }, i) => (
             <motion.div
               key={label}

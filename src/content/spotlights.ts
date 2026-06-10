@@ -38,8 +38,6 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
       'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/videos/spotlight/spotlight-bakery-hop.mp4',
     poster: `${POSTERS}/bakery-hop.webp`,
     badge: 'Stride Originals',
-    handle: '@stride_runclub_bengaluru',
-    handleUrl: 'https://www.instagram.com/stride_runclub_bengaluru/',
   },
   {
     slug: 'mothers-day',
@@ -51,8 +49,6 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
       'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/videos/spotlight/spotlight-mothers-day.mp4',
     poster: `${POSTERS}/mothers-day.webp`,
     badge: 'Stride Originals',
-    handle: '@stride_runclub_bengaluru',
-    handleUrl: 'https://www.instagram.com/stride_runclub_bengaluru/',
   },
   {
     slug: 'vagisha',
@@ -63,7 +59,5 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     videoUrl:
       'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/videos/spotlight/spotlight-vagisha.mp4',
     poster: `${POSTERS}/vagisha.webp`,
-    handle: '@vagisha._',
-    handleUrl: 'https://www.instagram.com/vagisha._?igsh=MThod3RxcWVldnd4MA==',
   },
 ];

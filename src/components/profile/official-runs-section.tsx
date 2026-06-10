@@ -37,12 +37,6 @@ function toPayload(form: FormState) {
   }
 }
 
-function whenLabel(run: OfficialRun): string | null {
-  if (run.month && run.year) return `${MONTHS[run.month - 1]} ${run.year}`
-  if (run.year) return String(run.year)
-  return null
-}
-
 export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
   const [runs, setRuns] = useState<OfficialRun[]>(initialRuns)
   const [adding, setAdding] = useState(false)
@@ -188,7 +182,6 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
               )
             }
 
-            const when = whenLabel(run)
             return (
               <div
                 key={run.id}
@@ -209,23 +202,33 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
                   </span>
                 )}
 
-                {/* Trophy medallion */}
-                <span className='shrink-0 w-10 h-10 rounded-xl bg-stride-yellow-accent/12 border border-stride-yellow-accent/25 flex items-center justify-center'>
-                  <Trophy size={17} className='text-stride-yellow-accent' />
-                </span>
+                {/* Calendar chip — month + year (matches the events page) */}
+                <div className='shrink-0 w-12 h-12 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center leading-none gap-0.5'>
+                  {run.month || run.year ? (
+                    <>
+                      {run.month && (
+                        <span className='text-stride-yellow-accent text-[8px] font-black font-mono uppercase tracking-widest'>
+                          {MONTHS[run.month - 1]}
+                        </span>
+                      )}
+                      {run.year && (
+                        <span className='text-white font-bold text-sm leading-none font-mono tabular-nums'>{run.year}</span>
+                      )}
+                    </>
+                  ) : (
+                    <Trophy size={18} className='text-stride-yellow-accent' />
+                  )}
+                </div>
 
                 {/* Name + meta */}
                 <div className='min-w-0 flex-1'>
                   <p className='text-white font-semibold text-sm leading-snug line-clamp-1'>{run.name}</p>
-                  <div className='mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/55'>
+                  <div className='mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/65'>
                     {run.distance && (
-                      <span className='inline-flex items-center gap-1'><Ruler size={11} className='text-white/35' />{run.distance}</span>
+                      <span className='inline-flex items-center gap-1.5'><Ruler size={13} className='text-white/40' />{run.distance}</span>
                     )}
                     {run.time && (
-                      <span className='inline-flex items-center gap-1 font-mono tabular-nums'><Clock size={11} className='text-stride-yellow-accent/70' />{run.time}</span>
-                    )}
-                    {when && (
-                      <span className='inline-flex items-center gap-1'><Calendar size={11} className='text-white/35' />{when}</span>
+                      <span className='inline-flex items-center gap-1.5 font-mono tabular-nums'><Clock size={13} className='text-stride-yellow-accent/70' />{run.time}</span>
                     )}
                   </div>
                 </div>

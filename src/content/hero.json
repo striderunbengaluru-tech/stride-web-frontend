@@ -1,6 +1,5 @@
 {
   "title": "Move as One.",
-  "scrollToExpand": "Swipe to know more",
   "overlay": {
     "pretitle": "Register for our upcoming run",
     "eventName": "Tim's Power Run",
@@ -10,7 +9,7 @@
     "ctaHref": "/events"
   },
   "content": {
-    "heading": "The **Fittest Club** in India.",
+    "heading": "The **'Fittest Club'** in India.",
     "subheading": "Stride Run Club is Bengaluru's community for runners of all paces. Whether you're chasing a PB or your first 5K, you belong here.",
     "ctas": [
       { "label": "Get Started", "href": "/events", "variant": "primary" },

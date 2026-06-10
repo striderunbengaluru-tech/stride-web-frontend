@@ -101,10 +101,6 @@ export default function SpotlightSection() {
           {/* ── Text panel ── */}
           <div className='mt-5 md:mt-0 md:flex-1 flex flex-col justify-center'>
 
-            <p className='text-xs font-mono uppercase tracking-widest text-stride-yellow-accent font-medium mb-6'>
-              Community voices
-            </p>
-
             {/* Slide counter */}
             <div className='flex items-center gap-3 mb-5'>
               <span className='h-px w-8 bg-copy-white/20 shrink-0' />
@@ -154,9 +150,10 @@ export default function SpotlightSection() {
               </AnimatePresence>
             </div>
 
-            {/* Nav arrows + dot indicators */}
+            {/* Nav arrows + dot indicators.
+                Arrows live here on desktop; on mobile they flank the video instead. */}
             <div className='flex items-center gap-5 mt-8'>
-              <div className='flex gap-3'>
+              <div className='hidden md:flex gap-3'>
                 <button
                   onClick={goPrev}
                   className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
@@ -193,7 +190,22 @@ export default function SpotlightSection() {
           </div>
 
           {/* ── Portrait video panel ── */}
-          <div className='flex justify-center md:justify-end md:shrink-0'>
+          <div className='relative flex items-center justify-center md:justify-end md:shrink-0'>
+            {/* Mobile nav arrows — flank the video (desktop arrows live in the text panel) */}
+            <button
+              onClick={goPrev}
+              className='md:hidden absolute left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+              aria-label='Previous spotlight'
+            >
+              <ArrowLeft className='h-4 w-4' />
+            </button>
+            <button
+              onClick={goNext}
+              className='md:hidden absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+              aria-label='Next spotlight'
+            >
+              <ArrowRight className='h-4 w-4' />
+            </button>
             <AnimatePresence mode='wait'>
               <motion.div
                 key={currentIndex}

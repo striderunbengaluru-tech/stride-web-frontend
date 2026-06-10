@@ -18,7 +18,7 @@ export default function FaqSection() {
             <span className='text-stride-yellow-accent'>know</span>
           </h2>
           <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-figtree'>
-            Before lacing up and joining the pack — here are answers to our most common questions.
+            Before you lace up and join the pack, here are answers to our most common questions.
           </p>
         </div>
 

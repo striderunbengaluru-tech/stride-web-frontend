@@ -11,17 +11,19 @@ export const metadata: Metadata = {
 }
 
 type RegRow = {
+  event_id: string
   status: string | null
   checked_in_at: string | null
-  events: {
-    id: string
-    name: string
-    slug: string
-    event_date: string | null
-    location: string | null
-    banner_images: string | null
-    price_paise: number | null
-  } | null
+}
+
+type EventRow = {
+  id: string
+  name: string
+  slug: string
+  event_date: string | null
+  location: string | null
+  banner_images: string | null
+  price_paise: number | null
 }
 
 function firstBanner(raw: string | null): string | null {
@@ -41,37 +43,55 @@ export default async function MyRunsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/become-a-member')
 
-  const { data } = await adminClient
+  // Fetch the member's registrations, then the events separately and join in
+  // JS. We deliberately avoid a PostgREST `events(...)` embed because it relies
+  // on the event_id → events foreign key being present, which can't be assumed.
+  const { data: regData } = await adminClient
     .from('event_registrations')
-    .select('status, checked_in_at, events(id, name, slug, event_date, location, banner_images, price_paise)')
+    .select('event_id, status, checked_in_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const rows = (data ?? []) as unknown as RegRow[]
-  const now = Date.now()
+  const regs = (regData ?? []) as RegRow[]
+  const eventIds = [...new Set(regs.map(r => r.event_id).filter(Boolean))]
 
-  const toRun = (r: RegRow): MyRun => ({
-    id: r.events!.id,
-    name: r.events!.name,
-    slug: r.events!.slug,
-    eventDate: r.events!.event_date,
-    location: r.events!.location,
-    bannerUrl: firstBanner(r.events!.banner_images),
-    pricePaise: r.events!.price_paise ?? 0,
+  const { data: eventData } = eventIds.length
+    ? await adminClient
+        .from('events')
+        .select('id, name, slug, event_date, location, banner_images, price_paise')
+        .in('id', eventIds)
+    : { data: [] as EventRow[] }
+
+  const eventsById = new Map((eventData ?? []).map(e => [e.id, e as EventRow]))
+  const now = new Date()
+
+  const toRun = (r: RegRow, e: EventRow): MyRun => ({
+    id: e.id,
+    name: e.name,
+    slug: e.slug,
+    eventDate: e.event_date,
+    location: e.location,
+    bannerUrl: firstBanner(e.banner_images),
+    pricePaise: e.price_paise ?? 0,
     checkedIn: !!r.checked_in_at,
   })
 
+  // Pair each registration with its event (dropping any orphaned rows).
+  const paired = regs
+    .map(r => ({ reg: r, event: eventsById.get(r.event_id) }))
+    .filter((p): p is { reg: RegRow; event: EventRow } => !!p.event)
+
   // Upcoming = active (non-cancelled) registration for an event still ahead.
-  const upcoming: MyRun[] = rows
-    .filter(r => r.events && r.status !== 'CANCELLED')
-    .filter(r => r.events!.event_date && new Date(r.events!.event_date).getTime() >= now)
-    .map(toRun)
+  const upcoming: MyRun[] = paired
+    .filter(({ reg }) => reg.status !== 'CANCELLED')
+    .filter(({ event }) => event.event_date && new Date(event.event_date) >= now)
+    .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (a.eventDate ?? '').localeCompare(b.eventDate ?? ''))
 
   // Past = runs the member actually checked in to.
-  const past: MyRun[] = rows
-    .filter(r => r.events && r.checked_in_at)
-    .map(toRun)
+  const past: MyRun[] = paired
+    .filter(({ reg }) => reg.checked_in_at)
+    .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (b.eventDate ?? '').localeCompare(a.eventDate ?? ''))
 
   return (

@@ -68,7 +68,7 @@ export default function Footer() {
               />
             </Link>
             <p className='text-white/55 text-sm leading-relaxed font-figtree'>
-              Bengaluru&apos;s community for athletes of every pace — events, training, and a whole lot of miles.
+              Bengaluru&apos;s running community for every pace. Events, group runs, and training.
             </p>
             {/* Social — visible on every screen size, grouped with brand */}
             <div className='flex items-center gap-5 pt-1'>

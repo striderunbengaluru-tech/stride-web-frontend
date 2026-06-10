@@ -3,7 +3,7 @@
     "id": "who-can-join",
     "number": "01",
     "question": "Who can join Stride Run Club?",
-    "answer": "Everyone — no pace requirement, no experience needed. We welcome first-timers chasing their debut 5K and seasoned marathoners alike. If you can put one foot in front of the other, you belong here."
+    "answer": "Everyone is welcome. There's no pace requirement and no experience needed. We welcome first-timers chasing their debut 5K and seasoned marathoners alike. If you can put one foot in front of the other, you belong here."
   },
   {
     "id": "when-where",
@@ -15,13 +15,13 @@
     "id": "membership-fee",
     "number": "03",
     "question": "Is there a membership fee?",
-    "answer": "Joining the Stride community is free. Individual run events may carry a small registration fee to cover logistics — you'll see the exact amount on the event listing before you commit."
+    "answer": "Joining the Stride community is free. Individual run events may carry a small registration fee to cover logistics, and you'll see the exact amount on the event listing before you commit."
   },
   {
     "id": "how-to-register",
     "number": "04",
     "question": "How do I register for a run?",
-    "answer": "Head to the Events page, find the run that excites you, and tap Register Now. Slots fill up fast, so book early — registration is confirmed on a first-come basis."
+    "answer": "Head to the Events page, find the run that excites you, and tap Register Now. Slots fill up fast, so book early. Registration is confirmed on a first-come basis."
   },
   {
     "id": "what-to-bring",
@@ -33,6 +33,6 @@
     "id": "training",
     "number": "06",
     "question": "Do you offer training programmes?",
-    "answer": "Yes. Our Training Lead designs structured blocks for every goal — 5K build-ups, half-marathon plans, and full marathon prep. Follow the community feed or check the Events page for upcoming training cycles."
+    "answer": "Yes. Our Training Lead designs structured blocks for every goal: 5K build-ups, half-marathon plans, and full marathon prep. Follow the community feed or check the Events page for upcoming training cycles."
   }
 ]

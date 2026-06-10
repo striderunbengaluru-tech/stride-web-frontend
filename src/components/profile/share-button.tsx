@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Share2, Copy, Check, X } from 'lucide-react'
 
 type Props = {
@@ -9,32 +9,41 @@ type Props = {
   text?: string
 }
 
-export function ShareButton({ url: initialUrl, title, text }: Props) {
+export function ShareButton({ url: initialUrl, title }: Props) {
   const [showFallback, setShowFallback] = useState(false)
   const [copied, setCopied] = useState(false)
-  // Prefer the live address-bar URL so shared links match the current
-  // environment (localhost / staging / production) rather than a baked-in host.
+  // URL shown inside the fallback modal; resolved client-side when it opens.
   const [url, setUrl] = useState(initialUrl)
-  useEffect(() => {
-    setUrl(window.location.href)
-  }, [])
+
+  // Build the link from the live address bar so it matches the current
+  // environment (localhost / staging / production), stripping any query
+  // string or hash so nothing extra is appended to the shared link.
+  function resolveShareUrl() {
+    if (typeof window === 'undefined') return initialUrl
+    return window.location.origin + window.location.pathname
+  }
 
   async function handleShare() {
+    const shareUrl = resolveShareUrl()
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
-        await navigator.share({ url, title, ...(text ? { text } : {}) })
+        // Share only the title + url. Passing `text` causes many targets
+        // (WhatsApp, Messages, etc.) to concatenate it onto the link, which
+        // is what produces a URL with extra text appended.
+        await navigator.share({ url: shareUrl, title })
         return
       } catch {
         // AbortError means user cancelled — don't show fallback
         return
       }
     }
+    setUrl(shareUrl)
     setShowFallback(true)
   }
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(resolveShareUrl())
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
