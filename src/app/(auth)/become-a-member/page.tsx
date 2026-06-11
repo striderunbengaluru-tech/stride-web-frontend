@@ -1,5 +1,6 @@
 import { GoogleSignInButton } from '@/utils/auth'
-import { guardPreviewFeature } from '@/lib/feature-flags'
+import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
+import { ComingSoon } from '@/components/ui/coming-soon'
 
 export const metadata = {
   title: 'Become a Member | Stride Run Club',
@@ -43,7 +44,17 @@ type PageProps = {
 }
 
 export default async function BecomeAMemberPage({ searchParams }: PageProps) {
-  guardPreviewFeature()
+  // On the production site, show a "Coming soon" placeholder instead of a hard
+  // 404 so visitors know membership is on its way. Full sign-in renders on
+  // staging / previews / local dev.
+  if (!PREVIEW_FEATURES_ENABLED) {
+    return (
+      <ComingSoon
+        label='Membership'
+        description='Member profiles and sign-in are almost ready. Check back soon to join the club.'
+      />
+    )
+  }
 
   const { next } = await searchParams
   // Only accept relative-path next values to prevent open-redirect attacks

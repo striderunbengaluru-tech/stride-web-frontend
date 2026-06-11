@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { SPOTLIGHT_SLIDES } from '@/content/spotlights';
 import { SpotlightVideo } from '@/components/home/spotlight-video';
@@ -77,7 +78,7 @@ export default function SpotlightSection() {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) > 50) {
-      diff > 0 ? goNext() : goPrev();
+      if (diff > 0) goNext(); else goPrev();
     }
     touchStartX.current = null;
   };
@@ -215,12 +216,36 @@ export default function SpotlightSection() {
                 transition={{ duration: 0.5, ease: EASE }}
                 className='relative w-[260px] sm:w-[300px] md:w-[320px] aspect-9/16 rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white/5'
               >
-                <SpotlightVideo
-                  src={slide.videoUrl}
-                  poster={slide.poster}
-                  isMuted={isMuted}
-                  onMuteChange={setIsMuted}
-                />
+                {slide.videoUrl ? (
+                  <SpotlightVideo
+                    src={slide.videoUrl}
+                    poster={slide.poster}
+                    isMuted={isMuted}
+                    onMuteChange={setIsMuted}
+                  />
+                ) : (
+                  // Image-only spotlight (no video). The image isn't 9:16, so
+                  // `object-contain` shows it whole over a blurred fill instead
+                  // of cropping it to the frame.
+                  <>
+                    <Image
+                      src={slide.poster}
+                      alt=''
+                      aria-hidden='true'
+                      fill
+                      sizes='(max-width: 768px) 300px, 320px'
+                      className='object-cover blur-xl scale-110 opacity-60'
+                    />
+                    <Image
+                      src={slide.poster}
+                      alt={slide.title}
+                      fill
+                      sizes='(max-width: 768px) 300px, 320px'
+                      className='object-contain'
+                    />
+                    <div className='absolute inset-0 bg-linear-to-t from-black/60 via-black/10 to-transparent pointer-events-none' />
+                  </>
+                )}
                 {/* Accent corner — top left */}
                 <div className='absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-stride-yellow-accent/50 rounded-tl-sm pointer-events-none z-20' />
               </motion.div>

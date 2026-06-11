@@ -1,7 +1,10 @@
 import type { Role } from './auth'
 import type { StravaPBs, StravaActivity } from './strava'
 
+// A textual Q&A prompt shown on the athlete profile. Stored as a JSON array on
+// `users.prompts` (max 3, drag-sortable).
 export type Prompt = {
+  id: string
   question: string
   answer: string
 }
@@ -11,13 +14,8 @@ export type GalleryImage = {
   caption?: string
 }
 
-export type PromptImage = {
-  prompt: string
-  url: string
-}
-
 // A user-entered race result. Stored as a JSON array on `users.official_runs`
-// (no dedicated table — mirrors the `prompt_images` pattern).
+// (no dedicated table).
 export type OfficialRun = {
   id: string
   name: string
@@ -44,7 +42,6 @@ export type UserProfile = {
   x_url: string | null
   prompts: Prompt[]
   gallery_images: GalleryImage[]
-  prompt_images: PromptImage[]
   runs_completed: number
   runner_tag: string | null
   strava_connected: boolean

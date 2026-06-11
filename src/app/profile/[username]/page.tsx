@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { UserProfile, PromptImage, OfficialRun } from '@/types/user'
+import type { UserProfile, OfficialRun, Prompt } from '@/types/user'
 import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
@@ -14,7 +14,7 @@ import { ShareButton } from '@/components/profile/share-button'
 import { EditHeaderSection } from '@/components/profile/edit-header-section'
 import { EditBioSection } from '@/components/profile/edit-bio-section'
 import { EditSpecialtiesSection } from '@/components/profile/edit-specialties-section'
-import { PromptImagesSection } from '@/components/profile/prompt-images-section'
+import { PromptsSection } from '@/components/profile/prompts-section'
 import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import { EventsAttendedSection } from '@/components/profile/events-attended-section'
 import { ChevronRight, ScanLine } from 'lucide-react'
@@ -71,7 +71,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompt_images, official_runs, runs_completed, runner_tag, deleted_at')
+    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag, deleted_at')
     .eq('username', username)
     .single()
 
@@ -79,14 +79,13 @@ export default async function ProfilePage({ params }: Props) {
   if (!row || (row as { deleted_at: string | null }).deleted_at) notFound()
 
   const skills       = parseJson<string[]>     (row.skills, [])
-  const promptImages = parseJson<PromptImage[]>((row as Record<string, string | null>).prompt_images, [])
+  const prompts      = parseJson<Prompt[]>     ((row as Record<string, string | null>).prompts, [])
 
   const profile: UserProfile = {
     ...(row as unknown as UserProfile),
     skills,
-    prompts: [],
+    prompts,
     gallery_images: [],
-    prompt_images: promptImages,
     cover_url: null,
     x_url: row.x_url ?? null,
     runner_tag: row.runner_tag ?? null,
@@ -289,9 +288,11 @@ export default async function ProfilePage({ params }: Props) {
           </div>
         </div>
 
-        {/* ── Prompt photos ── always shown (empty state for public viewers) */}
+        {/* ── Prompts ── always shown (empty state for public viewers) */}
         <div className='mt-4 animate-fade-in-up' style={{ animationDelay: '0.2s' }}>
-          <PromptImagesSection promptImages={promptImages} isOwnProfile={isOwnProfile} />
+          <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
+            <PromptsSection initialPrompts={prompts} isOwnProfile={isOwnProfile} />
+          </div>
         </div>
 
         {/* ── Runs attended with Stride ── past 10; list when >10, mini cards otherwise */}
