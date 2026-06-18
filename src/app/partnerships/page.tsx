@@ -13,7 +13,7 @@ import {
   WHY_US,
 } from './partners-data'
 
-const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-og.png'
+const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/partnerships-new-og.png'
 const SITE_ORIGIN = 'https://www.strideclub.in'
 const CANONICAL_URL = 'https://www.strideclub.in/partnerships/'
 

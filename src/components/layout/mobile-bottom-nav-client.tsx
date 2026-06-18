@@ -2,21 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CalendarDays, LogIn } from 'lucide-react'
+import { Home, Handshake } from 'lucide-react'
 import clsx from 'clsx'
-
-type NavUser = {
-  username: string
-  firstName: string
-  avatarUrl: string | null
-}
 
 const STATIC_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Events', href: '/events', icon: CalendarDays },
+  { label: 'Partnership', href: '/partnerships', icon: Handshake },
 ]
 
-export function MobileBottomNavClient({ navUser }: { navUser: NavUser | null }) {
+export function MobileBottomNavClient() {
   const pathname = usePathname()
 
   // Hide on event detail pages — the sticky register bar is the primary mobile CTA there
@@ -46,52 +40,6 @@ export function MobileBottomNavClient({ navUser }: { navUser: NavUser | null }) 
             </Link>
           )
         })}
-
-        {/* Profile / Login */}
-        {navUser ? (
-          <Link
-            href={`/profile/${navUser.username}`}
-            className={clsx(
-              'flex items-center gap-2 rounded-full px-3 py-2.5 transition-all duration-200 min-h-11',
-              pathname.startsWith('/profile')
-                ? 'bg-stride-yellow-accent text-copy-black'
-                : 'text-white/55 hover:text-white hover:bg-white/8'
-            )}
-            aria-label={`${navUser.firstName}'s profile`}
-          >
-            {navUser.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={navUser.avatarUrl}
-                alt={navUser.firstName}
-                className='size-[22px] rounded-full object-cover shrink-0'
-                referrerPolicy='no-referrer'
-              />
-            ) : (
-              <div className='size-[22px] rounded-full bg-stride-yellow-accent/30 flex items-center justify-center shrink-0'>
-                <span className='text-[10px] font-bold text-stride-yellow-accent'>
-                  {navUser.firstName.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-            <span className='text-xs font-semibold whitespace-nowrap'>
-              {navUser.firstName}
-            </span>
-          </Link>
-        ) : (
-          <Link
-            href='/become-a-member'
-            className={clsx(
-              'flex items-center gap-2 rounded-full px-4 py-2.5 transition-all duration-200 min-h-11',
-              pathname === '/become-a-member'
-                ? 'bg-stride-yellow-accent text-copy-black'
-                : 'text-white/55 hover:text-white hover:bg-white/8'
-            )}
-          >
-            <LogIn className='size-[18px] shrink-0' />
-            <span className='text-xs font-semibold whitespace-nowrap'>Join Us</span>
-          </Link>
-        )}
       </nav>
     </div>
   )
