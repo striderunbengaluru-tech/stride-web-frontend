@@ -13,8 +13,8 @@ const contacts = [
   {
     icon: Mail,
     channel: 'Email',
-    display: 'striderunbengaluru@gmail.com',
-    href: 'mailto:striderunbengaluru@gmail.com',
+    display: 'striderunclubbengaluru@gmail.com',
+    href: 'mailto:striderunclubbengaluru@gmail.com',
     external: false,
   },
   {
