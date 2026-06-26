@@ -166,7 +166,7 @@ You are advised to review this Privacy Policy periodically for any changes. Chan
 
 If you have any questions about this Privacy Policy, please contact us:
 
-- By email: striderunbengaluru@gmail.com
+- By email: striderunclubbengaluru@gmail.com
 - By visiting this page on our website: [https://www.strideclub.in/contact-us/](https://www.strideclub.in/contact-us/)
 - By phone number: +91 8368877289
 
