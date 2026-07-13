@@ -220,3 +220,13 @@ If you have any questions about this Privacy Policy, please contact us:
 - By visiting this page on our website: [https://www.strideclub.in/contact-us/](https://www.strideclub.in/contact-us/)
 - By phone number: +91 8368877289
 
+## 17. Grievance Redressal
+
+In accordance with the DPDP Act and applicable Indian law, if you have any grievance regarding the processing of your Personal Data, the exercise of your rights under this Privacy Policy, or any other aspect of our handling of your information, you may contact our Grievance Officer:
+
+- **Name**: Sidharth Yadav, Founder — Stride Run Club Bengaluru
+- **Email**: striderunclubbengaluru@gmail.com
+- **Phone**: +91 8368877289
+
+We will acknowledge your grievance within forty-eight (48) hours of receipt and endeavour to resolve it within fifteen (15) days. If you are not satisfied with our response, you have the right to escalate your grievance to the Data Protection Board of India in the manner prescribed under the DPDP Act.
+
