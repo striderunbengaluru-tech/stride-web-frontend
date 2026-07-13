@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
-import { PendingButton } from '@/components/admin/pending-button'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 
 type Run = { eventName: string; eventDate: string | null; checkedInAt: string }
@@ -25,7 +24,6 @@ export type UserRow = {
   emergency_contact_number: string | null
   location: string | null
   bio: string | null
-  deleted_at: string | null
   confirmed_count: number
   last_active_at: string | null
   runs: Run[]
@@ -77,8 +75,15 @@ export function UsersClient({ users }: { users: UserRow[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // Pending role-change target — opens the confirmation modal
   const [roleTarget, setRoleTarget] = useState<UserRow | null>(null)
+  const [roleError, setRoleError] = useState<string | null>(null)
+  const [rolePending, startRoleTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
+
+  function openRoleModal(user: UserRow) {
+    setRoleError(null)
+    setRoleTarget(user)
+  }
 
   const roleCounts = useMemo(() => ({
     ALL:   users.length,
@@ -120,25 +125,38 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             : ' will lose access to the admin panel.'}
         </p>
         <p className='text-white/40 text-xs mb-6'>You can change this back at any time.</p>
+        {roleError && (
+          <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs mb-4'>
+            {roleError}
+          </div>
+        )}
         <div className='flex gap-3'>
           <button
             onClick={() => setRoleTarget(null)}
-            className='flex-1 py-2.5 rounded-xl border border-white/15 text-white/70 text-sm hover:border-white/30 transition-colors'
+            disabled={rolePending}
+            className='flex-1 py-2.5 rounded-xl border border-white/15 text-white/70 text-sm hover:border-white/30 transition-colors disabled:opacity-60'
           >
             Cancel
           </button>
-          <form action={updateUserRoleAction.bind(null, roleTarget.id, nextRole)} className='flex-1'>
-            <PendingButton
-              className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 ${
-                makingAdmin
-                  ? 'bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90'
-                  : 'bg-white/10 text-white hover:bg-white/15'
-              }`}
-              pendingLabel='Updating…'
-            >
-              {makingAdmin ? 'Yes, make admin' : 'Yes, remove'}
-            </PendingButton>
-          </form>
+          <button
+            type='button'
+            disabled={rolePending}
+            onClick={() => {
+              const target = roleTarget
+              startRoleTransition(async () => {
+                const result = await updateUserRoleAction(target.id, nextRole)
+                if (result?.error) setRoleError(result.error)
+                else setRoleTarget(null)
+              })
+            }}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 ${
+              makingAdmin
+                ? 'bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90'
+                : 'bg-white/10 text-white hover:bg-white/15'
+            }`}
+          >
+            {rolePending ? 'Updating…' : makingAdmin ? 'Yes, make admin' : 'Yes, remove'}
+          </button>
         </div>
       </div>
     </div>,
@@ -190,17 +208,13 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       <div className='space-y-2'>
         {filtered.map(u => {
           const isExpanded = expandedId === u.id
-          const isDeactivated = !!u.deleted_at
-          // Don't link to /profile/<username> for deactivated users — that route 404s by design
-          const profileHref = u.username && !isDeactivated ? `/profile/${u.username}` : null
-          const displayName = isDeactivated ? 'Deactivated runner' : (u.full_name ?? '—')
+          const profileHref = u.username ? `/profile/${u.username}` : null
+          const displayName = u.full_name ?? '—'
 
           return (
             <div
               key={u.id}
-              className={`bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors ${
-                isDeactivated ? 'opacity-60' : ''
-              }`}
+              className='bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors'
             >
               {/* Main row */}
               <div className='flex items-center gap-3 px-4 py-3.5'>
@@ -214,7 +228,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     </div>
                   </a>
                 ) : (
-                  <Avatar url={isDeactivated ? null : u.avatar_url} name={displayName} />
+                  <Avatar url={u.avatar_url} name={displayName} />
                 )}
 
                 {/* Name + email + tag */}
@@ -226,28 +240,17 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                         {displayName}
                       </a>
                     ) : (
-                      <p className={`font-semibold text-sm truncate ${isDeactivated ? 'text-white/50 italic' : 'text-white'}`}>
+                      <p className='font-semibold text-sm truncate text-white'>
                         {displayName}
                       </p>
                     )}
-                    {u.runner_tag && !isDeactivated && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
-                    {isDeactivated && (
-                      <span className='text-[10px] font-bold font-mono uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400'>
-                        Deactivated
-                      </span>
-                    )}
+                    {u.runner_tag && <RunnerTagBadge tag={u.runner_tag} size='xs' />}
                   </div>
-                  <p className='text-white/40 text-xs truncate mt-0.5'>{isDeactivated ? '—' : u.email}</p>
+                  <p className='text-white/40 text-xs truncate mt-0.5'>{u.email}</p>
                   <p className='text-white/25 text-xs'>
-                    {isDeactivated
-                      ? `Deactivated ${u.deleted_at ? fmtDate(u.deleted_at) : ''}`
-                      : (
-                        <>
-                          {u.username ? `@${u.username}` : '—'}
-                          {' · '}
-                          Joined {fmtDate(u.created_at)}
-                        </>
-                      )}
+                    {u.username ? `@${u.username}` : '—'}
+                    {' · '}
+                    Joined {fmtDate(u.created_at)}
                   </p>
                 </div>
 
@@ -264,16 +267,14 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   </span>
                 </div>
 
-                {/* Admin toggle — hidden for deactivated users */}
-                {!isDeactivated && (
-                  <button
-                    type='button'
-                    onClick={e => { e.stopPropagation(); setRoleTarget(u) }}
-                    className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
-                  >
-                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                  </button>
-                )}
+                {/* Admin toggle */}
+                <button
+                  type='button'
+                  onClick={e => { e.stopPropagation(); openRoleModal(u) }}
+                  className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
+                >
+                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                </button>
 
                 {/* Expand button — always available so admins can drill into any user */}
                 <button
@@ -285,20 +286,18 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 </button>
               </div>
 
-              {/* Mobile: role + admin action — admin toggle hidden for deactivated users */}
+              {/* Mobile: role + admin action */}
               <div className='sm:hidden flex items-center gap-2 px-4 pb-3 -mt-1'>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${ROLE_STYLES[u.role] ?? 'bg-white/10 text-white/50'}`}>
                   {u.role}
                 </span>
-                {!isDeactivated && (
-                  <button
-                    type='button'
-                    onClick={() => setRoleTarget(u)}
-                    className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
-                  >
-                    {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
-                  </button>
-                )}
+                <button
+                  type='button'
+                  onClick={() => openRoleModal(u)}
+                  className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
+                >
+                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                </button>
               </div>
 
               {/* Expanded details — profile facts + run history */}

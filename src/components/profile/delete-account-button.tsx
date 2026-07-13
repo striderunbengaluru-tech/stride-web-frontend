@@ -41,8 +41,12 @@ export function DeleteAccountButton() {
     setSubmitting(true)
     setError(null)
     try {
-      await deleteAccountAction()
-      // Server action redirects on success — this line generally won't run.
+      const result = await deleteAccountAction()
+      // Server action redirects on success — a return value means it refused.
+      if (result?.error) {
+        setError(result.error)
+        setSubmitting(false)
+      }
     } catch (err) {
       // Next's redirect() throws a NEXT_REDIRECT — that's expected, swallow it
       const msg = err instanceof Error ? err.message : 'Something went wrong'

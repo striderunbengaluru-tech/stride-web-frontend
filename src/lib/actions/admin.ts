@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { eventSchema, productSchema, additionalFieldsArraySchema } from '@/lib/validations/admin'
 import { slugify } from '@/lib/utils/slug'
+import { isLastAdmin } from '@/lib/account/hard-delete'
 
 // Validates the JSON-encoded additional fields string from the form.
 // Returns a canonical JSON string ('[]' on any error) — never blocks the save.
@@ -190,10 +191,17 @@ export async function deleteProductAction(id: string): Promise<void> {
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-export async function updateUserRoleAction(userId: string, role: string): Promise<void> {
+// Returns { error } instead of throwing — Next.js masks thrown server-action
+// error messages in production, and the last-admin refusal must be readable.
+export async function updateUserRoleAction(userId: string, role: string): Promise<{ error: string } | void> {
   await requireAdmin()
 
   if (!['GUEST', 'MEMBER', 'ADMIN'].includes(role)) return
+
+  // The club must always keep at least one administrator.
+  if (role !== 'ADMIN' && await isLastAdmin(userId)) {
+    return { error: 'This is the only admin account. Promote another member to admin before removing this one.' }
+  }
 
   await adminClient.from('users').update({
     role,

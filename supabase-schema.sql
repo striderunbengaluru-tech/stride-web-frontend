@@ -25,6 +25,7 @@ create table public.users (
   role           text not null default 'GUEST'
                    check (role in ('GUEST', 'MEMBER', 'ADMIN')),
   avatar_url     text,
+  avatar_public  boolean not null default true,  -- DPDP: hide photo from public surfaces when false
   cover_url      text,
   location       text,
   skills         text,           -- JSON array of strings

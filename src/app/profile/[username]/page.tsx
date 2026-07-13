@@ -9,6 +9,7 @@ import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { SignOutButton } from '@/components/profile/sign-out-button'
 import { DeleteAccountButton } from '@/components/profile/delete-account-button'
 import { AvatarUpload } from '@/components/profile/avatar-upload'
+import { AvatarVisibilityToggle } from '@/components/profile/avatar-visibility-toggle'
 import { AvatarImage } from '@/components/profile/avatar-image'
 import { ShareButton } from '@/components/profile/share-button'
 import { EditHeaderSection } from '@/components/profile/edit-header-section'
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const { data: row } = await adminClient
     .from('users')
-    .select('full_name, bio, avatar_url')
+    .select('full_name, bio, avatar_url, avatar_public')
     .eq('username', username)
     .single()
 
@@ -44,8 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Description: the athlete's bio, or a generic fallback when none is set.
   const description = (row.bio?.trim().slice(0, 160))
     || `${displayName} is an athlete with Stride Run Club, Bengaluru's community for athletes. See their milestones, races and running story.`
-  // OG image: the athlete's profile photo.
-  const ogImage = row.avatar_url ?? undefined
+  // OG image: the athlete's profile photo — never exposed when the athlete has
+  // set their photo to private (link-preview scrapers are anonymous viewers).
+  const ogImage = row.avatar_public ? row.avatar_url ?? undefined : undefined
 
   return {
     title,
@@ -71,12 +73,11 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag, deleted_at')
+    .select('id, username, full_name, bio, role, avatar_url, avatar_public, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag')
     .eq('username', username)
     .single()
 
-  // Treat deactivated users as 404 so their public profile no longer resolves
-  if (!row || (row as { deleted_at: string | null }).deleted_at) notFound()
+  if (!row) notFound()
 
   const skills       = parseJson<string[]>     (row.skills, [])
   const prompts      = parseJson<Prompt[]>     ((row as Record<string, string | null>).prompts, [])
@@ -115,6 +116,11 @@ export default async function ProfilePage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
+  // DPDP visibility consent: strip the photo URL server-side for everyone but
+  // the owner when the athlete has set it to private — it must never reach a
+  // public viewer's HTML (covers uploaded and Google-hosted photos alike).
+  const publicAvatarUrl = profile.avatar_public || isOwnProfile ? profile.avatar_url : null
+
   const displayName   = profile.full_name ?? profile.username ?? username
   const joinedLabel   = new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const runsCompleted = profile.runs_completed ?? 0
@@ -145,10 +151,13 @@ export default async function ProfilePage({ params }: Props) {
               {/* Avatar (tier-coloured frame) */}
               <div className='mt-2'>
                 {isOwnProfile ? (
-                  <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} />
-                ) : profile.avatar_url ? (
+                  <>
+                    <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} />
+                    <AvatarVisibilityToggle initialPublic={profile.avatar_public} />
+                  </>
+                ) : publicAvatarUrl ? (
                   <AvatarImage
-                    src={profile.avatar_url}
+                    src={publicAvatarUrl}
                     alt={displayName}
                     frameColor={currentTier.frame}
                     className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg object-cover border-4'

@@ -6,6 +6,7 @@ import Navbar from "@/components/layout/navbar";
 import { NavbarGate } from "@/components/layout/navbar-gate";
 import Footer from "@/components/layout/footer";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
+import { CookieNotice } from "@/components/layout/cookie-notice";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import "./globals.css";
 
@@ -137,6 +138,7 @@ export default function RootLayout({
           <NavbarGate>
             <MobileBottomNav />
           </NavbarGate>
+          <CookieNotice />
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

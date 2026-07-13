@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import ReactCrop, { centerCrop, makeAspectCrop, type Crop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
-import { X } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { UploadProgress } from '@/components/ui/upload-progress'
 import { uploadWithProgress } from '@/lib/utils/upload'
@@ -29,11 +29,28 @@ export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
   const [errorMsg, setErrorMsg] = useState('')
   const [imgFailed, setImgFailed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [removeState, setRemoveState] = useState<'idle' | 'confirm' | 'removing'>('idle')
+  const [removeError, setRemoveError] = useState('')
   const lastBlobRef = useRef<Blob | null>(null)
   useEffect(() => { setMounted(true) }, [])
   const router = useRouter()
 
   const uploading = status === 'uploading'
+
+  async function handleRemovePhoto() {
+    setRemoveState('removing')
+    setRemoveError('')
+    try {
+      const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Could not remove photo. Please try again.')
+      setRemoveState('idle')
+      setImgFailed(false)
+      router.refresh()
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : 'Could not remove photo. Please try again.')
+      setRemoveState('idle')
+    }
+  }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -176,6 +193,45 @@ export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
           onChange={handleFileSelect}
         />
       </div>
+
+      {/* Remove photo — falls back to the initials placeholder everywhere */}
+      {currentUrl && (
+        <div className='mt-1.5 flex flex-col items-center' onClick={e => e.stopPropagation()}>
+          {removeState === 'confirm' ? (
+            <div className='flex items-center gap-3'>
+              <span className='text-white/50 text-xs'>Remove photo?</span>
+              <button
+                type='button'
+                onClick={handleRemovePhoto}
+                className='text-red-400 hover:text-red-300 text-xs font-semibold transition-colors min-h-11'
+              >
+                Yes, remove
+              </button>
+              <button
+                type='button'
+                onClick={() => setRemoveState('idle')}
+                className='text-white/50 hover:text-white text-xs transition-colors min-h-11'
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type='button'
+              onClick={() => setRemoveState('confirm')}
+              disabled={removeState === 'removing'}
+              className='inline-flex items-center gap-1.5 text-white/35 hover:text-red-400 text-xs transition-colors min-h-11 disabled:opacity-50'
+            >
+              {removeState === 'removing'
+                ? <><Spinner /> Removing…</>
+                : <><Trash2 size={12} /> Remove photo</>}
+            </button>
+          )}
+          {removeError && (
+            <p className='text-red-400 text-xs mt-1' role='alert'>{removeError}</p>
+          )}
+        </div>
+      )}
 
       {/* Crop modal — portaled to body so it escapes any stacking context */}
       {src && mounted && createPortal(

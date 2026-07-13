@@ -69,3 +69,44 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ url: versionedUrl })
 }
+
+// Permanently removes the user's profile photo (DPDP: users may delete their
+// image at any time). Every render site falls back to an initials placeholder.
+export async function DELETE() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: row } = await adminClient
+    .from('users')
+    .select('avatar_url')
+    .eq('id', user.id)
+    .single()
+
+  const paths = [`images/avatars/${user.id}.webp`]
+  // Also remove a legacy/non-canonical storage path if the row points at one.
+  // Google-hosted photo URLs are external — nothing to remove from storage.
+  const currentUrl = row?.avatar_url
+  if (currentUrl?.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    const currentPath = currentUrl.slice(STORAGE_PUBLIC_PREFIX.length).split('?')[0]
+    if (currentPath.startsWith('images/avatars/') && !paths.includes(currentPath)) {
+      paths.push(currentPath)
+    }
+  }
+  const { error: removeError } = await adminClient.storage.from('stride-assets').remove(paths)
+  if (removeError) {
+    // Orphaned file only — still clear the reference so the photo disappears.
+    console.warn('[Avatar delete] storage removal failed', removeError)
+  }
+
+  const { error: dbError } = await adminClient
+    .from('users')
+    .update({ avatar_url: null, updated_at: new Date().toISOString() })
+    .eq('id', user.id)
+  if (dbError) {
+    console.error('[Avatar delete]', dbError)
+    return NextResponse.json({ error: 'Could not remove photo' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
