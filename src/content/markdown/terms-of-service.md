@@ -1,6 +1,6 @@
 # Terms of Service
 
-*Last Updated: 28/05/2026*
+*Last Updated: 13/07/2026*
 
 # Terms of Service for Stride Run Club Bengaluru
 
@@ -9,6 +9,10 @@ These Terms of Service are provided as a template and should be reviewed by a qu
 
 ## 1. Introduction
 These Terms of Service ("Terms") govern your access to and use of the Stride Run Club Bengaluru community platform, forums, and related services (collectively, the "Services"). These Terms constitute a legally binding agreement between you and Stride Run Club Bengaluru ("we," "us," or "our"). By accessing or using our Services, you acknowledge that you have read, understood, and agree to be bound by these Terms.
+
+**Purpose of the Platform.** The Services constitute the official web presence of Stride Run Club, Bengaluru. The platform exists for the following purposes: (a) to serve as the club's online presence and source of information about the club, its runs, and its community; (b) to enable individuals to create and maintain a personal athlete profile; (c) to operate as a ticketing and registration platform through which users may register, and where applicable pay, for runs and events organised by the club; and (d) to enable users to become and remain members of Stride Run Club and to record their participation and milestones with the club.
+
+**Purpose of Data Collection.** In order to provide the Services, we collect and process the following categories of personal data, strictly for the purposes stated: your name, email address, and profile photograph (to create, identify, and display your account and athlete profile); profile details you choose to provide, such as your biography, location, specialties, social-media links, and race history (to present your athlete profile as you direct); your contact and emergency-contact details, date of birth, and gender where requested during event registration (to administer the event safely and to contact you or your nominated contact in an emergency); and your event registration, payment status, and attendance records (to operate ticketing, entry, check-in, and milestone tracking). We do not collect personal data for any purpose not described here or in our Privacy Policy, and we do not sell your personal data. The processing of all personal data is governed by our Privacy Policy and the Digital Personal Data Protection Act, 2023 ("DPDP Act").
 
 ## 2. Definitions
 "User," "you," and "your" refer to the individual or entity accessing or using our Services.
@@ -20,11 +24,15 @@ These Terms of Service ("Terms") govern your access to and use of the Stride Run
 ## 3. Acceptance of Terms
 By accessing or using our Services, you agree to be bound by these Terms, our Privacy Policy, and our Community Guidelines, all of which are incorporated by reference. If you are using our Services on behalf of an organization, you represent and warrant that you have the authority to bind that organization to these Terms. If you do not agree to these Terms, you may not access or use our Services.
 
+**Free Consent.** Your participation in the Services — including creating an account, building a profile, providing personal data, and registering for or attending club runs and events — is entirely voluntary. Any consent you give to the collection or processing of your personal data is, and must at all times be, free, specific, informed, unconditional, and unambiguous, signified by clear affirmative action on your part, in accordance with Section 6 of the DPDP Act. No feature of the Services conditions your access on consent to processing that is not necessary for that feature. You may withdraw your consent at any time, with the same ease with which it was given, including by deleting your account as described in our Privacy Policy; withdrawal does not affect the lawfulness of processing carried out before withdrawal.
+
 ## 4. Changes to Terms
 We reserve the right to modify these Terms at any time. We will provide notice of significant changes by posting a prominent notice on our Services or by sending you an email. Your continued use of our Services after any such changes constitutes your acceptance of the revised Terms. If you do not agree to the revised Terms, you must stop using our Services.
 
 ## 5. Eligibility
 To use our Services, you must be at least 13 years old. If you are under 18 years old, you must have permission from your parent or legal guardian to use our Services, and they must agree to these Terms on your behalf. By using our Services, you represent and warrant that you meet these eligibility requirements.
+
+**Minors and Guardian Consent.** In accordance with Section 9 of the DPDP Act, we process the personal data of a minor (any person who has not completed eighteen (18) years of age) only with the verifiable consent of that minor's parent or lawful guardian. Where a minor uses the Services, the parent or guardian who provides such consent: (a) represents and warrants that they are the minor's parent or lawful guardian and are competent to give such consent; (b) accepts these Terms on the minor's behalf; and (c) remains responsible for the minor's use of the Services. We do not undertake tracking or behavioural monitoring of minors, and we do not direct advertising at minors. If we learn that a minor's personal data has been collected without verifiable parental or guardian consent, we will erase it without delay.
 
 Certain areas or features of our Services may have additional age restrictions, which will be specified where applicable.
 
@@ -36,6 +44,8 @@ You may be required to create an account to access certain features of our Servi
 - Notifying us immediately of any unauthorized use of your account
 
 You may customize your profile and username, but you may not impersonate others or choose a username that is offensive, vulgar, infringes someone's rights, or otherwise violates our Community Guidelines.
+
+**Review and Modification of Your Details before Event Registration.** The information you have provided to us is stored securely against your account and is used to pre-fill the registration form for each new event, so that you are not required to re-enter it. Before completing any new event registration, you are afforded the opportunity — and are encouraged — to review the details presented in the registration form and to correct, update, or complete them. The details you submit at the time of registration are the details that will govern that registration. In addition, you may review and modify your profile details at any time from your profile page, in accordance with your right to correction under Section 11 of the DPDP Act.
 
 We reserve the right to suspend or terminate your account at our discretion if we believe you have violated these Terms, our Community Guidelines, or if we believe your account may pose a risk to our Services or other users.
 
@@ -100,6 +110,10 @@ In addition to the requirements in our Community Guidelines, you agree not to:
 ## 13. Intellectual Property
 All content provided by Stride Run Club Bengaluru, including but not limited to text, graphics, logos, icons, images, audio clips, digital downloads, data compilations, and software, is the property of Stride Run Club Bengaluru or its content suppliers and is protected by international copyright, trademark, and other intellectual property laws. The compilation of all content on our Services is the exclusive property of Stride Run Club Bengaluru and is protected by international copyright laws.
 
+**Ownership.** All rights, title, and interest in and to the Services and the club's proprietary content — including the "Stride Run Club" name and marks, the club's branding, logos, and trade dress, the design and software of the platform, and all photographs, imagery, event names, and editorial content created by or for the club — rightfully vest in and belong to **Sidharth Yadav, Founder of Stride Run Club**, or are held by Stride Run Club Bengaluru under his authority. Nothing in these Terms transfers to you any ownership of, or licence to, any of the foregoing except the limited right to access and use the Services in accordance with these Terms.
+
+For the avoidance of doubt, this Section does not affect your rights in your own personal data: you retain all rights in your personal data and in the User Content you submit (as set out in Section 8 and in our Privacy Policy), and you grant the club only the licence described in Section 8 to display and operate the Services. Where your name, photograph, or likeness appears in club photography or event coverage, it is used with your consent and in accordance with our Privacy Policy, and such consent may be withdrawn as described therein.
+
 Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of Stride Run Club Bengaluru.
 
 ## 14. Copyright Policy
@@ -128,16 +142,16 @@ OUR SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY K
 Stride Run Club Bengaluru DOES NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE CORRECTNESS, ACCURACY, OR RELIABILITY OF ANY USER CONTENT OR THAT ANY USER CONTENT WILL BE AVAILABLE ON OUR SERVICES.
 
 ## 19. Limitation of Liability
-To the maximum extent permitted by law,  shall not be liable for any indirect, incidental, special, consequential, or punitive damages.
+To the maximum extent permitted by law, Stride Run Club Bengaluru shall not be liable for any indirect, incidental, special, consequential, or punitive damages.
 
 ## 20. Indemnification
 You agree to indemnify, defend, and hold harmless Stride Run Club Bengaluru, its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, expenses, or fees (including reasonable attorneys' fees) that such parties may incur as a result of or arising from your violation of these Terms, your User Content, or your use of the Services. Stride Run Club Bengaluru reserves the right to assume the exclusive defense and control of any matter otherwise subject to indemnification by you, in which event you will cooperate with Stride Run Club Bengaluru in asserting any available defenses.
 
 ## 21. Governing Law
-These Terms shall be governed by and construed in accordance with the laws of the jurisdiction where  is headquartered.
+These Terms shall be governed by and construed in accordance with the laws of India. The courts at Bengaluru, Karnataka, India — where Stride Run Club Bengaluru is headquartered — shall have exclusive jurisdiction over any disputes arising from these Terms.
 
 ## 22. Dispute Resolution
-Any disputes arising from these Terms will be resolved through arbitration in accordance with the rules of the jurisdiction where  is headquartered.
+Any disputes arising from these Terms will be resolved through arbitration in accordance with the Arbitration and Conciliation Act, 1996, with the seat of arbitration at Bengaluru, Karnataka, India, where Stride Run Club Bengaluru is headquartered.
 
 ## 23. Entire Agreement
 These Terms, including our Privacy Policy, Community Guidelines, and any other agreements referenced herein, constitute the entire agreement between you and Stride Run Club Bengaluru regarding your use of our Services and supersede any prior agreements between you and Stride Run Club Bengaluru relating to your use of our Services.
@@ -165,7 +179,7 @@ Our Services may include features such as badges, reputation scores, achievement
 ## 28. Contact Information
 If you have any questions about these Terms, please [contact us](https://www.strideclub.in/contact-us/)
 
-Last Updated: 2026-05-28
+Last Updated: 2026-07-13
 
 ## Additional Terms
 

@@ -2,19 +2,16 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { adminClient } from '@/lib/supabase/admin'
+import { hardDeleteUser, isLastAdmin } from '@/lib/account/hard-delete'
 
-const BUCKET = 'stride-assets'
-
-// Permanently deactivates the currently authenticated user.
+// Permanently erases the currently authenticated user (DPDP right to erasure):
+// storage objects, the public.users row (cascading event_registrations), and
+// the auth.users credentials. Nothing is retained.
 //
-// We keep the row in `public.users` so foreign keys (especially
-// `event_registrations.user_id`) remain intact — admins can still see "this
-// person attended these runs" with the user shown in a deactivated state.
-// All PII (name, email, phone, DOB, gender, avatar, cover, gallery, bio,
-// social links, runner tag, location) is wiped, and the auth.users record
-// is removed so the user can't log back in.
-export async function deleteAccountAction(): Promise<void> {
+// Failures are returned as { error } rather than thrown — Next.js masks thrown
+// server-action error messages in production, and the last-admin guidance must
+// reach the user verbatim.
+export async function deleteAccountAction(): Promise<{ error: string } | void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -22,75 +19,25 @@ export async function deleteAccountAction(): Promise<void> {
   }
   const userId = user!.id
 
-  // ── 1. Wipe storage objects under the user's namespaced paths ──
-  try {
-    const fixedPaths = [
-      `images/avatars/${userId}.webp`,
-      `images/covers/${userId}.webp`,
-    ]
-    await adminClient.storage.from(BUCKET).remove(fixedPaths)
-  } catch (err) {
-    console.warn('[deleteAccount] avatar/cover removal failed', err)
-  }
-
-  try {
-    const galleryPrefix = `images/gallery/${userId}`
-    const { data: galleryFiles } = await adminClient.storage.from(BUCKET).list(galleryPrefix, { limit: 1000 })
-    if (galleryFiles && galleryFiles.length > 0) {
-      const paths = galleryFiles.map(f => `${galleryPrefix}/${f.name}`)
-      await adminClient.storage.from(BUCKET).remove(paths)
+  // The club must never be left without an administrator — the sole admin has
+  // to hand over the role before their account can be erased.
+  if (await isLastAdmin(userId)) {
+    return {
+      error: 'You are the only admin. Promote another member to admin in Admin → Users before deleting your account.',
     }
-  } catch (err) {
-    console.warn('[deleteAccount] gallery removal failed', err)
   }
 
-  // ── 2. Anonymize the public.users row (keep id + runs_completed + created_at) ──
-  //
-  //    Anonymizing username with a `deleted_<prefix>` placeholder keeps the
-  //    UNIQUE constraint happy and stops the soft-deleted row from squatting
-  //    on a desirable handle for future signups.
-  const anonUsername = `deleted_${userId.slice(0, 8)}`
-  const { error: dbError } = await adminClient
-    .from('users')
-    .update({
-      deleted_at: new Date().toISOString(),
-      full_name: null,
-      email: null,
-      username: anonUsername,
-      avatar_url: null,
-      cover_url: null,
-      bio: null,
-      location: null,
-      skills: '[]',
-      linkedin_url: null,
-      instagram_url: null,
-      strava_url: null,
-      prompts: '[]',
-      gallery_images: '[]',
-      runner_tag: null,
-      contact_number: null,
-      emergency_contact_number: null,
-      date_of_birth: null,
-      gender: null,
-      role: 'GUEST',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-  if (dbError) {
-    console.error('[deleteAccount] failed to anonymize users row', dbError)
-    throw new Error('Account deletion failed. Please try again or contact support.')
+  const result = await hardDeleteUser(userId)
+  if (!result.ok) {
+    return { error: 'Account deletion failed. Please try again or contact support.' }
   }
 
-  // ── 3. Delete the auth.users record so the user can't log back in.
-  //      Past event_registrations stay linked to the now-anonymized public.users
-  //      row, so admin dashboards can still show "deactivated runner attended X".
-  const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
-  if (authError) {
-    console.error('[deleteAccount] failed to delete auth.users record', authError)
-    // public.users is already anonymized — proceed with sign-out so the user isn't stuck.
+  // The auth user no longer exists, so signOut may 4xx — still attempt it to
+  // clear the local session cookies before redirecting.
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    // Session cookies are invalid either way; the redirect completes sign-out.
   }
-
-  // ── 4. Sign out the current session and redirect ──
-  await supabase.auth.signOut()
   redirect('/')
 }

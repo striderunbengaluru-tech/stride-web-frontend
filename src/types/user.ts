@@ -32,6 +32,8 @@ export type UserProfile = {
   bio: string | null
   role: Role
   avatar_url: string | null
+  /** When false, the photo is hidden from all public surfaces (DPDP consent). */
+  avatar_public: boolean
   created_at: Date
   cover_url: string | null
   location: string | null

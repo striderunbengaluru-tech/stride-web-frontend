@@ -9,12 +9,28 @@ export const metadata: Metadata = {
   description: 'How Stride Run Club Bengaluru collects, uses, and protects your personal information.',
 }
 
+// Deep-link anchor for section headings, e.g. "5. Cookie Policy" →
+// "cookie-policy" (the cookie banner links to /privacy-policy#cookie-policy).
+// Leading numbers are stripped so anchors survive renumbering.
+function headingId(children: React.ReactNode): string | undefined {
+  const text = Array.isArray(children)
+    ? children.filter((c): c is string => typeof c === 'string').join(' ')
+    : typeof children === 'string' ? children : ''
+  if (!text) return undefined
+  return text
+    .toLowerCase()
+    .replace(/^\d+\.?\s*/, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
 const components: Components = {
   h1: ({ children }) => (
     <h1 className='text-3xl sm:text-4xl font-bold text-white mt-10 mb-4 first:mt-0'>{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 className='text-xl font-bold text-white mt-10 mb-3 pb-2 border-b border-white/10'>{children}</h2>
+    <h2 id={headingId(children)} className='text-xl font-bold text-white mt-10 mb-3 pb-2 border-b border-white/10 scroll-mt-24'>{children}</h2>
   ),
   h3: ({ children }) => (
     <h3 className='text-base font-semibold text-white/90 mt-6 mb-2'>{children}</h3>
