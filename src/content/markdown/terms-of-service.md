@@ -4,11 +4,10 @@
 
 # Terms of Service for Stride Run Club Bengaluru
 
-## Legal Disclaimer
-These Terms of Service are provided as a template and should be reviewed by a qualified attorney before use. This document may not be fully compliant with the laws in your jurisdiction.
-
 ## 1. Introduction
 These Terms of Service ("Terms") govern your access to and use of the Stride Run Club Bengaluru community platform, forums, and related services (collectively, the "Services"). These Terms constitute a legally binding agreement between you and Stride Run Club Bengaluru ("we," "us," or "our"). By accessing or using our Services, you acknowledge that you have read, understood, and agree to be bound by these Terms.
+
+Stride Run Club is operated by Sidharth Yadav, Founder of Stride Run Club, located in Bengaluru, Karnataka, India.
 
 **Purpose of the Platform.** The Services constitute the official web presence of Stride Run Club, Bengaluru. The platform exists for the following purposes: (a) to serve as the club's online presence and source of information about the club, its runs, and its community; (b) to enable individuals to create and maintain a personal athlete profile; (c) to operate as a ticketing and registration platform through which users may register, and where applicable pay, for runs and events organised by the club; and (d) to enable users to become and remain members of Stride Run Club and to record their participation and milestones with the club.
 
@@ -125,8 +124,17 @@ Your privacy is important to us. Our Privacy Policy, which is incorporated into 
 ## 16. Third-Party Links and Services
 Our Services may contain links to third-party websites or services that are not owned or controlled by Stride Run Club Bengaluru. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services. You further acknowledge and agree that Stride Run Club Bengaluru shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the use of or reliance on any such content, goods, or services available on or through any such websites or services.
 
-## 17. Premium Features and Subscriptions
-We may offer premium features or subscription options that require payment. If you purchase a subscription:
+## 17. Payment Terms, Premium Features and Subscriptions
+
+**Payment Processing.** Where a run, event, or feature requires payment, the applicable fee is displayed at the time of registration or purchase. All payments are processed by a third-party payment gateway; we do not collect or store your card or payment-instrument details. A registration or purchase is confirmed only upon our verification of successful payment.
+
+**Taxes.** All fees are stated in Indian Rupees (INR) and, unless expressly stated otherwise at the time of registration or purchase, are inclusive of applicable taxes, including Goods and Services Tax (GST). You are responsible for any additional charges levied by your bank or payment provider.
+
+**Cancellation and Refunds.** Event registrations are personal to you and non-transferable. Cancellation and refund entitlements, if any, are as stated in the event-specific terms presented at the time of registration; unless stated otherwise there, fees paid for event registrations are non-refundable. If we cancel an event and it is not rescheduled, you will be offered a refund of the registration fee paid or, at our discretion and with your agreement, a transfer of your registration to another event. Refunds, where due, are processed to the original payment method within the timelines of the payment gateway and your bank.
+
+**Failed Payments.** If a payment fails, is declined, or remains incomplete, your registration is not confirmed and no place is held for you. Where an amount has been debited from your account but your registration is not confirmed, the amount is ordinarily reversed automatically by the payment gateway or your bank within their prescribed timelines; if it is not, please contact us using the details in Clause 29 and we will assist in tracing and resolving the payment.
+
+**Premium Features and Subscriptions.** We may offer premium features or subscription options that require payment. If you purchase a subscription:
 
 - You agree to pay the applicable fees and taxes
 - Subscriptions automatically renew unless you cancel before the renewal date
@@ -141,33 +149,38 @@ OUR SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY K
 
 Stride Run Club Bengaluru DOES NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE CORRECTNESS, ACCURACY, OR RELIABILITY OF ANY USER CONTENT OR THAT ANY USER CONTENT WILL BE AVAILABLE ON OUR SERVICES.
 
+**Participation and Medical Fitness.** Participation in runs, events, and other club activities is voluntary. Participants are responsible for ensuring that they are medically fit to participate and should seek medical advice where appropriate. By registering for or participating in any run or event, you represent that you are aware of the physical demands of the activity and that you participate at your own risk.
+
 ## 19. Limitation of Liability
 To the maximum extent permitted by law, Stride Run Club Bengaluru shall not be liable for any indirect, incidental, special, consequential, or punitive damages.
 
 ## 20. Indemnification
 You agree to indemnify, defend, and hold harmless Stride Run Club Bengaluru, its officers, directors, employees, agents, and affiliates from and against any and all claims, liabilities, damages, losses, costs, expenses, or fees (including reasonable attorneys' fees) that such parties may incur as a result of or arising from your violation of these Terms, your User Content, or your use of the Services. Stride Run Club Bengaluru reserves the right to assume the exclusive defense and control of any matter otherwise subject to indemnification by you, in which event you will cooperate with Stride Run Club Bengaluru in asserting any available defenses.
 
-## 21. Governing Law
-These Terms shall be governed by and construed in accordance with the laws of India. The courts at Bengaluru, Karnataka, India — where Stride Run Club Bengaluru is headquartered — shall have exclusive jurisdiction over any disputes arising from these Terms.
+## 21. Dispute Resolution
+Any disputes arising from these Terms will be resolved through arbitration in accordance with the Arbitration and Conciliation Act, 1996, with the seat of arbitration at Bengaluru, Karnataka, India, where Stride Run Club Bengaluru is headquartered. The parties shall first attempt in good faith to resolve any dispute amicably through mutual discussion within thirty (30) days of written notice of the dispute before commencing arbitration.
 
-## 22. Dispute Resolution
-Any disputes arising from these Terms will be resolved through arbitration in accordance with the Arbitration and Conciliation Act, 1996, with the seat of arbitration at Bengaluru, Karnataka, India, where Stride Run Club Bengaluru is headquartered.
+## 22. Governing Law and Jurisdiction
+These Terms shall be governed by and construed in accordance with the laws of India. Subject to Clause 21 (Dispute Resolution), the courts at Bengaluru, Karnataka, India — where Stride Run Club Bengaluru is headquartered — shall have exclusive jurisdiction over any disputes arising from these Terms.
 
-## 23. Entire Agreement
+## 23. Force Majeure
+Stride Run Club Bengaluru shall not be liable for any failure or delay in performing its obligations under these Terms — including the conduct, postponement, or cancellation of any run or event — where such failure or delay results from circumstances beyond its reasonable control, including but not limited to acts of God, extreme weather conditions, floods, earthquakes, epidemics or pandemics, fire, war, acts of terrorism, civil unrest, strikes or labour disputes, governmental orders, restrictions or advisories, failures of public infrastructure, or failures of telecommunications, hosting, or payment systems operated by third parties. In such circumstances, we will make reasonable efforts to notify affected participants and, where an event is cancelled and cannot be rescheduled, address registrations in accordance with Clause 17 (Payment Terms).
+
+## 24. Entire Agreement
 These Terms, including our Privacy Policy, Community Guidelines, and any other agreements referenced herein, constitute the entire agreement between you and Stride Run Club Bengaluru regarding your use of our Services and supersede any prior agreements between you and Stride Run Club Bengaluru relating to your use of our Services.
 
-## 24. Waiver and Severability
+## 25. Waiver and Severability
 The failure of Stride Run Club Bengaluru to enforce any right or provision of these Terms will not be deemed a waiver of such right or provision. If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions will remain in full force and effect.
 
-## 25. Assignment
+## 26. Assignment
 These Terms, and any rights and licenses granted hereunder, may not be transferred or assigned by you without the prior written consent of Stride Run Club Bengaluru, but may be assigned by Stride Run Club Bengaluru without restriction.
 
-## 26. Termination
+## 27. Termination
 We reserve the right to suspend or terminate your access to our Services at our sole discretion, with or without notice, for conduct that we believe violates these Terms, our Community Guidelines, or is harmful to other users of our Services, us, or third parties, or for any other reason. Upon termination, your right to use our Services will immediately cease, and you must cease all use of our Services.
 
 All provisions of these Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity, and limitations of liability.
 
-## 27. Community Economy and Virtual Items
+## 28. Community Economy and Virtual Items
 Our Services may include features such as badges, reputation scores, achievements, or other virtual items or currency. These virtual items:
 
 - Remain the property of Stride Run Club Bengaluru and do not constitute property of users
@@ -176,10 +189,13 @@ Our Services may include features such as badges, reputation scores, achievement
 - Are subject to the limitations and conditions we impose
 - May not be transferred, sold, or exchanged between users unless explicitly permitted
 
-## 28. Contact Information
-If you have any questions about these Terms, please [contact us](https://www.strideclub.in/contact-us/)
+## 29. Contact Information
+If you have any questions about these Terms, please contact us:
 
-Last Updated: 2026-07-13
+- **Name**: Sidharth Yadav, Founder — Stride Run Club Bengaluru
+- **Phone**: +91 8368877289
+- **Email**: striderunclubbengaluru@gmail.com
+- **Website**: [https://www.strideclub.in/contact-us/](https://www.strideclub.in/contact-us/)
 
 ## Additional Terms
 
