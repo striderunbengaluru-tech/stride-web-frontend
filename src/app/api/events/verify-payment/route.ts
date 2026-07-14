@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 
 function verifySignature(orderId: string, paymentId: string, signature: string): boolean {
   const secret = process.env.STRIDE_RAZORPAY_KEY_SECRET ?? ''
@@ -74,6 +75,10 @@ export async function POST(request: Request) {
 
   // Bust the event page's cache so back-navigation reflects the new CONFIRMED state.
   if (eventSlug) revalidatePath(`/events/${eventSlug}`)
+
+  // Atomic claim inside prevents a double-send if the Razorpay webhook
+  // confirms the same registration concurrently.
+  after(() => sendConfirmationEmailOnce(registrationId))
 
   return NextResponse.json({ success: true })
 }

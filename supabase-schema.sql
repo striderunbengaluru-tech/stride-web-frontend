@@ -223,3 +223,16 @@ create policy "Admins can manage all registrations"
 create trigger set_er_updated_at
   before update on public.event_registrations
   for each row execute procedure public.set_updated_at();
+
+-- ─── Transactional email idempotency stamps (Brevo) ──────────────────────────
+-- Applied manually via the Supabase SQL Editor. The claim-then-send helpers in
+-- src/lib/email/send-hooks.ts atomically stamp these columns so no email is
+-- ever sent twice (paid registrations can be confirmed by both verify-payment
+-- and the Razorpay webhook).
+alter table public.users add column welcome_email_sent_at timestamptz;
+alter table public.event_registrations add column confirmation_email_sent_at timestamptz;
+
+-- Backfill: existing users must NOT receive a welcome email on their next sign-in
+update public.users set welcome_email_sent_at = now();
+-- Backfill: already-confirmed registrations must not get a late confirmation email
+update public.event_registrations set confirmation_email_sent_at = now() where status = 'CONFIRMED';

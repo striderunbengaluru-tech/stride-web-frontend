@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
+import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import type { AdditionalField } from '@/types/event'
 
 export async function POST(request: Request) {
@@ -132,6 +133,7 @@ export async function POST(request: Request) {
     // Bust the event page's server cache so back-navigation shows
     // "You're registered ✓" instead of a stale Register CTA.
     revalidatePath(`/events/${event.slug}`)
+    after(() => sendConfirmationEmailOnce(registrationId))
     return NextResponse.json({ registrationId, slug: event.slug })
   }
 
