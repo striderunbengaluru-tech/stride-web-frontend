@@ -1,7 +1,8 @@
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
 
-// Sender domain must match the Brevo-authenticated domain (mail.strideclub.in)
-const SENDER = { name: 'Stride Run Club', email: 'no-reply@mail.strideclub.in' }
+// Sender domain must match the Brevo-authenticated domain (apex strideclub.in;
+// mail.strideclub.in is Brevo's branding CNAME, not a valid sender domain).
+const SENDER = { name: 'Stride Run Club', email: 'no-reply@strideclub.in' }
 
 type SendEmailParams = {
   to: string
