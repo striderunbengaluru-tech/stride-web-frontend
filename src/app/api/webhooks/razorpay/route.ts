@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { adminClient } from '@/lib/supabase/admin'
+import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
   const secret = process.env.STRIDE_RAZORPAY_WEBHOOK_SECRET ?? ''
@@ -51,6 +52,10 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         })
         .eq('razorpay_order_id', orderId)
+
+      // Atomic claim inside prevents a double-send if verify-payment
+      // confirms the same registration concurrently.
+      after(() => sendConfirmationEmailOnce(reg.id))
     }
   } else if (eventType === 'payment.failed') {
     await adminClient

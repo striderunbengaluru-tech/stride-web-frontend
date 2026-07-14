@@ -1,7 +1,8 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest, after } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { sendWelcomeEmailOnce } from '@/lib/email/send-hooks'
 
 // Supabase redirects here after Google OAuth completes (PKCE flow).
 // Exchange the one-time code for a session, then forward to the user's profile
@@ -81,6 +82,10 @@ export async function GET(request: NextRequest) {
 
           profile = upserted
         }
+
+        // First-ever sign-in gets a welcome email — the atomic claim inside
+        // makes this a no-op for returning users, so it's safe on every login.
+        after(() => sendWelcomeEmailOnce(user.id))
 
         // Prefer the validated next path if provided, else profile page
         if (nextPath) {
