@@ -44,10 +44,13 @@ const Navbar = async () => {
         aria-label='Main navigation'
         className='relative w-full max-w-6xl min-h-[60px] flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/30 px-5 py-3 backdrop-blur-xl'
       >
-        {/* Logo — centered on mobile, left on sm+ */}
+        {/* Logo — centered on mobile, left on sm+. Centered via inset-x + mx-auto
+            (layout, pixel-snapped) instead of left-1/2 -translate-x-1/2: the
+            composited transform lands on half-pixel offsets when the nav width
+            is odd, which rasterizes the SVG blurry on mobile. */}
         <Link
           href='/'
-          className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:static sm:left-auto sm:top-auto sm:translate-x-0 sm:translate-y-0 shrink-0'
+          className='absolute inset-0 mx-auto w-fit flex items-center sm:static sm:mx-0 sm:w-auto shrink-0'
           aria-label='Stride Run Club home'
         >
           <Image
