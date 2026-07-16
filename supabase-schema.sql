@@ -236,3 +236,11 @@ alter table public.event_registrations add column confirmation_email_sent_at tim
 update public.users set welcome_email_sent_at = now();
 -- Backfill: already-confirmed registrations must not get a late confirmation email
 update public.event_registrations set confirmation_email_sent_at = now() where status = 'CONFIRMED';
+
+-- ─── Profile shareability (DPDP) ──────────────────────────────────────────────
+-- Applied manually via the Supabase SQL Editor. When false, the profile page is
+-- owner/admin-only (404 for everyone else, direct URL included) and leaderboard
+-- entries render unlinked. Replaces the former avatar_public photo toggle.
+alter table public.users add column profile_public boolean not null default true;
+-- Optional cleanup once deployed (no code reads it anymore):
+-- alter table public.users drop column avatar_public;
