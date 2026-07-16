@@ -71,11 +71,8 @@ function PodiumCard({
   const statValue =
     tab === 'runs' ? `${user.runs_completed} runs` : formatDistance(user.total_distance_meters)
 
-  return (
-    <Link
-      href={`/profile/${user.username}`}
-      className={`flex flex-col items-center gap-2 ${heights[idx]} transition-transform hover:scale-105`}
-    >
+  const content = (
+    <>
       {/* Medal emoji */}
       <span className='text-2xl'>{MEDALS[idx]}</span>
 
@@ -104,7 +101,18 @@ function PodiumCard({
         className={`w-20 rounded-t-md ${idx === 0 ? 'h-10 bg-stride-yellow-accent/30' : idx === 1 ? 'h-7 bg-white/10' : 'h-5 bg-amber-700/20'} border-t ${idx === 0 ? 'border-stride-yellow-accent/50' : idx === 1 ? 'border-white/20' : 'border-amber-700/40'}`}
       />
       <p className='text-white/40 text-xs -mt-1'>{statLabel}</p>
+    </>
+  )
+
+  const baseClass = `flex flex-col items-center gap-2 ${heights[idx]}`
+
+  // Private profiles keep their podium spot (name + photo) but don't link out.
+  return user.profile_public ? (
+    <Link href={`/profile/${user.username}`} className={`${baseClass} transition-transform hover:scale-105`}>
+      {content}
     </Link>
+  ) : (
+    <div className={baseClass}>{content}</div>
   )
 }
 
@@ -136,7 +144,7 @@ export default function LeaderboardClient({
         <div className='mb-8 text-center'>
           <h1 className='text-4xl sm:text-5xl font-bold mb-2'>Leaderboard</h1>
           <p className='text-white/50 text-base'>
-            The Stride community's top performers — keep showing up.
+            The Stride community&apos;s top performers — keep showing up.
           </p>
         </div>
 
@@ -201,12 +209,9 @@ export default function LeaderboardClient({
                   ? `${user.runs_completed}`
                   : formatDistance(user.total_distance_meters)
 
-              return (
-                <Link
-                  key={user.username}
-                  href={`/profile/${user.username}`}
-                  className='grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_auto] px-5 py-3.5 border-b border-white/5 hover:bg-white/5 transition-colors last:border-0 items-center'
-                >
+              const rowClass = 'grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_auto_auto] px-5 py-3.5 border-b border-white/5 last:border-0 items-center'
+              const rowContent = (
+                <>
                   <span className='text-white/40 font-bold text-sm font-mono'>#{rank}</span>
                   <div className='flex items-center gap-3 min-w-0'>
                     <Avatar user={user} size='sm' />
@@ -218,7 +223,22 @@ export default function LeaderboardClient({
                     </div>
                   </div>
                   <span className='text-white/70 text-sm font-semibold text-right font-mono'>{stat}</span>
+                </>
+              )
+
+              // Private profiles stay on the board (name + photo) but don't link out.
+              return user.profile_public ? (
+                <Link
+                  key={user.username}
+                  href={`/profile/${user.username}`}
+                  className={`${rowClass} hover:bg-white/5 transition-colors`}
+                >
+                  {rowContent}
                 </Link>
+              ) : (
+                <div key={user.username} className={rowClass}>
+                  {rowContent}
+                </div>
               )
             })}
           </div>

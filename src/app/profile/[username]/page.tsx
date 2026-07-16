@@ -9,7 +9,7 @@ import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { SignOutButton } from '@/components/profile/sign-out-button'
 import { DeleteAccountButton } from '@/components/profile/delete-account-button'
 import { AvatarUpload } from '@/components/profile/avatar-upload'
-import { AvatarVisibilityToggle } from '@/components/profile/avatar-visibility-toggle'
+import { ProfileVisibilityToggle } from '@/components/profile/profile-visibility-toggle'
 import { AvatarImage } from '@/components/profile/avatar-image'
 import { ShareButton } from '@/components/profile/share-button'
 import { EditHeaderSection } from '@/components/profile/edit-header-section'
@@ -33,11 +33,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const { data: row } = await adminClient
     .from('users')
-    .select('full_name, bio, avatar_url, avatar_public')
+    .select('full_name, bio, avatar_url, profile_public')
     .eq('username', username)
     .single()
 
   if (!row) return { title: 'Profile not found - Stride Run Club' }
+
+  // Private profile: reveal nothing to link-preview scrapers and anonymous
+  // viewers — identical to a missing profile so its existence doesn't leak.
+  if (!row.profile_public) return { title: 'Profile not found - Stride Run Club' }
 
   const displayName = row.full_name ?? username
   // Title: "<Athlete name> - Stride Run Club"
@@ -45,9 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Description: the athlete's bio, or a generic fallback when none is set.
   const description = (row.bio?.trim().slice(0, 160))
     || `${displayName} is an athlete with Stride Run Club, Bengaluru's community for athletes. See their milestones, races and running story.`
-  // OG image: the athlete's profile photo — never exposed when the athlete has
-  // set their photo to private (link-preview scrapers are anonymous viewers).
-  const ogImage = row.avatar_public ? row.avatar_url ?? undefined : undefined
+  const ogImage = row.avatar_url ?? undefined
 
   return {
     title,
@@ -73,7 +75,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const { data: row } = await adminClient
     .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, avatar_public, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag')
+    .select('id, username, full_name, bio, role, avatar_url, profile_public, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag')
     .eq('username', username)
     .single()
 
@@ -116,10 +118,23 @@ export default async function ProfilePage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
-  // DPDP visibility consent: strip the photo URL server-side for everyone but
-  // the owner when the athlete has set it to private — it must never reach a
-  // public viewer's HTML (covers uploaded and Google-hosted photos alike).
-  const publicAvatarUrl = profile.avatar_public || isOwnProfile ? profile.avatar_url : null
+  // Shareability gate (DPDP consent): a private profile is reachable only by
+  // its owner and club admins — everyone else gets a 404, direct URL included,
+  // indistinguishable from a profile that doesn't exist.
+  if (!profile.profile_public && !isOwnProfile) {
+    let viewerIsAdmin = false
+    if (user) {
+      const { data: viewer } = await adminClient
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      viewerIsAdmin = viewer?.role === 'ADMIN'
+    }
+    if (!viewerIsAdmin) notFound()
+  }
+
+  const publicAvatarUrl = profile.avatar_url
 
   const displayName   = profile.full_name ?? profile.username ?? username
   const joinedLabel   = new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
@@ -143,17 +158,20 @@ export default async function ProfilePage({ params }: Props) {
           {/* Identity card */}
           <div className='lg:col-span-1 animate-fade-in-up' style={{ animationDelay: '0s' }}>
             <div className='relative h-full bg-white/8 border border-white/10 rounded-2xl px-5 py-6 hover:border-white/15 transition-colors flex flex-col items-center text-center'>
-              {/* Share — top right */}
-              <div className='absolute top-4 right-4'>
-                <ShareButton url={profileUrl} title={`${displayName} — Stride Run Club`} text={profile.bio ?? undefined} />
-              </div>
+              {/* Share — top right; hidden while the profile isn't shareable
+                  (the link would 404 for everyone else) */}
+              {profile.profile_public && (
+                <div className='absolute top-4 right-4'>
+                  <ShareButton url={profileUrl} title={`${displayName} — Stride Run Club`} text={profile.bio ?? undefined} />
+                </div>
+              )}
 
               {/* Avatar (tier-coloured frame) */}
               <div className='mt-2'>
                 {isOwnProfile ? (
                   <>
                     <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} />
-                    <AvatarVisibilityToggle initialPublic={profile.avatar_public} />
+                    <ProfileVisibilityToggle initialPublic={profile.profile_public} />
                   </>
                 ) : publicAvatarUrl ? (
                   <AvatarImage

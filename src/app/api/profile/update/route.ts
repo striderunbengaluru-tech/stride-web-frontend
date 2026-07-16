@@ -19,7 +19,7 @@ const schema = z.object({
   instagramUrl: httpUrl.optional().or(z.literal('')),
   stravaUrl: httpUrl.optional().or(z.literal('')),
   xUrl: httpUrl.optional().or(z.literal('')),
-  avatarPublic: z.boolean().optional(),
+  profilePublic: z.boolean().optional(),
 })
 
 export async function POST(request: Request) {
@@ -33,14 +33,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { skills, linkedinUrl, instagramUrl, stravaUrl, xUrl, name, avatarPublic, ...rest } = parsed.data
+  const { skills, linkedinUrl, instagramUrl, stravaUrl, xUrl, name, profilePublic, ...rest } = parsed.data
 
   await adminClient
     .from('users')
     .update({
       ...rest,
       full_name: name,
-      avatar_public: avatarPublic,
+      profile_public: profilePublic,
       linkedin_url: linkedinUrl !== undefined ? (linkedinUrl || null) : undefined,
       instagram_url: instagramUrl !== undefined ? (instagramUrl || null) : undefined,
       strava_url: stravaUrl !== undefined ? (stravaUrl || null) : undefined,
