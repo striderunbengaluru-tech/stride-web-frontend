@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft } from 'lucide-react'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { ReadingProgress } from '@/components/blog/reading-progress'
@@ -130,13 +131,15 @@ export default async function BlogPostPage({ params }: Props) {
             </h1>
           </div>
 
-          {/* ── Hero image ── */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          {/* ── Hero image — the post's LCP, optimized + priority ── */}
+          <Image
             src={post.coverUrl}
             alt={post.title}
+            width={1200}
+            height={675}
+            priority
+            sizes='(max-width: 768px) 100vw, 768px'
             className='w-full h-auto md:w-auto md:max-w-full md:max-h-[520px] rounded-md shadow-xl block mx-auto mb-8'
-            loading='eager'
           />
 
           {/* ── Author strip ── */}

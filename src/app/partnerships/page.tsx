@@ -20,7 +20,7 @@ const CANONICAL_URL = 'https://www.strideclub.in/partnerships/'
 export const metadata: Metadata = {
   title: "Partner With India's Fittest Running Community | Stride Run Club",
   description:
-    "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Put your brand at every finish line in Bengaluru. Stride Run Club delivers authentic, high-ROI partnerships with India's most engaged fitness community.",
+    "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Put your brand at every finish line in Bengaluru with India's most engaged running community.",
   openGraph: {
     title: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
         url: OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: "Partner With Stride Run Club — India's Fittest Running Community",
+        alt: "Partner With Stride Run Club, India's Fittest Running Community",
       },
     ],
     locale: 'en_IN',
@@ -62,7 +62,7 @@ const schemaOrg = {
       url: CANONICAL_URL,
       name: "Partner With India's Fittest Running Community | Stride Run Club",
       description:
-        "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Authentic, high-ROI brand partnerships with Bengaluru's most engaged fitness community.",
+        "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Brand partnerships with Bengaluru's most engaged fitness community.",
       image: OG_IMAGE,
       inLanguage: 'en-IN',
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
@@ -83,7 +83,7 @@ const schemaOrg = {
       url: SITE_ORIGIN,
       logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
       description:
-        "India's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
+        "India's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
       location: {
         '@type': 'Place',
         name: 'Bengaluru, Karnataka, India',
@@ -170,7 +170,7 @@ export default function PartnershipsPage() {
           </h2>
           <p className='text-white/50 mt-4 max-w-xl mx-auto'>
             Running clubs aren&apos;t just exercise groups. They&apos;re tight-knit tribes with shared values,
-            shared goals, and — critically — shared spending habits.
+            shared goals, and shared spending habits.
           </p>
         </SectionReveal>
 
@@ -204,13 +204,13 @@ export default function PartnershipsPage() {
       <section className='max-w-5xl mx-auto px-6 mb-24'>
         <SectionReveal className='text-center mb-10'>
           <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
-            Real Partnerships. Real Impact.
+            Recent partnerships
           </p>
           <h2 className='text-4xl sm:text-5xl font-bold text-white font-libre'>
             See it for yourself.
           </h2>
           <p className='text-white/50 mt-3 max-w-lg mx-auto'>
-            Five partnerships. Real runs. Proof in every frame.
+            Five recent partnerships, filmed at our own runs.
           </p>
         </SectionReveal>
 
@@ -229,8 +229,8 @@ export default function PartnershipsPage() {
             Every industry. One community.
           </h2>
           <p className='text-white/50 mt-4 max-w-lg mx-auto'>
-            From running shoes to post-run coffee — Stride connects brands across
-            the full spectrum of an active lifestyle.
+            From running shoes to post-run coffee, Stride connects brands to
+            every part of an active life.
           </p>
         </SectionReveal>
 

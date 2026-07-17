@@ -1,3 +1,4 @@
+import { cache as reactCache, Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -29,13 +30,61 @@ function parseJson<T>(raw: string | null | undefined, fallback: T): T {
   try { return JSON.parse(raw) as T } catch { return fallback }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { username } = await params
-  const { data: row } = await adminClient
+// Checked-in runs — streamed in via <Suspense> so the profile shell doesn't
+// block on these two queries. Fetched as two queries joined in JS: a
+// PostgREST `events(...)` embed used to fail with PGRST200 before the
+// event_id → events FK existed, and the JS join stays FK-independent.
+async function AttendedRunsSection({ userId, isOwnProfile }: { userId: string; isOwnProfile: boolean }) {
+  const { data: attendedRegs } = await adminClient
+    .from('event_registrations')
+    .select('event_id')
+    .eq('user_id', userId)
+    .not('checked_in_at', 'is', null)
+    .order('checked_in_at', { ascending: false })
+
+  type AttendedEvent = { id: string; name: string; slug: string; event_date: string | null; location: string | null; banner_images: string | null }
+  const attendedIds = [...new Set(
+    ((attendedRegs ?? []) as { event_id: string | null }[]).map(r => r.event_id).filter(Boolean)
+  )] as string[]
+
+  const { data: attendedEventRows } = attendedIds.length
+    ? await adminClient
+        .from('events')
+        .select('id, name, slug, event_date, location, banner_images')
+        .in('id', attendedIds)
+    : { data: [] as AttendedEvent[] }
+
+  // Re-order to match the registrations (latest check-in first) — `.in()`
+  // returns rows in arbitrary order.
+  const attendedById = new Map(((attendedEventRows ?? []) as AttendedEvent[]).map(e => [e.id, e]))
+  const attendedEvents = attendedIds
+    .map(id => attendedById.get(id))
+    .filter(Boolean) as AttendedEvent[]
+
+  return (
+    <EventsAttendedSection
+      events={attendedEvents.slice(0, 10)}
+      totalCount={attendedEvents.length}
+      asList={attendedEvents.length > 10}
+      isOwnProfile={isOwnProfile}
+    />
+  )
+}
+
+// Per-request dedupe: generateMetadata and the page body share this one fetch
+// instead of querying the same row twice.
+const getProfileRow = reactCache(async (username: string) => {
+  const { data } = await adminClient
     .from('users')
-    .select('full_name, bio, avatar_url, profile_public')
+    .select('id, username, full_name, bio, role, avatar_url, profile_public, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag')
     .eq('username', username)
     .single()
+  return data
+})
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { username } = await params
+  const row = await getProfileRow(username)
 
   if (!row) return { title: 'Profile not found - Stride Run Club' }
 
@@ -73,11 +122,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfilePage({ params }: Props) {
   const { username } = await params
 
-  const { data: row } = await adminClient
-    .from('users')
-    .select('id, username, full_name, bio, role, avatar_url, profile_public, created_at, location, skills, linkedin_url, instagram_url, strava_url, x_url, prompts, official_runs, runs_completed, runner_tag')
-    .eq('username', username)
-    .single()
+  const row = await getProfileRow(username)
 
   if (!row) notFound()
 
@@ -100,21 +145,7 @@ export default async function ProfilePage({ params }: Props) {
 
   const officialRuns = parseJson<OfficialRun[]>((row as Record<string, string | null>).official_runs, [])
 
-  const [{ data: attendedRegs }, supabase] = await Promise.all([
-    adminClient
-      .from('event_registrations')
-      .select('events(id, name, slug, event_date, location, banner_images)')
-      .eq('user_id', row.id)
-      .not('checked_in_at', 'is', null)
-      .order('checked_in_at', { ascending: false }),
-    createClient(),
-  ])
-
-  type AttendedReg = { events: { id: string; name: string; slug: string; event_date: string | null; location: string | null; banner_images: string | null } | null }
-  const attendedEvents = (attendedRegs ?? [] as unknown as AttendedReg[])
-    .map(r => (r as unknown as AttendedReg).events)
-    .filter(Boolean) as NonNullable<AttendedReg['events']>[]
-
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
@@ -325,12 +356,9 @@ export default async function ProfilePage({ params }: Props) {
         {/* ── Runs attended with Stride ── past 10; list when >10, mini cards otherwise */}
         <div className='mt-4 animate-fade-in-up' style={{ animationDelay: '0.24s' }}>
           <div className='bg-white/8 border border-white/10 rounded-2xl p-5 hover:border-white/15 transition-colors'>
-            <EventsAttendedSection
-              events={attendedEvents.slice(0, 10)}
-              totalCount={attendedEvents.length}
-              asList={attendedEvents.length > 10}
-              isOwnProfile={isOwnProfile}
-            />
+            <Suspense fallback={<div className='h-40 rounded-xl bg-white/5 animate-pulse' aria-hidden='true' />}>
+              <AttendedRunsSection userId={row.id} isOwnProfile={isOwnProfile} />
+            </Suspense>
           </div>
         </div>
 

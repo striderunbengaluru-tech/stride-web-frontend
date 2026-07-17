@@ -2,6 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
+import { NavLoadingLink } from './nav-loading-link'
+import { FooterAccountColumn } from './footer-account-column'
 
 // Events and Become-a-Member are gated to non-production deployments — drop them
 // from the footer wherever the routes 404 (i.e. on the live site).
@@ -10,10 +12,6 @@ const EXPLORE_LINKS = [
   { title: 'Blog',         href: '/blog' },
   { title: 'Partnerships', href: '/partnerships' },
 ]
-
-const ACCOUNT_LINKS = PREVIEW_FEATURES_ENABLED
-  ? [{ title: 'Become a Member', href: '/become-a-member' }]
-  : []
 
 const LEGAL_LINKS = [
   { title: 'Privacy Policy',    href: '/privacy-policy' },
@@ -35,12 +33,12 @@ function Column({ title, links }: ColumnProps) {
       <ul className='flex flex-col gap-3'>
         {links.map(link => (
           <li key={link.href}>
-            <Link
+            <NavLoadingLink
               href={link.href}
               className='text-white/55 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'
             >
               {link.title}
-            </Link>
+            </NavLoadingLink>
           </li>
         ))}
       </ul>
@@ -48,6 +46,8 @@ function Column({ title, links }: ColumnProps) {
   )
 }
 
+// Sync server component — the auth-dependent Account column is a client
+// island (FooterAccountColumn) so the footer never forces dynamic rendering.
 export default function Footer() {
   return (
     <footer className='px-4 pb-8 pt-4 md:pb-14 md:pt-6'>
@@ -96,7 +96,7 @@ export default function Footer() {
           {/* ── Link columns ── 1 col mobile, 3 col tablet+ ── */}
           <div className='grid grid-cols-1 sm:grid-cols-3 gap-x-12 gap-y-10 md:gap-x-16'>
             <Column title='Explore' links={EXPLORE_LINKS} />
-            {ACCOUNT_LINKS.length > 0 && <Column title='Account' links={ACCOUNT_LINKS} />}
+            <FooterAccountColumn />
             <Column title='Legal'   links={LEGAL_LINKS} />
           </div>
         </div>

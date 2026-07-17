@@ -5,26 +5,26 @@ import Image from 'next/image'
 import { Zap } from 'lucide-react'
 
 const TIPS = [
-  "Run your own race — comparison is the thief of joy on the track.",
-  "Easy runs should feel easy. Most athletes go too hard, too often.",
-  "Hydration starts the night before, not the morning of your run.",
-  "Your slowest run is still faster than sitting on the couch.",
-  "Strength training twice a week reduces running injuries by up to 50%.",
-  "The first 10 minutes are always the hardest. Push through and trust your body.",
-  "Sleep is the best legal performance-enhancing drug available.",
-  "Running form fix: lean slightly forward from your ankles, not your waist.",
-  "Cadence matters. Aim for 170–180 steps per minute to reduce impact.",
-  "Long runs should be at conversational pace — if you can't chat, slow down.",
-  "Recovery is when you get stronger. Respect the rest day.",
-  "Nothing new on race day — practice your fuel and gear in training.",
-  "Consistency beats intensity. 5 km every day beats 30 km once a week.",
-  "Trails and roads beat the treadmill every time — run outside when you can.",
-  "Post-run protein within 30 minutes accelerates muscle repair.",
-  "Cold showers after hard sessions reduce soreness and speed recovery.",
-  "Your breath tells the truth. If you're gasping, you're going too fast.",
+  "Run your own race. Someone else's pace has nothing to do with yours.",
+  "Easy runs should feel easy. Most of us run them too hard.",
+  "Hydration starts the night before, not the morning of the run.",
+  "A slow run still beats no run.",
+  "Strength training twice a week can cut running injuries by up to half.",
+  "The first 10 minutes usually feel the worst. Settle in before you judge the run.",
+  "Sleep is the best legal performance enhancer there is.",
+  "Lean slightly forward from your ankles, not your waist.",
+  "Aim for a cadence of 170–180 steps per minute. Quicker, shorter steps mean less impact.",
+  "Long runs belong at conversational pace. If you can't chat, slow down.",
+  "The strength you're chasing shows up between runs, so take the rest day.",
+  "Nothing new on race day. Test your fuel and gear in training first.",
+  "5 km every day will take you further than 30 km once a week.",
+  "Run outside when you can. Save the treadmill for days the weather wins.",
+  "Protein within 30 minutes of a run helps your muscles repair faster.",
+  "A cold shower after a hard session takes the edge off the soreness.",
+  "Your breathing is the simplest pace check you own. Gasping means slow down.",
   "Warm up with dynamic stretches, cool down with static holds.",
-  "Every Stride run makes you part of something bigger than yourself.",
-  "The best shoe fits your foot — not the biggest budget.",
+  "Half of a Stride run happens after the run. Stick around for the meetup.",
+  "Fit beats price when you're choosing running shoes.",
 ]
 
 const DUCKY_BASE =
@@ -76,7 +76,6 @@ export default function Loading() {
           width={176}
           height={176}
           className='w-44 h-44 object-contain drop-shadow-2xl'
-          priority={duckyIdx === 0}
         />
       </div>
 

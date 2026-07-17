@@ -7,7 +7,10 @@ import { Spinner } from '@/components/ui/spinner'
 import type { OfficialRun } from '@/types/user'
 
 const MAX_RUNS = 10
-const DISTANCE_SUGGESTIONS = ['5K', '10K', 'Half Marathon', 'Marathon', 'Ultra']
+const PRESET_DISTANCES = ['5K', '10K', '21.1K', '42.2K'] as const
+// Free-text values saved before the segmented control existed
+const LEGACY_DISTANCES: Record<string, string> = { 'Half Marathon': '21.1K', 'Marathon': '42.2K' }
+const CUSTOM_DISTANCE_RE = /^(\d+(?:\.\d+)?)K$/
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i)
@@ -17,10 +20,20 @@ type Props = { initialRuns: OfficialRun[]; isOwnProfile: boolean }
 type FormState = { name: string; distance: string; time: string; month: string; year: string }
 const EMPTY_FORM: FormState = { name: '', distance: '', time: '', month: '', year: '' }
 
+// Auto-insert colons as the user types a finish time: digits fill from the
+// right (seconds first), so 14530 renders as 1:45:30 and 4530 as 45:30.
+function formatRaceTime(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 6)
+  if (d.length <= 2) return d
+  if (d.length <= 4) return `${d.slice(0, -2)}:${d.slice(-2)}`
+  return `${d.slice(0, -4)}:${d.slice(-4, -2)}:${d.slice(-2)}`
+}
+
 function toForm(run: OfficialRun): FormState {
+  const rawDistance = run.distance ?? ''
   return {
     name: run.name,
-    distance: run.distance ?? '',
+    distance: LEGACY_DISTANCES[rawDistance] ?? rawDistance,
     time: run.time ?? '',
     month: run.month ? String(run.month) : '',
     year: run.year ? String(run.year) : '',
@@ -220,18 +233,23 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
                   )}
                 </div>
 
-                {/* Name + meta */}
+                {/* Name + distance chip */}
                 <div className='min-w-0 flex-1'>
                   <p className='text-white font-semibold text-sm leading-snug line-clamp-1'>{run.name}</p>
-                  <div className='mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/65'>
-                    {run.distance && (
-                      <span className='inline-flex items-center gap-1.5'><Ruler size={13} className='text-white/40' />{run.distance}</span>
-                    )}
-                    {run.time && (
-                      <span className='inline-flex items-center gap-1.5 font-mono tabular-nums'><Clock size={13} className='text-stride-yellow-accent/70' />{run.time}</span>
-                    )}
-                  </div>
+                  {run.distance && (
+                    <span className='mt-1.5 inline-flex items-center rounded-md bg-stride-yellow-accent/15 border border-stride-yellow-accent/25 px-2 py-0.5 text-[11px] font-mono font-bold text-stride-yellow-accent'>
+                      {run.distance}
+                    </span>
+                  )}
                 </div>
+
+                {/* Finish time — the hero stat of a race card */}
+                {run.time && (
+                  <div className='shrink-0 text-right'>
+                    <p className='text-[9px] font-mono uppercase tracking-[0.2em] text-white/35'>Finish</p>
+                    <p className='text-white font-bold font-mono tabular-nums text-base leading-tight'>{run.time}</p>
+                  </div>
+                )}
 
                 {isOwnProfile && (
                   <div className='flex items-center gap-1 shrink-0'>
@@ -277,75 +295,157 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
   )
 }
 
-// ── Shared icon-prefixed form, used for both add + edit ──
+// ── Shared labeled form, used for both add + edit ──
+
+type DistanceKind = '' | 'preset' | 'custom' | 'na'
+
+function deriveDistanceKind(distance: string): DistanceKind {
+  if (!distance) return ''
+  if ((PRESET_DISTANCES as readonly string[]).includes(distance)) return 'preset'
+  if (CUSTOM_DISTANCE_RE.test(distance)) return 'custom'
+  return '' // unknown legacy free text — nothing highlighted, value kept until changed
+}
+
 function RunForm({ form, setForm }: { form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>> }) {
+  const [kind, setKind] = useState<DistanceKind>(() => deriveDistanceKind(form.distance))
+  const [customKm, setCustomKm] = useState<string>(() => CUSTOM_DISTANCE_RE.exec(form.distance)?.[1] ?? '')
+
+  function pickPreset(d: string) {
+    setKind('preset')
+    setForm(f => ({ ...f, distance: d }))
+  }
+
+  function pickCustom() {
+    setKind('custom')
+    setForm(f => ({ ...f, distance: customKm ? `${customKm}K` : '' }))
+  }
+
+  function pickNa() {
+    setKind('na')
+    setCustomKm('')
+    setForm(f => ({ ...f, distance: '' }))
+  }
+
+  function handleCustomKm(raw: string) {
+    // Digits with an optional single decimal point, clamped to 1–1000
+    const cleaned = raw.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+    setCustomKm(cleaned)
+    const num = Number(cleaned)
+    const valid = cleaned !== '' && Number.isFinite(num) && num >= 1 && num <= 1000
+    setForm(f => ({ ...f, distance: valid ? `${cleaned}K` : '' }))
+  }
+
+  const customNum = Number(customKm)
+  const customInvalid = kind === 'custom' && customKm !== '' && !(customNum >= 1 && customNum <= 1000)
+  const chipBase = 'min-h-9 px-3 rounded-md text-xs font-semibold transition-colors'
+  const chipOff = 'bg-white/8 border border-white/15 text-white/60 hover:border-stride-yellow-accent/40 hover:text-white'
+  const chipOn = 'bg-stride-yellow-accent border border-stride-yellow-accent text-copy-black'
+
   return (
-    <div className='space-y-3'>
-      <IconField icon={<Flag size={15} className='text-white/40' />}>
-        <input
-          className={INPUT_CLS}
-          placeholder='Run name (e.g. Tata Mumbai Marathon)'
-          value={form.name}
-          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          autoFocus
-        />
-      </IconField>
-
-      <div className='grid grid-cols-2 gap-3'>
-        <IconField icon={<Ruler size={15} className='text-white/40' />}>
+    <div className='space-y-4'>
+      <label className='block'>
+        <span className={LABEL_CLS}>Race name</span>
+        <Field icon={<Flag size={15} className='text-white/40' />}>
           <input
             className={INPUT_CLS}
-            placeholder='Distance'
-            list='distance-suggestions'
-            value={form.distance}
-            onChange={e => setForm(f => ({ ...f, distance: e.target.value }))}
+            placeholder='e.g. Tata Mumbai Marathon'
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            autoFocus
           />
-          <datalist id='distance-suggestions'>
-            {DISTANCE_SUGGESTIONS.map(d => <option key={d} value={d} />)}
-          </datalist>
-        </IconField>
+        </Field>
+      </label>
 
-        <IconField icon={<Clock size={15} className='text-white/40' />}>
-          <input
-            className={INPUT_CLS}
-            placeholder='Time (H:MM:SS)'
-            value={form.time}
-            onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-          />
-        </IconField>
+      <div>
+        <span className={LABEL_CLS}>Distance</span>
+        <div className='flex flex-wrap gap-1.5' role='radiogroup' aria-label='Race distance'>
+          {PRESET_DISTANCES.map(d => (
+            <button key={d} type='button' role='radio' aria-checked={kind === 'preset' && form.distance === d}
+              onClick={() => pickPreset(d)}
+              className={`${chipBase} font-mono ${kind === 'preset' && form.distance === d ? chipOn : chipOff}`}>
+              {d}
+            </button>
+          ))}
+          <button type='button' role='radio' aria-checked={kind === 'custom'} onClick={pickCustom}
+            className={`${chipBase} ${kind === 'custom' ? chipOn : chipOff}`}>
+            Custom
+          </button>
+          <button type='button' role='radio' aria-checked={kind === 'na'} onClick={pickNa}
+            className={`${chipBase} ${kind === 'na' ? chipOn : chipOff}`}>
+            Not applicable
+          </button>
+        </div>
+        {kind === 'custom' && (
+          <div className='mt-2'>
+            <Field icon={<Ruler size={15} className='text-white/40' />}>
+              <input
+                className={`${INPUT_CLS} font-mono`}
+                placeholder='Distance in km (1–1000)'
+                inputMode='decimal'
+                value={customKm}
+                onChange={e => handleCustomKm(e.target.value)}
+              />
+              <span className='text-white/40 text-sm font-mono shrink-0'>K</span>
+            </Field>
+            {customInvalid && (
+              <p className='text-red-400 text-xs mt-1' role='alert'>Enter a distance between 1 and 1000.</p>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className='grid grid-cols-2 gap-3'>
-        <IconField icon={<Calendar size={15} className='text-white/40' />}>
-          <select
-            className={`${INPUT_CLS} appearance-none`}
-            value={form.month}
-            onChange={e => setForm(f => ({ ...f, month: e.target.value }))}
-          >
-            <option value=''>Month</option>
-            {MONTHS.map((m, i) => <option key={m} value={i + 1} className='bg-stride-purple-primary'>{m}</option>)}
-          </select>
-        </IconField>
+      <label className='block'>
+        <span className={LABEL_CLS}>Finish time</span>
+        <Field icon={<Clock size={15} className='text-white/40' />}>
+          <input
+            className={`${INPUT_CLS} font-mono tabular-nums`}
+            placeholder='1:45:30'
+            inputMode='numeric'
+            value={form.time}
+            onChange={e => setForm(f => ({ ...f, time: formatRaceTime(e.target.value) }))}
+          />
+        </Field>
+      </label>
 
-        <IconField icon={<Calendar size={15} className='text-white/40' />}>
-          <select
-            className={`${INPUT_CLS} appearance-none`}
-            value={form.year}
-            onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-          >
-            <option value=''>Year</option>
-            {YEARS.map(y => <option key={y} value={y} className='bg-stride-purple-primary'>{y}</option>)}
-          </select>
-        </IconField>
+      <div>
+        <span className={LABEL_CLS}>When</span>
+        <div className='grid grid-cols-2 gap-3'>
+          <Field icon={<Calendar size={15} className='text-white/40' />}>
+            <select
+              className={`${INPUT_CLS} appearance-none`}
+              aria-label='Month'
+              value={form.month}
+              onChange={e => setForm(f => ({ ...f, month: e.target.value }))}
+            >
+              <option value=''>Month</option>
+              {MONTHS.map((m, i) => <option key={m} value={i + 1} className='bg-stride-purple-primary'>{m}</option>)}
+            </select>
+          </Field>
+
+          <Field icon={<Calendar size={15} className='text-white/40' />}>
+            <select
+              className={`${INPUT_CLS} appearance-none`}
+              aria-label='Year'
+              value={form.year}
+              onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+            >
+              <option value=''>Year</option>
+              {YEARS.map(y => <option key={y} value={y} className='bg-stride-purple-primary'>{y}</option>)}
+            </select>
+          </Field>
+        </div>
       </div>
     </div>
   )
 }
 
+const LABEL_CLS =
+  'block text-[10px] font-mono uppercase tracking-[0.18em] text-white/40 mb-1.5'
+
 const INPUT_CLS =
   'w-full bg-transparent text-white text-sm placeholder:text-white/25 focus:outline-none'
 
-function IconField({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function Field({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className='flex items-center gap-2.5 bg-white/8 border border-white/20 rounded-xl px-3.5 py-2.5 focus-within:border-stride-yellow-accent/60 transition-colors'>
       <span className='shrink-0'>{icon}</span>

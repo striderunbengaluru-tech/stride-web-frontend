@@ -12,11 +12,12 @@ import {
   X, Plus, Eye, ChevronDown, Pencil, GripVertical, Trash2,
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
-  Hash, IndianRupee, Users, Link2, Coffee, Route, Clock, FileText, RotateCcw,
+  Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw,
 } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
 import type { AdditionalField, AdditionalFieldType } from '@/types/event'
 import { Spinner } from '@/components/ui/spinner'
+import { Switch } from '@/components/ui/switch'
 import { UploadProgress } from '@/components/ui/upload-progress'
 import { HelpHint } from '@/components/ui/help-hint'
 import { EventPreview } from '@/components/admin/event-preview'
@@ -69,6 +70,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
       : ''
   )
   const [difficulty, setDifficulty] = useState(defaultValues.difficulty ?? '')
+  const [showSpotsLeft, setShowSpotsLeft] = useState(defaultValues.showSpotsLeft ?? false)
 
   // Cancel confirmation modal — `mounted` flag guards createPortal on SSR
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
@@ -562,10 +564,16 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
                 <Field
-                  icon={<Coffee size={14} />} label='Post-run gather URL'
+                  icon={<Users size={14} />} label='Post run meetup spot'
+                  name='postRunLocation' defaultValue={defaultValues.postRunLocation}
+                  placeholder='e.g. Third Wave Coffee, HSR'
+                  help='Place name shown on the event page — café, breakfast spot, etc.'
+                />
+                <Field
+                  icon={<Link2 size={14} />} label='Post run meetup spot — Google Maps URL'
                   name='postRunLocationUrl' type='url' defaultValue={defaultValues.postRunLocationUrl}
                   placeholder='https://maps.google.com/...'
-                  help='Where runners hang out after — café, breakfast spot, etc.'
+                  help='Pin for the meetup spot. Makes the card on the event page clickable.'
                 />
                 <Field
                   icon={<Route size={14} />} label='Run route URL'
@@ -578,6 +586,21 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
 
             {/* ── REGISTRATION ── */}
             <Widget icon={<Ticket size={15} />} title='Registration'>
+              {/* Spots-left toggle */}
+              <div className='flex items-center justify-between gap-3 mb-4'>
+                <div className='flex items-center gap-1.5'>
+                  <Users size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Show spots left</label>
+                  <HelpHint text='Shows how many spots remain on the event page. When 10 or fewer are left it becomes a red “Hurry!” note to nudge sign-ups. Needs a capacity to be set.' />
+                </div>
+                <Switch
+                  checked={showSpotsLeft}
+                  onCheckedChange={(v) => { setShowSpotsLeft(v); markDirty() }}
+                  label='Show spots left on the event page'
+                />
+                <input type='hidden' name='showSpotsLeft' value={showSpotsLeft ? 'true' : 'false'} />
+              </div>
+
               <div className='flex flex-col gap-1.5'>
                 <div className='flex items-center gap-1.5'>
                   <FileText size={14} className='text-white/40' />

@@ -111,8 +111,9 @@ export default function SpotlightSection() {
               </span>
             </div>
 
-            {/* Animated content block — fixed height prevents layout shift */}
-            <div className='relative min-h-[240px]'>
+            {/* Animated content block — fixed height prevents layout shift.
+                Sized for the tallest slide (badge + handle + partner CTA). */}
+            <div className='relative min-h-[300px] md:min-h-[280px]'>
               <AnimatePresence mode='wait'>
                 <motion.div
                   key={currentIndex}
@@ -147,6 +148,15 @@ export default function SpotlightSection() {
                       {slide.handle}
                     </Link>
                   )}
+
+                  {/* Partnership hook — slide-specific copy, links to /partnerships */}
+                  <Link
+                    href='/partnerships'
+                    className='group/cta inline-flex items-start gap-1.5 w-fit mt-1 text-sm font-medium text-stride-yellow-accent hover:underline underline-offset-4 decoration-stride-yellow-accent/50'
+                  >
+                    <span>{slide.partnerCta}</span>
+                    <ArrowRight className='h-4 w-4 shrink-0 mt-0.5 group-hover/cta:translate-x-0.5 transition-transform' />
+                  </Link>
                 </motion.div>
               </AnimatePresence>
             </div>

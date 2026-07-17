@@ -57,7 +57,7 @@ export default function PartnershipsHero() {
         className='text-white/60 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10'
       >
         <span className='font-mono'>52,000+</span> followers. <span className='font-mono'>7,000+</span> athletes. A city moving as one. Stride is Bengaluru&apos;s most engaged running
-        community — high-intent, health-conscious members who show up every single week.
+        community: health-conscious members who show up every week.
       </motion.p>
 
       {/* CTA row */}

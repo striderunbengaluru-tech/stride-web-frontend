@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ParticipantDetailsModal } from '@/components/events/participant-details-modal'
 import type { AdditionalField } from '@/types/event'
 
@@ -12,7 +13,6 @@ type Props = {
   isRegistered: boolean
   isPast: boolean
   isLoggedIn: boolean
-  autoOpen?: boolean
   initial: {
     fullName: string | null
     dateOfBirth: string | null
@@ -33,13 +33,15 @@ export function RegisterButton({
   isRegistered,
   isPast,
   isLoggedIn,
-  autoOpen,
   initial,
   additionalFields,
   termsAndConditions,
   razorpayKeyId,
 }: Props) {
-  // Modal mounts open if returning from login with ?register=1 — never auto-open for past events
+  // ?register=1 (returning from login) is read here client-side so the server
+  // page never touches searchParams — never auto-open for past events
+  const searchParams = useSearchParams()
+  const autoOpen = searchParams.get('register') === '1'
   const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !isRegistered && !isFull && !isPast))
 
   if (isRegistered) {

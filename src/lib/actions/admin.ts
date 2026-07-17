@@ -1,9 +1,11 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { EVENTS_TAG, eventTag } from '@/lib/data/events'
 import { eventSchema, productSchema, additionalFieldsArraySchema } from '@/lib/validations/admin'
 import { slugify } from '@/lib/utils/slug'
 import { isLastAdmin } from '@/lib/account/hard-delete'
@@ -44,7 +46,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -65,6 +67,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
     event_date: eventDate ? new Date(eventDate).toISOString() : null,
     end_date: endDate ? new Date(endDate).toISOString() : null,
     location_url: locationUrl || null,
+    post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
@@ -74,10 +77,24 @@ export async function createEventAction(formData: FormData): Promise<void> {
     additional_fields: sanitiseAdditionalFields(additionalFields),
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
+    show_spots_left: showSpotsLeft,
     ...rest,
   })
 
+  revalidateEventCaches(slug)
   redirect('/admin/events')
+}
+
+// Purge every cache layer that serves event data: the tag-cached reads in
+// src/lib/data/events.ts and the ISR'd /events listing page.
+function revalidateEventCaches(slug: string | null) {
+  // 'max' = expire immediately (Next 16 requires an explicit cache profile)
+  revalidateTag(EVENTS_TAG, 'max')
+  if (slug) {
+    revalidateTag(eventTag(slug), 'max')
+    revalidatePath(`/events/${slug}`)
+  }
+  revalidatePath('/events')
 }
 
 export async function updateEventAction(id: string, formData: FormData): Promise<void> {
@@ -87,13 +104,14 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
 
-  await adminClient.from('events').update({
+  const { data: updated } = await adminClient.from('events').update({
     name,
     event_date: eventDate ? new Date(eventDate).toISOString() : null,
     end_date: endDate ? new Date(endDate).toISOString() : null,
     location_url: locationUrl || null,
+    post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
     price_paise: pricePaise,
@@ -103,10 +121,12 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     additional_fields: sanitiseAdditionalFields(additionalFields),
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
+    show_spots_left: showSpotsLeft,
     updated_at: new Date().toISOString(),
     ...rest,
-  }).eq('id', id)
+  }).eq('id', id).select('slug').single()
 
+  revalidateEventCaches(updated?.slug ?? null)
   redirect('/admin/events')
 }
 
@@ -115,10 +135,11 @@ const STORAGE_URL_PREFIX = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/
 export async function deleteEventAction(id: string): Promise<void> {
   await requireAdmin()
 
-  // Fetch banner images before deleting the row so we can clean up storage
+  // Fetch banner images (for storage cleanup) and slug (for cache purge)
+  // before deleting the row
   const { data: event } = await adminClient
     .from('events')
-    .select('banner_images')
+    .select('banner_images, slug')
     .eq('id', id)
     .single()
 
@@ -137,6 +158,7 @@ export async function deleteEventAction(id: string): Promise<void> {
   }
 
   await adminClient.from('events').delete().eq('id', id)
+  revalidateEventCaches(event?.slug ?? null)
   redirect('/admin/events')
 }
 

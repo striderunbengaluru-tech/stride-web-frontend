@@ -10,15 +10,27 @@ const httpUrl = z.string().url().refine(
   'Must be a valid http(s) URL',
 )
 
+// Social links must be shareable profile URLs on the platform's own domain —
+// rejects bare IDs/handles that happen to parse as URLs (e.g. "kushagra.g").
+const socialUrl = (label: string, hosts: string[]) =>
+  httpUrl.refine((v) => {
+    try {
+      const hostname = new URL(v).hostname.toLowerCase()
+      return hosts.some(h => hostname === h || hostname.endsWith(`.${h}`))
+    } catch {
+      return false
+    }
+  }, `Must be a shareable ${label} profile link, not just an ID`)
+
 const schema = z.object({
   name: z.string().trim().min(1).max(500).regex(NAME_RE, 'Name can only contain letters').optional(),
   bio: z.string().max(300).optional(),
   location: z.string().max(100).optional(),
   skills: z.array(z.string()).max(3).optional(),
-  linkedinUrl: httpUrl.optional().or(z.literal('')),
-  instagramUrl: httpUrl.optional().or(z.literal('')),
-  stravaUrl: httpUrl.optional().or(z.literal('')),
-  xUrl: httpUrl.optional().or(z.literal('')),
+  linkedinUrl: socialUrl('LinkedIn', ['linkedin.com']).optional().or(z.literal('')),
+  instagramUrl: socialUrl('Instagram', ['instagram.com']).optional().or(z.literal('')),
+  stravaUrl: socialUrl('Strava', ['strava.com', 'strava.app.link']).optional().or(z.literal('')),
+  xUrl: socialUrl('X', ['x.com', 'twitter.com']).optional().or(z.literal('')),
   profilePublic: z.boolean().optional(),
 })
 

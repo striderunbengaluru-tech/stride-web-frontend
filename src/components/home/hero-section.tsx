@@ -1,5 +1,6 @@
 import HeroContent from './hero-content'
 import { HeroBgSlideshow } from './hero-bg-slideshow'
+import { HeroMemberCta } from './hero-member-cta'
 import heroData from '@/content/hero.json'
 
 const HeroSection = () => {
@@ -19,6 +20,11 @@ const HeroSection = () => {
         >
           {title}
         </h1>
+
+        {/* Primary CTA — staging/preview only while membership is gated on
+            production, and only for signed-out visitors (resolved client-side
+            so the homepage stays static) */}
+        <HeroMemberCta />
       </section>
 
       {/* ── Panel 2: Content ── */}

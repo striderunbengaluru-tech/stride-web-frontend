@@ -16,6 +16,7 @@ export const eventSchema = z.object({
   details: z.string().optional(),
   location: z.string().max(200).optional(),
   locationUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  postRunLocation: z.string().max(200).optional(),
   postRunLocationUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   stravaRouteUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   eventDate: z.string().optional(),
@@ -24,6 +25,8 @@ export const eventSchema = z.object({
   distanceKm: z.coerce.number().positive().max(500).optional(),
   difficulty: z.string().max(60).optional(),
   pricePaise: z.coerce.number().int().min(0).default(0),
+  // Checkbox/switch posts 'true' | 'false' via a hidden input; absent = false
+  showSpotsLeft: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),

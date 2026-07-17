@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 import LeaderboardClient from './leaderboard-client'
 
 export const metadata = {
@@ -19,19 +19,21 @@ export type LeaderboardUser = {
 }
 
 export default async function LeaderboardPage() {
-  const supabase = await createClient()
-
-  const { data: byRuns } = await supabase
-    .from('users')
-    .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
-    .order('runs_completed', { ascending: false })
-    .limit(50)
-
-  const { data: byDistance } = await supabase
-    .from('users')
-    .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
-    .order('total_distance_meters', { ascending: false })
-    .limit(50)
+  // adminClient (no cookies) keeps this route ISR — the old createClient()
+  // read cookies and silently defeated `revalidate = 300`. Public columns
+  // only; the two independent queries run in parallel.
+  const [{ data: byRuns }, { data: byDistance }] = await Promise.all([
+    adminClient
+      .from('users')
+      .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
+      .order('runs_completed', { ascending: false })
+      .limit(50),
+    adminClient
+      .from('users')
+      .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
+      .order('total_distance_meters', { ascending: false })
+      .limit(50),
+  ])
 
   return (
     <LeaderboardClient

@@ -10,6 +10,8 @@ export type SpotlightSlide = {
   badge?: 'Stride Originals';
   handle?: string;
   handleUrl?: string;
+  /** Slide-specific partnership hook — rendered as an inline link to /partnerships. */
+  partnerCta: string;
 };
 
 const POSTERS =
@@ -27,6 +29,7 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     videoUrl: `${VIDEOS}/spotlight-bakery-hop.mp4`,
     poster: `${POSTERS}/bakery-hop.webp`,
     badge: 'Stride Originals',
+    partnerCta: 'Want to see your café in the next edition?',
   },
   {
     slug: 'stride-like-a-woman',
@@ -39,6 +42,7 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     badge: 'Stride Originals',
     handle: '@stridelikeawoman',
     handleUrl: 'https://www.instagram.com/stridelikeawoman?igsh=aWVkNzVvcm11NXNh',
+    partnerCta: 'Want to curate a fun experience with our women-only community?',
   },
   {
     slug: 'run-and-rave',
@@ -49,6 +53,7 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     videoUrl: `${VIDEOS}/spotlight-run-and-rave.mp4`,
     poster: `${POSTERS}/spotlight-run-and-rave.webp`,
     badge: 'Stride Originals',
+    partnerCta: 'Got a venue or brand made for the after-party?',
   },
   {
     slug: 'lake-hop',
@@ -59,5 +64,6 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     // Image-only spotlight — no video.
     poster: `${POSTERS}/spotlight-lake-hop.webp`,
     badge: 'Stride Originals',
+    partnerCta: 'Want your brand along on our morning lake runs?',
   },
 ];

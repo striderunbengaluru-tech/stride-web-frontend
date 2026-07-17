@@ -50,7 +50,7 @@ export default function NotFound() {
 
         {/* Description */}
         <p className='text-white/55 text-base sm:text-lg leading-relaxed mt-5 max-w-sm'>
-          This page doesn&apos;t exist — but the road back is wide open. Ducky&apos;s pointing you to a few good places to land.
+          This page doesn&apos;t exist, but the road back is wide open. Ducky&apos;s pointing you to a few good places to land.
         </p>
 
         {/* CTAs */}
@@ -73,7 +73,7 @@ export default function NotFound() {
 
         {/* Subtle footer link */}
         <p className='mt-8 text-white/35 text-xs'>
-          Think this is a broken link? <a href='/contact-us' className='text-stride-yellow-accent/70 hover:text-stride-yellow-accent transition-colors underline-offset-2 hover:underline'>Let us know</a>.
+          Think this is a broken link? <Link href='/contact-us' className='text-stride-yellow-accent/70 hover:text-stride-yellow-accent transition-colors underline-offset-2 hover:underline'>Let us know</Link>.
         </p>
       </div>
     </main>

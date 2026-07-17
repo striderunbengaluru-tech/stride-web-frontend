@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import HeroSection from '@/components/home/hero-section';
 import NewsroomSection from '@/components/home/newsroom-section';
 import SpotlightSection from '@/components/home/spotlight-section';
-import MerchSection from '@/components/home/merch-section';
 import FaqSection from '@/components/home/faq-section';
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/homepage-og.png'
@@ -12,7 +11,7 @@ const CANONICAL_URL = 'https://www.strideclub.in/'
 export const metadata: Metadata = {
   title: 'Stride Run Club Bengaluru — Move as One',
   description:
-    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here. Join Stride Run Club.",
+    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here. Join Stride Run Club.",
   keywords: [
     'Stride Run Club',
     'running club Bengaluru',
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K — you belong here.",
+      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here.",
     url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
@@ -67,7 +66,7 @@ const schemaOrg = {
       url: SITE_ORIGIN,
       name: 'Stride Run Club',
       description:
-        "Bengaluru's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year.",
+        "Bengaluru's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year.",
       publisher: { '@id': `${SITE_ORIGIN}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
@@ -115,7 +114,7 @@ const schemaOrg = {
       },
       image: OG_IMAGE,
       description:
-        "India's most engaged running community — 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
+        "India's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
       foundingDate: '2022',
       location: {
         '@type': 'Place',
@@ -151,9 +150,6 @@ export default function Home() {
       <HeroSection />
       <NewsroomSection />
       <SpotlightSection />
-      <div className='hidden'>
-        <MerchSection />
-      </div>
       <FaqSection />
     </main>
   );

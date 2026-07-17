@@ -27,7 +27,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
   {
     id: 'apparel',
     label: 'Apparel',
-    description: 'From race-day kits to streetwear — athletes are repeat buyers of quality apparel.',
+    description: 'From race-day kits to streetwear, athletes are repeat buyers of quality apparel.',
     partners: [
       { id: 'puma', name: 'Puma', logoUrl: `${SUPABASE_LOGOS}/puma-logo.svg` },
       { id: 'ua', name: 'Under Armour', logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg` },
@@ -49,7 +49,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
     id: 'fnb',
     label: 'Food & Beverage',
     description:
-      'Fuel before, during, and after the run — Stride athletes eat out, caffeinate, and celebrate together.',
+      'Stride athletes fuel before, during, and after the run. They eat out, caffeinate, and celebrate together.',
     partners: [
       { id: 'redbull', name: 'Red Bull', logoUrl: `${SUPABASE_LOGOS}/red-bull-logo.svg` },
       {
@@ -99,7 +99,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
     id: 'others',
     label: 'Others',
     description:
-      "From GPS wearables to quick commerce — Stride's community lives an active, tech-forward lifestyle.",
+      "From GPS wearables to quick commerce, Stride's community lives an active, tech-forward life.",
     partners: [
       { id: 'garmin', name: 'Garmin', logoUrl: 'https://cdn.simpleicons.org/garmin' },
       { id: 'zepto', name: 'Zepto', logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg` },
@@ -139,25 +139,25 @@ export const WHY_US: WhyUsItem[] = [
   {
     id: 'audience',
     title: 'High-Intent Audience',
-    body: 'Active buyers who spend on fitness gear, nutrition, and recovery every single week. No passive scrollers — these are people who take their health seriously.',
+    body: 'Active buyers who spend on fitness gear, nutrition, and recovery every week, and take their health seriously.',
     badges: ['22–35 yr urban professionals', 'Equal gender ratio'],
   },
   {
     id: 'creators',
     title: 'Pro Creator Community',
-    body: "We nurture an ecosystem of UGC fitness content creators who are regulars at our runs — producing authentic content that money can't manufacture.",
+    body: "We nurture a community of UGC fitness creators who are regulars at our runs, making the kind of authentic content money can't manufacture.",
     badges: ['50+ UGC creators', 'Organic reach'],
   },
   {
     id: 'irl',
     title: 'Real-World Brand Moments',
-    body: 'Among the only social run clubs in India running three times a week across formats — beginner, intermediate, and advanced. Your brand shows up at every single one.',
+    body: 'Among the only social run clubs in India running three times a week across beginner, intermediate, and advanced formats. Your brand shows up at every one of them.',
     badges: ['3 runs per week', 'All athlete levels'],
   },
   {
     id: 'women',
     title: 'Women-Only Sub-Community',
-    body: 'A dedicated run & lifestyle club led by women, for women. Reach a highly engaged, underserved demographic at the intersection of fitness and lifestyle.',
+    body: 'A dedicated run and lifestyle club led by women, for women. Reach a highly engaged, underserved audience where fitness meets lifestyle.',
     brandLabel: 'Stride Like a Woman',
   },
 ];

@@ -15,6 +15,9 @@ export type MyRun = {
   bannerUrl: string | null
   pricePaise: number
   checkedIn: boolean
+  // Registration id when CONFIRMED — the row links to the booking
+  // confirmation (receipt); null falls back to the event page.
+  confirmationRegId: string | null
 }
 
 type Tab = 'upcoming' | 'past'
@@ -23,6 +26,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'past', label: 'Past' },
 ]
+
+const PAGE_SIZE = 10
 
 function priceLabel(paise: number): string {
   return paise === 0 ? 'Free' : `₹${(paise / 100).toLocaleString('en-IN')}`
@@ -35,7 +40,15 @@ function dateLabel(iso: string | null): string | null {
 
 export function MyRunsClient({ upcoming, past }: { upcoming: MyRun[]; past: MyRun[] }) {
   const [tab, setTab] = useState<Tab>('upcoming')
+  // Per-tab pagination — switching tabs keeps each tab's loaded count
+  const [visibleCount, setVisibleCount] = useState<Record<Tab, number>>({
+    upcoming: PAGE_SIZE,
+    past: PAGE_SIZE,
+  })
+
   const runs = tab === 'upcoming' ? upcoming : past
+  const visibleRuns = runs.slice(0, visibleCount[tab])
+  const remaining = runs.length - visibleRuns.length
   const counts = { upcoming: upcoming.length, past: past.length }
 
   return (
@@ -71,70 +84,85 @@ export function MyRunsClient({ upcoming, past }: { upcoming: MyRun[]; past: MyRu
             </p>
           </motion.div>
         ) : (
-          <motion.ul
+          <motion.div
             key={tab}
-            className='flex flex-col gap-3.5'
             initial='hidden'
             animate='show'
             exit={{ opacity: 0, transition: { duration: 0.15 } }}
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
           >
-            {runs.map(run => (
-              <motion.li
-                key={run.id}
-                variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } }}
-              >
-                <Link
-                  href={`/events/${run.slug}`}
-                  className='group flex items-stretch gap-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors overflow-hidden'
+            <ul className='flex flex-col gap-3.5'>
+              {visibleRuns.map(run => (
+                <motion.li
+                  key={run.id}
+                  variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } } }}
                 >
-                  {/* Banner — left, 3:4 */}
-                  <div className='relative w-24 sm:w-32 shrink-0 bg-white/5'>
-                    <div className='relative aspect-3/4 h-full'>
+                  <Link
+                    href={run.confirmationRegId
+                      ? `/events/${run.slug}/confirmation/${run.confirmationRegId}`
+                      : `/events/${run.slug}`}
+                    className='group flex items-center gap-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors p-3.5'
+                  >
+                    {/* Thumbnail — fixed 3:4 frame matching the poster ratio,
+                        so the artwork is fully visible, never cropped */}
+                    <div className='relative w-16 sm:w-20 aspect-3/4 rounded-lg overflow-hidden shrink-0 bg-white/5'>
                       {run.bannerUrl ? (
-                        <Image src={run.bannerUrl} alt={run.name} fill sizes='128px' className='object-cover' />
+                        <Image src={run.bannerUrl} alt={run.name} fill sizes='80px' className='object-cover' />
                       ) : (
                         <div className='absolute inset-0 flex items-center justify-center text-white/15'>
-                          <CalendarDays size={26} />
+                          <CalendarDays size={22} />
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Details — right */}
-                  <div className='flex-1 min-w-0 py-3.5 pr-3.5 flex flex-col justify-center gap-1.5'>
-                    <h3 className='text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2'>{run.name}</h3>
+                    {/* Details */}
+                    <div className='flex-1 min-w-0 flex flex-col justify-center gap-1.5'>
+                      <h3 className='text-white font-semibold text-sm sm:text-base leading-snug line-clamp-2'>{run.name}</h3>
 
-                    {dateLabel(run.eventDate) && (
-                      <p className='flex items-center gap-1.5 text-white/55 text-xs font-mono'>
-                        <CalendarDays size={12} className='shrink-0 text-white/35' />
-                        {dateLabel(run.eventDate)}
-                      </p>
-                    )}
-                    {run.location && (
-                      <p className='flex items-center gap-1.5 text-white/55 text-xs'>
-                        <MapPin size={12} className='shrink-0 text-white/35' />
-                        <span className='line-clamp-1'>{run.location}</span>
-                      </p>
-                    )}
-
-                    <div className='flex items-center gap-2 mt-1.5 flex-wrap'>
-                      <span className='inline-flex items-center text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 rounded-md px-2 py-0.5 font-mono'>
-                        {priceLabel(run.pricePaise)} paid
-                      </span>
-                      {run.checkedIn && (
-                        <span className='inline-flex items-center gap-1 text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/25 rounded-md px-2 py-0.5'>
-                          <CheckCircle2 size={12} /> Checked in
-                        </span>
+                      {dateLabel(run.eventDate) && (
+                        <p className='flex items-center gap-1.5 text-white/55 text-xs font-mono'>
+                          <CalendarDays size={12} className='shrink-0 text-white/35' />
+                          {dateLabel(run.eventDate)}
+                        </p>
                       )}
-                    </div>
-                  </div>
+                      {run.location && (
+                        <p className='flex items-center gap-1.5 text-white/55 text-xs'>
+                          <MapPin size={12} className='shrink-0 text-white/35' />
+                          <span className='line-clamp-1'>{run.location}</span>
+                        </p>
+                      )}
 
-                  <ChevronRight size={18} className='self-center shrink-0 mr-3 text-white/20 group-hover:text-stride-yellow-accent transition-colors' />
-                </Link>
-              </motion.li>
-            ))}
-          </motion.ul>
+                      <div className='flex items-center gap-2 mt-1 flex-wrap'>
+                        <span className='inline-flex items-center text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 rounded-md px-2 py-0.5 font-mono'>
+                          {run.pricePaise === 0 ? 'Free' : `${priceLabel(run.pricePaise)} paid`}
+                        </span>
+                        {run.checkedIn && (
+                          <span className='inline-flex items-center gap-1 text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/25 rounded-md px-2 py-0.5'>
+                            <CheckCircle2 size={12} /> Checked in
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <ChevronRight size={18} className='shrink-0 text-white/20 group-hover:text-stride-yellow-accent transition-colors' />
+                  </Link>
+                </motion.li>
+              ))}
+            </ul>
+
+            {/* Load more — 10 at a time */}
+            {remaining > 0 && (
+              <div className='flex justify-center mt-10'>
+                <button
+                  onClick={() => setVisibleCount(c => ({ ...c, [tab]: c[tab] + PAGE_SIZE }))}
+                  className='inline-flex items-center gap-2 min-h-11 px-6 py-2.5 rounded-md bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors text-white font-semibold text-sm'
+                >
+                  Load more runs
+                  <span className='text-white/40 font-normal'>({remaining} more)</span>
+                </button>
+              </div>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

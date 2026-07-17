@@ -1,5 +1,6 @@
 import { NextResponse, after } from 'next/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { eventRegsTag } from '@/lib/data/events'
 import { nanoid } from 'nanoid'
 import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
@@ -131,7 +132,9 @@ export async function POST(request: Request) {
       custom_responses: customResponsesJson,
     })
     // Bust the event page's server cache so back-navigation shows
-    // "You're registered ✓" instead of a stale Register CTA.
+    // "You're registered ✓" instead of a stale Register CTA, and purge the
+    // cached confirmed-count so spots-left is exact after every registration.
+    revalidateTag(eventRegsTag(eventId), 'max')
     revalidatePath(`/events/${event.slug}`)
     after(() => sendConfirmationEmailOnce(registrationId))
     return NextResponse.json({ registrationId, slug: event.slug })

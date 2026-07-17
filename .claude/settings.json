@@ -22,7 +22,8 @@
       "WebFetch(domain:newskarnataka.com)",
       "WebFetch(domain:www.passionateinmarketing.com)",
       "mcp__supabase__apply_migration",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__search_docs"
     ],
     "additionalDirectories": [
       "/Users/kushagra.g/Documents/Code Repositories/stride-web-frontend/src/app/api/auth/[...all]",

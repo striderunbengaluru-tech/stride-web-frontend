@@ -1,5 +1,6 @@
 import { NextResponse, after } from 'next/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { eventRegsTag } from '@/lib/data/events'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   // Also pull the event slug so we can revalidate the event page on confirm.
   const { data: registration } = await adminClient
     .from('event_registrations')
-    .select('id, user_id, status, razorpay_order_id, events(slug)')
+    .select('id, user_id, status, event_id, razorpay_order_id, events(slug)')
     .eq('id', registrationId)
     .single()
 
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
   // Idempotent: already confirmed is fine
   if (registration.status === 'CONFIRMED') {
+    revalidateTag(eventRegsTag(registration.event_id), 'max')
     if (eventSlug) revalidatePath(`/events/${eventSlug}`)
     return NextResponse.json({ success: true })
   }
@@ -73,7 +75,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Confirmation failed' }, { status: 500 })
   }
 
-  // Bust the event page's cache so back-navigation reflects the new CONFIRMED state.
+  // Bust the event page's cache so back-navigation reflects the new CONFIRMED
+  // state, and purge the cached confirmed-count so spots-left is exact.
+  revalidateTag(eventRegsTag(registration.event_id), 'max')
   if (eventSlug) revalidatePath(`/events/${eventSlug}`)
 
   // Atomic claim inside prevents a double-send if the Razorpay webhook

@@ -1,6 +1,8 @@
 import { NextResponse, after } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { adminClient } from '@/lib/supabase/admin'
+import { eventRegsTag } from '@/lib/data/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 
 function verifyWebhookSignature(body: string, signature: string): boolean {
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
     // Fetch current status first (idempotency — skip if already CONFIRMED)
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, status')
+      .select('id, status, event_id')
       .eq('razorpay_order_id', orderId)
       .maybeSingle()
 
@@ -53,16 +55,22 @@ export async function POST(request: Request) {
         })
         .eq('razorpay_order_id', orderId)
 
+      // Keep the cached confirmed-count (spots-left) exact after webhook confirms
+      revalidateTag(eventRegsTag(reg.event_id), 'max')
+
       // Atomic claim inside prevents a double-send if verify-payment
       // confirms the same registration concurrently.
       after(() => sendConfirmationEmailOnce(reg.id))
     }
   } else if (eventType === 'payment.failed') {
-    await adminClient
+    const { data: cancelled } = await adminClient
       .from('event_registrations')
       .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
       .eq('razorpay_order_id', orderId)
       .neq('status', 'CONFIRMED') // never cancel an already-confirmed registration
+      .select('event_id')
+      .maybeSingle()
+    if (cancelled) revalidateTag(eventRegsTag(cancelled.event_id), 'max')
   }
 
   return NextResponse.json({ ok: true })
