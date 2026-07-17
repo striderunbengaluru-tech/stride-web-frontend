@@ -45,7 +45,7 @@ export default function AnimatedStatsBar() {
           <motion.div
             key={label}
             variants={fade(0.06 + i * 0.07)}
-            className='flex flex-col items-center text-center py-6 basis-1/2 sm:basis-1/3 lg:basis-1/5'
+            className='flex flex-col items-center text-center py-6 px-3 basis-1/2 sm:basis-1/3 lg:basis-1/5'
           >
             <AnimatedCounter
               to={to}
@@ -54,7 +54,7 @@ export default function AnimatedStatsBar() {
               className='text-4xl lg:text-5xl font-bold text-white tabular-nums font-mono leading-none'
             />
             <div className='w-6 h-px bg-stride-yellow-accent/50 my-3' />
-            <p className='text-white/55 text-xs font-mono uppercase tracking-[0.12em]'>{label}</p>
+            <p className='text-white/55 text-xs font-mono uppercase tracking-[0.12em] leading-snug text-balance'>{label}</p>
           </motion.div>
         ))}
       </div>

@@ -1,40 +1,13 @@
 import Link from 'next/link'
-import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
-import UserMenu from './user-menu'
 import NavLinks from './nav-links'
+import { NavbarLogo } from './navbar-logo'
+import { NavbarAuth } from './navbar-auth'
 import { HideOnAdminRoute } from './navbar-gate'
 
-const Navbar = async () => {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  let navUser: {
-    username: string
-    firstName: string
-    avatarUrl: string | null
-    isAdmin: boolean
-    email: string | null
-  } | null = null
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from('users')
-      .select('username, full_name, avatar_url, role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      navUser = {
-        username: profile.username ?? user.id,
-        firstName: profile.full_name?.split(' ')[0] ?? profile.username ?? 'You',
-        avatarUrl: profile.avatar_url ?? null,
-        isAdmin: profile.role === 'ADMIN',
-        email: user.email ?? null,
-      }
-    }
-  }
-
+// Sync server component — no cookies()/auth here. The auth-dependent corner
+// is the <NavbarAuth /> client island, which keeps the root layout (and
+// therefore every public page) statically prerenderable.
+const Navbar = () => {
   return (
     <div className='fixed top-0 left-0 right-0 z-50'>
       {/* The admin layout adds its own glassmorphic strip behind the navbar.
@@ -53,15 +26,7 @@ const Navbar = async () => {
           className='absolute inset-0 mx-auto w-fit flex items-center sm:static sm:mx-0 sm:w-auto shrink-0'
           aria-label='Stride Run Club home'
         >
-          <Image
-            src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg'
-            alt='Stride Run Club'
-            width={110}
-            height={36}
-            className='object-contain'
-            priority
-            unoptimized
-          />
+          <NavbarLogo />
         </Link>
 
         {/* Nav links — hidden on admin routes (kept simple there) */}
@@ -69,28 +34,9 @@ const Navbar = async () => {
           <NavLinks />
         </HideOnAdminRoute>
 
-        {/* Auth actions + Partner CTA — Partner CTA hidden once logged in
-            AND hidden on admin routes; user menu always shows */}
+        {/* Auth corner — user menu or logged-out CTAs, resolved client-side */}
         <div className='flex items-center gap-3 shrink-0 ml-auto sm:ml-0'>
-          {!navUser && (
-            <HideOnAdminRoute>
-              <Link
-                href='/partnerships'
-                className='hidden md:inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold px-4 py-2 rounded-md text-sm hover:scale-[1.03] hover:shadow-lg hover:shadow-stride-yellow-accent/25 active:scale-[0.97] transition-all duration-150'
-              >
-                Partner With Us
-              </Link>
-            </HideOnAdminRoute>
-          )}
-          {navUser ? (
-            <UserMenu
-              username={navUser.username}
-              firstName={navUser.firstName}
-              avatarUrl={navUser.avatarUrl}
-              isAdmin={navUser.isAdmin}
-              email={navUser.email}
-            />
-          ) : null}
+          <NavbarAuth />
         </div>
       </nav>
       </div>

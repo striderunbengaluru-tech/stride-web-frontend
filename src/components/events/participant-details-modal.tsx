@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
-import ReactMarkdown from 'react-markdown'
+import dynamic from 'next/dynamic'
+
+// Lazy: react-markdown only loads when a modal with event T&C actually opens,
+// keeping it out of the event page's initial JS.
+const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import type { AdditionalField } from '@/types/event'
@@ -23,11 +28,49 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
   { value: 'MALE',              label: 'Male',           icon: '♂' },
   { value: 'FEMALE',            label: 'Female',         icon: '♀' },
   { value: 'OTHER',             label: 'Other',          icon: '⚧' },
-  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not say', icon: '✕' },
+  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say', icon: '✕' },
 ]
 
 const inputBase =
   'bg-white/8 border border-white/20 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/70 focus:bg-white/10 transition-colors w-full'
+
+const checkboxBase = 'mt-0.5 accent-stride-yellow-accent w-4 h-4 shrink-0'
+const inputErrorBorder = 'border-red-500/60 focus:border-red-500/60'
+
+// Per-field validators — shared by live (blur/change) validation and the
+// submit-time backstop. Return a message, or null when valid.
+const validateFullName = (v: string) =>
+  v.trim().length < 2 ? 'Please enter your full name' : null
+const validateDob = (v: string) =>
+  !/^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Please enter your date of birth' : null
+const validatePhone = (v: string) =>
+  !/^\d{10,11}$/.test(v) ? 'Enter a valid 10 or 11 digit number (digits only)' : null
+
+function validateCustomField(field: AdditionalField, raw: string): string | null {
+  const v = raw.trim()
+  if (field.required && !v) return `Please answer: ${field.label}`
+  if (!v) return null
+  if (field.type === 'number' && Number.isNaN(Number(v))) return `"${field.label}" must be a number`
+  if (field.type === 'link') {
+    try { new URL(v) } catch { return `"${field.label}" must start with http:// or https://` }
+  }
+  return null
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null
+  return <p className='text-red-400 text-[11px] mt-1.5'>{msg}</p>
+}
+
+function ageFromDob(dob: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null
+  const birth = new Date(dob)
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const monthDiff = now.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--
+  return age
+}
 
 type Props = {
   open: boolean
@@ -60,11 +103,42 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
   )
   const [accepted, setAccepted] = useState(false)
+  const [agreedPolicies, setAgreedPolicies] = useState(false)
+  const [agreedGuardian, setAgreedGuardian] = useState(false)
+  const [agreedSafety, setAgreedSafety] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Live validation — a field validates on blur once it's dirty (the user
+  // actually typed in it), and re-validates on every change while it has an
+  // error so the message clears the moment the input becomes valid.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>({})
+
+  function setFieldError(key: string, msg: string | null) {
+    setFieldErrors(prev => {
+      const next = { ...prev }
+      if (msg) next[key] = msg
+      else delete next[key]
+      return next
+    })
+  }
+  function markFieldDirty(key: string) {
+    setDirtyFields(prev => (prev[key] ? prev : { ...prev, [key]: true }))
+  }
+
+  // Emergency number is valid only if well-formed AND different from the
+  // primary contact — needs both values, so it can't be a module validator.
+  const validateEmergency = (v: string, contact: string) =>
+    validatePhone(v) ?? (v === contact ? 'Emergency number must be different from your contact number' : null)
+
   const isPaid = pricePaise > 0
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
+
+  // Guardian-consent checkbox appears only for participants under 18,
+  // computed live from the date-of-birth field.
+  const age = ageFromDob(dateOfBirth)
+  const isMinor = age !== null && age < 18
 
   // Reset state when modal closes
   useEffect(() => {
@@ -72,6 +146,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       setError(null)
       setLoading(false)
       setAccepted(false)
+      setAgreedPolicies(false)
+      setAgreedGuardian(false)
+      setAgreedSafety(false)
+      setFieldErrors({})
+      setDirtyFields({})
     }
   }, [open])
 
@@ -95,29 +174,29 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     e.preventDefault()
     setError(null)
 
-    if (fullName.trim().length < 2) return setError('Please enter your full name')
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return setError('Please enter your date of birth')
-    if (!gender) return setError('Please select your gender')
-    if (!/^\d{10,11}$/.test(contactNumber)) return setError('Enter a valid 10 or 11 digit contact number (digits only)')
-    if (!/^\d{10,11}$/.test(emergencyContactNumber)) return setError('Enter a valid 10 or 11 digit emergency contact number (digits only)')
-    if (contactNumber === emergencyContactNumber) return setError('Emergency number must be different from your contact number')
-
-    // Validate custom fields
-    for (const field of additionalFields) {
-      const v = (customResponses[field.id] ?? '').trim()
-      if (field.required && !v) return setError(`Please answer: ${field.label}`)
-      if (!v) continue
-      if (field.type === 'number' && Number.isNaN(Number(v))) {
-        return setError(`"${field.label}" must be a number`)
-      }
-      if (field.type === 'link') {
-        try { new URL(v) } catch {
-          return setError(`"${field.label}" must start with http:// or https://`)
-        }
+    // Submit-time backstop — same validators as the live blur/change checks,
+    // and the failing field gets its inline error highlighted too.
+    const submitChecks: [key: string, msg: string | null][] = [
+      ['fullName', validateFullName(fullName)],
+      ['dateOfBirth', validateDob(dateOfBirth)],
+      ['contactNumber', validatePhone(contactNumber)],
+      ['emergencyContactNumber', validateEmergency(emergencyContactNumber, contactNumber)],
+      ...additionalFields.map((field): [string, string | null] =>
+        [field.id, validateCustomField(field, customResponses[field.id] ?? '')]
+      ),
+    ]
+    for (const [key, msg] of submitChecks) {
+      if (msg) {
+        setFieldError(key, msg)
+        return setError(msg)
       }
     }
+    if (!gender) return setError('Please select your gender')
 
     if (hasTerms && !accepted) return setError('Please accept the terms & conditions to continue')
+    if (!agreedPolicies) return setError('Please agree to the Privacy Policy and Terms of Service')
+    if (isMinor && !agreedGuardian) return setError('Please confirm you have your guardian’s consent to attend')
+    if (!agreedSafety) return setError('Please accept the safety declaration to continue')
 
     setLoading(true)
     try {
@@ -223,12 +302,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             <div className='shrink-0 px-6 pt-6 pb-4 border-b border-white/8'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='min-w-0'>
-                  <span className='inline-flex items-center gap-2 text-stride-yellow-accent text-[10px] font-bold tracking-[0.2em] font-mono uppercase mb-2.5'>
-                    <span className='w-1.5 h-1.5 rounded-full bg-stride-yellow-accent animate-pulse' />
-                    Final step
-                  </span>
                   <h2 className='text-white font-bold text-xl leading-tight'>Tell us about you</h2>
-                  <p className='text-white/50 text-sm mt-1 leading-snug'>Quick details to join the run — saved for next time.</p>
+                  <p className='text-white/50 text-sm mt-1 leading-snug'>Quick details to join the run.</p>
                 </div>
                 <button
                   type='button'
@@ -251,11 +326,17 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='text'
                 value={fullName}
-                onChange={e => setFullName(e.target.value)}
+                onChange={e => {
+                  setFullName(e.target.value)
+                  markFieldDirty('fullName')
+                  if (fieldErrors.fullName) setFieldError('fullName', validateFullName(e.target.value))
+                }}
+                onBlur={() => { if (dirtyFields.fullName) setFieldError('fullName', validateFullName(fullName)) }}
                 placeholder='Your full name'
-                className={inputBase}
+                className={`${inputBase} ${fieldErrors.fullName ? inputErrorBorder : ''}`}
                 required
               />
+              <FieldError msg={fieldErrors.fullName} />
             </div>
 
             {/* Date of birth */}
@@ -264,11 +345,17 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='date'
                 value={dateOfBirth}
-                onChange={e => setDateOfBirth(e.target.value)}
+                onChange={e => {
+                  setDateOfBirth(e.target.value)
+                  markFieldDirty('dateOfBirth')
+                  if (fieldErrors.dateOfBirth) setFieldError('dateOfBirth', validateDob(e.target.value))
+                }}
+                onBlur={() => { if (dirtyFields.dateOfBirth) setFieldError('dateOfBirth', validateDob(dateOfBirth)) }}
                 max={new Date().toISOString().split('T')[0]}
-                className={`${inputBase} scheme-dark`}
+                className={`${inputBase} scheme-dark ${fieldErrors.dateOfBirth ? inputErrorBorder : ''}`}
                 required
               />
+              <FieldError msg={fieldErrors.dateOfBirth} />
             </div>
 
             {/* Gender */}
@@ -303,14 +390,25 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='tel'
                 value={contactNumber}
-                onChange={e => setContactNumber(e.target.value.replace(/\D/g, ''))}
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g, '')
+                  setContactNumber(v)
+                  markFieldDirty('contactNumber')
+                  if (fieldErrors.contactNumber) setFieldError('contactNumber', validatePhone(v))
+                  // The "must differ" rule depends on this value too
+                  if (fieldErrors.emergencyContactNumber) {
+                    setFieldError('emergencyContactNumber', validateEmergency(emergencyContactNumber, v))
+                  }
+                }}
+                onBlur={() => { if (dirtyFields.contactNumber) setFieldError('contactNumber', validatePhone(contactNumber)) }}
                 placeholder='9876543210'
                 inputMode='numeric'
                 pattern='\d*'
                 maxLength={11}
-                className={inputBase}
+                className={`${inputBase} ${fieldErrors.contactNumber ? inputErrorBorder : ''}`}
                 required
               />
+              <FieldError msg={fieldErrors.contactNumber} />
             </div>
 
             {/* Emergency contact number */}
@@ -319,71 +417,92 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <input
                 type='tel'
                 value={emergencyContactNumber}
-                onChange={e => setEmergencyContactNumber(e.target.value.replace(/\D/g, ''))}
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g, '')
+                  setEmergencyContactNumber(v)
+                  markFieldDirty('emergencyContactNumber')
+                  if (fieldErrors.emergencyContactNumber) setFieldError('emergencyContactNumber', validateEmergency(v, contactNumber))
+                }}
+                onBlur={() => {
+                  if (dirtyFields.emergencyContactNumber) {
+                    setFieldError('emergencyContactNumber', validateEmergency(emergencyContactNumber, contactNumber))
+                  }
+                }}
                 placeholder='9876543210'
                 inputMode='numeric'
                 pattern='\d*'
                 maxLength={11}
-                className={inputBase}
+                className={`${inputBase} ${fieldErrors.emergencyContactNumber ? inputErrorBorder : ''}`}
                 required
               />
+              <FieldError msg={fieldErrors.emergencyContactNumber} />
               <p className='text-white/30 text-[11px] mt-1.5'>Someone we can reach if anything happens during the run.</p>
             </div>
 
             {/* Event-specific custom fields */}
             {additionalFields.length > 0 && (
               <div className='pt-4 mt-2 border-t border-white/8 space-y-4'>
-                <div className='flex items-center gap-2'>
-                  <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
-                  <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Event-specific questions</p>
-                </div>
-                {additionalFields.map(field => (
-                  <div key={field.id}>
-                    <label className='block text-white/70 text-xs font-medium mb-1.5'>
-                      {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
-                    </label>
-                    {field.type === 'number' ? (
-                      <input
-                        type='number'
-                        inputMode='numeric'
-                        value={customResponses[field.id] ?? ''}
-                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-                        placeholder={field.placeholder ?? ''}
-                        className={inputBase}
-                        required={field.required}
-                      />
-                    ) : field.type === 'link' ? (
-                      <input
-                        type='url'
-                        inputMode='url'
-                        value={customResponses[field.id] ?? ''}
-                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-                        placeholder={field.placeholder ?? 'https://...'}
-                        className={inputBase}
-                        required={field.required}
-                      />
-                    ) : (
-                      <input
-                        type='text'
-                        value={customResponses[field.id] ?? ''}
-                        onChange={e => setCustomResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-                        placeholder={field.placeholder ?? ''}
-                        className={inputBase}
-                        required={field.required}
-                      />
-                    )}
-                  </div>
-                ))}
+                <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Event-specific questions</p>
+                {additionalFields.map(field => {
+                  const err = fieldErrors[field.id]
+                  const handleChange = (value: string) => {
+                    setCustomResponses(prev => ({ ...prev, [field.id]: value }))
+                    markFieldDirty(field.id)
+                    if (fieldErrors[field.id]) setFieldError(field.id, validateCustomField(field, value))
+                  }
+                  const handleBlur = () => {
+                    if (dirtyFields[field.id]) setFieldError(field.id, validateCustomField(field, customResponses[field.id] ?? ''))
+                  }
+                  const className = `${inputBase} ${err ? inputErrorBorder : ''}`
+                  return (
+                    <div key={field.id}>
+                      <label className='block text-white/70 text-xs font-medium mb-1.5'>
+                        {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
+                      </label>
+                      {field.type === 'number' ? (
+                        <input
+                          type='number'
+                          inputMode='numeric'
+                          value={customResponses[field.id] ?? ''}
+                          onChange={e => handleChange(e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder={field.placeholder ?? ''}
+                          className={className}
+                          required={field.required}
+                        />
+                      ) : field.type === 'link' ? (
+                        <input
+                          type='url'
+                          inputMode='url'
+                          value={customResponses[field.id] ?? ''}
+                          onChange={e => handleChange(e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder={field.placeholder ?? 'https://...'}
+                          className={className}
+                          required={field.required}
+                        />
+                      ) : (
+                        <input
+                          type='text'
+                          value={customResponses[field.id] ?? ''}
+                          onChange={e => handleChange(e.target.value)}
+                          onBlur={handleBlur}
+                          placeholder={field.placeholder ?? ''}
+                          className={className}
+                          required={field.required}
+                        />
+                      )}
+                      <FieldError msg={err} />
+                    </div>
+                  )
+                })}
               </div>
             )}
 
             {/* Terms & conditions — required acceptance before registering */}
             {hasTerms && (
               <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
-                <div className='flex items-center gap-2'>
-                  <span className='inline-block w-1 h-1 rounded-full bg-stride-yellow-accent' />
-                  <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
-                </div>
+                <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
                 <div className='max-h-44 overflow-y-auto rounded-lg bg-white/5 border border-white/12 px-4 py-3 prose prose-invert prose-xs max-w-none prose-p:text-white/70 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-1.5 prose-ol:my-1.5 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                   <ReactMarkdown>{termsAndConditions ?? ''}</ReactMarkdown>
                 </div>
@@ -401,6 +520,54 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               </div>
             )}
 
+            {/* Consent declarations — all required before registering */}
+            <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
+              <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+                <input
+                  type='checkbox'
+                  checked={agreedPolicies}
+                  onChange={e => setAgreedPolicies(e.target.checked)}
+                  className={checkboxBase}
+                />
+                <span className='text-white/70 text-xs leading-snug'>
+                  I agree to the{' '}
+                  <Link href='/privacy-policy' target='_blank' className='text-stride-yellow-accent hover:underline underline-offset-2'>
+                    Privacy Policy
+                  </Link>
+                  {' '}and{' '}
+                  <Link href='/terms-of-service' target='_blank' className='text-stride-yellow-accent hover:underline underline-offset-2'>
+                    Terms of Service
+                  </Link>.
+                </span>
+              </label>
+
+              {isMinor && (
+                <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+                  <input
+                    type='checkbox'
+                    checked={agreedGuardian}
+                    onChange={e => setAgreedGuardian(e.target.checked)}
+                    className={checkboxBase}
+                  />
+                  <span className='text-white/70 text-xs leading-snug'>
+                    I am under 18 and have the consent of my parent/guardian to attend this event.
+                  </span>
+                </label>
+              )}
+
+              <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+                <input
+                  type='checkbox'
+                  checked={agreedSafety}
+                  onChange={e => setAgreedSafety(e.target.checked)}
+                  className={checkboxBase}
+                />
+                <span className='text-white/70 text-xs leading-snug'>
+                  I am solely responsible for my safety and health during the entire experience, and the organisers are not responsible for the same.
+                </span>
+              </label>
+            </div>
+
             {/* Error */}
             {error && (
               <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs'>
@@ -411,7 +578,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             {/* Submit */}
             <button
               type='submit'
-              disabled={loading || (hasTerms && !accepted)}
+              disabled={loading || (hasTerms && !accepted) || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
               className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-11 flex items-center justify-center gap-2'
             >
               {loading
@@ -422,7 +589,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             </button>
 
             <p className='text-white/30 text-[11px] text-center'>
-              Your details are saved to your Stride profile — you won&apos;t need to fill this in again.
+              Your details are saved to your Stride profile, so you won&apos;t need to fill this in again.
             </p>
             </form>
           </div>

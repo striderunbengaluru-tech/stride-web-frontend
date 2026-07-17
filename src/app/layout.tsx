@@ -20,7 +20,8 @@ const libreBaskerville = Libre_Baskerville({
 const figtree = Figtree({
   variable: "--font-figtree",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  // 300 dropped — no font-light usage anywhere in src/
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({

@@ -66,16 +66,27 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
         href={`/events/${slug}`}
         className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
       >
-        {/* Image — 3:4 poster, edge-to-edge */}
-        <div className='relative aspect-3/4 bg-white/5'>
+        {/* Image — 3:4 frame; object-contain so posters of any ratio are never
+            cropped, with a blurred copy filling the letterbox space behind */}
+        <div className='relative aspect-3/4 bg-white/5 overflow-hidden'>
           {coverUrl ? (
-            <Image
-              src={coverUrl}
-              alt={name}
-              fill
-              className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
-              sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
-            />
+            <>
+              <Image
+                src={coverUrl}
+                alt=''
+                aria-hidden
+                fill
+                className='object-cover blur-2xl scale-110 opacity-40'
+                sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+              />
+              <Image
+                src={coverUrl}
+                alt={name}
+                fill
+                className='object-contain group-hover:scale-[1.02] transition-transform duration-500'
+                sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+              />
+            </>
           ) : (
             <div className='absolute inset-0 flex items-center justify-center text-white/8 text-6xl select-none bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/8'>
               🏃

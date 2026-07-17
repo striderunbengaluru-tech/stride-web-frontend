@@ -1,30 +1,37 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
-import { adminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
-import { RegisterButton } from '@/components/events/register-button'
+import { getEventBySlug, getConfirmedCount } from '@/lib/data/events'
+import {
+  RegistrationCtaDesktop,
+  RegistrationCtaMobile,
+  RegistrationCtaDesktopSkeleton,
+  RegistrationCtaMobileSkeleton,
+} from '@/components/events/registration-cta'
 import { EventHero } from '@/components/events/event-hero'
 import { SectionReveal } from '@/components/ui/section-reveal'
 import { ShareButton } from '@/components/events/share-button'
-import { ArrowLeft, MapPin, Route, Coffee, ExternalLink, Gauge, Activity } from 'lucide-react'
+import { ArrowLeft, MapPin, Route, Users, ExternalLink, Gauge, Activity } from 'lucide-react'
 import type { AdditionalField } from '@/types/event'
 import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
+import { TrackBackdrop } from '@/components/ui/track-backdrop'
+import { BackToTop } from '@/components/ui/back-to-top'
 
 type Props = {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ register?: string }>
 }
+
+// At this many remaining spots (or fewer) the spots-left note turns into a
+// red pulsating "Hurry!" message.
+const SPOTS_URGENCY_THRESHOLD = 10
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const { data: event } = await adminClient
-    .from('events')
-    .select('name, subtitle, cover_url, banner_images')
-    .eq('slug', slug)
-    .single()
+  // Deduped with the page body via React cache() inside getEventBySlug
+  const event = await getEventBySlug(slug)
   if (!event) return {}
 
   // First carousel image is the OG image; fall back to cover_url if banners missing
@@ -74,72 +81,36 @@ function fmtDay(d: string) {
   return new Date(d).getDate()
 }
 
-export default async function EventDetailPage({ params, searchParams }: Props) {
+export default async function EventDetailPage({ params }: Props) {
   const { slug } = await params
-  const { register } = await searchParams
-  const autoOpenModal = register === '1'
-
-  const { data: event } = await adminClient
-    .from('events')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  // Event row + confirmed-count come from the tag-cached reads (no DB hit on
+  // most requests). Everything viewer-dependent (auth, registration state)
+  // lives in the Suspense-streamed RegistrationCta islands below, so the
+  // whole page shell flushes without waiting on auth.
+  const event = await getEventBySlug(slug)
 
   if (!event || event.status === 'DRAFT') notFound()
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const isLoggedIn = !!user
-
-  const { count: confirmedCount } = await adminClient
-    .from('event_registrations')
-    .select('*', { count: 'exact', head: true })
-    .eq('event_id', event.id)
-    .eq('status', 'CONFIRMED')
+  const confirmedCount = await getConfirmedCount(event.id)
 
   const isFull = !!event.capacity && (confirmedCount ?? 0) >= event.capacity
   // Past events (start date has elapsed). Falls back to false for events without a date.
   const isPast = !!event.event_date && new Date(event.event_date).getTime() < Date.now()
 
-  let isRegistered = false
-  let participantInitial = {
-    fullName: null as string | null,
-    dateOfBirth: null as string | null,
-    gender: null as string | null,
-    contactNumber: null as string | null,
-    emergencyContactNumber: null as string | null,
-  }
-  if (user) {
-    const [{ data: reg }, { data: profile }] = await Promise.all([
-      adminClient
-        .from('event_registrations')
-        .select('status')
-        .eq('event_id', event.id)
-        .eq('user_id', user.id)
-        .maybeSingle(),
-      adminClient
-        .from('users')
-        .select('full_name, date_of_birth, gender, contact_number, emergency_contact_number')
-        .eq('id', user.id)
-        .maybeSingle(),
-    ])
-    isRegistered = reg?.status === 'CONFIRMED'
-    // Fall back to Google OAuth metadata if users.full_name is empty for some reason
-    const oauthName = (user.user_metadata?.full_name as string | undefined)
-      ?? (user.user_metadata?.name as string | undefined)
-      ?? null
-    if (profile) {
-      participantInitial = {
-        fullName: profile.full_name ?? oauthName,
-        dateOfBirth: profile.date_of_birth ?? null,
-        gender: profile.gender ?? null,
-        contactNumber: profile.contact_number ?? null,
-        emergencyContactNumber: profile.emergency_contact_number ?? null,
-      }
-    } else {
-      participantInitial = { ...participantInitial, fullName: oauthName }
-    }
-  }
+  // Spots-left indicator — admin-toggled per event; needs a capacity to mean
+  // anything. At SPOTS_URGENCY_THRESHOLD or fewer it switches to a red
+  // pulsating "Hurry!" note.
+  const spotsLeft = event.capacity ? Math.max(0, event.capacity - (confirmedCount ?? 0)) : null
+  const showSpotsLeft = !!event.show_spots_left && spotsLeft !== null && spotsLeft > 0 && !isPast && !isFull
+  const spotsUrgent = showSpotsLeft && spotsLeft <= SPOTS_URGENCY_THRESHOLD
+  const spotsLabel = spotsUrgent
+    ? `Hurry! Only ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`
+    : `${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`
+  const spotsLine = showSpotsLeft ? (
+    <p className={`text-sm font-bold mt-1 ${spotsUrgent ? 'text-red-400 animate-pulse' : 'text-stride-yellow-accent'}`}>
+      {spotsLabel}
+    </p>
+  ) : null
 
   let bannerImages: string[] = []
   try { bannerImages = JSON.parse(event.banner_images ?? '[]') as string[] }
@@ -165,12 +136,11 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
           can't show a stale "Register" CTA after the user hits browser back. */}
       <BfcacheRefresh />
 
-      {/* Live ambient orbs — radial gradients with gentle drift */}
-      <div className='pointer-events-none absolute inset-0 overflow-hidden'>
-        <div className='orb orb-yellow animate-orb-drift top-[-14%] left-[-10%] w-[48rem] h-[48rem]' />
-        <div className='orb orb-yellow animate-orb-drift-reverse top-[28%] right-[-14%] w-[38rem] h-[38rem]' style={{ animationDelay: '3s' }} />
-        <div className='orb orb-white animate-orb-drift bottom-[-18%] left-[18%] w-[44rem] h-[44rem]' style={{ animationDelay: '6s' }} />
-      </div>
+      {/* Run-club backdrop — track lanes, route line, grain */}
+      <TrackBackdrop />
+
+      {/* Floating back-to-top — surfaces the "All Events" link on long pages */}
+      <BackToTop />
 
       {/* Two-column layout */}
       <div className='relative z-10 lg:flex lg:pt-28 lg:max-w-6xl lg:mx-auto lg:gap-10 lg:px-6'>
@@ -302,28 +272,32 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
             </SectionReveal>
           )}
 
-          {/* ── Post-run + Route (clubbed) ── */}
-          {(event.post_run_location_url || event.strava_route_url) && (
+          {/* ── Post run meetup spot + Route (clubbed) ── */}
+          {(event.post_run_location_url || event.post_run_location || event.strava_route_url) && (
             <SectionReveal delay={0.16}>
               <div className='mt-3 rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
-                {event.post_run_location_url && (
+                {(event.post_run_location_url || event.post_run_location) && (
+                  // Without a Maps URL the anchor has no href — it renders as
+                  // a plain, non-clickable row showing just the place name.
                   <a
-                    href={event.post_run_location_url}
-                    target='_blank'
-                    rel='noopener noreferrer'
+                    {...(event.post_run_location_url
+                      ? { href: event.post_run_location_url, target: '_blank', rel: 'noopener noreferrer' }
+                      : {})}
                     className='flex items-center gap-4 px-5 py-4 hover:bg-white/4 transition-colors group/row'
                     style={event.strava_route_url ? { borderBottom: '1px solid rgba(255,255,255,0.08)' } : undefined}
                   >
                     <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center shrink-0'>
-                      <Coffee size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
+                      <Users size={15} className='text-white/50 group-hover/row:text-stride-yellow-accent transition-colors' />
                     </div>
                     <div className='flex-1 min-w-0'>
-                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Post-run</p>
-                      <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
-                        Where we gather after the run
+                      <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Post Run Meetup Spot</p>
+                      <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors line-clamp-2'>
+                        {event.post_run_location || 'Where we gather after the run'}
                       </p>
                     </div>
-                    <ExternalLink size={14} className='text-white/30 shrink-0 group-hover/row:text-stride-yellow-accent transition-colors' />
+                    {event.post_run_location_url && (
+                      <ExternalLink size={14} className='text-white/30 shrink-0 group-hover/row:text-stride-yellow-accent transition-colors' />
+                    )}
                   </a>
                 )}
 
@@ -379,39 +353,46 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                 <p className='text-white/50 text-xs font-bold font-mono uppercase tracking-widest'>Registration</p>
               </div>
               <div className='px-5 py-5'>
-                <div className='flex items-center justify-between gap-4 mb-4'>
-                  <p className='text-white/60 text-sm'>
-                    {isRegistered
-                      ? "You're registered for this event."
-                      : isPast
-                      ? 'This event has concluded.'
-                      : isFull
-                      ? 'This event is full.'
-                      : 'Secure your spot below.'}
-                  </p>
-                  <p className='text-2xl font-bold text-white shrink-0 font-mono'>{priceLabel}</p>
-                </div>
-                <RegisterButton
-                  eventId={event.id}
-                  eventSlug={slug}
-                  pricePaise={event.price_paise}
-                  isFull={isFull}
-                  isRegistered={isRegistered}
-                  isPast={isPast}
-                  isLoggedIn={isLoggedIn}
-                  autoOpen={autoOpenModal}
-                  initial={participantInitial}
-                  additionalFields={additionalFields}
-                  termsAndConditions={event.terms_and_conditions}
-                  razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
-                />
+                <Suspense
+                  fallback={
+                    <RegistrationCtaDesktopSkeleton
+                      isPast={isPast}
+                      isFull={isFull}
+                      priceLabel={priceLabel}
+                      spotsLine={spotsLine}
+                    />
+                  }
+                >
+                  <RegistrationCtaDesktop
+                    eventId={event.id}
+                    eventSlug={slug}
+                    pricePaise={event.price_paise}
+                    isFull={isFull}
+                    isPast={isPast}
+                    additionalFields={additionalFields}
+                    termsAndConditions={event.terms_and_conditions}
+                    razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+                    priceLabel={priceLabel}
+                    spotsLine={spotsLine}
+                  />
+                </Suspense>
               </div>
             </div>
           </SectionReveal>
 
           {/* Share — very bottom of the page, both mobile and desktop */}
           <div className='mt-6 flex justify-center sm:justify-end'>
-            <ShareButton title={event.name} url={shareUrl} />
+            <ShareButton
+              url={shareUrl}
+              text={[
+                'Hey!',
+                'I am attending this experience with Stride Run Club 🏃',
+                event.name,
+                dateLong || startTime ? `When: ${[dateLong, startTime].filter(Boolean).join(', ')}` : null,
+                event.location ? `Where: ${event.location}` : null,
+                'Sign up now on this link -',
+              ].filter(Boolean).join('\n')}
+            />
           </div>
 
         </div>
@@ -419,26 +400,29 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
 
       {/* Sticky mobile registration bar */}
       <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/10 px-4 py-4 z-40'>
+        {showSpotsLeft && (
+          <p className={`text-center text-xs font-bold mb-2.5 ${spotsUrgent ? 'text-red-400 animate-pulse' : 'text-stride-yellow-accent'}`}>
+            {spotsLabel}
+          </p>
+        )}
         <div className='flex items-center gap-4 max-w-lg mx-auto'>
           <div>
             <p className='text-white/40 text-xs'>Entry fee</p>
             <p className='text-white font-bold text-xl leading-none mt-0.5 font-mono'>{priceLabel}</p>
           </div>
           <div className='flex-1'>
-            <RegisterButton
-              eventId={event.id}
-              eventSlug={slug}
-              pricePaise={event.price_paise}
-              isFull={isFull}
-              isRegistered={isRegistered}
-              isPast={isPast}
-              isLoggedIn={isLoggedIn}
-              autoOpen={autoOpenModal}
-              initial={participantInitial}
-              additionalFields={additionalFields}
-              termsAndConditions={event.terms_and_conditions}
-              razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
-            />
+            <Suspense fallback={<RegistrationCtaMobileSkeleton />}>
+              <RegistrationCtaMobile
+                eventId={event.id}
+                eventSlug={slug}
+                pricePaise={event.price_paise}
+                isFull={isFull}
+                isPast={isPast}
+                additionalFields={additionalFields}
+                termsAndConditions={event.terms_and_conditions}
+                razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

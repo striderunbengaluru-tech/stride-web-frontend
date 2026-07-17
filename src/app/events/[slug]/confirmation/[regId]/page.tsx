@@ -34,6 +34,33 @@ function formatTime(d: string | null) {
   return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Google Calendar template links need UTC timestamps as YYYYMMDDTHHMMSSZ
+function gcalDate(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+}
+
+// Assumed run duration when the admin didn't set an end time
+const DEFAULT_EVENT_DURATION_MS = 2 * 60 * 60 * 1000
+
+function buildGoogleCalendarUrl(opts: {
+  eventName: string
+  startIso: string
+  endIso: string | null
+  location: string | null
+  description: string
+}): string {
+  const endIso = opts.endIso
+    ?? new Date(new Date(opts.startIso).getTime() + DEFAULT_EVENT_DURATION_MS).toISOString()
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${opts.eventName} — Stride Run Club`,
+    dates: `${gcalDate(opts.startIso)}/${gcalDate(endIso)}`,
+    details: opts.description,
+    ...(opts.location ? { location: opts.location } : {}),
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
 export default async function ConfirmationPage({ params }: Props) {
   const { regId } = await params
 
@@ -77,6 +104,31 @@ export default async function ConfirmationPage({ params }: Props) {
   } catch { /* keep null */ }
 
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
+
+  // Add-to-calendar — only for runs that haven't concluded yet
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
+  const concludesAt = event.end_date ?? event.event_date
+  const isConcluded = !!concludesAt && new Date(concludesAt).getTime() < Date.now()
+  const googleCalendarUrl = event.event_date && !isConcluded
+    ? buildGoogleCalendarUrl({
+        eventName: event.name,
+        startIso: event.event_date,
+        endIso: event.end_date ?? null,
+        location: event.location ?? null,
+        description: [
+          'Your run with Stride Run Club 🏃',
+          '',
+          `Confirmation code: STRIDE-${registration.id.slice(0, 8).toUpperCase()}`,
+          ...(profile?.runner_tag ? [`Stride Tag: ${profile.runner_tag}`] : []),
+          ...(event.location ? [`Where: ${event.location}`] : []),
+          '',
+          `Event details & registration: ${siteUrl}/events/${event.slug}`,
+          `Booking confirmation (your ticket): ${siteUrl}/events/${event.slug}/confirmation/${registration.id}`,
+          '',
+          'Tip: set this event’s notification to 12 hours before so you’re ready to lace up.',
+        ].join('\n'),
+      })
+    : null
 
   // Three most-recent blog posts for the "Keep reading" section
   const blogPicks = [...BLOG_POSTS]
@@ -180,6 +232,27 @@ export default async function ConfirmationPage({ params }: Props) {
             </div>
           </Link>
         </SectionReveal>
+
+        {/* ── Add to Google Calendar — upcoming runs only ── */}
+        {googleCalendarUrl && (
+          <SectionReveal delay={0.12}>
+            <a
+              href={googleCalendarUrl}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='flex items-center justify-center gap-2.5 w-full min-h-11 rounded-md bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors text-white font-semibold text-sm px-5 py-3'
+            >
+              <Image
+                src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/google-calendar-icon.webp'
+                alt=''
+                width={18}
+                height={18}
+                className='shrink-0'
+              />
+              Add to Google Calendar
+            </a>
+          </SectionReveal>
+        )}
 
         {/* ── Stride tag ── */}
         <SectionReveal delay={0.2}>

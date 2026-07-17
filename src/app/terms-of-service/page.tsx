@@ -57,13 +57,7 @@ export default function TermsOfServicePage() {
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-24 pb-20'>
       <div className='max-w-4xl mx-auto px-6'>
-        <div className='pt-10 pb-8'>
-          <p className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-[0.2em] mb-3'>
-            Stride Run Club
-          </p>
-          <div className='h-px w-12 bg-stride-yellow-accent/40' />
-        </div>
-        <div className='pb-16'>
+        <div className='pt-10 pb-16'>
           <ReactMarkdown components={components}>
             {content}
           </ReactMarkdown>

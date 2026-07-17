@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowUpRight, Clock } from 'lucide-react'
 import type { BlogPost } from '@/content/blog/index'
 
@@ -23,12 +24,12 @@ export function PostCard({ post, featured = false }: Props) {
         className='group block rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-stride-yellow-accent/30 transition-all duration-300 hover:scale-[1.01]'
       >
         <div className='relative aspect-video overflow-hidden'>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={post.coverUrl}
             alt={post.title}
-            className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
-            loading='lazy'
+            fill
+            sizes='(max-width: 768px) 100vw, 800px'
+            className='object-cover transition-transform duration-500 group-hover:scale-105'
           />
           <div className='absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent' />
           <div className='absolute top-4 right-4 flex items-center gap-1.5'>
@@ -73,12 +74,12 @@ export function PostCard({ post, featured = false }: Props) {
       className='group flex flex-col rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-stride-yellow-accent/30 transition-all duration-300 hover:scale-[1.015]'
     >
       <div className='relative aspect-video overflow-hidden'>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={post.coverUrl}
           alt={post.title}
-          className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
-          loading='lazy'
+          fill
+          sizes='(max-width: 768px) 100vw, 400px'
+          className='object-cover transition-transform duration-500 group-hover:scale-105'
         />
         <div className='absolute inset-0 bg-gradient-to-t from-black/40 to-transparent' />
       </div>

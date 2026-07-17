@@ -116,9 +116,6 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
                   ) : (
                     <div className='absolute inset-0 bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/20' />
                   )}
-                  <span className='absolute top-1.5 right-1.5 bg-stride-yellow-accent text-copy-black text-[8px] font-bold px-1.5 py-0.5 rounded-full font-mono uppercase tracking-wider'>
-                    Attended
-                  </span>
                 </div>
                 <div className='p-2.5'>
                   <p className='text-white font-semibold text-xs leading-snug line-clamp-2'>{event.name}</p>

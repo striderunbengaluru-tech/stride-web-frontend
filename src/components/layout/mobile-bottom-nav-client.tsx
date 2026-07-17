@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Handshake } from 'lucide-react'
 import clsx from 'clsx'
+import { useRevealAfterFold } from '@/hooks/use-reveal-after-fold'
 
 const STATIC_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
@@ -12,12 +13,16 @@ const STATIC_ITEMS = [
 
 export function MobileBottomNavClient() {
   const pathname = usePathname()
+  // Docked nav stays hidden until the visitor scrolls past the first fold so
+  // the opening screen isn't crowded with floating chrome.
+  const revealed = useRevealAfterFold()
 
   // Hide on event detail pages — the sticky register bar is the primary mobile CTA there
   if (/^\/events\/.+/.test(pathname)) return null
+  if (!revealed) return null
 
   return (
-    <div className='fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:hidden'>
+    <div className='animate-fade-in-up fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:hidden'>
       <nav
         aria-label='Mobile navigation'
         className='flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-2xl border border-white/12 p-1.5 shadow-2xl shadow-black/30'

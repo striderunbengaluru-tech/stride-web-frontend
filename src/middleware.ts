@@ -30,8 +30,14 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Do not add logic between createServerClient and auth.getUser().
-  const { data: { user } } = await supabase.auth.getUser()
+  // IMPORTANT: Do not add logic between createServerClient and getClaims().
+  // getClaims() verifies the JWT locally against the project's public keys
+  // (asymmetric signing) — no network round trip per request, unlike
+  // getUser(). Session cookies still refresh through the same @supabase/ssr
+  // cookie callbacks above. Admin routes re-verify with getUser() + a fresh
+  // DB role read in their own layout, so middleware only needs a valid session.
+  const { data } = await supabase.auth.getClaims()
+  const claims = data?.claims ?? null
 
   const { pathname } = request.nextUrl
 
@@ -39,14 +45,14 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(prefix)
   )
 
-  if (isProtected && !user) {
+  if (isProtected && !claims) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/become-a-member'
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  if (AUTH_PATHS.includes(pathname) && user) {
+  if (AUTH_PATHS.includes(pathname) && claims) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
@@ -55,6 +61,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)',
   ],
 }

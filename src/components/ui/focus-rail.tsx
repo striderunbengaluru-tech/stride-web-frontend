@@ -2,8 +2,9 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence, type PanInfo, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export type FocusRailItem = {
@@ -36,16 +37,15 @@ function ArticleCardImage({ src, alt }: { src: string; alt: string }) {
           loaded ? 'opacity-0 pointer-events-none' : 'opacity-100'
         )}
       />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={src}
         alt={alt}
+        fill
+        sizes='(max-width: 640px) 380px, (max-width: 768px) 420px, (max-width: 1024px) 460px, 780px'
         className={cn(
-          'h-full w-full object-cover pointer-events-none transition-opacity duration-500',
+          'object-cover pointer-events-none transition-opacity duration-500',
           loaded ? 'opacity-100' : 'opacity-0'
         )}
-        loading='lazy'
-        fetchPriority='low'
         onLoad={() => setLoaded(true)}
       />
     </>
@@ -263,8 +263,18 @@ export function FocusRail({
           })}
         </motion.div>
 
-        {/* Info, controls & progress */}
-        <div className='mx-auto mt-4 md:mt-8 w-full max-w-4xl flex flex-col gap-4 pointer-events-auto'>
+        {/* Progress — sits directly below the image */}
+        {autoPlay && (
+          <div className='mx-auto mt-4 md:mt-6 w-full max-w-4xl h-[2px] rounded-full bg-white/10 overflow-hidden'>
+            <motion.div
+              style={{ width: progressWidth }}
+              className='h-full bg-stride-yellow-accent rounded-full'
+            />
+          </div>
+        )}
+
+        {/* Info & controls */}
+        <div className='mx-auto mt-4 md:mt-6 w-full max-w-4xl flex flex-col gap-4 pointer-events-auto'>
 
           {/* Animated title block — full width, fixed height to prevent layout shift */}
           <div className='relative min-h-[160px] md:min-h-[180px]'>
@@ -317,59 +327,39 @@ export function FocusRail({
           </AnimatePresence>
           </div>
 
-          {/* Controls + CTA */}
-          <div className='flex items-center gap-3'>
-            {/* Nav pill — progress bar is absolute so it doesn't shift flex alignment */}
-            <div className='relative'>
-              <div className='flex items-center gap-0 px-1 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/15'>
-                <button
-                  onClick={handlePrev}
-                  className='rounded-md p-2.5 text-copy-white/50 transition-all hover:bg-white/10 hover:text-copy-white active:scale-90'
-                  aria-label='Previous article'
-                >
-                  <ChevronLeft className='h-4 w-4' />
-                </button>
-
-                <div className='flex items-center gap-1.5 px-3 select-none'>
-                  <span className='text-sm font-semibold text-copy-white tabular-nums leading-none'>
-                    {String(activeIndex + 1).padStart(2, '0')}
-                  </span>
-                  <span className='text-copy-white/25 text-[10px] leading-none'>·</span>
-                  <span className='text-xs text-copy-white/40 tabular-nums leading-none'>
-                    {String(count).padStart(2, '0')}
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleNext}
-                  className='rounded-md p-2.5 text-copy-white/50 transition-all hover:bg-white/10 hover:text-copy-white active:scale-90'
-                  aria-label='Next article'
-                >
-                  <ChevronRight className='h-4 w-4' />
-                </button>
-              </div>
-
-              {autoPlay && (
-                <div className='absolute top-full mt-1.5 left-0 right-0 h-[2px] rounded-full bg-white/10 overflow-hidden'>
-                  <motion.div
-                    style={{ width: progressWidth }}
-                    className='h-full bg-stride-yellow-accent rounded-full'
-                  />
-                </div>
-              )}
-            </div>
+          {/* Controls + CTA — arrows match the Stride Originals carousel */}
+          <div className='flex items-center gap-3 flex-wrap'>
+            <button
+              onClick={handlePrev}
+              className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+              aria-label='Previous article'
+            >
+              <ArrowLeft className='h-4 w-4' />
+            </button>
+            <button
+              onClick={handleNext}
+              className='flex items-center justify-center h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-copy-white/60 hover:text-copy-white hover:border-stride-yellow-accent/40 hover:bg-white/15 transition-all active:scale-90 cursor-pointer'
+              aria-label='Next article'
+            >
+              <ArrowRight className='h-4 w-4' />
+            </button>
 
             {activeItem.href && (
               <Link
                 href={activeItem.href}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='group inline-flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-stride-yellow-accent/45 hover:bg-white/12 hover:text-white active:scale-95'
+                className='group inline-flex items-center gap-2 rounded-md bg-stride-yellow-accent px-5 py-2.5 min-h-10 text-sm font-bold text-copy-black transition-all duration-200 hover:bg-stride-yellow-accent/90 active:scale-95'
               >
                 Read the article
-                <ArrowUpRight className='h-4 w-4 text-stride-yellow-accent opacity-70 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5' />
+                <ArrowUpRight className='h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5' />
               </Link>
             )}
+
+            {/* Slide counter */}
+            <span className='font-mono text-sm text-copy-white/50 tabular-nums select-none'>
+              {activeIndex + 1}/{count}
+            </span>
           </div>
 
         </div>

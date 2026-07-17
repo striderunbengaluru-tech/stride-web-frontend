@@ -40,6 +40,36 @@ function normaliseUrl(raw: string): string | null {
   }
 }
 
+// Each social link must live on its platform's domain — this is what catches
+// people pasting just their handle ("kushagra.g", "@runner_23") instead of the
+// shareable profile link.
+const SOCIAL_PLATFORMS = {
+  Instagram: { hosts: ['instagram.com'], example: 'https://instagram.com/your_handle' },
+  Strava:    { hosts: ['strava.com', 'strava.app.link'], example: 'https://strava.com/athletes/1234567' },
+  LinkedIn:  { hosts: ['linkedin.com'], example: 'https://linkedin.com/in/your-name' },
+  X:         { hosts: ['x.com', 'twitter.com'], example: 'https://x.com/your_handle' },
+} as const
+
+type SocialLabel = keyof typeof SOCIAL_PLATFORMS
+
+// Returns the normalised URL, '' for empty input, or an error message.
+function validateSocialUrl(label: SocialLabel, raw: string): { url: string } | { error: string } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { url: '' }
+
+  const { hosts, example } = SOCIAL_PLATFORMS[label]
+  const normalised = normaliseUrl(trimmed)
+  if (normalised === null) {
+    return { error: `“${trimmed}” looks like an ID, not a link. Paste your shareable ${label} profile link instead (e.g. ${example}).` }
+  }
+  const hostname = new URL(normalised).hostname.toLowerCase()
+  const onPlatform = hosts.some(h => hostname === h || hostname.endsWith(`.${h}`))
+  if (!onPlatform) {
+    return { error: `That doesn’t look like a ${label} link. Paste your shareable ${label} profile link (e.g. ${example}), not just your ID.` }
+  }
+  return { url: normalised }
+}
+
 const SOCIAL_BTN = 'w-9 h-9 flex items-center justify-center rounded-full bg-white/6 border border-white/12 text-white/50 transition-colors'
 
 // Input with a leading (optionally brand-coloured) icon — used in the edit form.
@@ -90,8 +120,9 @@ export function EditHeaderSection({
     if (trimmedName.length > 500) return setError('Name must be 500 characters or fewer')
     if (!NAME_RE.test(trimmedName)) return setError('Name can only contain letters — no numbers or symbols')
 
-    // Social links: normalise (add https:// if missing) and validate each.
-    const fields: { label: string; value: string }[] = [
+    // Social links: normalise (add https:// if missing) and validate that each
+    // one is a real link on its platform's domain — not just a pasted ID.
+    const fields: { label: SocialLabel; value: string }[] = [
       { label: 'LinkedIn', value: linkedin },
       { label: 'Instagram', value: instagram },
       { label: 'X', value: x },
@@ -99,9 +130,9 @@ export function EditHeaderSection({
     ]
     const normalised: Record<string, string> = {}
     for (const { label, value } of fields) {
-      const result = normaliseUrl(value)
-      if (result === null) return setError(`Enter a valid ${label} URL (e.g. https://…)`)
-      normalised[label] = result
+      const result = validateSocialUrl(label, value)
+      if ('error' in result) return setError(result.error)
+      normalised[label] = result.url
     }
 
     setSaving(true)

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { GoogleSignInButton } from '@/utils/auth'
 import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { ComingSoon } from '@/components/ui/coming-soon'
@@ -145,13 +146,13 @@ export default async function BecomeAMemberPage({ searchParams }: PageProps) {
 
               <p className='text-white/50 text-xs text-center mt-2 leading-relaxed font-figtree'>
                 By continuing, you agree to our{' '}
-                <a href='/terms-of-service' className='text-stride-yellow-accent/80 hover:text-stride-yellow-accent transition-colors'>
+                <Link href='/terms-of-service' className='text-stride-yellow-accent/80 hover:text-stride-yellow-accent transition-colors'>
                   Terms
-                </a>{' '}
+                </Link>{' '}
                 and{' '}
-                <a href='/privacy-policy' className='text-stride-yellow-accent/80 hover:text-stride-yellow-accent transition-colors'>
+                <Link href='/privacy-policy' className='text-stride-yellow-accent/80 hover:text-stride-yellow-accent transition-colors'>
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
             </div>
