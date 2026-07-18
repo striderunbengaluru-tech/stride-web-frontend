@@ -6,7 +6,14 @@ import ReactMarkdown from 'react-markdown'
 import { CheckCircle2, MapPin, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import {
+  MAX_PASSES_PER_REGISTRATION,
+  getWalletQuotaRemaining,
+  getWalletPassCount,
+} from '@/lib/wallet-quota'
+import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
+import { WalletPassButtons } from '@/components/events/wallet-pass-buttons'
 import { ShareConfirmation } from '@/components/events/share-confirmation'
 import { SectionReveal } from '@/components/ui/section-reveal'
 import { PostCard } from '@/components/blog/post-card'
@@ -16,7 +23,10 @@ import { BLOG_POSTS } from '@/content/blog/index'
 // we want to always reflect the live registration row.
 export const dynamic = 'force-dynamic'
 
-type Props = { params: Promise<{ slug: string; regId: string }> }
+type Props = {
+  params: Promise<{ slug: string; regId: string }>
+  searchParams: Promise<{ wallet?: string }>
+}
 
 export const metadata: Metadata = {
   title: 'Booking Confirmed — Stride Run Club',
@@ -34,35 +44,10 @@ function formatTime(d: string | null) {
   return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Google Calendar template links need UTC timestamps as YYYYMMDDTHHMMSSZ
-function gcalDate(iso: string): string {
-  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
-}
 
-// Assumed run duration when the admin didn't set an end time
-const DEFAULT_EVENT_DURATION_MS = 2 * 60 * 60 * 1000
-
-function buildGoogleCalendarUrl(opts: {
-  eventName: string
-  startIso: string
-  endIso: string | null
-  location: string | null
-  description: string
-}): string {
-  const endIso = opts.endIso
-    ?? new Date(new Date(opts.startIso).getTime() + DEFAULT_EVENT_DURATION_MS).toISOString()
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: `${opts.eventName} — Stride Run Club`,
-    dates: `${gcalDate(opts.startIso)}/${gcalDate(endIso)}`,
-    details: opts.description,
-    ...(opts.location ? { location: opts.location } : {}),
-  })
-  return `https://calendar.google.com/calendar/render?${params.toString()}`
-}
-
-export default async function ConfirmationPage({ params }: Props) {
+export default async function ConfirmationPage({ params, searchParams }: Props) {
   const { regId } = await params
+  const { wallet } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -109,24 +94,38 @@ export default async function ConfirmationPage({ params }: Props) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
   const concludesAt = event.end_date ?? event.event_date
   const isConcluded = !!concludesAt && new Date(concludesAt).getTime() < Date.now()
+  // Wallet CTAs — hidden entirely when the run is over, the monthly
+  // WalletWallet quota is exhausted (or key unset), or this registration hit
+  // its per-booking cap. `?wallet=` flags from the pass route surface notices.
+  const [quotaRemaining, passCount] = await Promise.all([
+    getWalletQuotaRemaining(),
+    getWalletPassCount(registration.id),
+  ])
+  const walletAvailable = quotaRemaining === null || quotaRemaining > 0
+  const underPassCap = passCount < MAX_PASSES_PER_REGISTRATION
+  const showWalletCtas = !isConcluded && walletAvailable && underPassCap
+  const walletNotice =
+    !isConcluded && walletAvailable && (wallet === 'limit' || !underPassCap)
+      ? `You’ve hit the download limit for this booking (${MAX_PASSES_PER_REGISTRATION} passes). Your saved pass still works.`
+      : wallet === 'quota'
+      ? 'Wallet passes are temporarily unavailable. Please try again later.'
+      : wallet === 'error'
+      ? 'We couldn’t generate your pass just now. Please try again in a bit.'
+      : null
+
   const googleCalendarUrl = event.event_date && !isConcluded
     ? buildGoogleCalendarUrl({
         eventName: event.name,
         startIso: event.event_date,
         endIso: event.end_date ?? null,
         location: event.location ?? null,
-        description: [
-          'Your run with Stride Run Club 🏃',
-          '',
-          `Confirmation code: STRIDE-${registration.id.slice(0, 8).toUpperCase()}`,
-          ...(profile?.runner_tag ? [`Stride Tag: ${profile.runner_tag}`] : []),
-          ...(event.location ? [`Where: ${event.location}`] : []),
-          '',
-          `Event details & registration: ${siteUrl}/events/${event.slug}`,
-          `Booking confirmation (your ticket): ${siteUrl}/events/${event.slug}/confirmation/${registration.id}`,
-          '',
-          'Tip: set this event’s notification to 12 hours before so you’re ready to lace up.',
-        ].join('\n'),
+        description: calendarDescription({
+          siteUrl,
+          eventSlug: event.slug,
+          registrationId: registration.id,
+          runnerTag: profile?.runner_tag ?? null,
+          location: event.location ?? null,
+        }),
       })
     : null
 
@@ -233,40 +232,56 @@ export default async function ConfirmationPage({ params }: Props) {
           </Link>
         </SectionReveal>
 
-        {/* ── Add to Google Calendar — upcoming runs only ── */}
-        {googleCalendarUrl && (
+        {/* ── Here's your next steps — wallet, calendar, share ── */}
+        <SectionReveal delay={0.1}>
+          <h2 className='text-white font-bold text-xl leading-tight pt-2'>Here&apos;s your next steps</h2>
+        </SectionReveal>
+
+        {/* Save to your wallet — hidden when the run is over, the monthly
+            WalletWallet quota is exhausted, or this booking hit its cap.
+            The pass QR deep-links to the admin check-in page. */}
+        {(showWalletCtas || walletNotice) && (
           <SectionReveal delay={0.12}>
-            <a
-              href={googleCalendarUrl}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='flex items-center justify-center gap-2.5 w-full min-h-11 rounded-md bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors text-white font-semibold text-sm px-5 py-3'
-            >
-              <Image
-                src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/google-calendar-icon.webp'
-                alt=''
-                width={18}
-                height={18}
-                className='shrink-0'
-              />
-              Add to Google Calendar
-            </a>
+            <div>
+              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Save to your wallet</p>
+              {walletNotice && (
+                <p className='text-white/60 text-xs bg-white/5 border border-white/12 rounded-lg px-3 py-2.5 mb-3'>
+                  {walletNotice}
+                </p>
+              )}
+              {showWalletCtas && <WalletPassButtons registrationId={registration.id} />}
+            </div>
           </SectionReveal>
         )}
 
-        {/* ── Stride tag ── */}
-        <SectionReveal delay={0.2}>
-          <RunnerTagTicket
-            runnerTag={profile?.runner_tag ?? null}
-            registrationId={registration.id}
-            userName={profile?.full_name ?? user.email ?? ''}
-          />
-        </SectionReveal>
+        {/* Block your calendar — upcoming runs only */}
+        {googleCalendarUrl && (
+          <SectionReveal delay={0.14}>
+            <div>
+              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Block your calendar</p>
+              <a
+                href={googleCalendarUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='flex items-center justify-center gap-2.5 w-full min-h-11 rounded-md bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors text-white font-semibold text-sm px-5 py-3'
+              >
+                <Image
+                  src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/google-calendar-icon.webp'
+                  alt=''
+                  width={18}
+                  height={18}
+                  className='shrink-0'
+                />
+                Add to Google Calendar
+              </a>
+            </div>
+          </SectionReveal>
+        )}
 
-        {/* ── Share ── */}
-        <SectionReveal delay={0.24}>
+        {/* Spread the word */}
+        <SectionReveal delay={0.16}>
           <div>
-            <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Share</p>
+            <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Spread the word</p>
             <ShareConfirmation
               eventName={event.name}
               eventDate={compactDate ?? null}
@@ -275,6 +290,15 @@ export default async function ConfirmationPage({ params }: Props) {
               eventBannerUrl={eventBannerUrl}
             />
           </div>
+        </SectionReveal>
+
+        {/* ── Stride tag ── */}
+        <SectionReveal delay={0.2}>
+          <RunnerTagTicket
+            runnerTag={profile?.runner_tag ?? null}
+            registrationId={registration.id}
+            userName={profile?.full_name ?? user.email ?? ''}
+          />
         </SectionReveal>
 
         </div>
@@ -287,8 +311,8 @@ export default async function ConfirmationPage({ params }: Props) {
               <div className='pt-8 border-t border-white/8'>
                 <div className='flex items-end justify-between gap-4 mb-5'>
                   <div>
-                    <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-widest mb-1.5'>Inside Stride</p>
-                    <h3 className='text-white font-bold text-xl leading-tight'>While you lace up — stories, run recaps &amp; what we&apos;re building.</h3>
+                    <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-widest mb-1.5'>Stride Run Club Blogs</p>
+                    <h3 className='text-white font-bold text-xl leading-tight'>Stories and run recaps to read while you lace up.</h3>
                   </div>
                   <Link
                     href='/blog'

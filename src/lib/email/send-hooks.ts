@@ -1,6 +1,7 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { sendEmail } from './brevo'
 import { registrationConfirmedEmail, welcomeEmail } from './templates'
+import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
 
@@ -63,25 +64,50 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
 
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, users(email, full_name), events(name, slug, event_date, location)')
+      .select('id, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
       .eq('id', registrationId)
       .single()
 
-    const user = reg?.users as unknown as { email: string | null; full_name: string | null } | null
+    const user = reg?.users as unknown as { email: string | null; full_name: string | null; runner_tag: string | null } | null
     const event = reg?.events as unknown as {
       name: string
       slug: string
       event_date: string | null
+      end_date: string | null
       location: string | null
+      location_url: string | null
+      banner_images: string | null
     } | null
     if (!user?.email || !event) return
+
+    let bannerUrl: string | null = null
+    try { bannerUrl = (JSON.parse(event.banner_images ?? '[]') as string[])[0] ?? null } catch { /* keep null */ }
+
+    const calendarUrl = event.event_date
+      ? buildGoogleCalendarUrl({
+          eventName: event.name,
+          startIso: event.event_date,
+          endIso: event.end_date,
+          location: event.location,
+          description: calendarDescription({
+            siteUrl: SITE_URL,
+            eventSlug: event.slug,
+            registrationId,
+            runnerTag: user.runner_tag,
+            location: event.location,
+          }),
+        })
+      : null
 
     const { subject, htmlContent } = registrationConfirmedEmail({
       fullName: user.full_name,
       eventName: event.name,
       eventDate: event.event_date,
       location: event.location,
-      confirmationCode: `STRIDE-${registrationId.slice(0, 8).toUpperCase()}`,
+      locationUrl: event.location_url,
+      bannerUrl,
+      runnerTag: user.runner_tag,
+      calendarUrl,
       confirmationUrl: `${SITE_URL}/events/${event.slug}/confirmation/${registrationId}`,
     })
     await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
