@@ -103,7 +103,7 @@ export default function Footer() {
 
         {/* ── Bottom bar — tagline + copyright ── */}
         <div className='mt-12 pt-8 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4'>
-          <p className='text-white/60 text-xs font-figtree'>
+          <p className='text-white/70 text-xs font-figtree'>
             &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru
           </p>
           <p className='font-libre font-bold text-stride-yellow-accent text-xl tracking-tight'>

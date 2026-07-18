@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Calendar, MapPin } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/data/events'
 import { EventsClient } from '@/components/events/events-client'
+import { EventCountdown } from '@/components/events/event-countdown'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 
 export const metadata: Metadata = {
@@ -45,29 +46,19 @@ function UpNextBanner({ event }: { event: EventRow }) {
 
   return (
     <Link href={`/events/${event.slug}`} className='group block mb-14'>
-      <div className='grid grid-cols-1 md:grid-cols-2 bg-white/6 backdrop-blur-md border border-white/12 rounded-2xl overflow-hidden hover:border-stride-yellow-accent/50 transition-colors'>
-        {/* Image — object-contain so the poster is never cropped; a blurred
-            copy of the same image fills the letterbox space behind it */}
-        <div className='relative aspect-video md:aspect-auto md:min-h-72 md:order-2 bg-white/5 overflow-hidden'>
+      <div className='grid grid-cols-1 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] bg-white/6 backdrop-blur-md border border-white/12 rounded-2xl overflow-hidden hover:border-stride-yellow-accent/50 transition-colors'>
+        {/* Image — posters are always 3:4 (admin crops to 3:4), so the column
+            is a fixed 3:4 frame the poster fills exactly: no letterbox gap */}
+        <div className='relative aspect-3/4 md:order-2 bg-white/5 overflow-hidden'>
           {event.imageUrl && (
-            <>
-              <Image
-                src={event.imageUrl}
-                alt=''
-                aria-hidden
-                fill
-                sizes='(max-width: 768px) 100vw, 50vw'
-                className='object-cover blur-2xl scale-110 opacity-40'
-              />
-              <Image
-                src={event.imageUrl}
-                alt={event.name}
-                fill
-                sizes='(max-width: 768px) 100vw, 50vw'
-                className='object-contain'
-                priority
-              />
-            </>
+            <Image
+              src={event.imageUrl}
+              alt={event.name}
+              fill
+              sizes='(max-width: 768px) 100vw, 340px'
+              className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
+              priority
+            />
           )}
         </div>
 
@@ -97,6 +88,14 @@ function UpNextBanner({ event }: { event: EventRow }) {
               </span>
             )}
           </div>
+
+          {/* Live countdown to the start — min-height reserves the slot so the
+              client-only timer doesn't shift the layout when it mounts */}
+          {event.event_date && (
+            <div className='min-h-[88px]'>
+              <EventCountdown eventDate={event.event_date} label='Starts in' />
+            </div>
+          )}
 
           <div className='flex items-center gap-4 pt-1'>
             <span className='inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold text-sm px-5 py-2.5 rounded-md group-hover:scale-[1.02] group-active:scale-[0.98] transition-transform min-h-11'>

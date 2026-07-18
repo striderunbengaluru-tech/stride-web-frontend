@@ -83,19 +83,26 @@ function ctaButton(href: string, label: string, wide = false): string {
     </table>`
 }
 
-// Glassmorphic feature card (site glass pattern): centered icon, left-aligned copy.
+// Glassmorphic feature card (site glass pattern): icon beside the title,
+// copy below — reads as a compact step row rather than a stacked poster.
 function featureCard(icon: string, title: string, bodyHtml: string): string {
   return `
     <tr>
-      <td style="padding:20px 32px 0;">
+      <td style="padding:16px 32px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;">
           <tr>
-            <td style="padding:30px 28px 26px;">
-              <div style="text-align:center;">
-                <img src="${ICON_BASE}/${icon}.png" alt="" width="52" style="display:inline-block;width:52px;height:52px;border:0;">
-              </div>
-              <h3 style="margin:18px 0 0;font-family:${HEADING_FONT};font-size:19px;line-height:1.35;color:#ffffff;">${title}</h3>
-              <p style="margin:10px 0 0;font-family:${BODY_FONT};font-size:14px;line-height:1.65;color:rgba(255,255,255,0.8);">${bodyHtml}</p>
+            <td style="padding:24px 26px 22px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:14px;">
+                    <img src="${ICON_BASE}/${icon}.png" alt="" width="40" style="display:block;width:40px;height:40px;border:0;">
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <h3 style="margin:0;font-family:${HEADING_FONT};font-size:18px;line-height:1.35;color:#ffffff;">${title}</h3>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:12px 0 0;font-family:${BODY_FONT};font-size:14px;line-height:1.65;color:rgba(255,255,255,0.8);">${bodyHtml}</p>
             </td>
           </tr>
         </table>
@@ -182,14 +189,14 @@ export function welcomeEmail(params: {
             </td>
           </tr>
           <tr>
-            <td style="padding:44px 32px 0;">
+            <td style="padding:40px 32px 0;">
               <div style="border-top:1px solid rgba(255,255,255,0.25);"></div>
             </td>
           </tr>
           <tr>
-            <td style="padding:38px 32px 0;">
+            <td style="padding:34px 32px 0;">
               <h2 style="margin:0;font-family:${HEADING_FONT};font-size:23px;line-height:1.3;color:#ffffff;">Hey ${firstName(fullName)},</h2>
-              <p style="margin:16px 0 0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:rgba(255,255,255,0.88);">Your Stride profile is live — welcome to Bengaluru&#39;s fastest-growing running community. Whether it&#39;s your very first run or your fiftieth race, there&#39;s a place for you here. <strong style="color:#ffffff;">All paces, all fitness levels, one crew.</strong></p>
+              <p style="margin:16px 0 0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:rgba(255,255,255,0.88);">Your Stride profile is live. Welcome to Bengaluru&#39;s fastest-growing running community: first run or fiftieth race, there&#39;s a place for you here. <strong style="color:#ffffff;">All paces, all fitness levels, one crew.</strong></p>
               ${ctaButton(profileUrl, 'View your profile', true)}
             </td>
           </tr>
@@ -201,7 +208,7 @@ export function welcomeEmail(params: {
           ${featureCard(
             'footprints',
             'Weekly runs, new routes',
-            `Cafe hops, lake loops, hill repeats, track nights — we run somewhere new across Bengaluru every single week. Follow <a href="${INSTAGRAM_URL}" target="_blank" style="color:${YELLOW};text-decoration:underline;">@stride_runclub_bengaluru</a> to catch the next one.`
+            `Cafe hops, lake loops, hill repeats, track nights. We run somewhere new across Bengaluru every week, and <a href="${INSTAGRAM_URL}" target="_blank" style="color:${YELLOW};text-decoration:underline;">@stride_runclub_bengaluru</a> is where the next one drops.`
           )}
           ${featureCard(
             'circle-user-round',
@@ -211,7 +218,7 @@ export function welcomeEmail(params: {
           ${featureCard(
             'heart-handshake',
             'Bring a friend',
-            '63% of our runners last year were first-timers. Runs are better together — bring someone along for their first 5K.'
+            '63% of our runners last year were first-timers. Runs are better with company, so bring someone along for their first 5K.'
           )}
           <tr><td style="padding:0 0 44px;"></td></tr>
           ${footer()}
@@ -221,38 +228,77 @@ export function welcomeEmail(params: {
   </table>`
 
   return {
-    subject: 'Welcome to Stride Run Club — move as one 🏃',
+    subject: "Welcome to Stride Run Club - The 'Fittest Club' in India.",
     htmlContent,
   }
 }
 
 // Ticket-style confirmation (Dribbble email-confirmation motif): check-mark
-// moment, serif headline, then the booking as an event ticket — details on
-// top, a dashed perforation, and a boarding-pass code stub below.
+// moment, serif headline, then the booking as an event ticket — the event
+// poster on top, stacked What/When/Where rows (Where links to Google Maps),
+// a dashed perforation, and the runner's Stride Tag as the boarding-pass stub.
 export function registrationConfirmedEmail(params: {
   fullName: string | null
   eventName: string
   eventDate: string | null
   location: string | null
-  confirmationCode: string
+  locationUrl: string | null
+  bannerUrl: string | null
+  runnerTag: string | null
+  calendarUrl: string | null
   confirmationUrl: string
 }): EmailContent {
-  const { fullName, eventName, eventDate, location, confirmationCode, confirmationUrl } = params
+  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl } = params
 
   const ticketLabel = (text: string) =>
     `<p style="margin:0 0 5px;font-family:${MONO_FONT};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,0.55);">${text}</p>`
 
-  const dateCell = eventDate
-    ? `<td style="padding:22px 12px 0 28px;vertical-align:top;">
-        ${ticketLabel('Date &amp; time')}
-        <p style="margin:0;font-family:${BODY_FONT};font-size:14px;line-height:1.5;color:#ffffff;">${escapeHtml(formatEventDateIST(eventDate))} <span style="color:rgba(255,255,255,0.55);">IST</span></p>
-      </td>`
+  // Event poster — first image of the event's carousel, full card width
+  const bannerRow = bannerUrl
+    ? `<tr>
+        <td style="padding:0;">
+          <a href="${confirmationUrl}" target="_blank" style="text-decoration:none;">
+            <img src="${bannerUrl}" alt="${escapeHtml(eventName)}" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:13px 13px 0 0;">
+          </a>
+        </td>
+      </tr>`
     : ''
-  const locationCell = location
-    ? `<td style="padding:22px 28px 0 ${eventDate ? '12px' : '28px'};vertical-align:top;">
-        ${ticketLabel('Location')}
-        <p style="margin:0;font-family:${BODY_FONT};font-size:14px;line-height:1.5;color:#ffffff;">${escapeHtml(location)}</p>
-      </td>`
+
+  const whenRow = eventDate
+    ? `<tr>
+        <td style="padding:20px 28px 0;">
+          ${ticketLabel('When')}
+          <p style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:#ffffff;">${escapeHtml(formatEventDateIST(eventDate))} <span style="color:rgba(255,255,255,0.55);">IST</span></p>
+        </td>
+      </tr>`
+    : ''
+
+  const whereValue = location
+    ? locationUrl
+      ? `<a href="${locationUrl}" target="_blank" style="color:${YELLOW};text-decoration:underline;">${escapeHtml(location)}</a> <span style="font-family:${BODY_FONT};font-size:12px;color:rgba(255,255,255,0.55);">(opens in Google Maps)</span>`
+      : escapeHtml(location)
+    : null
+  const whereRow = whereValue
+    ? `<tr>
+        <td style="padding:20px 28px 0;">
+          ${ticketLabel('Where')}
+          <p style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:#ffffff;">${whereValue}</p>
+        </td>
+      </tr>`
+    : ''
+
+  // Glass secondary CTA with the Google Calendar mark (PNG — email-safe)
+  const calendarButton = calendarUrl
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px auto 0;">
+        <tr>
+          <td style="background-color:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:6px;text-align:center;">
+            <a href="${calendarUrl}" target="_blank" style="display:block;padding:14px 24px;font-family:${BODY_FONT};font-size:14px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:6px;">
+              <img src="${ICON_BASE}/google-calendar.png" alt="" width="18" style="display:inline-block;width:18px;height:18px;border:0;vertical-align:-4px;">
+              &nbsp;Add to Google Calendar
+            </a>
+          </td>
+        </tr>
+      </table>`
     : ''
 
   const htmlContent = `${WEBFONT_STYLE}
@@ -275,29 +321,31 @@ export function registrationConfirmedEmail(params: {
           </tr>
           <tr>
             <td style="padding:32px 32px 0;">
-              <p style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:rgba(255,255,255,0.88);">Hey ${firstName(fullName)}, your spot is locked in. Bring your energy — we&#39;ll bring the crew.</p>
+              <p style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:rgba(255,255,255,0.88);">Hey ${firstName(fullName)}, your spot is locked in. Bring your energy and we&#39;ll bring the crew.</p>
             </td>
           </tr>
           <tr>
             <td style="padding:28px 32px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;">
+                ${bannerRow}
                 <tr>
-                  <td colspan="2" style="padding:26px 28px 0;">
-                    ${ticketLabel('Event')}
+                  <td style="padding:24px 28px 0;">
+                    ${ticketLabel('What')}
                     <h2 style="margin:0;font-family:${HEADING_FONT};font-size:21px;line-height:1.35;color:#ffffff;">${escapeHtml(eventName)}</h2>
                   </td>
                 </tr>
-                <tr>${dateCell}${locationCell}</tr>
+                ${whenRow}
+                ${whereRow}
                 <tr>
-                  <td colspan="2" style="padding:26px 28px 0;">
+                  <td style="padding:26px 28px 0;">
                     <div style="border-top:1px dashed rgba(255,255,255,0.3);"></div>
                   </td>
                 </tr>
                 <tr>
-                  <td colspan="2" style="padding:20px 28px 26px;text-align:center;">
-                    ${ticketLabel('Confirmation code')}
-                    <p style="margin:2px 0 0;font-family:${MONO_FONT};font-size:22px;font-weight:bold;letter-spacing:3px;color:${YELLOW};">${escapeHtml(confirmationCode)}</p>
-                    <p style="margin:8px 0 0;font-family:${BODY_FONT};font-size:12px;color:rgba(255,255,255,0.55);">Your Stride Tag is your ticket — mention it to the lead Strider at the run.</p>
+                  <td style="padding:20px 28px 26px;text-align:center;">
+                    ${ticketLabel('Your Stride Tag')}
+                    <p style="margin:2px 0 0;font-family:${MONO_FONT};font-size:26px;font-weight:bold;letter-spacing:4px;color:${YELLOW};">${escapeHtml(runnerTag ?? '—')}</p>
+                    <p style="margin:8px 0 0;font-family:${BODY_FONT};font-size:12px;color:rgba(255,255,255,0.55);">Show this tag to the lead Strider when you arrive.</p>
                   </td>
                 </tr>
               </table>
@@ -306,6 +354,7 @@ export function registrationConfirmedEmail(params: {
           <tr>
             <td style="padding:0 32px;">
               ${ctaButton(confirmationUrl, 'View your ticket', true)}
+              ${calendarButton}
             </td>
           </tr>
           <tr><td style="padding:0 0 48px;"></td></tr>

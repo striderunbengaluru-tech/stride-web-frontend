@@ -28,10 +28,13 @@ function compute(target: string): Segment[] | null {
   return [{ value: m, label: 'min' }, { value: s, label: 'sec' }]
 }
 
-export function EventCountdown({ eventDate }: { eventDate: string }) {
-  const [segments, setSegments] = useState<Segment[] | null>(() => compute(eventDate))
+export function EventCountdown({ eventDate, label }: { eventDate: string; label?: string }) {
+  // Client-only: starts null and computes after mount. Rendering a tick value
+  // during SSR would be stale on ISR pages and mismatch on hydration.
+  const [segments, setSegments] = useState<Segment[] | null>(null)
 
   useEffect(() => {
+    setSegments(compute(eventDate))
     const id = setInterval(() => setSegments(compute(eventDate)), 1000)
     return () => clearInterval(id)
   }, [eventDate])
@@ -41,6 +44,10 @@ export function EventCountdown({ eventDate }: { eventDate: string }) {
   const urgent = segments.length === 2 // only min + sec — under 1 hour
 
   return (
+    <div>
+      {label && (
+        <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-2'>{label}</p>
+      )}
     <div className='flex items-end gap-2'>
       {segments.map(({ value, label }, i) => (
         <div key={label} className='flex flex-col items-center'>
@@ -61,6 +68,7 @@ export function EventCountdown({ eventDate }: { eventDate: string }) {
           <p className='text-white/30 text-[9px] font-mono uppercase tracking-widest mt-1.5'>{label}</p>
         </div>
       ))}
+    </div>
     </div>
   )
 }

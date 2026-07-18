@@ -61,9 +61,6 @@ export default function BlogPage() {
 
         {/* ── Header ── */}
         <SectionReveal className='mb-14 md:mb-20'>
-          <p className='text-xs font-mono uppercase tracking-[0.25em] text-stride-yellow-accent mb-4'>
-            From the Track
-          </p>
           <h1 className='font-libre text-4xl md:text-6xl font-bold text-white leading-tight'>
             Stories that{' '}
             <span className='text-stride-yellow-accent'>move you.</span>
