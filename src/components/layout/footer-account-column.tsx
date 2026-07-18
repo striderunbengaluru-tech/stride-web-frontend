@@ -14,14 +14,14 @@ export function FooterAccountColumn() {
 
   return (
     <nav aria-label='Account links' className='flex flex-col gap-3.5'>
-      <p className='text-[10px] font-mono uppercase tracking-[0.25em] text-stride-yellow-accent/70'>
+      <p className='text-[10px] font-mono uppercase tracking-[0.25em] text-stride-yellow-accent'>
         Account
       </p>
       <ul className='flex flex-col gap-3'>
         <li>
           <NavLoadingLink
             href='/become-a-member'
-            className='text-white/55 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'
+            className='text-white/70 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'
           >
             Become a Member
           </NavLoadingLink>

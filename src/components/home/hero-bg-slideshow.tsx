@@ -59,14 +59,34 @@ export function HeroBgSlideshow() {
     };
   }, []);
 
-  // Background-preload the remaining slides after mount, marked low priority
-  // so the browser schedules them behind everything the first fold needs.
+  // Background-preload the remaining slides sequentially, starting only after
+  // the page's load event. One at a time so each download gets the full
+  // connection — firing all of them in parallel starved slow connections and
+  // logged net::ERR_TIMED_OUT console errors. If a slide isn't ready when its
+  // turn comes, the crossfade simply holds the previous image (loadedSrcs gate).
   React.useEffect(() => {
-    BG_IMAGES.slice(EAGER_COUNT).forEach((src) => {
+    let cancelled = false;
+    const queue = BG_IMAGES.slice(EAGER_COUNT);
+
+    function loadNext(i: number) {
+      if (cancelled || i >= queue.length) return;
       const img = new window.Image();
       img.setAttribute('fetchpriority', 'low');
-      img.src = src;
-    });
+      img.onload = () => loadNext(i + 1);
+      img.onerror = () => loadNext(i + 1);
+      img.src = queue[i];
+    }
+
+    const start = () => loadNext(0);
+    if (document.readyState === 'complete') {
+      start();
+    } else {
+      window.addEventListener('load', start, { once: true });
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', start);
+    };
   }, []);
 
   return (
