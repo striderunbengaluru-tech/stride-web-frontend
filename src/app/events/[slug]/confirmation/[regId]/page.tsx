@@ -49,21 +49,25 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   const { regId } = await params
   const { wallet } = await searchParams
 
+  // Two parallel stages instead of the old five-hop waterfall: auth check and
+  // registration lookup are independent (ownership is verified after both
+  // resolve), then everything keyed off them fires together.
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const [{ data: { user } }, { data: registration }] = await Promise.all([
+    supabase.auth.getUser(),
+    adminClient
+      .from('event_registrations')
+      .select('id, user_id, status, event_id')
+      .eq('id', regId)
+      .single(),
+  ])
+
   if (!user) redirect('/become-a-member')
-
-  const { data: registration } = await adminClient
-    .from('event_registrations')
-    .select('id, user_id, status, event_id')
-    .eq('id', regId)
-    .single()
-
   if (!registration || registration.user_id !== user.id || registration.status !== 'CONFIRMED') {
     notFound()
   }
 
-  const [{ data: event }, { data: profile }] = await Promise.all([
+  const [{ data: event }, { data: profile }, quotaRemaining, passCount] = await Promise.all([
     adminClient
       .from('events')
       .select('id, name, slug, subtitle, event_date, end_date, location, location_url, banner_images, price_paise, confirmation_text')
@@ -74,6 +78,8 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
       .select('full_name, runner_tag')
       .eq('id', user.id)
       .single(),
+    getWalletQuotaRemaining(),
+    getWalletPassCount(regId),
   ])
 
   if (!event) notFound()
@@ -97,10 +103,6 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   // Wallet CTAs — hidden entirely when the run is over, the monthly
   // WalletWallet quota is exhausted (or key unset), or this registration hit
   // its per-booking cap. `?wallet=` flags from the pass route surface notices.
-  const [quotaRemaining, passCount] = await Promise.all([
-    getWalletQuotaRemaining(),
-    getWalletPassCount(registration.id),
-  ])
   const walletAvailable = quotaRemaining === null || quotaRemaining > 0
   const underPassCap = passCount < MAX_PASSES_PER_REGISTRATION
   const showWalletCtas = !isConcluded && walletAvailable && underPassCap

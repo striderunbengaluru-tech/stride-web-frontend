@@ -34,17 +34,6 @@ export function WalletPassButtons({ registrationId }: { registrationId: string }
 
   async function handleApple() {
     if (loading) return
-
-    // iOS: navigate directly so Safari opens the Add-to-Wallet sheet in one
-    // tap (a blob download would need a second tap from Files). The trade-off
-    // is no loader/toast on iOS — the native sheet is the feedback.
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    if (isIOS) {
-      window.location.href = `/api/events/wallet-pass?reg=${registrationId}&platform=apple`
-      return
-    }
-
     setLoading('apple')
     try {
       const res = await fetch(passUrl('apple'))
@@ -63,7 +52,7 @@ export function WalletPassButtons({ registrationId }: { registrationId: string }
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 30_000)
-      toast.success('Pass downloaded. Open it to add to Apple Wallet.')
+      toast.success('Your pass is downloaded! Open the .pkpass file from your downloads and tap "Add" to put it in Apple Wallet.', { duration: 6000 })
     } catch {
       toast.error('We couldn’t generate your pass just now. Please try again in a bit.')
     } finally {
