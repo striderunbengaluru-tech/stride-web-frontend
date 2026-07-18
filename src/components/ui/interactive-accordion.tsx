@@ -51,7 +51,7 @@ export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccord
                     />
                     <motion.span
                       className='relative z-10 text-sm font-medium tracking-wide font-figtree'
-                      animate={{ color: isActive ? '#4B2862' : 'rgba(255,255,255,0.5)' }}
+                      animate={{ color: isActive ? '#4B2862' : 'rgba(255,255,255,0.7)' }}
                       transition={{ duration: 0.2 }}
                     >
                       {item.number}

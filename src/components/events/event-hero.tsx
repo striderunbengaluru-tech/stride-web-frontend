@@ -110,18 +110,22 @@ export function EventHero({ images, eventName }: Props) {
         </>
       )}
 
-      {/* Pagination dots */}
+      {/* Pagination dots — visual dot inside a ≥24px hit area */}
       {images.length > 1 && (
-        <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1.5'>
+        <div className='absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center bg-black/30 backdrop-blur-sm rounded-full px-2 py-0.5'>
           {images.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`rounded-full transition-all duration-300 ${
-                i === current ? 'w-5 h-1.5 bg-stride-yellow-accent' : 'w-1.5 h-1.5 bg-white/50'
-              }`}
+              className='flex items-center justify-center min-w-6 min-h-6'
               aria-label={`Image ${i + 1}`}
-            />
+            >
+              <span
+                className={`rounded-full transition-all duration-300 ${
+                  i === current ? 'w-5 h-1.5 bg-stride-yellow-accent' : 'w-1.5 h-1.5 bg-white/50'
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}
@@ -202,18 +206,22 @@ export function EventHero({ images, eventName }: Props) {
             )}
           </div>
 
-          {/* Dots */}
+          {/* Dots — visual dot inside a 44px-tall hit area */}
           {images.length > 1 && (
-            <div className='flex items-center justify-center gap-1.5 pb-6 shrink-0'>
+            <div className='flex items-center justify-center pb-4 shrink-0'>
               {images.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrent(i)}
-                  className={`rounded-full transition-all duration-300 ${
-                    i === current ? 'w-5 h-1.5 bg-stride-yellow-accent' : 'w-1.5 h-1.5 bg-white/50'
-                  }`}
+                  className='flex items-center justify-center min-w-6 min-h-11'
                   aria-label={`Image ${i + 1}`}
-                />
+                >
+                  <span
+                    className={`rounded-full transition-all duration-300 ${
+                      i === current ? 'w-5 h-1.5 bg-stride-yellow-accent' : 'w-1.5 h-1.5 bg-white/50'
+                    }`}
+                  />
+                </button>
               ))}
             </div>
           )}

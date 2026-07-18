@@ -357,7 +357,7 @@ export function FocusRail({
             )}
 
             {/* Slide counter */}
-            <span className='font-mono text-sm text-copy-white/50 tabular-nums select-none'>
+            <span className='font-mono text-sm text-copy-white/70 tabular-nums select-none'>
               {activeIndex + 1}/{count}
             </span>
           </div>

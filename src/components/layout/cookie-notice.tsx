@@ -77,7 +77,7 @@ export function CookieNotice() {
             href='/privacy-policy#cookie-policy'
             className='text-stride-yellow-accent hover:underline underline-offset-2'
           >
-            Learn more
+            Read our cookie policy
           </Link>
         </p>
         <button

@@ -105,7 +105,7 @@ export default function SpotlightSection() {
             {/* Slide counter */}
             <div className='flex items-center gap-3 mb-5'>
               <span className='h-px w-8 bg-copy-white/20 shrink-0' />
-              <span className='text-copy-white/35 text-xs font-figtree tabular-nums'>
+              <span className='text-copy-white/70 text-xs font-figtree tabular-nums'>
                 {String(currentIndex + 1).padStart(2, '0')} /{' '}
                 {String(count).padStart(2, '0')}
               </span>
@@ -181,20 +181,26 @@ export default function SpotlightSection() {
                 </button>
               </div>
 
-              {/* Dot indicators */}
-              <div className='flex gap-2 items-center'>
+              {/* Dot indicators — the visual dot sits inside a 44px-tall,
+                  ≥24px-wide hit area so touch targets pass without changing
+                  the look */}
+              <div className='flex gap-1 items-center'>
                 {SPOTLIGHT_SLIDES.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => goToSlide(i)}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all duration-300 cursor-pointer',
-                      i === currentIndex
-                        ? 'w-6 bg-stride-yellow-accent'
-                        : 'w-1.5 bg-white/25 hover:bg-white/45'
-                    )}
+                    className='flex items-center justify-center min-w-6 min-h-11 cursor-pointer'
                     aria-label={`Go to slide ${i + 1}`}
-                  />
+                  >
+                    <span
+                      className={cn(
+                        'h-1.5 rounded-full transition-all duration-300',
+                        i === currentIndex
+                          ? 'w-6 bg-stride-yellow-accent'
+                          : 'w-1.5 bg-white/45 hover:bg-white/65'
+                      )}
+                    />
+                  </button>
                 ))}
               </div>
             </div>

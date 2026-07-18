@@ -27,7 +27,7 @@ type ColumnProps = { title: string; links: { title: string; href: string }[] }
 function Column({ title, links }: ColumnProps) {
   return (
     <nav aria-label={`${title} links`} className='flex flex-col gap-3.5'>
-      <p className='text-[10px] font-mono uppercase tracking-[0.25em] text-stride-yellow-accent/70'>
+      <p className='text-[10px] font-mono uppercase tracking-[0.25em] text-stride-yellow-accent'>
         {title}
       </p>
       <ul className='flex flex-col gap-3'>
@@ -35,7 +35,7 @@ function Column({ title, links }: ColumnProps) {
           <li key={link.href}>
             <NavLoadingLink
               href={link.href}
-              className='text-white/55 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'
+              className='text-white/70 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'
             >
               {link.title}
             </NavLoadingLink>
@@ -67,7 +67,7 @@ export default function Footer() {
                 className='object-contain'
               />
             </Link>
-            <p className='text-white/55 text-sm leading-relaxed font-figtree'>
+            <p className='text-white/70 text-sm leading-relaxed font-figtree'>
               Bengaluru&apos;s running community for every pace. Events, group runs, and training.
             </p>
             {/* Social — visible on every screen size, grouped with brand */}
@@ -103,7 +103,7 @@ export default function Footer() {
 
         {/* ── Bottom bar — tagline + copyright ── */}
         <div className='mt-12 pt-8 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4'>
-          <p className='text-white/30 text-xs font-figtree'>
+          <p className='text-white/60 text-xs font-figtree'>
             &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru
           </p>
           <p className='font-libre font-bold text-stride-yellow-accent text-xl tracking-tight'>
