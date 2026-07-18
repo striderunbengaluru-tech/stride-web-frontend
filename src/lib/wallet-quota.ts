@@ -19,9 +19,11 @@ export const getWalletQuotaRemaining = (): Promise<number | null> =>
       const key = process.env.STRIDE_WALLETWALLET_API_KEY
       if (!key) return 0
       try {
+        // Short timeout — this sits on the confirmation page's critical path
+        // on cache misses; unknown quota falls back to showing the CTAs.
         const res = await fetch('https://api.walletwallet.dev/api/auth/usage', {
           headers: { Authorization: `Bearer ${key}` },
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(2000),
         })
         if (!res.ok) return null
         const data = (await res.json()) as { remaining?: number }
