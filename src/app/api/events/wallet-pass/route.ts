@@ -27,6 +27,19 @@ const STRIP_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/wallet-ticket-strip-banner.png'
 const RELEVANT_TEXT = "You've almost reached! Show this pass to one of the Stride leads"
 
+// Origin of the deployment actually serving this request, so pass links point
+// at the environment that generated them (staging → staging.strideclub.in,
+// production → www.strideclub.in) regardless of how NEXT_PUBLIC_SITE_URL is
+// set. Vercel's proxy provides x-forwarded-host/proto; local dev falls back to
+// the plain Host header.
+function requestOrigin(request: Request): string {
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  if (!host) return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
+  const proto = request.headers.get('x-forwarded-proto')
+    ?? (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https')
+  return `${proto}://${host}`
+}
+
 function fmtEventOn(iso: string | null): string | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -41,7 +54,7 @@ function fmtEventOn(iso: string | null): string | null {
 }
 
 export async function GET(request: Request) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
+  const siteUrl = requestOrigin(request)
   const apiKey = process.env.STRIDE_WALLETWALLET_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'Wallet passes are not configured' }, { status: 503 })
