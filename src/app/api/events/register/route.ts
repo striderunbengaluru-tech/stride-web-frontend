@@ -122,15 +122,28 @@ export async function POST(request: Request) {
 
   const registrationId = nanoid()
 
-  // Free event — confirm immediately
+  // Free event — confirm immediately. The seat cap is enforced atomically
+  // inside register_for_event (SELECT ... FOR UPDATE on the event row) so two
+  // concurrent last-seat registrations cannot both insert a CONFIRMED row.
   if (event.price_paise === 0) {
-    await adminClient.from('event_registrations').insert({
-      id: registrationId,
-      event_id: eventId,
-      user_id: user.id,
-      status: 'CONFIRMED',
-      custom_responses: customResponsesJson,
+    const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
+      p_registration_id: registrationId,
+      p_event_id: eventId,
+      p_user_id: user.id,
+      p_status: 'CONFIRMED',
+      p_custom_responses: customResponsesJson,
     })
+    if (rpcError) {
+      console.error('[Register] Registration failed', rpcError)
+      return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+    }
+    if (outcome === 'CAPACITY_FULL') {
+      return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+    }
+    if (outcome !== 'INSERTED') {
+      console.error('[Register] Unexpected registration outcome', outcome)
+      return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+    }
     // Bust the event page's server cache so back-navigation shows
     // "You're registered ✓" instead of a stale Register CTA, and purge the
     // cached confirmed-count so spots-left is exact after every registration.
@@ -158,14 +171,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Payment initialisation failed' }, { status: 500 })
   }
 
-  await adminClient.from('event_registrations').insert({
-    id: registrationId,
-    event_id: eventId,
-    user_id: user.id,
-    status: 'PENDING',
-    razorpay_order_id: order.id,
-    custom_responses: customResponsesJson,
+  // Hold the seat as PENDING through the same atomic capacity guard so a
+  // concurrent CONFIRMED registration that fills the last seat is respected.
+  const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
+    p_registration_id: registrationId,
+    p_event_id: eventId,
+    p_user_id: user.id,
+    p_status: 'PENDING',
+    p_custom_responses: customResponsesJson,
+    p_razorpay_order_id: order.id,
   })
+  if (rpcError) {
+    console.error('[Register] Registration failed', rpcError)
+    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+  }
+  if (outcome === 'CAPACITY_FULL') {
+    return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+  }
+  if (outcome !== 'INSERTED') {
+    console.error('[Register] Unexpected registration outcome', outcome)
+    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+  }
 
   return NextResponse.json({
     registrationId,

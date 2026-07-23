@@ -237,6 +237,84 @@ update public.users set welcome_email_sent_at = now();
 -- Backfill: already-confirmed registrations must not get a late confirmation email
 update public.event_registrations set confirmation_email_sent_at = now() where status = 'CONFIRMED';
 
+-- ─── Atomic event-capacity guard (race-condition fix — CWE-362) ──────────────
+-- Applied manually via the Supabase SQL Editor. MUST be run BEFORE deploying the
+-- updated /api/events/register route, which calls this function via rpc().
+--
+-- The register route previously read the CONFIRMED count and then inserted in a
+-- separate, non-atomic step, so two concurrent registrations for the last seat
+-- could both pass the check and both insert — overbooking an event past its
+-- capacity. This function closes that window: it takes a row lock on the event
+-- (SELECT ... FOR UPDATE), so concurrent registrations for the SAME event
+-- serialize on that lock; the CONFIRMED count is then re-read under the lock and
+-- the row is inserted only if a seat is genuinely free — all in one transaction.
+--
+-- Semantics preserved from the previous application-level gate:
+--   * capacity IS NULL  → unlimited (no cap enforced)
+--   * only CONFIRMED rows count toward the cap (matches getConfirmedCount() and
+--     the "spots left" display); PENDING holds are not counted
+-- Returns one of:
+--   'INSERTED'        → registration row created
+--   'CAPACITY_FULL'   → event at capacity (route returns the existing 409 "Event is full")
+--   'EVENT_NOT_FOUND' → no such event id
+--
+-- SECURITY DEFINER + execute restricted to service_role: the route's adminClient
+-- (service_role) is the only caller. anon/authenticated must NOT be able to call
+-- it directly, as it inserts a registration with a caller-supplied user_id/status
+-- and would otherwise bypass RLS. Idempotent: safe to re-run.
+create or replace function public.register_for_event(
+  p_registration_id   text,
+  p_event_id          text,
+  p_user_id           text,
+  p_status            text,
+  p_custom_responses  text,
+  p_razorpay_order_id text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_capacity  int;
+  v_confirmed int;
+begin
+  -- Serialize concurrent registrations for this event; the lock is held until
+  -- this function's transaction commits, so the count below sees every prior
+  -- committed insert.
+  select capacity into v_capacity
+  from public.events
+  where id = p_event_id
+  for update;
+
+  if not found then
+    return 'EVENT_NOT_FOUND';
+  end if;
+
+  if v_capacity is not null then
+    select count(*) into v_confirmed
+    from public.event_registrations
+    where event_id = p_event_id and status = 'CONFIRMED';
+
+    if v_confirmed >= v_capacity then
+      return 'CAPACITY_FULL';
+    end if;
+  end if;
+
+  insert into public.event_registrations
+    (id, event_id, user_id, status, razorpay_order_id, custom_responses)
+  values
+    (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id, p_custom_responses);
+
+  return 'INSERTED';
+end;
+$$;
+
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from public;
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from anon;
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from authenticated;
+grant  execute on function public.register_for_event(text, text, text, text, text, text) to service_role;
+
 -- ─── Profile shareability (DPDP) ──────────────────────────────────────────────
 -- Applied manually via the Supabase SQL Editor. When false, the profile page is
 -- owner/admin-only (404 for everyone else, direct URL included) and leaderboard
