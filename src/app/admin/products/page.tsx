@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { deleteProductAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
@@ -20,12 +21,12 @@ export default async function AdminProductsPage() {
     <div>
       <div className='flex items-center justify-between mb-8'>
         <h1 className='text-3xl font-bold text-white'>Products</h1>
-        <a
+        <Link
           href='/admin/products/new'
           className='bg-stride-yellow-accent text-copy-black font-semibold px-5 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center'
         >
           + New Product
-        </a>
+        </Link>
       </div>
 
       {!allProducts || allProducts.length === 0 ? (
@@ -60,9 +61,9 @@ export default async function AdminProductsPage() {
                   </td>
                   <td className='px-6 py-4'>
                     <div className='flex gap-3 justify-end'>
-                      <a href={`/admin/products/${product.id}/edit`} className='text-stride-yellow-accent hover:underline text-xs'>
+                      <Link href={`/admin/products/${product.id}/edit`} className='text-stride-yellow-accent hover:underline text-xs'>
                         Edit
-                      </a>
+                      </Link>
                       <form action={deleteProductAction.bind(null, product.id)}>
                         <PendingButton className='text-red-400 hover:underline text-xs' pendingLabel='Deleting…'>
                           Delete

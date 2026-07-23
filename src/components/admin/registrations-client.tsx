@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar } from 'lucide-react'
 import type { RunnerRow, EventWithAttendees } from '@/app/admin/registrations/page'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
@@ -243,13 +244,13 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
 
                         {/* Actions — stop propagation so clicks don't toggle expand */}
                         <div className='flex items-center gap-1 shrink-0' onClick={e => e.stopPropagation()}>
-                          <a
+                          <Link
                             href={`/admin/events/${event.id}/edit`}
                             title='Edit event'
                             className='p-1.5 rounded-lg text-white/25 hover:text-stride-yellow-accent hover:bg-white/5 transition-colors'
                           >
                             <Pencil size={13} />
-                          </a>
+                          </Link>
                           <a
                             href={`/events/${event.slug}`}
                             target='_blank'

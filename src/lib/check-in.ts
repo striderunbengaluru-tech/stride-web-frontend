@@ -7,6 +7,11 @@ import { adminClient } from '@/lib/supabase/admin'
 // Callers MUST verify the caller is an admin before invoking — this mutates.
 
 const CHECK_IN_GRACE_MS = 24 * 60 * 60 * 1000
+// A single scan reaches this GET more than once (RSC prefetch + the real
+// navigation, a reload, or the camera→browser handoff). Within this window a
+// repeat is treated as the SAME scan and shown as success, not the "already
+// checked in" warning — that warning is reserved for a genuine later re-scan.
+const CHECK_IN_DEDUP_MS = 2 * 60 * 1000
 
 export type CheckInResult =
   | { ok: true; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
@@ -52,26 +57,36 @@ export async function checkInByRegistrationId(registrationId: string): Promise<C
     return { ok: false, code: 'not-confirmed', message: 'Registration is not confirmed.', attendeeName, eventName }
   }
 
-  if (registration.checked_in_at) {
-    return {
-      ok: false,
-      code: 'already',
-      message: 'Already checked in.',
-      attendeeName,
-      eventName,
-      checkedInAt: registration.checked_in_at,
-    }
-  }
-
+  // Atomic check-in: only the request that flips checked_in_at from NULL wins,
+  // so runs_completed can never be double-counted by concurrent/duplicate GETs.
   const now = new Date().toISOString()
-  const { error: updateError } = await adminClient
+  const { data: claimed, error: updateError } = await adminClient
     .from('event_registrations')
     .update({ checked_in_at: now })
     .eq('id', registration.id)
+    .is('checked_in_at', null)
+    .select('id')
 
   if (updateError) {
     console.error('[Check-in] update error', updateError)
     return { ok: false, code: 'failed', message: 'Check-in failed. Try again.', attendeeName, eventName }
+  }
+
+  // No row claimed → this pass was already checked in. If that happened just
+  // now (a duplicate fire of the same scan) show success; only a genuine later
+  // re-scan gets the "already checked in" warning.
+  if (!claimed || claimed.length === 0) {
+    const { data: current } = await adminClient
+      .from('event_registrations')
+      .select('checked_in_at')
+      .eq('id', registration.id)
+      .maybeSingle()
+    const checkedInAt = current?.checked_in_at ?? now
+    const isRecent = Date.now() - new Date(checkedInAt).getTime() < CHECK_IN_DEDUP_MS
+    if (isRecent) {
+      return { ok: true, attendeeName, eventName, runsCompleted: runner?.runs_completed ?? 0, checkedInAt }
+    }
+    return { ok: false, code: 'already', message: 'Already checked in.', attendeeName, eventName, checkedInAt }
   }
 
   const runsCompleted = (runner?.runs_completed ?? 0) + 1

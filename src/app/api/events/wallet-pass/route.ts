@@ -22,9 +22,10 @@ import {
 const WALLETWALLET_ENDPOINT = 'https://api.walletwallet.dev/api/passes'
 const LOGO_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/stride-logo-small.png'
-// Fixed strip banner — the same for every run and both wallet platforms
-const STRIP_URL =
-  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/wallet-ticket-strip-banner.png'
+// Ducky thumbnail — shown as a compact square image on the pass. Replaces the
+// old full-width strip banner, which was being visually cut off in the wallet.
+const THUMBNAIL_URL =
+  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
 const RELEVANT_TEXT = "You've almost reached! Show this pass to one of the Stride leads"
 
 // Origin of the deployment actually serving this request, so pass links point
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
     color: '#4B2862',
     logoURL: LOGO_URL,
     iconURL: LOGO_URL,
-    stripURL: STRIP_URL,
+    thumbnailURL: THUMBNAIL_URL,
     primaryFields: [{ label: "You're In!", value: event.name }],
     ...(eventOn ? { secondaryFields: [{ label: 'Event on', value: eventOn }] } : {}),
     ...(profile?.runner_tag
