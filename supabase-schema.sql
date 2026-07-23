@@ -322,3 +322,104 @@ grant  execute on function public.register_for_event(text, text, text, text, tex
 alter table public.users add column profile_public boolean not null default true;
 -- Optional cleanup once deployed (no code reads it anymore):
 -- alter table public.users drop column avatar_public;
+
+-- ─── Privileged-column write guard (privilege-escalation fix — CWE-269) ───────
+-- Applied manually via the Supabase SQL Editor. Idempotent, safe to re-run.
+--
+-- The "Users can update own profile" UPDATE policy gates only on row ownership
+-- (auth.uid() = id) with no column restriction, so a member could PATCH their
+-- own row's `role` to 'ADMIN' straight through PostgREST and self-escalate.
+-- Defence 1 (authoritative): a BEFORE UPDATE trigger rejects any change to the
+-- privileged/server-maintained columns when the caller is a PostgREST client
+-- role (authenticated/anon); trusted backend roles (service_role via adminClient,
+-- postgres) pass through. Defence 2: a column-level UPDATE revoke.
+create or replace function public.enforce_users_privileged_columns()
+returns trigger
+language plpgsql
+as $$
+declare
+  privileged_cols constant text[] :=
+    array['role', 'runs_completed', 'total_distance_meters', 'runner_tag'];
+  col     text;
+  old_row jsonb := to_jsonb(old);
+  new_row jsonb := to_jsonb(new);
+begin
+  if current_user not in ('authenticated', 'anon') then
+    return new;
+  end if;
+
+  foreach col in array privileged_cols loop
+    if (old_row ? col) and (new_row ? col)
+       and (old_row -> col) is distinct from (new_row -> col) then
+      raise exception 'Column "%" on public.users is not client-updatable', col
+        using errcode = 'insufficient_privilege';
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists enforce_users_privileged_columns on public.users;
+create trigger enforce_users_privileged_columns
+  before update on public.users
+  for each row execute procedure public.enforce_users_privileged_columns();
+
+do $$
+declare
+  privileged_cols constant text[] :=
+    array['role', 'runs_completed', 'total_distance_meters', 'runner_tag'];
+  col text;
+begin
+  foreach col in array privileged_cols loop
+    if exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name  = 'users'
+        and column_name = col
+    ) then
+      execute format(
+        'revoke update (%I) on public.users from anon, authenticated', col);
+    end if;
+  end loop;
+end;
+$$;
+
+-- ─── PII read guard (info-disclosure fix — CWE-1230) ──────────────────────────
+-- Applied manually via the Supabase SQL Editor. Idempotent, safe to re-run.
+--
+-- The "Profiles are publicly readable" SELECT policy is using(true), and Supabase
+-- grants table-wide SELECT to anon/authenticated by default, so any anon-key
+-- holder could dump every member's PII via PostgREST, bypassing the app-layer
+-- profile_public toggle. Fix: drop the table-wide SELECT grant and re-grant
+-- column-level SELECT on every column EXCEPT the five PII columns. Public profile
+-- display and the leaderboard read via adminClient (service_role), which bypasses
+-- column grants, so they are unaffected.
+do $$
+declare
+  pii_columns constant text[] := array[
+    'email',
+    'contact_number',
+    'emergency_contact_number',
+    'date_of_birth',
+    'gender'
+  ];
+  grantable text;
+begin
+  revoke select on public.users from anon, authenticated;
+
+  select string_agg(quote_ident(column_name), ', ')
+    into grantable
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name   = 'users'
+    and column_name <> all (pii_columns);
+
+  if grantable is not null then
+    execute format(
+      'grant select (%s) on public.users to anon, authenticated',
+      grantable
+    );
+  end if;
+end
+$$;
