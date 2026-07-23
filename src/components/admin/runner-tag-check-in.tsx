@@ -96,8 +96,6 @@ const TONE_CLASSES: Record<'green' | 'yellow' | 'orange' | 'grey', string> = {
 export function RunnerTagCheckIn() {
   const [events, setEvents] = useState<Event[]>([])
   const [selectedEventId, setSelectedEventId] = useState('')
-  const [eventStats, setEventStats] = useState<EventStats | null>(null)
-  const [loadingStats, setLoadingStats] = useState(false)
   const [runnerTag, setRunnerTag] = useState('')
   const [state, setState] = useState<CheckInState>({ status: 'idle' })
   const [now, setNow] = useState(() => Date.now())
@@ -174,28 +172,19 @@ export function RunnerTagCheckIn() {
     }
   }, [pickerOpen])
 
-  // Stats fetch
-  useEffect(() => {
-    if (!selectedEventId) { setEventStats(null); return }
-    setLoadingStats(true)
-    const supabase = createClient()
-    Promise.all([
-      supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', selectedEventId)
-        .eq('status', 'CONFIRMED'),
-      supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', selectedEventId)
-        .eq('status', 'CONFIRMED')
-        .not('checked_in_at', 'is', null),
-    ]).then(([{ count: total }, { count: checkedIn }]) => {
-      setEventStats({ checkedIn: checkedIn ?? 0, total: total ?? 0 })
-      setLoadingStats(false)
-    })
-  }, [selectedEventId])
+  // Check-in counter derived from the admin-gated attendee list (below) rather
+  // than a browser-side count query: that query ran through the RLS-scoped
+  // anon client and could only see the admin's OWN registrations, so it showed
+  // a bogus "0 / 1". The attendee list comes from /api/admin/event-attendees
+  // (service role), so counting it gives the true checked-in / total figures —
+  // and it updates automatically as attendees are optimistically checked in.
+  const eventStats = useMemo<EventStats | null>(() => {
+    if (!selectedEventId) return null
+    return {
+      total: attendees.length,
+      checkedIn: attendees.filter(a => a.checkedInAt).length,
+    }
+  }, [selectedEventId, attendees])
 
   // Load attendees for search mode (admin-gated API)
   const loadAttendees = useCallback(async (eventId: string) => {
@@ -251,8 +240,8 @@ export function RunnerTagCheckIn() {
         runsCompleted: d.runsCompleted,
         checkedInAt: d.checkedInAt,
       })
-      setEventStats(prev => prev ? { ...prev, checkedIn: prev.checkedIn + 1 } : null)
-      // Optimistically mark in the search list
+      // Optimistically mark in the search list — the counter is derived from
+      // this list, so it advances in lockstep without a separate update.
       setAttendees(prev => prev.map(a => a.runnerTag?.toUpperCase() === tag.toUpperCase()
         ? { ...a, checkedInAt: d.checkedInAt }
         : a))
@@ -387,7 +376,7 @@ export function RunnerTagCheckIn() {
         {/* Stats */}
         {selectedEventId && (
           <div className='mt-1'>
-            {loadingStats ? (
+            {loadingAttendees && attendees.length === 0 ? (
               <div className='h-7 bg-white/5 rounded-lg animate-pulse' />
             ) : eventStats ? (
               <div className='flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5'>

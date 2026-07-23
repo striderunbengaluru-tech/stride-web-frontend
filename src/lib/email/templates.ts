@@ -16,10 +16,33 @@ const BODY_FONT = "'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 const HEADING_FONT = "'Libre Baskerville', Georgia, 'Times New Roman', serif"
 const MONO_FONT = "'Geist Mono', 'Courier New', Courier, monospace"
 
-const WEBFONT_STYLE = `
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Figtree:wght@400;500;600;700&family=Geist+Mono:wght@400;700&display=swap');
-  </style>`
+// Wraps a template body in a complete HTML document. The `color-scheme` /
+// `supported-color-schemes` meta tags are the fix for mobile dark mode: they
+// declare that this email is already designed for its own (dark purple) canvas,
+// so Gmail and Apple Mail STOP applying their automatic dark-mode colour
+// remapping. Without this opt-in the clients treat the mail as "light" and
+// force-darken the purple canvas, white copy and yellow CTA into an illegible,
+// inverted mess — while light mode (no remapping) looked correct. The document
+// also pins the body background so the brand canvas never flashes white.
+function emailDocument(body: string): string {
+  return `<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;background-color:${PURPLE};">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <meta name="supported-color-schemes" content="dark light">
+    <style>
+      :root { color-scheme: dark light; supported-color-schemes: dark light; }
+      body { margin:0; padding:0; background-color:${PURPLE}; }
+      @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Figtree:wght@400;500;600;700&family=Geist+Mono:wght@400;700&display=swap');
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background-color:${PURPLE};">
+    ${body}
+  </body>
+</html>`
+}
 
 // PNG copies of site assets — Gmail does not render SVG, Outlook does not
 // render WebP, so the email versions live alongside the originals as PNG.
@@ -171,7 +194,7 @@ export function welcomeEmail(params: {
   const { fullName, username, siteUrl } = params
   const profileUrl = `${siteUrl}/profile/${encodeURIComponent(username)}`
 
-  const htmlContent = `${WEBFONT_STYLE}
+  const bodyContent = `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PURPLE};padding:0 0 8px;">
     <tr>
       <td align="center">
@@ -229,7 +252,7 @@ export function welcomeEmail(params: {
 
   return {
     subject: "Welcome to Stride Run Club - The 'Fittest Club' in India.",
-    htmlContent,
+    htmlContent: emailDocument(bodyContent),
   }
 }
 
@@ -301,7 +324,7 @@ export function registrationConfirmedEmail(params: {
       </table>`
     : ''
 
-  const htmlContent = `${WEBFONT_STYLE}
+  const bodyContent = `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PURPLE};padding:0 0 8px;">
     <tr>
       <td align="center">
@@ -366,6 +389,6 @@ export function registrationConfirmedEmail(params: {
 
   return {
     subject: `You're in! Booking confirmed for ${eventName}`,
-    htmlContent,
+    htmlContent: emailDocument(bodyContent),
   }
 }

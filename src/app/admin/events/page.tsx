@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events-admin-client'
 
@@ -57,12 +58,12 @@ export default async function AdminEventsPage() {
           <h1 className='text-3xl font-bold text-white'>Events</h1>
           <p className='text-white/40 text-sm mt-1'>{rows.length} total · {published} published · {upcoming} upcoming</p>
         </div>
-        <a
+        <Link
           href='/admin/events/new'
           className='bg-stride-yellow-accent text-copy-black font-semibold px-5 py-2.5 rounded-md hover:bg-stride-yellow-accent/90 transition-colors text-sm min-h-11 flex items-center gap-2'
         >
           + New Event
-        </a>
+        </Link>
       </div>
 
       {/* Summary stats */}
