@@ -10,6 +10,7 @@ import {
   Users,
   ScanLine,
 } from 'lucide-react'
+import { NavLoadingLink } from '@/components/layout/nav-loading-link'
 
 const navLinks = [
   { href: '/admin',               label: 'Dashboard',      icon: LayoutDashboard, exact: true },
@@ -45,27 +46,31 @@ export function AdminNav() {
             {/* Separator */}
             <div className='h-5 w-px bg-white/10 shrink-0 mr-1' aria-hidden='true' />
 
-            {/* Nav links */}
+            {/* Nav links. Active item stays a plain Link (you're already there,
+                so it needs aria-current, not a spinner). Inactive items use
+                NavLoadingLink so a tap immediately shows a spinner + yellow
+                label while the destination segment loads — no dead-tap feel. */}
             {navLinks.map(({ href, label, icon: Icon, exact }) => {
               const active = isActive(href, exact)
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
-                    active
-                      ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
-                      : 'text-white/50 hover:text-white hover:bg-white/8'
-                  }`}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <Icon
-                    size={14}
-                    strokeWidth={active ? 2.5 : 2}
-                    className='shrink-0'
-                  />
+              const className = `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+                active
+                  ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
+                  : 'text-white/50 hover:text-white hover:bg-white/8'
+              }`
+              const inner = (
+                <>
+                  <Icon size={14} strokeWidth={active ? 2.5 : 2} className='shrink-0' />
                   <span>{label}</span>
+                </>
+              )
+              return active ? (
+                <Link key={href} href={href} className={className} aria-current='page'>
+                  {inner}
                 </Link>
+              ) : (
+                <NavLoadingLink key={href} href={href} className={className}>
+                  {inner}
+                </NavLoadingLink>
               )
             })}
           </div>

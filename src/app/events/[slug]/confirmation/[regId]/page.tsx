@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -6,14 +7,9 @@ import ReactMarkdown from 'react-markdown'
 import { CheckCircle2, MapPin, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-import {
-  MAX_PASSES_PER_REGISTRATION,
-  getWalletQuotaRemaining,
-  getWalletPassCount,
-} from '@/lib/wallet-quota'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
-import { WalletPassButtons } from '@/components/events/wallet-pass-buttons'
+import { WalletPassSection, WalletPassSectionSkeleton } from '@/components/events/wallet-pass-section'
 import { ShareConfirmation } from '@/components/events/share-confirmation'
 import { SectionReveal } from '@/components/ui/section-reveal'
 import { PostCard } from '@/components/blog/post-card'
@@ -67,7 +63,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     notFound()
   }
 
-  const [{ data: event }, { data: profile }, quotaRemaining, passCount] = await Promise.all([
+  const [{ data: event }, { data: profile }] = await Promise.all([
     adminClient
       .from('events')
       .select('id, name, slug, subtitle, event_date, end_date, location, location_url, banner_images, price_paise, confirmation_text')
@@ -78,8 +74,6 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
       .select('full_name, runner_tag')
       .eq('id', user.id)
       .single(),
-    getWalletQuotaRemaining(),
-    getWalletPassCount(regId),
   ])
 
   if (!event) notFound()
@@ -100,20 +94,6 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
   const concludesAt = event.end_date ?? event.event_date
   const isConcluded = !!concludesAt && new Date(concludesAt).getTime() < Date.now()
-  // Wallet CTAs — hidden entirely when the run is over, the monthly
-  // WalletWallet quota is exhausted (or key unset), or this registration hit
-  // its per-booking cap. `?wallet=` flags from the pass route surface notices.
-  const walletAvailable = quotaRemaining === null || quotaRemaining > 0
-  const underPassCap = passCount < MAX_PASSES_PER_REGISTRATION
-  const showWalletCtas = !isConcluded && walletAvailable && underPassCap
-  const walletNotice =
-    !isConcluded && walletAvailable && (wallet === 'limit' || !underPassCap)
-      ? `You’ve hit the download limit for this booking (${MAX_PASSES_PER_REGISTRATION} passes). Your saved pass still works.`
-      : wallet === 'quota'
-      ? 'Wallet passes are temporarily unavailable. Please try again later.'
-      : wallet === 'error'
-      ? 'We couldn’t generate your pass just now. Please try again in a bit.'
-      : null
 
   const googleCalendarUrl = event.event_date && !isConcluded
     ? buildGoogleCalendarUrl({
@@ -239,21 +219,18 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
           <h2 className='text-white font-bold text-xl leading-tight pt-2'>Here&apos;s your next steps</h2>
         </SectionReveal>
 
-        {/* Save to your wallet — hidden when the run is over, the monthly
-            WalletWallet quota is exhausted, or this booking hit its cap.
+        {/* Save to your wallet — streamed separately so the external wallet
+            quota check never blocks the rest of the page. Hidden when the run
+            is over, the monthly quota is exhausted, or this booking hit its cap.
             The pass QR deep-links to the admin check-in page. */}
-        {(showWalletCtas || walletNotice) && (
-          <SectionReveal delay={0.12}>
-            <div>
-              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Save to your wallet</p>
-              {walletNotice && (
-                <p className='text-white/60 text-xs bg-white/5 border border-white/12 rounded-lg px-3 py-2.5 mb-3'>
-                  {walletNotice}
-                </p>
-              )}
-              {showWalletCtas && <WalletPassButtons registrationId={registration.id} />}
-            </div>
-          </SectionReveal>
+        {!isConcluded && (
+          <Suspense fallback={<WalletPassSectionSkeleton />}>
+            <WalletPassSection
+              registrationId={registration.id}
+              isConcluded={isConcluded}
+              walletFlag={wallet}
+            />
+          </Suspense>
         )}
 
         {/* Block your calendar — upcoming runs only */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
@@ -262,13 +263,13 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
 
                   {/* Desktop actions */}
                   <div className='hidden sm:flex items-center gap-1 shrink-0'>
-                    <a
+                    <Link
                       href={`/admin/events/${event.id}/edit`}
                       title='Edit event'
                       className='p-2 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 hover:text-stride-yellow-accent transition-colors'
                     >
                       <Pencil size={14} />
-                    </a>
+                    </Link>
                     <CopyLinkButton slug={event.slug} />
                     <button
                       onClick={() => setDeleteTarget(event)}
@@ -303,9 +304,9 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                     <CapacityBar confirmed={event.confirmedCount} capacity={event.capacity} />
                   </div>
                   <div className='flex items-center gap-1 shrink-0'>
-                    <a href={`/admin/events/${event.id}/edit`} title='Edit' className='p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-stride-yellow-accent transition-colors'>
+                    <Link href={`/admin/events/${event.id}/edit`} title='Edit' className='p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-stride-yellow-accent transition-colors'>
                       <Pencil size={13} />
-                    </a>
+                    </Link>
                     <CopyLinkButton slug={event.slug} />
                     <button onClick={() => setDeleteTarget(event)} title='Delete' className='p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-red-400 transition-colors'>
                       <Trash2 size={13} />
@@ -342,12 +343,12 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       <p className='text-white/40'>{fmtDate(event.createdAt)}</p>
                     </div>
                     <div className='sm:col-span-2 flex gap-2 pt-1'>
-                      <a
+                      <Link
                         href={`/admin/events/${event.id}/edit`}
                         className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stride-yellow-accent/10 text-stride-yellow-accent text-xs font-medium hover:bg-stride-yellow-accent/20 transition-colors'
                       >
                         <Pencil size={11} /> Edit event
-                      </a>
+                      </Link>
                       <a
                         href={`/events/${event.slug}`}
                         target='_blank'

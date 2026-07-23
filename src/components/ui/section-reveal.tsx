@@ -44,11 +44,22 @@ export function SectionReveal({ children, className, delay = 0 }: SectionRevealP
           observer.disconnect()
         }
       },
-      // Reveal starts once the element is 80px inside the viewport
-      { rootMargin: '-80px' }
+      // Reveal BEFORE the element scrolls into view — the bottom margin extends
+      // the root downward so the fade begins ~40% of a screen early and has
+      // finished by the time the section is actually on screen. The old
+      // `-80px` fired only after the element was already 80px inside the
+      // viewport, leaving a visible blank band that "loaded in" as you scrolled.
+      { rootMargin: '0px 0px 40% 0px' }
     )
     observer.observe(el)
-    return () => observer.disconnect()
+
+    // Safety net: never leave a section stuck invisible if the observer somehow
+    // doesn't fire (e.g. it renders inside a scroll container it can't observe).
+    const fallback = setTimeout(() => setPhase(p => (p === 'hidden' ? 'revealed' : p)), 1200)
+    return () => {
+      observer.disconnect()
+      clearTimeout(fallback)
+    }
   }, [])
 
   const hidden = phase === 'hidden'

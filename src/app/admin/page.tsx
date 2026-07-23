@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { DashboardCharts } from '@/components/admin/dashboard-charts'
 import { CalendarRange, ClipboardCheck, Users, Package, LayoutDashboard, ArrowUpRight } from 'lucide-react'
@@ -156,7 +157,7 @@ export default async function AdminDashboardPage() {
       {/* Stat cards */}
       <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
         {stats.map((stat) => (
-          <a
+          <Link
             key={stat.label}
             href={stat.href}
             className='group relative bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-stride-yellow-accent/50 hover:bg-white/8 transition-colors'
@@ -172,7 +173,7 @@ export default async function AdminDashboardPage() {
             </div>
             <p className='text-4xl font-bold text-white tabular-nums leading-none font-mono'>{stat.count}</p>
             <p className='text-white/45 text-xs mt-2 font-mono uppercase tracking-wider'>{stat.label}</p>
-          </a>
+          </Link>
         ))}
       </div>
 
