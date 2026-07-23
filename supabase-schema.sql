@@ -237,6 +237,84 @@ update public.users set welcome_email_sent_at = now();
 -- Backfill: already-confirmed registrations must not get a late confirmation email
 update public.event_registrations set confirmation_email_sent_at = now() where status = 'CONFIRMED';
 
+-- ─── Atomic event-capacity guard (race-condition fix — CWE-362) ──────────────
+-- Applied manually via the Supabase SQL Editor. MUST be run BEFORE deploying the
+-- updated /api/events/register route, which calls this function via rpc().
+--
+-- The register route previously read the CONFIRMED count and then inserted in a
+-- separate, non-atomic step, so two concurrent registrations for the last seat
+-- could both pass the check and both insert — overbooking an event past its
+-- capacity. This function closes that window: it takes a row lock on the event
+-- (SELECT ... FOR UPDATE), so concurrent registrations for the SAME event
+-- serialize on that lock; the CONFIRMED count is then re-read under the lock and
+-- the row is inserted only if a seat is genuinely free — all in one transaction.
+--
+-- Semantics preserved from the previous application-level gate:
+--   * capacity IS NULL  → unlimited (no cap enforced)
+--   * only CONFIRMED rows count toward the cap (matches getConfirmedCount() and
+--     the "spots left" display); PENDING holds are not counted
+-- Returns one of:
+--   'INSERTED'        → registration row created
+--   'CAPACITY_FULL'   → event at capacity (route returns the existing 409 "Event is full")
+--   'EVENT_NOT_FOUND' → no such event id
+--
+-- SECURITY DEFINER + execute restricted to service_role: the route's adminClient
+-- (service_role) is the only caller. anon/authenticated must NOT be able to call
+-- it directly, as it inserts a registration with a caller-supplied user_id/status
+-- and would otherwise bypass RLS. Idempotent: safe to re-run.
+create or replace function public.register_for_event(
+  p_registration_id   text,
+  p_event_id          text,
+  p_user_id           text,
+  p_status            text,
+  p_custom_responses  text,
+  p_razorpay_order_id text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_capacity  int;
+  v_confirmed int;
+begin
+  -- Serialize concurrent registrations for this event; the lock is held until
+  -- this function's transaction commits, so the count below sees every prior
+  -- committed insert.
+  select capacity into v_capacity
+  from public.events
+  where id = p_event_id
+  for update;
+
+  if not found then
+    return 'EVENT_NOT_FOUND';
+  end if;
+
+  if v_capacity is not null then
+    select count(*) into v_confirmed
+    from public.event_registrations
+    where event_id = p_event_id and status = 'CONFIRMED';
+
+    if v_confirmed >= v_capacity then
+      return 'CAPACITY_FULL';
+    end if;
+  end if;
+
+  insert into public.event_registrations
+    (id, event_id, user_id, status, razorpay_order_id, custom_responses)
+  values
+    (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id, p_custom_responses);
+
+  return 'INSERTED';
+end;
+$$;
+
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from public;
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from anon;
+revoke all    on function public.register_for_event(text, text, text, text, text, text) from authenticated;
+grant  execute on function public.register_for_event(text, text, text, text, text, text) to service_role;
+
 -- ─── Profile shareability (DPDP) ──────────────────────────────────────────────
 -- Applied manually via the Supabase SQL Editor. When false, the profile page is
 -- owner/admin-only (404 for everyone else, direct URL included) and leaderboard
@@ -244,3 +322,104 @@ update public.event_registrations set confirmation_email_sent_at = now() where s
 alter table public.users add column profile_public boolean not null default true;
 -- Optional cleanup once deployed (no code reads it anymore):
 -- alter table public.users drop column avatar_public;
+
+-- ─── Privileged-column write guard (privilege-escalation fix — CWE-269) ───────
+-- Applied manually via the Supabase SQL Editor. Idempotent, safe to re-run.
+--
+-- The "Users can update own profile" UPDATE policy gates only on row ownership
+-- (auth.uid() = id) with no column restriction, so a member could PATCH their
+-- own row's `role` to 'ADMIN' straight through PostgREST and self-escalate.
+-- Defence 1 (authoritative): a BEFORE UPDATE trigger rejects any change to the
+-- privileged/server-maintained columns when the caller is a PostgREST client
+-- role (authenticated/anon); trusted backend roles (service_role via adminClient,
+-- postgres) pass through. Defence 2: a column-level UPDATE revoke.
+create or replace function public.enforce_users_privileged_columns()
+returns trigger
+language plpgsql
+as $$
+declare
+  privileged_cols constant text[] :=
+    array['role', 'runs_completed', 'total_distance_meters', 'runner_tag'];
+  col     text;
+  old_row jsonb := to_jsonb(old);
+  new_row jsonb := to_jsonb(new);
+begin
+  if current_user not in ('authenticated', 'anon') then
+    return new;
+  end if;
+
+  foreach col in array privileged_cols loop
+    if (old_row ? col) and (new_row ? col)
+       and (old_row -> col) is distinct from (new_row -> col) then
+      raise exception 'Column "%" on public.users is not client-updatable', col
+        using errcode = 'insufficient_privilege';
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists enforce_users_privileged_columns on public.users;
+create trigger enforce_users_privileged_columns
+  before update on public.users
+  for each row execute procedure public.enforce_users_privileged_columns();
+
+do $$
+declare
+  privileged_cols constant text[] :=
+    array['role', 'runs_completed', 'total_distance_meters', 'runner_tag'];
+  col text;
+begin
+  foreach col in array privileged_cols loop
+    if exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public'
+        and table_name  = 'users'
+        and column_name = col
+    ) then
+      execute format(
+        'revoke update (%I) on public.users from anon, authenticated', col);
+    end if;
+  end loop;
+end;
+$$;
+
+-- ─── PII read guard (info-disclosure fix — CWE-1230) ──────────────────────────
+-- Applied manually via the Supabase SQL Editor. Idempotent, safe to re-run.
+--
+-- The "Profiles are publicly readable" SELECT policy is using(true), and Supabase
+-- grants table-wide SELECT to anon/authenticated by default, so any anon-key
+-- holder could dump every member's PII via PostgREST, bypassing the app-layer
+-- profile_public toggle. Fix: drop the table-wide SELECT grant and re-grant
+-- column-level SELECT on every column EXCEPT the five PII columns. Public profile
+-- display and the leaderboard read via adminClient (service_role), which bypasses
+-- column grants, so they are unaffected.
+do $$
+declare
+  pii_columns constant text[] := array[
+    'email',
+    'contact_number',
+    'emergency_contact_number',
+    'date_of_birth',
+    'gender'
+  ];
+  grantable text;
+begin
+  revoke select on public.users from anon, authenticated;
+
+  select string_agg(quote_ident(column_name), ', ')
+    into grantable
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name   = 'users'
+    and column_name <> all (pii_columns);
+
+  if grantable is not null then
+    execute format(
+      'grant select (%s) on public.users to anon, authenticated',
+      grantable
+    );
+  end if;
+end
+$$;
