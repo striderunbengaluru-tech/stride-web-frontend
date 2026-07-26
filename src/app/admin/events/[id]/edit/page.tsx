@@ -43,7 +43,7 @@ export default async function EditEventPage({ params }: Props) {
           eventDate: toDatetimeLocal(event.event_date),
           endDate: toDatetimeLocal(event.end_date),
           capacity: event.capacity ?? undefined,
-          pricePaise: event.price_paise,
+          priceRupees: event.price_paise / 100,
           showSpotsLeft: event.show_spots_left ?? false,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,

@@ -91,6 +91,24 @@ export default function Footer() {
                 <StravaIcon className='size-5' />
               </Link>
             </div>
+            {/* Secure-payments trust badge — external asset from Razorpay's CDN */}
+            <a
+              href='https://razorpay.com/'
+              target='_blank'
+              rel='noopener noreferrer'
+              aria-label='Payments secured by Razorpay'
+              className='inline-block w-fit pt-1'
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                referrerPolicy='origin'
+                src='https://badges.razorpay.com/badge-light.png'
+                alt='Razorpay | Payment Gateway | Neobank'
+                loading='lazy'
+                fetchPriority='low'
+                className='h-11.25 w-28.25'
+              />
+            </a>
           </div>
 
           {/* ── Link columns ── 1 col mobile, 3 col tablet+ ── */}

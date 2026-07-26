@@ -581,11 +581,21 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               disabled={loading || (hasTerms && !accepted) || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
               className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-11 flex items-center justify-center gap-2'
             >
-              {loading
-                ? <><Spinner /> Processing…</>
-                : isPaid
-                  ? `Continue to payment · ₹${(pricePaise / 100).toLocaleString('en-IN')}`
-                  : 'Confirm registration'}
+              {loading ? (
+                <><Spinner /> Processing…</>
+              ) : isPaid ? (
+                <>
+                  Pay ₹{(pricePaise / 100).toLocaleString('en-IN')} securely via
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/razorpay-full-icon.svg'
+                    alt='Razorpay'
+                    className='h-5 w-auto'
+                  />
+                </>
+              ) : (
+                'Confirm registration'
+              )}
             </button>
 
             <p className='text-white/30 text-[11px] text-center'>

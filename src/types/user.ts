@@ -9,11 +9,6 @@ export type Prompt = {
   answer: string
 }
 
-export type GalleryImage = {
-  url: string
-  caption?: string
-}
-
 // A user-entered race result. Stored as a JSON array on `users.official_runs`
 // (no dedicated table).
 export type OfficialRun = {
@@ -44,7 +39,6 @@ export type UserProfile = {
   strava_url: string | null
   x_url: string | null
   prompts: Prompt[]
-  gallery_images: GalleryImage[]
   runs_completed: number
   runner_tag: string | null
   strava_connected: boolean

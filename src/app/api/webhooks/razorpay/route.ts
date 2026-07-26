@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  let event: { event: string; payload?: { payment?: { entity?: { order_id?: string; id?: string } } } }
+  let event: { event: string; payload?: { payment?: { entity?: { order_id?: string; id?: string; amount?: number | string } } } }
   try {
     event = JSON.parse(rawBody)
   } catch {
@@ -34,11 +34,13 @@ export async function POST(request: Request) {
   const eventType = event.event ?? ''
   const orderId = event.payload?.payment?.entity?.order_id ?? ''
   const paymentId = event.payload?.payment?.entity?.id ?? ''
+  const capturedAmount = Number(event.payload?.payment?.entity?.amount ?? 0)
 
   if (!orderId) return NextResponse.json({ ok: true })
 
   if (eventType === 'payment.captured') {
-    // Fetch current status first (idempotency — skip if already CONFIRMED)
+    // Locate the registration this order belongs to (idempotent: the RPC skips
+    // an already-CONFIRMED row).
     const { data: reg } = await adminClient
       .from('event_registrations')
       .select('id, status, event_id')
@@ -46,21 +48,22 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (reg && reg.status !== 'CONFIRMED') {
-      await adminClient
-        .from('event_registrations')
-        .update({
-          status: 'CONFIRMED',
-          razorpay_payment_id: paymentId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('razorpay_order_id', orderId)
+      // Same atomic, capacity-guarded confirm path as verify-payment — records
+      // the captured amount and never oversells.
+      const { data: outcome } = await adminClient.rpc('confirm_registration', {
+        p_registration_id: reg.id,
+        p_razorpay_payment_id: paymentId,
+        p_amount_paid_paise: capturedAmount,
+      })
 
-      // Keep the cached confirmed-count (spots-left) exact after webhook confirms
-      revalidateTag(eventRegsTag(reg.event_id), 'max')
+      if (outcome === 'CONFIRMED') {
+        // Keep the cached confirmed-count (spots-left) exact after webhook confirms
+        revalidateTag(eventRegsTag(reg.event_id), 'max')
 
-      // Atomic claim inside prevents a double-send if verify-payment
-      // confirms the same registration concurrently.
-      after(() => sendConfirmationEmailOnce(reg.id))
+        // Atomic claim inside prevents a double-send if verify-payment
+        // confirms the same registration concurrently.
+        after(() => sendConfirmationEmailOnce(reg.id))
+      }
     }
   } else if (eventType === 'payment.failed') {
     const { data: cancelled } = await adminClient

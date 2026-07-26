@@ -53,7 +53,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     supabase.auth.getUser(),
     adminClient
       .from('event_registrations')
-      .select('id, user_id, status, event_id')
+      .select('id, user_id, status, event_id, amount_paid_paise, razorpay_payment_id')
       .eq('id', regId)
       .single(),
   ])
@@ -213,6 +213,29 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
             </div>
           </Link>
         </SectionReveal>
+
+        {/* ── Payment receipt — paid registrations only. Both values are read
+            straight from the DB (server-verified against Razorpay), never from
+            the client. ── */}
+        {registration.amount_paid_paise != null && (
+          <SectionReveal delay={0.08}>
+            <div className='rounded-xl bg-white/10 backdrop-blur-md border border-white/15 px-5 py-4'>
+              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Payment</p>
+              <div className='flex items-center justify-between gap-4'>
+                <span className='text-white/60 text-sm'>Amount paid</span>
+                <span className='text-white font-bold text-sm'>
+                  ₹{(registration.amount_paid_paise / 100).toLocaleString('en-IN')}
+                </span>
+              </div>
+              {registration.razorpay_payment_id && (
+                <div className='flex items-center justify-between gap-4 mt-2.5 pt-2.5 border-t border-white/8'>
+                  <span className='text-white/60 text-sm shrink-0'>Payment ID</span>
+                  <span className='font-mono text-white/70 text-xs truncate'>{registration.razorpay_payment_id}</span>
+                </div>
+              )}
+            </div>
+          </SectionReveal>
+        )}
 
         {/* ── Here's your next steps — wallet, calendar, share ── */}
         <SectionReveal delay={0.1}>
