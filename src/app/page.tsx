@@ -9,7 +9,7 @@ const SITE_ORIGIN = 'https://www.strideclub.in'
 const CANONICAL_URL = 'https://www.strideclub.in/'
 
 export const metadata: Metadata = {
-  title: 'Stride Run Club Bengaluru — Move as One',
+  title: "Stride Run Club Bengaluru - The 'Fittest Club' in India.",
   description:
     "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here. Join Stride Run Club.",
   keywords: [

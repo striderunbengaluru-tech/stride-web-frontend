@@ -61,7 +61,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   const [confirmationText, setConfirmationText] = useState(defaultValues.confirmationText ?? '')
   const [termsText, setTermsText] = useState(defaultValues.termsText ?? '')
   const [location, setLocation] = useState(defaultValues.location ?? '')
-  const [pricePaise, setPricePaise] = useState(defaultValues.pricePaise ?? 0)
+  // Admin edits the price in rupees (the edit page converts stored paise → rupees).
+  const [priceRupees, setPriceRupees] = useState(defaultValues.priceRupees ?? 0)
+  // Integer paise for the live preview + what the DB stores (Razorpay's unit).
+  const pricePaise = Math.round(priceRupees * 100)
   const [eventDate, setEventDate] = useState(defaultValues.eventDate ?? '')
   const [status, setStatus] = useState<Status>((defaultValues.status as Status) ?? 'DRAFT')
   const [distanceKm, setDistanceKm] = useState<string>(
@@ -515,14 +518,16 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                 <div className='flex flex-col gap-1.5'>
                   <div className='flex items-center gap-1.5'>
                     <IndianRupee size={14} className='text-white/40' />
-                    <label className='text-white/70 text-sm font-medium'>Price (paise)</label>
-                    <HelpHint text='Amount in paise. 100 paise = ₹1. Set to 0 for free events.' />
+                    <label className='text-white/70 text-sm font-medium'>Price (₹)</label>
+                    <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events.' />
                   </div>
                   <input
                     type='number'
-                    name='pricePaise'
-                    value={pricePaise}
-                    onChange={e => setPricePaise(Number(e.target.value))}
+                    name='priceRupees'
+                    step='0.01'
+                    min='0'
+                    value={priceRupees}
+                    onChange={e => setPriceRupees(Number(e.target.value))}
                     placeholder='0 for free'
                     className={`${inputBase} scheme-dark`}
                   />

@@ -64,7 +64,7 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
 
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
+      .select('id, amount_paid_paise, razorpay_payment_id, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
       .eq('id', registrationId)
       .single()
 
@@ -109,6 +109,8 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
       runnerTag: user.runner_tag,
       calendarUrl,
       confirmationUrl: `${SITE_URL}/events/${event.slug}/confirmation/${registrationId}`,
+      amountPaidPaise: reg?.amount_paid_paise ?? null,
+      paymentId: reg?.razorpay_payment_id ?? null,
     })
     await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
   } catch (err) {

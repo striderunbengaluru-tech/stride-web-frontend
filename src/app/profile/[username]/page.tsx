@@ -133,7 +133,6 @@ export default async function ProfilePage({ params }: Props) {
     ...(row as unknown as UserProfile),
     skills,
     prompts,
-    gallery_images: [],
     cover_url: null,
     x_url: row.x_url ?? null,
     runner_tag: row.runner_tag ?? null,

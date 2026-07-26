@@ -291,10 +291,17 @@ begin
     return 'EVENT_NOT_FOUND';
   end if;
 
+  -- Capacity counts CONFIRMED registrations PLUS fresh PENDING holds (created
+  -- within the last 15 minutes): an in-checkout hold reserves a seat, and
+  -- abandoned holds lazily expire so the seat frees itself (no cron needed).
   if v_capacity is not null then
     select count(*) into v_confirmed
     from public.event_registrations
-    where event_id = p_event_id and status = 'CONFIRMED';
+    where event_id = p_event_id
+      and (
+        status = 'CONFIRMED'
+        or (status = 'PENDING' and created_at > now() - interval '15 minutes')
+      );
 
     if v_confirmed >= v_capacity then
       return 'CAPACITY_FULL';
@@ -314,6 +321,76 @@ revoke all    on function public.register_for_event(text, text, text, text, text
 revoke all    on function public.register_for_event(text, text, text, text, text, text) from anon;
 revoke all    on function public.register_for_event(text, text, text, text, text, text) from authenticated;
 grant  execute on function public.register_for_event(text, text, text, text, text, text) to service_role;
+
+-- ─── Atomic payment confirmation ──────────────────────────────────────────────
+-- Applied manually via the Supabase SQL Editor. The single confirm path used by
+-- both the verify-payment route and the Razorpay webhook. Confirms a PENDING
+-- registration only if a seat is still available (SELECT ... FOR UPDATE on the
+-- event row), so no oversell is possible even if a payment lands after the
+-- 15-minute hold expired. Records the server-verified captured amount + payment
+-- id. Returns 'CONFIRMED' | 'ALREADY_CONFIRMED' | 'CAPACITY_FULL' |
+-- 'NOT_FOUND' | 'NOT_PENDING'.
+create or replace function public.confirm_registration(
+  p_registration_id     text,
+  p_razorpay_payment_id text,
+  p_amount_paid_paise   int
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_event_id  text;
+  v_status    text;
+  v_capacity  int;
+  v_confirmed int;
+begin
+  select event_id, status into v_event_id, v_status
+  from public.event_registrations
+  where id = p_registration_id
+  for update;
+
+  if not found then
+    return 'NOT_FOUND';
+  end if;
+  if v_status = 'CONFIRMED' then
+    return 'ALREADY_CONFIRMED';
+  end if;
+  if v_status <> 'PENDING' then
+    return 'NOT_PENDING';
+  end if;
+
+  select capacity into v_capacity
+  from public.events
+  where id = v_event_id
+  for update;
+
+  if v_capacity is not null then
+    select count(*) into v_confirmed
+    from public.event_registrations
+    where event_id = v_event_id and status = 'CONFIRMED';
+
+    if v_confirmed >= v_capacity then
+      return 'CAPACITY_FULL';
+    end if;
+  end if;
+
+  update public.event_registrations
+  set status              = 'CONFIRMED',
+      razorpay_payment_id = p_razorpay_payment_id,
+      amount_paid_paise   = p_amount_paid_paise,
+      updated_at          = now()
+  where id = p_registration_id;
+
+  return 'CONFIRMED';
+end;
+$$;
+
+revoke all    on function public.confirm_registration(text, text, int) from public;
+revoke all    on function public.confirm_registration(text, text, int) from anon;
+revoke all    on function public.confirm_registration(text, text, int) from authenticated;
+grant  execute on function public.confirm_registration(text, text, int) to service_role;
 
 -- ─── Profile shareability (DPDP) ──────────────────────────────────────────────
 -- Applied manually via the Supabase SQL Editor. When false, the profile page is

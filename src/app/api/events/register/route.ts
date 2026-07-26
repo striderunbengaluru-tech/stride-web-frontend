@@ -99,13 +99,28 @@ export async function POST(request: Request) {
 
   const { data: existing } = await adminClient
     .from('event_registrations')
-    .select('id')
+    .select('id, status')
     .eq('event_id', eventId)
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (existing) {
+  if (existing?.status === 'CONFIRMED') {
     return NextResponse.json({ error: 'Already registered' }, { status: 409 })
+  }
+
+  // A leftover PENDING (abandoned Razorpay checkout) or CANCELLED row would trip
+  // the unique(event_id, user_id) constraint and keep holding a reserved seat.
+  // Clear it so the user can retry — only a CONFIRMED registration blocks.
+  if (existing) {
+    const { error: delError } = await adminClient
+      .from('event_registrations')
+      .delete()
+      .eq('id', existing.id)
+      .neq('status', 'CONFIRMED')
+    if (delError) {
+      console.error('[Register] Failed to clear prior registration', delError)
+      return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+    }
   }
 
   if (event.capacity) {
@@ -153,7 +168,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ registrationId, slug: event.slug })
   }
 
-  // Paid event — create Razorpay order, hold seat as PENDING
+  // Paid event — reserve the seat as PENDING FIRST through the atomic capacity
+  // guard (an in-checkout PENDING hold reserves a seat for 15 min), THEN create
+  // the Razorpay order and attach it. Reserving before charging means we never
+  // create an order for a seat that's already gone.
+  const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
+    p_registration_id: registrationId,
+    p_event_id: eventId,
+    p_user_id: user.id,
+    p_status: 'PENDING',
+    p_custom_responses: customResponsesJson,
+  })
+  if (rpcError) {
+    console.error('[Register] Registration failed', rpcError)
+    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+  }
+  if (outcome === 'CAPACITY_FULL') {
+    return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+  }
+  if (outcome !== 'INSERTED') {
+    console.error('[Register] Unexpected registration outcome', outcome)
+    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+  }
+
   const razorpay = new Razorpay({
     key_id: process.env.STRIDE_RAZORPAY_KEY_ID ?? '',
     key_secret: process.env.STRIDE_RAZORPAY_KEY_SECRET ?? '',
@@ -168,29 +205,19 @@ export async function POST(request: Request) {
     })
   } catch (err) {
     console.error('[Register] Razorpay order creation failed', err)
+    // Release the seat we just reserved so the abandoned hold doesn't linger.
+    await adminClient.from('event_registrations').delete().eq('id', registrationId)
     return NextResponse.json({ error: 'Payment initialisation failed' }, { status: 500 })
   }
 
-  // Hold the seat as PENDING through the same atomic capacity guard so a
-  // concurrent CONFIRMED registration that fills the last seat is respected.
-  const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
-    p_registration_id: registrationId,
-    p_event_id: eventId,
-    p_user_id: user.id,
-    p_status: 'PENDING',
-    p_custom_responses: customResponsesJson,
-    p_razorpay_order_id: order.id,
-  })
-  if (rpcError) {
-    console.error('[Register] Registration failed', rpcError)
-    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
-  }
-  if (outcome === 'CAPACITY_FULL') {
-    return NextResponse.json({ error: 'Event is full' }, { status: 409 })
-  }
-  if (outcome !== 'INSERTED') {
-    console.error('[Register] Unexpected registration outcome', outcome)
-    return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+  const { error: orderLinkError } = await adminClient
+    .from('event_registrations')
+    .update({ razorpay_order_id: order.id })
+    .eq('id', registrationId)
+  if (orderLinkError) {
+    console.error('[Register] Failed to attach Razorpay order id', orderLinkError)
+    await adminClient.from('event_registrations').delete().eq('id', registrationId)
+    return NextResponse.json({ error: 'Payment initialisation failed' }, { status: 500 })
   }
 
   return NextResponse.json({

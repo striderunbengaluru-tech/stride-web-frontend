@@ -24,7 +24,10 @@ export const eventSchema = z.object({
   capacity: z.coerce.number().int().positive().optional(),
   distanceKm: z.coerce.number().positive().max(500).optional(),
   difficulty: z.string().max(60).optional(),
-  pricePaise: z.coerce.number().int().min(0).default(0),
+  // Admin enters the price in rupees with up to 2 decimals (e.g. 2000.50).
+  // Stored as integer paise (price_paise) in the action — paise is the unit
+  // Razorpay charges in and avoids floating-point money errors.
+  priceRupees: z.coerce.number().min(0, 'Price cannot be negative').max(1_000_000, 'Price is too large').default(0),
   // Checkbox/switch posts 'true' | 'false' via a hidden input; absent = false
   showSpotsLeft: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),

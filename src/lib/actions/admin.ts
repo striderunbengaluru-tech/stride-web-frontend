@@ -46,7 +46,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -70,7 +70,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
     post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
-    price_paise: pricePaise,
+    price_paise: Math.round(priceRupees * 100),
     confirmation_text: confirmationText || null,
     terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
@@ -104,7 +104,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, pricePaise, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
 
   const { data: updated } = await adminClient.from('events').update({
     name,
@@ -114,7 +114,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,
     strava_route_url: stravaRouteUrl || null,
-    price_paise: pricePaise,
+    price_paise: Math.round(priceRupees * 100),
     confirmation_text: confirmationText || null,
     terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
