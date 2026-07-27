@@ -23,7 +23,7 @@ export function RunnerTagTicket({ runnerTag, registrationId, userName }: Props) 
   }
 
   return (
-    <div className='bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-5'>
+    <div className='bg-white/10 backdrop-blur-sm md:backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-5'>
       <div className='flex items-center gap-1.5 mb-1'>
         <Tag size={13} className='text-stride-yellow-accent' strokeWidth={2.5} />
         <p className='text-white/40 text-xs font-medium font-mono uppercase tracking-widest'>Stride Tag</p>

@@ -18,8 +18,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  scroll-behavior: smooth;
+/* Smooth scrolling is a per-frame cost on low-end mobile and fights scroll
+   restoration — honour the visitor's motion preference. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 button:not(:disabled) {
@@ -76,6 +80,87 @@ h1, h2, h3, h4, h5, h6 {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Scroll reveal — zero JavaScript ──
+   Content is VISIBLE by default. A browser without scroll-driven animation
+   support (or with reduced motion requested) simply renders it static and can
+   never blank it. The reveal runs entirely on the compositor via a view()
+   timeline, so it does not wait for — and cannot be starved by — hydration.
+
+   This replaced a JS/IntersectionObserver component that SSR'd content visible
+   and then hid everything below the fold in useEffect. On mobile, hydration
+   landed seconds after paint, so it blanked sections the visitor was already
+   reading and the fade-back-in queued behind the same long task that delayed
+   it. Never reintroduce a "hide after mount" reveal.
+
+   The `opacity: 1` base rule below is load-bearing, not decoration. Whenever a
+   view() timeline is inactive the animation contributes nothing and the element
+   renders its base style, so every failure mode lands on "visible", never on
+   "blank". Measured in Chrome 150:
+
+     ancestor overflow      timeline   result
+     none / clip / x-clip   live       reveal animates
+     hidden / x-hidden      dead       no animation, content statically visible
+
+   So `overflow: hidden` on an ancestor (it becomes a scroll container, and
+   view() resolves against the nearest one) silently disables the reveal rather
+   than breaking the page. Prefer `overflow-clip` / `overflow-x-clip` on
+   ancestors — same clipping, and the animation still runs. Note `overflow-x:
+   hidden` is the sneakier one: it forces the other axis to `auto`, so it makes
+   an element a scroll container even though only one axis was specified. */
+.reveal {
+  opacity: 1;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: revealUp linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 20%;
+    }
+
+    /* Siblings that enter together (e.g. the 3-up blog grid) stagger via
+       animation-range, NOT animation-delay — delay is time-based and has no
+       effect on a progress-based timeline. */
+    .reveal-stagger > *:nth-child(2) {
+      animation-range: entry 0% cover 28%;
+    }
+    .reveal-stagger > *:nth-child(3) {
+      animation-range: entry 0% cover 36%;
+    }
+  }
+}
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Ambient page glow — background-only, so it costs nothing ──
+   Replaces the pattern of absolutely-positioned circles with huge `blur()`
+   radii. A blurred element is a promoted composited layer the GPU has to
+   re-rasterize; on low-end mobile a pair of `blur(130px)` orbs spanning the
+   document dropped frames and heated the device. These gradients paint as part
+   of the element's background: no extra DOM, no layers, no filters. */
+.ambient-glow {
+  background-image:
+    radial-gradient(60rem 60rem at 8% 0%,
+      rgba(225, 208, 63, 0.10) 0%,
+      rgba(225, 208, 63, 0.04) 35%,
+      transparent 65%),
+    radial-gradient(48rem 48rem at 100% 42%,
+      rgba(74, 222, 128, 0.06) 0%,
+      rgba(74, 222, 128, 0.02) 38%,
+      transparent 68%);
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
+/* NOTE: `content-visibility: auto` on a container with `.reveal` descendants is
+   untested here. A skipped subtree has no layout boxes, so the reveal would at
+   best not animate; whether it can also suppress the base style was not
+   measured. If you want it, verify the sections still render before shipping. */
 
 /* ── Login page animations ── */
 @keyframes fadeInUp {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { PostCard } from '@/components/blog/post-card'
-import { SectionReveal } from '@/components/ui/section-reveal'
+import { Reveal } from '@/components/ui/reveal'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stride-web-frontend.vercel.app'
 
@@ -60,7 +60,7 @@ export default function BlogPage() {
       <div className='mx-auto max-w-6xl px-4 md:px-8'>
 
         {/* ── Header ── */}
-        <SectionReveal className='mb-14 md:mb-20'>
+        <Reveal className='mb-14 md:mb-20'>
           <h1 className='font-libre text-4xl md:text-6xl font-bold text-white leading-tight'>
             Stories that{' '}
             <span className='text-stride-yellow-accent'>move you.</span>
@@ -68,28 +68,31 @@ export default function BlogPage() {
           <p className='mt-4 text-white/55 font-figtree text-base md:text-lg max-w-xl leading-relaxed'>
             Run reports, collabs, community moments. From the Stride crew to every athlete who shows up.
           </p>
-        </SectionReveal>
+        </Reveal>
 
         {/* ── Featured post ── */}
         {featured && (
-          <SectionReveal className='mb-12' delay={0.08}>
+          <Reveal className='mb-12'>
             <PostCard post={featured} featured />
-          </SectionReveal>
+          </Reveal>
         )}
 
         {/* ── All other posts ── */}
         {rest.length > 0 && (
           <>
-            <SectionReveal className='mb-6' delay={0.1}>
+            <Reveal className='mb-6'>
               <p className='text-xs font-mono uppercase tracking-[0.2em] text-white/30'>
                 More stories
               </p>
-            </SectionReveal>
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
-              {rest.map((post, i) => (
-                <SectionReveal key={post.slug} delay={0.06 + i * 0.06}>
+            </Reveal>
+            {/* `reveal-stagger` cascades cards that enter the viewport together
+                — a scroll-timeline animation ignores animation-delay, so the
+                stagger lives in animation-range offsets (globals.css). */}
+            <div className='reveal-stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
+              {rest.map((post) => (
+                <Reveal key={post.slug}>
                   <PostCard post={post} />
-                </SectionReveal>
+                </Reveal>
               ))}
             </div>
           </>

@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import clsx from 'clsx'
 import { useAuth } from '@/components/auth/auth-provider'
 import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
-import UserMenu from './user-menu'
 import { NavbarMemberCta } from './navbar-member-cta'
 import { HideOnAdminRoute } from './navbar-gate'
+
+// UserMenu statically imports the Supabase browser client (for sign-out), and
+// this island sits in the root layout — so importing it eagerly put ~55 KB gzip
+// of supabase-js on the hydration critical path of EVERY page, defeating the
+// deferral in AuthProvider. It only renders once a session has resolved
+// client-side, so loading it on demand costs nothing visually.
+const UserMenu = dynamic(() => import('./user-menu'), { ssr: false })
 
 // Client auth island for the static navbar shell. Renders nothing while the
 // local session resolves (a frame or two after hydration), then either the

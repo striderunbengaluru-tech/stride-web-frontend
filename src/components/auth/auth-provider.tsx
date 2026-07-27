@@ -2,8 +2,15 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { toast, Toaster } from 'sonner'
+import dynamic from 'next/dynamic'
+
+// supabase-js and sonner are BOTH loaded lazily and deliberately absent from
+// the static import graph. This provider lives in the root layout, so anything
+// it imports statically lands on the hydration critical path of every page —
+// supabase-js alone is ~55 KB gzip (it bundles RealtimeClient and a base64
+// shim this app never uses). Deferring them is what lets the page become
+// interactive before that JS has even been fetched.
+const Toaster = dynamic(() => import('sonner').then(m => m.Toaster), { ssr: false })
 
 // sessionStorage keys — cleared on sign-out so the next real sign-in shows the
 // toast again / refetches the nav profile.
@@ -63,73 +70,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthContextValue>({ status: 'loading', navProfile: null })
 
   useEffect(() => {
-    const supabase = createClient()
-    let cancelled = false
-
-    async function loadProfile(userId: string, email: string | null) {
-      const cached = readCachedProfile(userId)
-      if (cached && !cancelled) setState({ status: 'signed-in', navProfile: cached })
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('username, full_name, avatar_url, role')
-        .eq('id', userId)
-        .single()
-      if (cancelled) return
-
-      if (profile) {
-        const navProfile: NavProfile = {
-          username: profile.username ?? userId,
-          firstName: profile.full_name?.split(' ')[0] ?? profile.username ?? 'You',
-          avatarUrl: profile.avatar_url ?? null,
-          isAdmin: profile.role === 'ADMIN',
-          email,
-        }
-        try {
-          sessionStorage.setItem(`${NAV_PROFILE_KEY}:${userId}`, JSON.stringify(navProfile))
-        } catch {
-          // best-effort cache only
-        }
-        setState({ status: 'signed-in', navProfile })
-      } else if (!cached) {
-        // Signed in but no profile row yet (fresh OAuth user mid-trigger) —
-        // still report signed-in so the UI doesn't show sign-up CTAs.
-        setState({ status: 'signed-in', navProfile: null })
-      }
+    // Synchronous, free, and the whole point of the deferral: @supabase/ssr
+    // stores the session in `sb-<projectRef>-auth-token` (suffixed .0/.1 when
+    // chunked). The key is derived exactly the way supabase-js derives it, so a
+    // signed-out visitor is resolved here and never downloads supabase-js at all.
+    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]
+    if (!document.cookie.includes(`sb-${projectRef}-auth-token`)) {
+      setState({ status: 'signed-out', navProfile: null })
+      return
     }
 
-    // Initial state from the locally-stored session — no network round trip
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled) return
-      if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
-      else setState({ status: 'signed-out', navProfile: null })
-    })
+    let cancelled = false
+    // Assigned once the lazily-imported client has attached its listener. The
+    // cleanup below may run before that resolves, hence the guard.
+    let unsubscribe: (() => void) | undefined
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        router.refresh()
-        if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
-        // Only toast on an actual new sign-in, not on every session restoration
-        if (!sessionStorage.getItem(AUTHED_KEY)) {
-          sessionStorage.setItem(AUTHED_KEY, '1')
-          toast.success('Signed in successfully!', { id: 'signed-in' })
+    void (async () => {
+      const [{ createClient }, { toast }] = await Promise.all([
+        import('@/lib/supabase/client'),
+        import('sonner'),
+      ])
+      if (cancelled) return
+      const supabase = createClient()
+
+      async function loadProfile(userId: string, email: string | null) {
+        const cached = readCachedProfile(userId)
+        if (cached && !cancelled) setState({ status: 'signed-in', navProfile: cached })
+
+        const { data: profile } = await supabase
+          .from('users')
+          .select('username, full_name, avatar_url, role')
+          .eq('id', userId)
+          .single()
+        if (cancelled) return
+
+        if (profile) {
+          const navProfile: NavProfile = {
+            username: profile.username ?? userId,
+            firstName: profile.full_name?.split(' ')[0] ?? profile.username ?? 'You',
+            avatarUrl: profile.avatar_url ?? null,
+            isAdmin: profile.role === 'ADMIN',
+            email,
+          }
+          try {
+            sessionStorage.setItem(`${NAV_PROFILE_KEY}:${userId}`, JSON.stringify(navProfile))
+          } catch {
+            // best-effort cache only
+          }
+          setState({ status: 'signed-in', navProfile })
+        } else if (!cached) {
+          // Signed in but no profile row yet (fresh OAuth user mid-trigger) —
+          // still report signed-in so the UI doesn't show sign-up CTAs.
+          setState({ status: 'signed-in', navProfile: null })
         }
-      } else if (event === 'SIGNED_OUT') {
-        sessionStorage.removeItem(AUTHED_KEY)
-        clearCachedProfiles()
-        setState({ status: 'signed-out', navProfile: null })
-        router.refresh()
-        toast.info('Signed out successfully.', { id: 'signed-out' })
-      } else if (event === 'USER_UPDATED') {
-        router.refresh()
-        if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
       }
-      // TOKEN_REFRESHED — silent, no action needed
-    })
+
+      // Initial state from the locally-stored session — no network round trip
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (cancelled) return
+        if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
+        else setState({ status: 'signed-out', navProfile: null })
+      })
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN') {
+          router.refresh()
+          if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
+          // Only toast on an actual new sign-in, not on every session restoration
+          if (!sessionStorage.getItem(AUTHED_KEY)) {
+            sessionStorage.setItem(AUTHED_KEY, '1')
+            toast.success('Signed in successfully!', { id: 'signed-in' })
+          }
+        } else if (event === 'SIGNED_OUT') {
+          sessionStorage.removeItem(AUTHED_KEY)
+          clearCachedProfiles()
+          setState({ status: 'signed-out', navProfile: null })
+          router.refresh()
+          toast.info('Signed out successfully.', { id: 'signed-out' })
+        } else if (event === 'USER_UPDATED') {
+          router.refresh()
+          if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
+        }
+        // TOKEN_REFRESHED — silent, no action needed
+      })
+
+      unsubscribe = () => subscription.unsubscribe()
+    })()
 
     return () => {
       cancelled = true
-      subscription.unsubscribe()
+      unsubscribe?.()
     }
   }, [router])
 

@@ -15,7 +15,12 @@ const Navbar = () => {
       <div className='relative pt-4 flex justify-center px-4'>
       <nav
         aria-label='Main navigation'
-        className='relative w-full max-w-6xl min-h-[60px] flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/30 px-5 py-3 backdrop-blur-xl'
+        // This bar is `fixed` over scrolling content, so its backdrop-filter is
+        // re-evaluated on every scroll frame — the costliest blur on the site for
+        // low-end mobile. Below `md` we use a much smaller radius and a more
+        // opaque backing (which keeps nav text contrast at or above where it was);
+        // desktop keeps the full frosted effect.
+        className='relative w-full max-w-6xl min-h-[60px] flex items-center justify-between gap-6 rounded-2xl border border-copy-white/10 bg-copy-black/55 md:bg-copy-black/30 px-5 py-3 backdrop-blur-sm md:backdrop-blur-xl'
       >
         {/* Logo — centered on mobile, left on sm+. Centered via inset-x + mx-auto
             (layout, pixel-snapped) instead of left-1/2 -translate-x-1/2: the

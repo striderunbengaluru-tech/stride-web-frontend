@@ -25,7 +25,11 @@ export function MobileBottomNavClient() {
     <div className='animate-fade-in-up fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 md:hidden'>
       <nav
         aria-label='Mobile navigation'
-        className='flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-2xl border border-white/12 p-1.5 shadow-2xl shadow-black/30'
+        // Mobile-only surface floating over scrolling content: `backdrop-blur-2xl`
+        // meant the browser re-filtered the scene behind it every frame. A
+        // smaller radius plus a more opaque backing looks the same at this size
+        // and costs a fraction as much.
+        className='flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-md border border-white/12 p-1.5 shadow-2xl shadow-black/30'
       >
         {STATIC_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
