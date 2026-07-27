@@ -11,7 +11,7 @@ import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calend
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
 import { WalletPassSection, WalletPassSectionSkeleton } from '@/components/events/wallet-pass-section'
 import { ShareConfirmation } from '@/components/events/share-confirmation'
-import { SectionReveal } from '@/components/ui/section-reveal'
+import { Reveal } from '@/components/ui/reveal'
 import { PostCard } from '@/components/blog/post-card'
 import { BLOG_POSTS } from '@/content/blog/index'
 
@@ -45,37 +45,47 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   const { regId } = await params
   const { wallet } = await searchParams
 
-  // Two parallel stages instead of the old five-hop waterfall: auth check and
-  // registration lookup are independent (ownership is verified after both
-  // resolve), then everything keyed off them fires together.
+  // One DB round trip instead of the old two-stage waterfall.
+  //
+  // getClaims() verifies the session JWT locally against the project's public
+  // keys (asymmetric signing) — no network hop to Supabase, unlike getUser().
+  // Same mechanism src/middleware.ts already relies on. We take only identity
+  // (`sub`/`email`) from the token; ownership is still checked against the live
+  // registration row below, and no role decision is made on this page, so the
+  // "always read role fresh from the DB" rule is untouched.
   const supabase = await createClient()
-  const [{ data: { user } }, { data: registration }] = await Promise.all([
-    supabase.auth.getUser(),
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims ?? null
+  if (!claims) redirect('/become-a-member')
+
+  const userId = claims.sub
+
+  // Having the user id without a network round trip lets the registration and
+  // profile reads run as a single parallel stage. The event is embedded via the
+  // event_registrations.event_id → events.id foreign key, collapsing what used
+  // to be a second stage.
+  const [{ data: registration }, { data: profile }] = await Promise.all([
     adminClient
       .from('event_registrations')
-      .select('id, user_id, status, event_id, amount_paid_paise, razorpay_payment_id')
+      .select(
+        'id, user_id, status, amount_paid_paise, razorpay_payment_id, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, confirmation_text)'
+      )
       .eq('id', regId)
-      .single(),
-  ])
-
-  if (!user) redirect('/become-a-member')
-  if (!registration || registration.user_id !== user.id || registration.status !== 'CONFIRMED') {
-    notFound()
-  }
-
-  const [{ data: event }, { data: profile }] = await Promise.all([
-    adminClient
-      .from('events')
-      .select('id, name, slug, subtitle, event_date, end_date, location, location_url, banner_images, price_paise, confirmation_text')
-      .eq('id', registration.event_id)
       .single(),
     adminClient
       .from('users')
       .select('full_name, runner_tag')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single(),
   ])
 
+  if (!registration || registration.user_id !== userId || registration.status !== 'CONFIRMED') {
+    notFound()
+  }
+
+  // PostgREST returns a to-one embed as an object, but normalise defensively so
+  // a relationship-shape surprise can't crash the page.
+  const event = Array.isArray(registration.events) ? registration.events[0] : registration.events
   if (!event) notFound()
 
   const dateShort = formatDateShort(event.event_date)
@@ -116,14 +126,13 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, 3)
 
+  // The ambient glow is a background gradient, not blurred orb elements — see
+  // `.ambient-glow` in globals.css. That also lets `overflow-hidden` go from
+  // <main>: it was only there to clip the orbs, and as a scroll container it
+  // would have killed the view() timeline of every <Reveal> below, silently
+  // disabling the scroll reveal on this page.
   return (
-    <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden pb-20'>
-
-      {/* Ambient orbs */}
-      <div className='pointer-events-none absolute inset-0 overflow-hidden'>
-        <div className='absolute top-[-10%] left-[-8%] w-160 h-160 rounded-full bg-stride-yellow-accent/7 blur-[130px]' />
-        <div className='absolute top-[40%] right-[-10%] w-xl h-144 rounded-full bg-green-400/4 blur-[120px]' />
-      </div>
+    <main className='relative min-h-screen bg-stride-purple-primary ambient-glow pb-20'>
 
       <div className='relative z-10 pt-28 sm:pt-32'>
 
@@ -131,7 +140,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         <div className='max-w-2xl mx-auto px-5 sm:px-8 space-y-7'>
 
         {/* ── Success badge ── */}
-        <SectionReveal>
+        <Reveal>
           <div className='flex flex-col items-center text-center'>
             <div className='relative inline-flex items-center justify-center mb-5'>
               <div className='absolute w-20 h-20 rounded-full bg-green-500/12 animate-ping' style={{ animationDuration: '2.6s' }} aria-hidden='true' />
@@ -144,21 +153,21 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
               Confirmation code <span className='font-mono text-white/70 ml-1'>STRIDE-{registration.id.slice(0, 8).toUpperCase()}</span>
             </p>
           </div>
-        </SectionReveal>
+        </Reveal>
 
         {/* ── A note from Stride — field only, no label, sits right under the header ── */}
         {event.confirmation_text && event.confirmation_text.trim() && (
-          <SectionReveal delay={0.04}>
+          <Reveal>
             <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
               <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/85 prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                 <ReactMarkdown>{event.confirmation_text}</ReactMarkdown>
               </div>
             </div>
-          </SectionReveal>
+          </Reveal>
         )}
 
         {/* ── Event card — clickable, mirrors the public event card ── */}
-        <SectionReveal delay={0.06}>
+        <Reveal>
           <Link
             href={`/events/${event.slug}`}
             className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
@@ -172,6 +181,10 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
                   fill
                   className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
                   sizes='(max-width: 640px) 100vw, 640px'
+                  // This poster is the LCP element. Without `priority` it stays
+                  // lazy and only starts downloading after layout, which on
+                  // mobile pushed LCP out by seconds.
+                  priority
                 />
               ) : (
                 <div className='absolute inset-0 flex items-center justify-center text-white/10 text-6xl select-none'>
@@ -212,14 +225,18 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
               </div>
             </div>
           </Link>
-        </SectionReveal>
+        </Reveal>
 
         {/* ── Payment receipt — paid registrations only. Both values are read
             straight from the DB (server-verified against Razorpay), never from
             the client. ── */}
         {registration.amount_paid_paise != null && (
-          <SectionReveal delay={0.08}>
-            <div className='rounded-xl bg-white/10 backdrop-blur-md border border-white/15 px-5 py-4'>
+          <Reveal>
+            {/* backdrop-blur is softened on mobile: backdrop-filter forces the
+                browser to re-render and re-filter everything behind the element,
+                which is one of the costliest things you can do on a low-end
+                phone. Desktop keeps the full glass effect. */}
+            <div className='rounded-xl bg-white/10 backdrop-blur-sm md:backdrop-blur-md border border-white/15 px-5 py-4'>
               <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Payment</p>
               <div className='flex items-center justify-between gap-4'>
                 <span className='text-white/60 text-sm'>Amount paid</span>
@@ -234,13 +251,13 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
                 </div>
               )}
             </div>
-          </SectionReveal>
+          </Reveal>
         )}
 
         {/* ── Here's your next steps — wallet, calendar, share ── */}
-        <SectionReveal delay={0.1}>
+        <Reveal>
           <h2 className='text-white font-bold text-xl leading-tight pt-2'>Here&apos;s your next steps</h2>
-        </SectionReveal>
+        </Reveal>
 
         {/* Save to your wallet — streamed separately so the external wallet
             quota check never blocks the rest of the page. Hidden when the run
@@ -258,7 +275,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
 
         {/* Block your calendar — upcoming runs only */}
         {googleCalendarUrl && (
-          <SectionReveal delay={0.14}>
+          <Reveal>
             <div>
               <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Block your calendar</p>
               <a
@@ -277,11 +294,11 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
                 Add to Google Calendar
               </a>
             </div>
-          </SectionReveal>
+          </Reveal>
         )}
 
         {/* Spread the word */}
-        <SectionReveal delay={0.16}>
+        <Reveal>
           <div>
             <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Spread the word</p>
             <ShareConfirmation
@@ -292,16 +309,16 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
               eventBannerUrl={eventBannerUrl}
             />
           </div>
-        </SectionReveal>
+        </Reveal>
 
         {/* ── Stride tag ── */}
-        <SectionReveal delay={0.2}>
+        <Reveal>
           <RunnerTagTicket
             runnerTag={profile?.runner_tag ?? null}
             registrationId={registration.id}
-            userName={profile?.full_name ?? user.email ?? ''}
+            userName={profile?.full_name ?? claims.email ?? ''}
           />
-        </SectionReveal>
+        </Reveal>
 
         </div>
         {/* End narrow column */}
@@ -309,7 +326,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         {/* ── Keep reading — wider column so the 3-up grid breathes on desktop ── */}
         {blogPicks.length > 0 && (
           <div className='max-w-5xl mx-auto px-5 sm:px-8 mt-12 sm:mt-16'>
-            <SectionReveal delay={0.32}>
+            <Reveal>
               <div className='pt-8 border-t border-white/8'>
                 <div className='flex items-end justify-between gap-4 mb-5'>
                   <div>
@@ -324,15 +341,19 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
                     <ArrowRight size={13} />
                   </Link>
                 </div>
-                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
-                  {blogPicks.map((post, i) => (
-                    <SectionReveal key={post.slug} delay={0.36 + i * 0.06}>
+                {/* `reveal-stagger` cascades these cards, which all enter the
+                    viewport together. A scroll-timeline animation ignores
+                    animation-delay, so the stagger lives in animation-range
+                    offsets — see globals.css. */}
+                <div className='reveal-stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'>
+                  {blogPicks.map((post) => (
+                    <Reveal key={post.slug}>
                       <PostCard post={post} />
-                    </SectionReveal>
+                    </Reveal>
                   ))}
                 </div>
               </div>
-            </SectionReveal>
+            </Reveal>
           </div>
         )}
 

@@ -4,7 +4,7 @@ import {
   getWalletPassCount,
 } from '@/lib/wallet-quota'
 import { WalletPassButtons } from '@/components/events/wallet-pass-buttons'
-import { SectionReveal } from '@/components/ui/section-reveal'
+import { Reveal } from '@/components/ui/reveal'
 
 type Props = {
   registrationId: string
@@ -41,7 +41,7 @@ export async function WalletPassSection({ registrationId, isConcluded, walletFla
   if (!showWalletCtas && !walletNotice) return null
 
   return (
-    <SectionReveal delay={0.12}>
+    <Reveal>
       <div>
         <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Save to your wallet</p>
         {walletNotice && (
@@ -51,7 +51,7 @@ export async function WalletPassSection({ registrationId, isConcluded, walletFla
         )}
         {showWalletCtas && <WalletPassButtons registrationId={registrationId} />}
       </div>
-    </SectionReveal>
+    </Reveal>
   )
 }
 

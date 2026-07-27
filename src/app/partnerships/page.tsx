@@ -6,7 +6,7 @@ import PartnershipsHero from '@/components/partnerships/partnerships-hero'
 import AnimatedStatsBar from '@/components/partnerships/animated-stats-bar'
 import AnimatedWhyUs from '@/components/partnerships/animated-why-us'
 import PartnerWithUsButton from '@/components/partnerships/partner-with-us-button'
-import { SectionReveal } from '@/components/ui/section-reveal'
+import { Reveal } from '@/components/ui/reveal'
 import {
   PARTNER_CATEGORIES,
   ALL_PARTNERS,
@@ -132,8 +132,13 @@ const PARTNERSHIP_REELS = [
 ]
 
 export default function PartnershipsPage() {
+  // `overflow-x-clip`, NOT `overflow-x-hidden`: hidden on one axis forces the
+  // other to `auto`, which quietly makes this a scroll container and kills the
+  // view() timeline of every <Reveal> below — they still render (base style is
+  // opacity:1) but stop animating. clip contains the marquee overflow without
+  // that side effect. See globals.css.
   return (
-    <main className='min-h-screen bg-stride-purple-primary pt-16 md:pt-24 pb-24 overflow-x-hidden'>
+    <main className='min-h-screen bg-stride-purple-primary pt-16 md:pt-24 pb-24 overflow-x-clip'>
       <script
         type='application/ld+json'
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
@@ -161,7 +166,7 @@ export default function PartnershipsPage() {
 
       {/* ── WHY STRIDE ───────────────────────────────────────── */}
       <section id='why-stride' className='max-w-5xl mx-auto px-6 mb-16'>
-        <SectionReveal className='text-center mb-12'>
+        <Reveal className='text-center mb-12'>
           <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Why Stride
           </p>
@@ -172,13 +177,13 @@ export default function PartnershipsPage() {
             Running clubs aren&apos;t just exercise groups. They&apos;re tight-knit tribes with shared values,
             shared goals, and shared spending habits.
           </p>
-        </SectionReveal>
+        </Reveal>
 
         <AnimatedWhyUs items={WHY_US} />
       </section>
 
       {/* ── MID-PAGE CTA ─────────────────────────────────────── */}
-      <SectionReveal className='max-w-3xl mx-auto px-6 mb-24'>
+      <Reveal className='max-w-3xl mx-auto px-6 mb-24'>
         <div className='relative overflow-hidden rounded-2xl bg-stride-yellow-accent p-8 sm:p-12 text-center'>
           <div className='pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-copy-black/5' />
           <div className='pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-copy-black/5' />
@@ -198,11 +203,11 @@ export default function PartnershipsPage() {
             className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
           />
         </div>
-      </SectionReveal>
+      </Reveal>
 
       {/* ── SEE IT FOR YOURSELF ──────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 mb-24'>
-        <SectionReveal className='text-center mb-10'>
+        <Reveal className='text-center mb-10'>
           <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Recent partnerships
           </p>
@@ -212,7 +217,7 @@ export default function PartnershipsPage() {
           <p className='text-white/50 mt-3 max-w-lg mx-auto'>
             Five recent partnerships, filmed at our own runs.
           </p>
-        </SectionReveal>
+        </Reveal>
 
         <div className='-mx-6'>
           <ReelsCarousel reels={PARTNERSHIP_REELS} />
@@ -221,7 +226,7 @@ export default function PartnershipsPage() {
 
       {/* ── OUR PARTNERS ─────────────────────────────────────── */}
       <section className='max-w-5xl mx-auto px-6 mb-24'>
-        <SectionReveal className='text-center mb-12'>
+        <Reveal className='text-center mb-12'>
           <p className='text-stride-yellow-accent text-xs font-semibold font-mono uppercase tracking-widest mb-3'>
             Our Partners
           </p>
@@ -232,13 +237,13 @@ export default function PartnershipsPage() {
             From running shoes to post-run coffee, Stride connects brands to
             every part of an active life.
           </p>
-        </SectionReveal>
+        </Reveal>
 
         <PartnerGrid categories={PARTNER_CATEGORIES} />
       </section>
 
       {/* ── FINAL CTA ────────────────────────────────────────── */}
-      <SectionReveal className='max-w-3xl mx-auto px-6'>
+      <Reveal className='max-w-3xl mx-auto px-6'>
         <div className='relative overflow-hidden rounded-2xl bg-stride-yellow-accent p-10 sm:p-14 text-center'>
           <div className='pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-copy-black/5' />
           <div className='pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-copy-black/5' />
@@ -258,7 +263,7 @@ export default function PartnershipsPage() {
             className='relative inline-flex items-center gap-2.5 bg-copy-black text-white font-bold px-8 py-4 rounded-md hover:bg-copy-black/85 hover:scale-[1.03] active:scale-[0.97] transition-all duration-150 text-base min-h-12'
           />
         </div>
-      </SectionReveal>
+      </Reveal>
 
     </main>
   )

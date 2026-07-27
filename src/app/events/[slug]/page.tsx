@@ -11,7 +11,7 @@ import {
   RegistrationCtaMobileSkeleton,
 } from '@/components/events/registration-cta'
 import { EventHero } from '@/components/events/event-hero'
-import { SectionReveal } from '@/components/ui/section-reveal'
+import { Reveal } from '@/components/ui/reveal'
 import { ShareButton } from '@/components/events/share-button'
 import { ArrowLeft, MapPin, Route, Users, ExternalLink, Gauge, Activity } from 'lucide-react'
 import type { AdditionalField } from '@/types/event'
@@ -129,8 +129,12 @@ export default async function EventDetailPage({ params }: Props) {
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
+  // `overflow-clip`, NOT `overflow-hidden`: hidden makes this a scroll container,
+  // which kills the view() timeline of every <Reveal> below it — the reveals
+  // still render (their base style is opacity:1) but stop animating. clip clips
+  // the same way without establishing a scrollport. See globals.css.
   return (
-    <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden pb-32 sm:pb-20'>
+    <main className='relative min-h-screen bg-stride-purple-primary overflow-clip pb-32 sm:pb-20'>
 
       {/* Refresh on back/forward bfcache restore — so post-registration the page
           can't show a stale "Register" CTA after the user hits browser back. */}
@@ -179,7 +183,7 @@ export default async function EventDetailPage({ params }: Props) {
           </div>
 
           {/* Title */}
-          <SectionReveal delay={0.04}>
+          <Reveal>
             <h1 className='text-4xl sm:text-5xl font-bold text-white leading-[1.05] tracking-tight'>
               {event.name}
             </h1>
@@ -204,11 +208,11 @@ export default async function EventDetailPage({ params }: Props) {
                 )}
               </div>
             )}
-          </SectionReveal>
+          </Reveal>
 
           {/* ── When & Where (clubbed) ── */}
           {(dateLong || event.location) && (
-            <SectionReveal delay={0.12}>
+            <Reveal>
               <div className='mt-7 rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
                 {dateLong && event.event_date && (
                   <div className='flex items-start gap-4 px-5 py-4 border-b border-white/8'>
@@ -269,12 +273,12 @@ export default async function EventDetailPage({ params }: Props) {
                   </div>
                 )}
               </div>
-            </SectionReveal>
+            </Reveal>
           )}
 
           {/* ── Post run meetup spot + Route (clubbed) ── */}
           {(event.post_run_location_url || event.post_run_location || event.strava_route_url) && (
-            <SectionReveal delay={0.16}>
+            <Reveal>
               <div className='mt-3 rounded-2xl border border-white/10 bg-white/4 overflow-hidden'>
                 {(event.post_run_location_url || event.post_run_location) && (
                   // Without a Maps URL the anchor has no href — it renders as
@@ -321,33 +325,33 @@ export default async function EventDetailPage({ params }: Props) {
                   </a>
                 )}
               </div>
-            </SectionReveal>
+            </Reveal>
           )}
 
           {/* About the experience */}
           {event.details && (
-            <SectionReveal delay={0.26}>
+            <Reveal>
               <div className='mt-8'>
                 <p className='text-white/40 text-xs font-bold font-mono uppercase tracking-widest mb-4'>About the experience</p>
                 <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/75 prose-p:leading-relaxed prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
                   <ReactMarkdown>{event.details}</ReactMarkdown>
                 </div>
               </div>
-            </SectionReveal>
+            </Reveal>
           )}
 
           {/* Meeting-point map */}
           {event.location && (
-            <SectionReveal delay={0.32}>
+            <Reveal>
               <div className='mt-8'>
                 <p className='text-white/40 text-xs font-bold font-mono uppercase tracking-widest mb-4'>Meet here</p>
                 <MapEmbed locationName={event.location} locationUrl={event.location_url} />
               </div>
-            </SectionReveal>
+            </Reveal>
           )}
 
           {/* ── Registration box — bottom of page (desktop). Mobile uses the sticky bar below. ── */}
-          <SectionReveal delay={0.36}>
+          <Reveal>
             <div className='hidden sm:block mt-10 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
               <div className='px-5 py-3 border-b border-white/8'>
                 <p className='text-white/50 text-xs font-bold font-mono uppercase tracking-widest'>Registration</p>
@@ -378,7 +382,7 @@ export default async function EventDetailPage({ params }: Props) {
                 </Suspense>
               </div>
             </div>
-          </SectionReveal>
+          </Reveal>
 
           {/* Share — very bottom of the page, both mobile and desktop */}
           <div className='mt-6 flex justify-center sm:justify-end'>
