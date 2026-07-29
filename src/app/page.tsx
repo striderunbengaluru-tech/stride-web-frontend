@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import HeroSection from '@/components/home/hero-section';
+import { UpNextSection } from '@/components/home/up-next-section';
 import NewsroomSection from '@/components/home/newsroom-section';
 import SpotlightSection from '@/components/home/spotlight-section';
 import FaqSection from '@/components/home/faq-section';
@@ -148,6 +149,8 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
       />
       <HeroSection />
+      {/* Renders nothing when there's no upcoming run */}
+      <UpNextSection />
       <NewsroomSection />
       <SpotlightSection />
       <FaqSection />

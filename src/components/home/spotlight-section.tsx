@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -31,12 +31,14 @@ function OriginalsBadge() {
           repeatDelay: 3,
         }}
       />
-      {/* Pulsing dot */}
+      {/* Twinkling star */}
       <motion.span
-        className='h-1.5 w-1.5 rounded-full bg-stride-yellow-accent shrink-0'
-        animate={{ opacity: [1, 0.3, 1], scale: [1, 0.7, 1] }}
+        className='flex items-center shrink-0 text-stride-yellow-accent'
+        animate={{ opacity: [1, 0.4, 1], scale: [1, 0.85, 1] }}
         transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-      />
+      >
+        <Star size={10} fill='currentColor' strokeWidth={0} aria-hidden='true' />
+      </motion.span>
       <span className='text-[10px] font-semibold font-mono uppercase tracking-widest text-stride-yellow-accent leading-none'>
         Stride Originals
       </span>
@@ -87,7 +89,7 @@ export default function SpotlightSection() {
 
   return (
     <section
-      className='py-8 md:py-24 px-4 md:px-6'
+      className='pt-8 pb-5 md:pt-24 md:pb-10 px-4 md:px-6'
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -111,9 +113,15 @@ export default function SpotlightSection() {
               </span>
             </div>
 
-            {/* Animated content block — fixed height prevents layout shift.
-                Sized for the tallest slide (badge + handle + partner CTA). */}
-            <div className='relative min-h-[300px] md:min-h-[280px]'>
+            {/* Animated content block. The slide sits in normal flow so the
+                block is only ever as tall as its own content — slides differ by
+                ~90px (the handle button, extra wrapped lines), and a reserve
+                sized for the tallest one left a large hole under the shorter
+                ones. Safe because nothing auto-advances: the height only changes
+                on a click/swipe the visitor initiated. `min-h` is just a floor
+                so the box doesn't collapse mid-transition, while
+                AnimatePresence `mode='wait'` briefly has no child. */}
+            <div className='relative min-h-48 md:min-h-50'>
               <AnimatePresence mode='wait'>
                 <motion.div
                   key={currentIndex}
@@ -121,7 +129,7 @@ export default function SpotlightSection() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: direction === 'next' ? -20 : 20 }}
                   transition={{ duration: 0.4, ease: EASE }}
-                  className='absolute top-0 left-0 right-0 flex flex-col gap-3'
+                  className='flex flex-col gap-3'
                 >
                   {/* Stride Originals badge */}
                   {slide.badge === 'Stride Originals' && <OriginalsBadge />}
@@ -152,6 +160,8 @@ export default function SpotlightSection() {
                   {/* Partnership hook — slide-specific copy, links to /partnerships */}
                   <Link
                     href='/partnerships'
+                    target='_blank'
+                    rel='noopener noreferrer'
                     className='group/cta inline-flex items-start gap-1.5 w-fit mt-1 text-sm font-medium text-stride-yellow-accent hover:underline underline-offset-4 decoration-stride-yellow-accent/50'
                   >
                     <span>{slide.partnerCta}</span>
@@ -163,7 +173,7 @@ export default function SpotlightSection() {
 
             {/* Nav arrows + dot indicators.
                 Arrows live here on desktop; on mobile they flank the video instead. */}
-            <div className='flex items-center gap-5 mt-8'>
+            <div className='flex items-center gap-5 mt-4 md:mt-5'>
               <div className='hidden md:flex gap-3'>
                 <button
                   onClick={goPrev}

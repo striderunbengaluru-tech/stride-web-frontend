@@ -351,7 +351,7 @@ export function FocusRail({
                 rel='noopener noreferrer'
                 className='group inline-flex items-center gap-2 rounded-md bg-stride-yellow-accent px-5 py-2.5 min-h-10 text-sm font-bold text-copy-black transition-all duration-200 hover:bg-stride-yellow-accent/90 active:scale-95'
               >
-                Read the article
+                Read the story
                 <ArrowUpRight className='h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5' />
               </Link>
             )}

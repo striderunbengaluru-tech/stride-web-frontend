@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Handshake } from 'lucide-react'
+import { Home, CalendarDays, Handshake, Trophy } from 'lucide-react'
 import clsx from 'clsx'
 import { useRevealAfterFold } from '@/hooks/use-reveal-after-fold'
 
 const STATIC_ITEMS = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Partnership', href: '/partnerships', icon: Handshake },
+  { label: 'Events', href: '/events', icon: CalendarDays },
+  { label: 'Partnerships', href: '/partnerships', icon: Handshake },
+  { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
 ]
 
 export function MobileBottomNavClient() {
@@ -29,7 +31,10 @@ export function MobileBottomNavClient() {
         // meant the browser re-filtered the scene behind it every frame. A
         // smaller radius plus a more opaque backing looks the same at this size
         // and costs a fraction as much.
-        className='flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-md border border-white/12 p-1.5 shadow-2xl shadow-black/30'
+        // `max-w-full` + `overflow-x-auto`: four stacked items just fit at 375px,
+        // but below that they'd push the pill past the viewport. Scrolling inside
+        // the pill keeps the page itself free of horizontal scroll.
+        className='flex items-center gap-1 max-w-full overflow-x-auto rounded-full bg-black/70 backdrop-blur-md border border-white/12 p-1.5 shadow-2xl shadow-black/30'
       >
         {STATIC_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
@@ -38,14 +43,18 @@ export function MobileBottomNavClient() {
               key={href}
               href={href}
               className={clsx(
-                'flex items-center gap-2 rounded-full px-4 py-2.5 transition-all duration-200 min-h-11',
+                // Icon stacked over the label. min-h-11/min-w-11 keep the touch
+                // target at 44px even though the visual box is smaller.
+                'flex flex-col items-center justify-center gap-1 rounded-full px-3 py-2 transition-all duration-200 min-h-11 min-w-11 shrink-0',
                 isActive
                   ? 'bg-stride-yellow-accent text-copy-black'
                   : 'text-white/55 hover:text-white hover:bg-white/8'
               )}
             >
-              <Icon className='size-[18px] shrink-0' />
-              <span className='text-xs font-semibold whitespace-nowrap'>{label}</span>
+              <Icon className='size-4.5 shrink-0' />
+              <span className='text-[10px] font-semibold leading-none whitespace-nowrap'>
+                {label}
+              </span>
             </Link>
           )
         })}

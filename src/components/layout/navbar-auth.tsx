@@ -2,9 +2,7 @@
 
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import clsx from 'clsx'
 import { useAuth } from '@/components/auth/auth-provider'
-import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { NavbarMemberCta } from './navbar-member-cta'
 import { HideOnAdminRoute } from './navbar-gate'
 
@@ -40,20 +38,16 @@ export function NavbarAuth() {
   return (
     <HideOnAdminRoute>
       <div className='hidden md:flex items-center'>
+        {/* Secondary to the Become-a-Member CTA that sits beside it */}
         <Link
           href='/partnerships'
-          className={clsx(
-            'inline-flex items-center font-bold px-4 py-2 rounded-md text-sm transition-all duration-150',
-            PREVIEW_FEATURES_ENABLED
-              ? 'bg-white/10 backdrop-blur-md border border-white/15 text-white hover:border-stride-yellow-accent/50'
-              : 'bg-stride-yellow-accent text-copy-black hover:scale-[1.03] hover:shadow-lg hover:shadow-stride-yellow-accent/25 active:scale-[0.97]'
-          )}
+          className='inline-flex items-center font-bold px-4 py-2 rounded-md text-sm transition-all duration-150 bg-white/10 backdrop-blur-md border border-white/15 text-white hover:border-stride-yellow-accent/50'
         >
           Partner With Us
         </Link>
         {/* Reveals itself only once the homepage hero CTA scrolls out of
             view — the same CTA never shows twice in one fold */}
-        {PREVIEW_FEATURES_ENABLED && <NavbarMemberCta />}
+        <NavbarMemberCta />
       </div>
     </HideOnAdminRoute>
   )

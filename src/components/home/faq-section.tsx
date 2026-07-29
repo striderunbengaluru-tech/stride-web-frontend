@@ -5,7 +5,7 @@ const FAQ_ITEMS: AccordionItem[] = faqData;
 
 export default function FaqSection() {
   return (
-    <section className='max-w-6xl mx-auto px-6 py-12 md:py-20'>
+    <section className='max-w-6xl mx-auto px-6 pt-6 pb-12 md:pt-10 md:pb-20'>
       <div>
 
         {/* Section heading */}
@@ -18,7 +18,7 @@ export default function FaqSection() {
             <span className='text-stride-yellow-accent'>know</span>
           </h2>
           <p className='text-copy-white/60 text-base md:text-lg max-w-xl font-figtree'>
-            Before you lace up and join the pack, here are answers to our most common questions.
+            Before you lace up and join, find answers to your queries.
           </p>
         </div>
 

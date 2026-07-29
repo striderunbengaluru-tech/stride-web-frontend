@@ -55,7 +55,7 @@ function emailDocument(body: string): string {
 }
 
 const LOGO_URL =
-  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png'
+  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/email-icons/stride-logo-purple-bg.png'
 const DUCKY_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
 const ICON_BASE =
@@ -383,7 +383,7 @@ export function registrationConfirmedEmail(params: {
                   <td style="padding:20px 28px 26px;text-align:center;">
                     ${ticketLabel('Your Stride Tag')}
                     <p style="margin:2px 0 0;font-family:${MONO_FONT};font-size:26px;font-weight:bold;letter-spacing:4px;color:${YELLOW};">${escapeHtml(runnerTag ?? '—')}</p>
-                    <p class="t-muted" style="margin:8px 0 0;font-family:${BODY_FONT};font-size:12px;color:${MUTED};">Show this tag to the lead Strider when you arrive.</p>
+                    <p class="t-muted" style="margin:8px 0 0;font-family:${BODY_FONT};font-size:12px;color:${MUTED};">Mention this tag to the organizers to gain entry.</p>
                   </td>
                 </tr>
               </table>
@@ -403,7 +403,7 @@ export function registrationConfirmedEmail(params: {
   </table>`
 
   return {
-    subject: `You're in! Booking confirmed for ${eventName}`,
+    subject: `Ticket for ${eventName}`,
     htmlContent: emailDocument(bodyContent),
   }
 }

@@ -23,9 +23,9 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
   {
     slug: 'bakery-hop',
     title: 'Bakery Hop Run',
-    subtitle: 'Run between bakeries, earn every bite',
+    subtitle: 'Earn every bite as you run.',
     description:
-      "We run between Bengaluru's most-loved bakeries and earn every bite one kilometre at a time. Equal parts run, equal parts indulgence.",
+      'Run through a curated route of local bakeries, with exclusive pit stops serving bites you earn along the way.',
     videoUrl: `${VIDEOS}/spotlight-bakery-hop.mp4`,
     poster: `${POSTERS}/bakery-hop.webp`,
     badge: 'Stride Originals',
@@ -34,9 +34,9 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
   {
     slug: 'stride-like-a-woman',
     title: 'Stride Like a Woman',
-    subtitle: 'Women-only run series, led by women',
+    subtitle: 'A women-only fitness and lifestyle community.',
     description:
-      "For many women, the biggest barrier to running isn't fitness, it's safety. We built a run designed for women to move freely, and the turnout said everything.",
+      'Move, grow, and build meaningful friendships in a space designed by women, for women.',
     videoUrl: `${VIDEOS}/spotlight-stride-like-a-woman.mp4`,
     poster: `${POSTERS}/stride-like-a-woman.webp`,
     badge: 'Stride Originals',
@@ -47,9 +47,9 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
   {
     slug: 'run-and-rave',
     title: 'Run and Rave',
-    subtitle: 'A group run, then a fully sober dance party',
+    subtitle: 'A workout that ends in a dance party.',
     description:
-      "A community run followed by a fully sober dance and social, hosted at some of the city's best venues with food, coffee, and plenty of fun. Stride was one of the first run clubs to bring the idea to Bengaluru.",
+      'Start your morning with a fitness experience, then hit the dance floor with great music, food, and amazing people.',
     videoUrl: `${VIDEOS}/spotlight-run-and-rave.mp4`,
     poster: `${POSTERS}/spotlight-run-and-rave.webp`,
     badge: 'Stride Originals',
@@ -58,9 +58,9 @@ export const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
   {
     slug: 'lake-hop',
     title: 'The Lake Hop Project',
-    subtitle: "Weekday morning runs around the city's lakes",
+    subtitle: 'One run. Multiple lakes.',
     description:
-      "A weekday morning run series around Bengaluru's lakes. We meet early, run the shoreline together, and are done before the city wakes up.",
+      'Hop from lake to lake on a scenic route at sunrise, with routes ranging from 8 to 30 km.',
     // Image-only spotlight — no video.
     poster: `${POSTERS}/spotlight-lake-hop.webp`,
     badge: 'Stride Originals',

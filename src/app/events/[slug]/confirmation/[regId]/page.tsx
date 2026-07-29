@@ -68,7 +68,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     adminClient
       .from('event_registrations')
       .select(
-        'id, user_id, status, amount_paid_paise, razorpay_payment_id, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, confirmation_text)'
+        'id, user_id, status, amount_paid_paise, razorpay_payment_id, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, distance_km, confirmation_text)'
       )
       .eq('id', regId)
       .single(),
@@ -304,7 +304,10 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
             <ShareConfirmation
               eventName={event.name}
               eventDate={compactDate ?? null}
+              eventDateLabel={dateShort ?? null}
+              eventTimeLabel={startTime ?? null}
               eventLocation={event.location ?? null}
+              eventDistanceKm={event.distance_km ?? null}
               eventSlug={event.slug}
               eventBannerUrl={eventBannerUrl}
             />

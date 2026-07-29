@@ -3,11 +3,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /auth/
-Disallow: /events/
-Disallow: /become-a-member/
-Disallow: /milestones/
+Disallow: /events/*/confirmation/
 Disallow: /team/
-Disallow: /my-runs/
+Disallow: /my-runs
 Disallow: /login/
 Disallow: /register/
 

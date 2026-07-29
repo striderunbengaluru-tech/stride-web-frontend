@@ -12,7 +12,7 @@ import {
   X, Plus, Eye, ChevronDown, Pencil, GripVertical, Trash2,
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
-  Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw,
+  Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
 } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
 import type { AdditionalField, AdditionalFieldType } from '@/types/event'
@@ -74,6 +74,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   )
   const [difficulty, setDifficulty] = useState(defaultValues.difficulty ?? '')
   const [showSpotsLeft, setShowSpotsLeft] = useState(defaultValues.showSpotsLeft ?? false)
+  const [isTestEvent, setIsTestEvent] = useState(defaultValues.isTestEvent ?? false)
 
   // Cancel confirmation modal — `mounted` flag guards createPortal on SSR
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
@@ -461,6 +462,21 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   icon={<PauseCircle size={14} />} label='Draft' tone='yellow' />
                 <StatusPill value='CANCELLED' active={status === 'CANCELLED'} onClick={() => { setStatus('CANCELLED'); markDirty() }}
                   icon={<XCircle size={14} />} label='Cancelled' tone='red' />
+              </div>
+
+              {/* Test event — lives with status because both control visibility */}
+              <div className='flex items-center justify-between gap-3 mt-4 pt-4 border-t border-white/10'>
+                <div className='flex items-center gap-1.5'>
+                  <FlaskConical size={14} className='text-white/40' />
+                  <label className='text-white/70 text-sm font-medium'>Test event (staging only)</label>
+                  <HelpHint text='Keeps the event off the live site entirely — it never appears on strideclub.in, in the sitemap, or on the homepage, and its page 404s there, even when PUBLISHED. Still fully usable on staging for testing registration, check-in and emails.' />
+                </div>
+                <Switch
+                  checked={isTestEvent}
+                  onCheckedChange={(v) => { setIsTestEvent(v); markDirty() }}
+                  label='Test event, visible on staging only'
+                />
+                <input type='hidden' name='isTestEvent' value={isTestEvent ? 'true' : 'false'} />
               </div>
             </div>
 

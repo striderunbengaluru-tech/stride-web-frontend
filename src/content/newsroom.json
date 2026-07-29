@@ -2,9 +2,19 @@
   "heading": {
     "pretitle": "Press & Media",
     "title": "We have been all over the **news**",
-    "subtitle": "Bengaluru's running community has caught the eye of the city's top publications. Here's what they're saying about Stride."
+    "subtitle": "India's top fitness community has caught the eye of the national media. Here's what they're saying about Stride Run Club:"
   },
   "articles": [
+    {
+      "id": "the-hindu-2025",
+      "publication": "The Hindu",
+      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/the-hindu-logo.svg",
+      "title": "This weekend run club in Bengaluru helps people to find new sole-mates",
+      "excerpt": "Stride Run Club in Bengaluru offers a social fitness experience to combat loneliness, welcoming all levels of participants",
+      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-8.webp",
+      "date": "24 Nov 2024",
+      "url": "https://www.thehindu.com/news/cities/bangalore/this-weekend-run-club-in-bengaluru-helps-people-to-find-new-sole-mates/article68901224.ece"
+    },
     {
       "id": "passionate-in-marketing-2026",
       "publication": "Passionate In Marketing",
@@ -84,16 +94,6 @@
       "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-7.webp",
       "date": "02 May 2025",
       "url": "https://timesofindia.indiatimes.com/entertainment/events/bangalore/bengalurus-runners-find-strength-in-numbers/articleshow/120791672.cms"
-    },
-    {
-      "id": "the-hindu-2025",
-      "publication": "The Hindu",
-      "publicationLogo": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/the-hindu-logo.svg",
-      "title": "This weekend run club in Bengaluru helps people to find new sole-mates",
-      "excerpt": "Stride Run Club in Bengaluru offers a social fitness experience to combat loneliness, welcoming all levels of participants",
-      "image": "https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/newsroom-8.webp",
-      "date": "24 Nov 2024",
-      "url": "https://www.thehindu.com/news/cities/bangalore/this-weekend-run-club-in-bengaluru-helps-people-to-find-new-sole-mates/article68901224.ece"
     },
     {
       "id": "news-karnataka-2024",

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 
-// Events, Become-a-Member and Milestones are still in internal testing.
+// The Team page is still in internal testing.
 // Shown on every non-production deployment (staging branch, feature-branch
 // previews, local dev) and hidden — returning 404 — only on the production
 // deployment of the live site. `NEXT_PUBLIC_VERCEL_ENV` is injected
@@ -19,11 +19,7 @@ export function guardPreviewFeature(): void {
 // on the live site. When a feature launches, remove its `guardPreviewFeature()`
 // call AND drop its prefix from this list so it re-enters the production sitemap.
 export const GATED_ROUTE_PREFIXES = [
-  '/events',
-  '/become-a-member',
-  '/milestones',
   '/team',
-  '/my-runs',
 ] as const
 
 // True when `path` is (or is nested under) a route hidden on production.

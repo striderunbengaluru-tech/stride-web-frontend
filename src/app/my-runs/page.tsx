@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { guardPreviewFeature } from '@/lib/feature-flags'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { MyRunsClient, type MyRun } from '@/components/profile/my-runs-client'
@@ -39,8 +38,6 @@ function firstBanner(raw: string | null): string | null {
 }
 
 export default async function MyRunsPage() {
-  guardPreviewFeature()
-
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/become-a-member')

@@ -13,14 +13,14 @@ const BG_IMAGES = [3, 2, 5, 4, 7, 6, 8, 9, 1].map(
   (n) => `${BG_BASE}/newsroom-${n}.webp`
 );
 
-const CYCLE_MS = 1000;
+const CYCLE_MS = 4000;
 // Hold the first slide before cycling starts — keeps the opening viewport
 // stable while the page loads (better LCP, no continuous repaint during
-// startup), then the fast 1s montage kicks in.
+// startup), then the slideshow kicks in.
 const CYCLE_START_DELAY_MS = 3000;
-// Only the first two slides load eagerly (they cover the first cycle); the
-// rest are fetched in the background at low priority so they never compete
-// with the page's first paint.
+// Only the first two slides load eagerly (between the start delay and the
+// first two 4s slots they cover the opening ~11s); the rest are fetched in the
+// background at low priority so they never compete with the page's first paint.
 const EAGER_COUNT = 2;
 
 // Blur-up placeholder: a 24px-wide copy of newsroom-3.webp (the first slide)

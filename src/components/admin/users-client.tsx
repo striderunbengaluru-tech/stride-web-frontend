@@ -2,9 +2,11 @@
 
 import { useState, useMemo, useEffect, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
+import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
+import { TierBadge } from '@/components/ui/tier-badge'
 
 type Run = { eventName: string; eventDate: string | null; checkedInAt: string }
 
@@ -45,6 +47,22 @@ function calcAge(dob: string | null): number | null {
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'GUEST'
 
+type SortKey = 'joined' | 'runs' | 'tier'
+type SortDir = 'asc' | 'desc'
+
+const SORT_LABEL: Record<SortKey, string> = {
+  joined: 'Joined',
+  runs: 'Runs',
+  tier: 'Milestone',
+}
+
+// Tier position from the run count. Milestone tiers are a function of
+// `runs_completed`, so this ordering matches the runs ordering — it only differs
+// in that everyone inside a band is grouped together.
+function tierIndexOf(runs: number): number {
+  return MILESTONE_TIERS.findIndex(t => t.key === getMilestone(runs).key)
+}
+
 const ROLE_STYLES: Record<string, string> = {
   ADMIN: 'bg-stride-yellow-accent/20 text-stride-yellow-accent',
   GUEST: 'bg-white/10 text-white/50',
@@ -72,6 +90,8 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 export function UsersClient({ users }: { users: UserRow[] }) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
+  const [sortKey, setSortKey] = useState<SortKey>('joined')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // Pending role-change target — opens the confirmation modal
   const [roleTarget, setRoleTarget] = useState<UserRow | null>(null)
@@ -101,8 +121,22 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       u.username?.toLowerCase().includes(q) ||
       u.runner_tag?.toLowerCase().includes(q)
     )
-    return result
-  }, [users, search, roleFilter])
+
+    // Copy before sorting — `result` can still be the `users` prop array.
+    const sorted = [...result].sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1
+      if (sortKey === 'joined') {
+        return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      }
+      if (sortKey === 'tier') {
+        const delta = tierIndexOf(a.runs_completed) - tierIndexOf(b.runs_completed)
+        // Same tier — order by runs inside it so the list stays meaningful.
+        return dir * (delta !== 0 ? delta : a.runs_completed - b.runs_completed)
+      }
+      return dir * (a.runs_completed - b.runs_completed)
+    })
+    return sorted
+  }, [users, search, roleFilter, sortKey, sortDir])
 
   // ── Role-change confirmation modal ──
   const makingAdmin = roleTarget?.role !== 'ADMIN'
@@ -195,6 +229,34 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             </button>
           ))}
         </div>
+
+        {/* Sort — key picker + direction toggle */}
+        <div className='flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1 shrink-0'>
+          {(['joined', 'runs', 'tier'] as SortKey[]).map(k => (
+            <button
+              key={k}
+              onClick={() => setSortKey(k)}
+              aria-pressed={sortKey === k}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                sortKey === k
+                  ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
+                  : 'text-white/50 hover:text-white'
+              }`}
+            >
+              {SORT_LABEL[k]}
+            </button>
+          ))}
+          <button
+            onClick={() => setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))}
+            title={sortDir === 'asc' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
+            aria-label={`Sort direction: ${sortDir === 'asc' ? 'ascending' : 'descending'}`}
+            className='flex items-center justify-center min-w-8 h-8 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors'
+          >
+            {sortDir === 'asc'
+              ? <ArrowUpNarrowWide size={15} aria-hidden='true' />
+              : <ArrowDownWideNarrow size={15} aria-hidden='true' />}
+          </button>
+        </div>
       </div>
 
       {/* Empty state */}
@@ -252,6 +314,15 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                     {' · '}
                     Joined {fmtDate(u.created_at)}
                   </p>
+                </div>
+
+                {/* Milestone tier — hidden on the narrowest rows so the runs
+                    count and role pill keep their fixed slots */}
+                <div className='hidden md:flex items-center gap-1.5 w-36 shrink-0'>
+                  <TierBadge tier={getMilestone(u.runs_completed)} size='md' />
+                  <span className='text-white/60 text-xs font-medium line-clamp-1'>
+                    {getMilestone(u.runs_completed).label}
+                  </span>
                 </div>
 
                 {/* Runs — fixed width so alignment never shifts */}
