@@ -38,6 +38,31 @@ const inputBase =
 const checkboxBase = 'mt-0.5 accent-stride-yellow-accent w-4 h-4 shrink-0'
 const inputErrorBorder = 'border-red-500/60 focus:border-red-500/60'
 
+// Section heading inside the modal — plain and readable. Deliberately not the
+// mono/uppercase/tracked treatment: at 10px it was the least legible label in a
+// dialog whose whole job is informed consent.
+const sectionHeading = 'text-white text-sm font-semibold'
+
+// Markdown rendered inside the modal. prose-sm matches every other markdown
+// block in the app (the previous `prose-xs` isn't a real typography size, so the
+// terms silently rendered at prose *default* — 16px with 1.75 leading — and the
+// per-element overrides were fighting it). Headings are capped near body size so
+// an admin's `##` can't out-shout the modal's own headings, and links are
+// underlined rather than distinguished by colour alone.
+const termsProse =
+  'prose prose-invert prose-sm max-w-none ' +
+  'prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-2 ' +
+  'prose-headings:text-white prose-headings:font-semibold prose-headings:text-[13px] prose-headings:mt-4 prose-headings:mb-1.5 ' +
+  'prose-a:text-stride-yellow-accent prose-a:underline prose-a:underline-offset-2 ' +
+  'prose-strong:text-white prose-li:text-white/85 prose-li:my-0.5 ' +
+  'prose-ul:my-2 prose-ol:my-2 prose-hr:border-white/10 ' +
+  '[&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent ' +
+  '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0'
+
+// Treat the scroll position as "at the end" a few px early — sub-pixel layout
+// means scrollTop often lands just short of the exact bottom.
+const SCROLL_END_SLOP_PX = 8
+
 // Per-field validators — shared by live (blur/change) validation and the
 // submit-time backstop. Return a message, or null when valid.
 const validateFullName = (v: string) =>
@@ -98,6 +123,13 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
   )
   const [accepted, setAccepted] = useState(false)
+  // Terms scroll state. `atEnd` is transient and drives the fade at the bottom
+  // edge (scroll back up and there genuinely is more below again); `read` is
+  // sticky and drives the header's confirmation. Both start true when the terms
+  // are short enough not to scroll, so the UI never asks for a scroll that
+  // isn't possible.
+  const [termsAtEnd, setTermsAtEnd] = useState(false)
+  const [termsRead, setTermsRead] = useState(false)
   const [agreedPolicies, setAgreedPolicies] = useState(false)
   const [agreedGuardian, setAgreedGuardian] = useState(false)
   const [agreedSafety, setAgreedSafety] = useState(false)
@@ -120,6 +152,21 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   }
   function markFieldDirty(key: string) {
     setDirtyFields(prev => (prev[key] ? prev : { ...prev, [key]: true }))
+  }
+
+  // Measured on attach rather than in an effect — terms that fit without
+  // scrolling are already fully read.
+  function measureTerms(el: HTMLDivElement | null) {
+    if (el && el.scrollHeight - el.clientHeight <= SCROLL_END_SLOP_PX) {
+      setTermsAtEnd(true)
+      setTermsRead(true)
+    }
+  }
+  function handleTermsScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    const atEnd = el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_END_SLOP_PX
+    setTermsAtEnd(atEnd)
+    if (atEnd) setTermsRead(true)
   }
 
   // Emergency number is valid only if well-formed AND different from the
@@ -437,8 +484,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
 
             {/* Event-specific custom fields */}
             {additionalFields.length > 0 && (
-              <div className='pt-4 mt-2 border-t border-white/8 space-y-4'>
-                <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Event-specific questions</p>
+              <div className='pt-5 mt-2 border-t border-white/10 space-y-4'>
+                <h3 className={sectionHeading}>A few event questions</h3>
                 {additionalFields.map(field => {
                   const err = fieldErrors[field.id]
                   const handleChange = (value: string) => {
@@ -536,21 +583,46 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               </div>
             )}
 
-            {/* Terms & conditions — required acceptance before registering */}
+            {/* Terms & conditions — a document to read, then attest to.
+                The copy sits in a recessed well (darker than the modal's glass,
+                so it reads as inset rather than a card stacked on a card) and
+                fades at its bottom edge while there's more below, so "keep
+                reading" is shown rather than implied. */}
             {hasTerms && (
-              <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
-                <p className='text-stride-yellow-accent text-[10px] font-bold font-mono uppercase tracking-[0.2em]'>Terms &amp; conditions</p>
-                <div className='max-h-44 overflow-y-auto rounded-lg bg-white/5 border border-white/12 px-4 py-3 prose prose-invert prose-xs max-w-none prose-p:text-white/70 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/70 prose-ul:my-1.5 prose-ol:my-1.5 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
+              <div className='pt-5 mt-2 border-t border-white/10'>
+                <div className='flex items-baseline justify-between gap-3 mb-2'>
+                  <h3 className={sectionHeading}>Event terms</h3>
+                  <span
+                    aria-live='polite'
+                    className={`text-[11px] tabular-nums transition-colors duration-200 motion-reduce:transition-none ${
+                      termsRead ? 'text-stride-yellow-accent' : 'text-white/40'
+                    }`}
+                  >
+                    {termsRead ? 'Read' : 'Scroll to read'}
+                  </span>
+                </div>
+
+                <div
+                  ref={measureTerms}
+                  onScroll={handleTermsScroll}
+                  tabIndex={0}
+                  role='region'
+                  aria-label='Event terms and conditions'
+                  className={`max-h-48 overflow-y-auto overscroll-contain rounded-lg border border-white/10 bg-black/20 px-4 py-3.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stride-yellow-accent/70 ${
+                    termsAtEnd ? '' : 'mask-b-from-88% mask-b-to-100%'
+                  } ${termsProse}`}
+                >
                   <ReactMarkdown>{termsAndConditions ?? ''}</ReactMarkdown>
                 </div>
-                <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+
+                <label className='mt-1 flex min-h-11 items-center gap-2.5 cursor-pointer select-none group'>
                   <input
                     type='checkbox'
                     checked={accepted}
                     onChange={e => setAccepted(e.target.checked)}
-                    className='mt-0.5 accent-stride-yellow-accent w-4 h-4 shrink-0'
+                    className='accent-stride-yellow-accent w-4 h-4 shrink-0 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stride-yellow-accent'
                   />
-                  <span className='text-white/70 text-xs leading-snug'>
+                  <span className='text-white/70 text-xs leading-snug group-hover:text-white/85 transition-colors duration-150 motion-reduce:transition-none'>
                     I have read and agree to the terms &amp; conditions for this event.
                   </span>
                 </label>
