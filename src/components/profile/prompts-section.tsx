@@ -171,40 +171,53 @@ export function PromptsSection({ initialPrompts, isOwnProfile }: Props) {
                 onDragOver={e => { e.preventDefault(); if (i !== dragOver) setDragOver(i) }}
                 onDrop={() => handleDrop(i)}
                 onDragEnd={() => { setDragSrc(null); setDragOver(null) }}
-                className={`group flex items-start gap-3.5 rounded-2xl border bg-white/6 backdrop-blur-md px-4 py-4 transition-all ${
+                // Hinge's prompt-card hierarchy: a small quiet label, then the
+                // answer set large in the serif face, with room to breathe under
+                // it. min-h keeps a one-line answer looking deliberate rather
+                // than cramped.
+                className={`group relative flex min-h-40 flex-col rounded-2xl border bg-white/6 backdrop-blur-md px-6 py-7 sm:px-7 transition-all ${
                   isOver ? 'border-stride-yellow-accent bg-stride-yellow-accent/5'
                     : isDragging ? 'border-white/10 opacity-40'
                     : 'border-white/12 hover:border-stride-yellow-accent/40'
                 }`}
               >
+                {/* Owner controls — always reachable on touch, revealed on hover
+                    from md: up so they stay out of the reading experience. */}
                 {isOwnProfile && (
-                  <span className='shrink-0 mt-1 text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing' aria-label='Drag to reorder'>
-                    <GripVertical size={16} />
-                  </span>
-                )}
-
-                {/* Quote mark */}
-                <span className='shrink-0 mt-0.5 text-stride-yellow-accent/60' aria-hidden='true'>
-                  <Quote size={16} />
-                </span>
-
-                {/* Question + answer */}
-                <div className='min-w-0 flex-1'>
-                  <p className='text-stride-yellow-accent/80 text-xs font-medium font-mono tracking-wide'>{prompt.question}</p>
-                  <p className='text-white text-sm leading-relaxed mt-1.5 whitespace-pre-line break-words'>{prompt.answer}</p>
-                </div>
-
-                {isOwnProfile && (
-                  <div className='flex items-center gap-1 shrink-0'>
-                    <button onClick={() => startEdit(prompt)} className='text-white/25 hover:text-white transition-colors p-1.5' aria-label='Edit prompt'>
+                  <div className='absolute right-3 top-3 flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100'>
+                    <span
+                      className='flex h-8 w-8 cursor-grab items-center justify-center text-white/25 transition-colors hover:text-white/60 active:cursor-grabbing'
+                      aria-label='Drag to reorder'
+                    >
+                      <GripVertical size={15} />
+                    </span>
+                    <button
+                      onClick={() => startEdit(prompt)}
+                      className='flex h-8 w-8 items-center justify-center rounded-lg text-white/30 transition-colors hover:bg-white/8 hover:text-white'
+                      aria-label='Edit prompt'
+                    >
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(prompt.id)} disabled={deletingId === prompt.id}
-                      className='text-white/20 hover:text-red-400 transition-colors disabled:opacity-50 p-1.5' aria-label='Delete prompt'>
+                    <button
+                      onClick={() => handleDelete(prompt.id)}
+                      disabled={deletingId === prompt.id}
+                      className='flex h-8 w-8 items-center justify-center rounded-lg text-white/25 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50'
+                      aria-label='Delete prompt'
+                    >
                       {deletingId === prompt.id ? <Spinner /> : <X size={14} />}
                     </button>
                   </div>
                 )}
+
+                {/* The prompt, quiet */}
+                <p className={`font-figtree text-[13px] font-semibold tracking-tight text-white/55 ${isOwnProfile ? 'pr-24' : ''}`}>
+                  {prompt.question}
+                </p>
+
+                {/* The answer, loud */}
+                <p className='mt-3 font-libre text-2xl leading-snug tracking-tight text-balance break-words whitespace-pre-line text-white sm:text-[28px]'>
+                  {prompt.answer}
+                </p>
               </div>
             )
           })}

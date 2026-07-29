@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X, Check } from 'lucide-react'
@@ -21,13 +22,20 @@ export function EditBioSection({ bio, isOwnProfile }: Props) {
   async function save() {
     if (tooLong) return
     setSaving(true)
-    await fetch('/api/profile/update', {
+    // The response was previously ignored, so a failed save still closed the
+    // editor silently. Checking it keeps the success toast honest.
+    const res = await fetch('/api/profile/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bio: value || undefined }),
     })
     setSaving(false)
+    if (!res.ok) {
+      toast.error('Couldn’t save your About section. Please try again.')
+      return
+    }
     setEditing(false)
+    toast.success('About section updated!')
     router.refresh()
   }
 

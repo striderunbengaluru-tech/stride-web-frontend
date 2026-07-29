@@ -1,10 +1,11 @@
 // Utility — builds a 1080x1920 Instagram-Story-ready PNG of an event.
 // Used by the confirmation page's Share button (see share-confirmation.tsx).
 //
-// Layout: pure purple background, event image bounded in a rounded frame in
-// the lower half (no gradient overlay), big event name + date + location in
-// the upper half, Stride handle + URL at the bottom. No runner tag here —
-// that stays on the page itself.
+// Layout, top to bottom: purple background, Stride wordmark, "I AM ATTENDING"
+// eyebrow, event name, date + location, a dashed zone for the sharer to drop
+// Instagram's own link sticker on, then the event poster filling the full width
+// between the side margins. No handle or URL — the link sticker replaces them,
+// and no runner tag, which stays on the page itself.
 
 const CANVAS_W = 1080
 const CANVAS_H = 1920
@@ -13,8 +14,15 @@ const BRAND_PURPLE_DARK = '#2a1240'
 const BRAND_YELLOW = '#E1D03F'
 const PADDING = 80
 
-const SITE_HOST = 'strideclub.in'
-const STRIDE_HANDLE = '@stride_runclub_bengaluru'
+// Dashed placeholder the sharer covers with Instagram's link sticker. Sized to
+// its own label rather than the full content width, so it reads as a chip-shaped
+// hint instead of a big empty box.
+const STICKER_H = 64
+const STICKER_PAD_X = 28
+const STICKER_LABEL = 'ADD LINK STICKER'
+
+// Leaves the poster clear of Instagram's own bottom chrome.
+const BOTTOM_MARGIN = 70
 
 // The Stride wordmark logo (same SVG used in the navbar/footer).
 const LOGO_URL = '/assets/images/stride-logo-color-transparent.svg'
@@ -96,7 +104,6 @@ export async function buildStoryCanvas(opts: {
   eventDate: string | null     // already formatted, e.g. "Sat, 28 Jun · 7:15 AM"
   eventLocation: string | null
   eventBannerUrl: string | null
-  eventSlug: string
 }): Promise<Blob | null> {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_W
@@ -123,11 +130,13 @@ export async function buildStoryCanvas(opts: {
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
 
   // ── Brand block — Stride wordmark (SVG) top-left ──
+  // The header is deliberately tight: every pixel saved up here goes to the
+  // poster, which now has to fill the full content width.
   const logo = await loadImage(LOGO_URL)
   if (logo) {
-    const logoW = 300
+    const logoW = 240
     const ratio = logo.naturalWidth ? logo.naturalHeight / logo.naturalWidth : 0.33
-    ctx.drawImage(logo, PADDING, 120, logoW, logoW * ratio)
+    ctx.drawImage(logo, PADDING, 90, logoW, logoW * ratio)
   }
 
   // ── Eyebrow ── (Geist Mono uppercase to match the brand system)
@@ -137,26 +146,29 @@ export async function buildStoryCanvas(opts: {
   // Geist Mono is already a wide monospace face, so keep tracking minimal —
   // extra letter-spacing here reads as gaps between every character.
   ctx.letterSpacing = '1px'
-  ctx.fillText('I AM ATTENDING', PADDING, 320)
+  // Baselines are spaced so there's clear air between the wordmark, the eyebrow
+  // and the title — roughly 50px logo-to-eyebrow and 38px eyebrow-to-title once
+  // cap heights and descenders are accounted for.
+  ctx.fillText('I AM ATTENDING', PADDING, 246)
   ctx.letterSpacing = '0px'
 
   // ── Event name — title face (Libre Baskerville), wraps to max 2 lines ──
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = `700 76px ${FONT_TITLE}`
+  ctx.font = `700 60px ${FONT_TITLE}`
   const nameLines = layoutWrappedText(ctx, opts.eventName, CANVAS_W - PADDING * 2, 2)
-  let cursorY = 410
+  let cursorY = 336
   for (const line of nameLines) {
     ctx.fillText(line, PADDING, cursorY)
-    cursorY += 96
+    cursorY += 74
   }
 
   // ── Date + location ──
-  cursorY += 12
-  ctx.font = `500 40px ${FONT_BODY}`
+  cursorY += 8
+  ctx.font = `500 38px ${FONT_BODY}`
   ctx.fillStyle = 'rgba(255,255,255,0.8)'
   if (opts.eventDate) {
     ctx.fillText(`📅  ${opts.eventDate}`, PADDING, cursorY)
-    cursorY += 62
+    cursorY += 52
   }
   if (opts.eventLocation) {
     // Truncate location if very long
@@ -166,36 +178,79 @@ export async function buildStoryCanvas(opts: {
     }
     const locText = loc === opts.eventLocation ? loc : `${loc}…`
     ctx.fillText(`📍  ${locText}`, PADDING, cursorY)
-    cursorY += 62
+    cursorY += 52
   }
 
-  // ── Event banner image — bounded rounded frame in the lower half ──
-  const FRAME_X = PADDING
-  const FRAME_W = CANVAS_W - PADDING * 2
-  const FRAME_Y = Math.max(cursorY + 40, 880)
-  const FRAME_H = 1700 - FRAME_Y // ends ~1700, leaving room for handle/URL footer
+  // ── Link-sticker zone — dashed placeholder the sharer drops Instagram's own
+  //    link sticker onto. Kept low-contrast so it reads as a guide, not content,
+  //    if someone posts without covering it. ──
+  const STICKER_Y = cursorY + 26
 
-  // Frame background (in case image fails to load)
+  // Measure with the exact font + tracking the label is drawn with, so the box
+  // hugs the text at any font fallback.
+  ctx.save()
+  ctx.font = `500 26px ${FONT_MONO}`
+  ctx.letterSpacing = '2px'
+  const stickerW = Math.round(ctx.measureText(STICKER_LABEL).width) + STICKER_PAD_X * 2
+
+  ctx.setLineDash([14, 11])
+  ctx.strokeStyle = 'rgba(255,255,255,0.34)'
+  ctx.lineWidth = 3
+  drawRoundedRect(ctx, PADDING, STICKER_Y, stickerW, STICKER_H, 18)
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = 'rgba(255,255,255,0.42)'
+  ctx.fillText(STICKER_LABEL, PADDING + stickerW / 2, STICKER_Y + STICKER_H / 2)
+  ctx.restore()
+
+  cursorY = STICKER_Y + STICKER_H
+
+  // ── Event poster ──
+  // The frame is sized from the poster's own aspect ratio rather than being a
+  // fixed box the poster is fitted into. That means nothing is ever cropped and
+  // there are no letterbox bars inside the frame either — the border hugs the
+  // artwork. It grows upward from a fixed bottom edge, as large as the space
+  // left under the sticker zone allows, and stays horizontally centred.
+  const poster = opts.eventBannerUrl ? await loadImage(opts.eventBannerUrl) : null
+
+  const MAX_FRAME_W = CANVAS_W - PADDING * 2
+  const FRAME_BOTTOM = CANVAS_H - BOTTOM_MARGIN
+  const AVAILABLE_H = FRAME_BOTTOM - (cursorY + 34)
+
+  const aspect = poster?.naturalWidth && poster.naturalHeight
+    ? poster.naturalWidth / poster.naturalHeight
+    : 3 / 4 // admin crops posters to 3:4, so that's the sane fallback
+
+  const FRAME_H = Math.min(AVAILABLE_H, MAX_FRAME_W / aspect)
+  const FRAME_W = FRAME_H * aspect
+  const FRAME_X = (CANVAS_W - FRAME_W) / 2
+  const FRAME_Y = FRAME_BOTTOM - FRAME_H
+
+  // Frame background (visible only if the poster failed to load)
   ctx.fillStyle = 'rgba(255,255,255,0.05)'
   drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
   ctx.fill()
 
-  if (opts.eventBannerUrl) {
-    const img = await loadImage(opts.eventBannerUrl)
-    if (img) {
-      ctx.save()
-      drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
-      ctx.clip()
-      // Contain-fit — the whole poster stays visible inside the bounded frame
-      // (no cropping); the rounded frame acts as the bounding box.
-      const scale = Math.min(FRAME_W / img.naturalWidth, FRAME_H / img.naturalHeight)
-      const drawW = img.naturalWidth * scale
-      const drawH = img.naturalHeight * scale
-      const drawX = FRAME_X + (FRAME_W - drawW) / 2
-      const drawY = FRAME_Y + (FRAME_H - drawH) / 2
-      ctx.drawImage(img, drawX, drawY, drawW, drawH)
-      ctx.restore()
-    }
+  if (poster) {
+    ctx.save()
+    drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
+    ctx.clip()
+    // Contain-fit. Because the frame was derived from this image's aspect it
+    // fills exactly — no crop, no bars.
+    const scale = Math.min(FRAME_W / poster.naturalWidth, FRAME_H / poster.naturalHeight)
+    const drawW = poster.naturalWidth * scale
+    const drawH = poster.naturalHeight * scale
+    ctx.drawImage(
+      poster,
+      FRAME_X + (FRAME_W - drawW) / 2,
+      FRAME_Y + (FRAME_H - drawH) / 2,
+      drawW,
+      drawH,
+    )
+    ctx.restore()
   }
 
   // Subtle border around the frame
@@ -203,15 +258,6 @@ export async function buildStoryCanvas(opts: {
   ctx.lineWidth = 2
   drawRoundedRect(ctx, FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 32)
   ctx.stroke()
-
-  // ── Footer — handle + URL (Geist Mono, matching the site's mono labels) ──
-  ctx.fillStyle = BRAND_YELLOW
-  ctx.font = `700 34px ${FONT_MONO}`
-  ctx.fillText(STRIDE_HANDLE, PADDING, 1780)
-
-  ctx.fillStyle = 'rgba(255,255,255,0.65)'
-  ctx.font = `500 28px ${FONT_MONO}`
-  ctx.fillText(`${SITE_HOST}/events/${opts.eventSlug}`, PADDING, 1830)
 
   return new Promise<Blob | null>(resolve => {
     canvas.toBlob(b => resolve(b), 'image/png')

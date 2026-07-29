@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Calendar, MapPin, ChevronRight, Footprints } from 'lucide-react'
+import { Calendar, ChevronRight, Footprints } from 'lucide-react'
 
 type AttendedEvent = {
   id: string
@@ -93,8 +93,10 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
           })}
         </div>
       ) : (
-        /* Mini cards — 10 or fewer runs */
-        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3'>
+        /* Mini cards — 10 or fewer runs. Four across instead of five, and a 3:4
+           frame instead of a square: posters are cropped to 3:4 by the admin, so
+           this shows them whole and noticeably larger. */
+        <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3'>
           {events.map(event => {
             const bannerUrl = firstBanner(event.banner_images)
             const dateStr = formatEventDate(event.event_date)
@@ -104,14 +106,14 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
                 href={`/events/${event.slug}`}
                 className='group rounded-xl overflow-hidden border border-white/10 hover:border-stride-yellow-accent/40 transition-all bg-white/5 block'
               >
-                <div className='relative aspect-square bg-white/5'>
+                <div className='relative aspect-3/4 bg-white/5'>
                   {bannerUrl ? (
                     <Image
                       src={bannerUrl}
                       alt={event.name}
                       fill
                       className='object-cover transition-transform duration-500 group-hover:scale-105'
-                      sizes='(max-width: 640px) 50vw, 200px'
+                      sizes='(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 220px'
                     />
                   ) : (
                     <div className='absolute inset-0 bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/20' />
@@ -123,12 +125,6 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
                     <span className='flex items-center gap-1 text-white/40 text-[11px] mt-1'>
                       <Calendar size={9} />
                       {dateStr}
-                    </span>
-                  )}
-                  {event.location && (
-                    <span className='flex items-center gap-1 text-white/30 text-[11px] mt-0.5 truncate'>
-                      <MapPin size={9} />
-                      {event.location}
                     </span>
                   )}
                 </div>

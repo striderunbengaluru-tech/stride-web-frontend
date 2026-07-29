@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X, Check, MapPin, User } from 'lucide-react'
@@ -153,6 +154,9 @@ export function EditHeaderSection({
       setError('Couldn’t save — please check your details and try again.')
       return
     }
+    // This form covers name, location and the social links together, so the
+    // message stays broader than "links updated".
+    toast.success('Profile details updated!')
     // Reflect normalised links locally so the saved state shows immediately.
     setLinkedin(normalised.LinkedIn)
     setInstagram(normalised.Instagram)
