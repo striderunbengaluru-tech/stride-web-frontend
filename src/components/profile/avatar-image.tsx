@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { avatarFrameStyle } from '@/lib/milestones'
 
 type Props = {
   src: string
@@ -8,11 +9,13 @@ type Props = {
   className?: string
   /** Tier frame colour applied to the avatar border. */
   frameColor?: string
+  /** Optional hairline outside the border, for frame colours too dark to read alone. */
+  frameRingColor?: string
 }
 
-export function AvatarImage({ src, alt, className, frameColor }: Props) {
+export function AvatarImage({ src, alt, className, frameColor, frameRingColor }: Props) {
   const [failed, setFailed] = useState(false)
-  const frameStyle = frameColor ? { borderColor: frameColor } : undefined
+  const frameStyle = avatarFrameStyle(frameColor, frameRingColor)
 
   if (failed) {
     return (

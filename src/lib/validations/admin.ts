@@ -30,6 +30,10 @@ export const eventSchema = z.object({
   priceRupees: z.coerce.number().min(0, 'Price cannot be negative').max(1_000_000, 'Price is too large').default(0),
   // Checkbox/switch posts 'true' | 'false' via a hidden input; absent = false
   showSpotsLeft: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Staging-only event: never surfaced on the production deployment, whatever
+  // its status. Used to exercise features against real data without the live
+  // site showing it.
+  isTestEvent: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),

@@ -541,6 +541,14 @@
   resolved "https://registry.npmjs.org/@nolyfill/is-core-module/-/is-core-module-1.0.39.tgz"
   integrity sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==
 
+"@number-flow/react@0.6.2":
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/@number-flow/react/-/react-0.6.2.tgz#4ce1b7acb5cc353eb266a041472d84682b4d96a0"
+  integrity sha512-WjZuV4aA+vhRCgCF+adGLgFVVAJ8vdvq6EchRT2FiBIgElTXtDOA3YgkcMr9UHpvpS9v4H70AB5wZv0D9jc3QA==
+  dependencies:
+    esm-env "^1.1.4"
+    number-flow "0.6.2"
+
 "@reduxjs/toolkit@^1.9.0 || 2.x.x":
   version "2.12.0"
   resolved "https://registry.yarnpkg.com/@reduxjs/toolkit/-/toolkit-2.12.0.tgz#e62787503a38561e04bb8f39e29ca8db689590f9"
@@ -2086,6 +2094,11 @@ eslint@^9:
     minimatch "^3.1.2"
     natural-compare "^1.4.0"
     optionator "^0.9.3"
+
+esm-env@^1.1.4:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/esm-env/-/esm-env-1.2.2.tgz#263c9455c55861f41618df31b20cb571fc20b75e"
+  integrity sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA==
 
 espree@^10.0.1, espree@^10.4.0:
   version "10.4.0"
@@ -3689,6 +3702,13 @@ nth-check@^2.0.0:
   integrity sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==
   dependencies:
     boolbase "^1.0.0"
+
+number-flow@0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/number-flow/-/number-flow-0.6.2.tgz#458f61f697af94584b06e41c10c144455ac8eb32"
+  integrity sha512-MCnImG4Q5vPwhSXnov56nOuyyKn6LC+Qd7II1UiKc+ACRtug5iAtn0+CwXNxM38AC5lSowEY+oYEtZX2qMnUyw==
+  dependencies:
+    esm-env "^1.1.4"
 
 object-assign@^4.1.1:
   version "4.1.1"

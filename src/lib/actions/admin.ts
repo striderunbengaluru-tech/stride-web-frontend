@@ -46,7 +46,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -78,6 +78,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
+    is_test_event: isTestEvent,
     ...rest,
   })
 
@@ -104,7 +105,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
 
   const { data: updated } = await adminClient.from('events').update({
     name,
@@ -122,6 +123,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
+    is_test_event: isTestEvent,
     updated_at: new Date().toISOString(),
     ...rest,
   }).eq('id', id).select('slug').single()

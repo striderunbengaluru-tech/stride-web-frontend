@@ -1,5 +1,5 @@
-import { adminClient } from '@/lib/supabase/admin'
 import LeaderboardClient from './leaderboard-client'
+import { getRankedAthletes, toPublicRow, type LeaderboardRow } from '@/lib/leaderboard'
 
 export const metadata = {
   title: 'Leaderboard — Stride Run Club',
@@ -8,37 +8,25 @@ export const metadata = {
 // Revalidate every 5 minutes so the board stays reasonably fresh
 export const revalidate = 300
 
-export type LeaderboardUser = {
-  username: string
-  full_name: string | null
-  avatar_url: string | null
-  runs_completed: number
-  total_distance_meters: number
-  /** When false the entry shows name + photo only, with no profile link. */
-  profile_public: boolean
-}
+export type LeaderboardUser = LeaderboardRow
+
+const BOARD_SIZE = 50
 
 export default async function LeaderboardPage() {
-  // adminClient (no cookies) keeps this route ISR — the old createClient()
-  // read cookies and silently defeated `revalidate = 300`. Public columns
-  // only; the two independent queries run in parallel.
-  const [{ data: byRuns }, { data: byDistance }] = await Promise.all([
-    adminClient
-      .from('users')
-      .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
-      .order('runs_completed', { ascending: false })
-      .limit(50),
-    adminClient
-      .from('users')
-      .select('username, full_name, avatar_url, profile_public, runs_completed, total_distance_meters')
-      .order('total_distance_meters', { ascending: false })
-      .limit(50),
-  ])
+  // No cookies anywhere in this route — that's what keeps it ISR. A previous
+  // version read cookies via createClient() and silently defeated
+  // `revalidate = 300`. The viewer's own position is fetched client-side from
+  // /api/leaderboard/me instead, so this stays cacheable for everyone.
+  //
+  // It also used to select `total_distance_meters` for a second "Distance"
+  // board. No such column exists on `users`: PostgREST rejected the query, the
+  // data came back null, and the whole board rendered "No athletes yet".
+  const ranked = await getRankedAthletes()
 
   return (
     <LeaderboardClient
-      byRuns={(byRuns ?? []) as LeaderboardUser[]}
-      byDistance={(byDistance ?? []) as LeaderboardUser[]}
+      byRuns={ranked.slice(0, BOARD_SIZE).map(toPublicRow)}
+      totalAthletes={ranked.length}
     />
   )
 }

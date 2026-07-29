@@ -82,7 +82,7 @@ export function EventsClient({ events }: { events: Event[] }) {
             className='py-20 text-center'
           >
             <p className='text-white/30 text-lg font-medium'>No {filter === 'all' ? '' : filter} events right now.</p>
-            <p className='text-white/20 text-sm mt-2'>Check back soon — we run regularly!</p>
+            <p className='text-white/20 text-sm mt-2'>We run two to three times a week; new dates are posted here.</p>
           </motion.div>
         ) : (
           <motion.div

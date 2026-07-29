@@ -9,17 +9,20 @@ import { X, Trash2, Pencil, Eye, ImageUp } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { UploadProgress } from '@/components/ui/upload-progress'
 import { uploadWithProgress } from '@/lib/utils/upload'
+import { avatarFrameStyle } from '@/lib/milestones'
 
 type Props = {
   currentUrl: string | null
   displayName: string
   /** Tier frame colour applied to the avatar border. */
   frameColor?: string
+  /** Optional hairline outside the border, for frame colours too dark to read alone. */
+  frameRingColor?: string
 }
 
 type Status = 'idle' | 'uploading' | 'error'
 
-export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
+export function AvatarUpload({ currentUrl, displayName, frameColor, frameRingColor }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [src, setSrc] = useState<string | null>(null)
@@ -191,7 +194,7 @@ export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
             src={displayUrl}
             alt={displayName}
             className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg object-cover border-4 border-stride-purple-primary'
-            style={frameColor ? { borderColor: frameColor } : undefined}
+            style={avatarFrameStyle(frameColor, frameRingColor)}
             loading='lazy'
             fetchPriority='low'
             referrerPolicy='no-referrer'
@@ -200,7 +203,7 @@ export function AvatarUpload({ currentUrl, displayName, frameColor }: Props) {
         ) : (
           <div
             className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg bg-stride-yellow-accent/20 border-4 border-stride-purple-primary flex items-center justify-center'
-            style={frameColor ? { borderColor: frameColor } : undefined}
+            style={avatarFrameStyle(frameColor, frameRingColor)}
           >
             <span className='text-stride-yellow-accent text-5xl font-bold'>
               {displayName.charAt(0).toUpperCase()}

@@ -3,36 +3,36 @@
     "id": "who-can-join",
     "number": "01",
     "question": "Who can join Stride Run Club?",
-    "answer": "Everyone is welcome. There's no pace requirement and no experience needed. We welcome first-timers chasing their debut 5K and seasoned marathoners alike. If you can put one foot in front of the other, you belong here."
+    "answer": "Anyone can join Stride Run Club. No prior running or fitness experience is required. Our runs are open to people of all ages and genders. As long as you can move, you're welcome. You can walk, jog, or run at your own pace."
   },
   {
-    "id": "when-where",
+    "id": "how-to-join",
     "number": "02",
-    "question": "When and where do you meet?",
-    "answer": "We run regularly at Agara Lake, HSR or Atal Bihari Vajpayee Stadium, HSR, Bengaluru. Most runs happen on weekend mornings and select weekday mornings called The Lake Hop Run. Check the Events page for upcoming dates, timings, and meeting points."
+    "question": "How to join Stride Run Club?",
+    "answer": "Joining Stride Run Club is simple. [Sign up here](/become-a-member) and create your profile. You'll get a unique Stride Tag that tracks your journey with the club. The more runs you attend, the more club perks and rewards you unlock."
+  },
+  {
+    "id": "where-do-you-meet",
+    "number": "03",
+    "question": "Where do you meet?",
+    "answer": "We organize runs across Bengaluru, including HSR Layout, Koramangala, Indiranagar, Cubbon Park, and more. The meeting location depends on the run. You can find the exact venue and all the details on the [Events page](/events) for each upcoming run."
   },
   {
     "id": "membership-fee",
-    "number": "03",
-    "question": "Is there a membership fee?",
-    "answer": "Joining the Stride community is free. Individual run events may carry a small registration fee to cover logistics, and you'll see the exact amount on the event listing before you commit."
-  },
-  {
-    "id": "how-to-register",
     "number": "04",
-    "question": "How do I register for a run?",
-    "answer": "Head to the Events page, find the run that excites you, and tap Register Now. Slots fill up fast, so book early. Registration is confirmed on a first-come basis."
+    "question": "Is there a membership fee?",
+    "answer": "No, there is no membership fee to join Stride Run Club. Most of our runs are free to attend. Some curated experiences are paid, and the registration fee is shown on the event page."
   },
   {
-    "id": "what-to-bring",
+    "id": "run-frequency",
     "number": "05",
-    "question": "What should I bring to a group run?",
-    "answer": "Comfortable running shoes, a water bottle, and your best energy. We'll handle the route, pacing groups, and the post-run high-fives. On longer runs, we recommend a light snack and sun protection."
+    "question": "How frequently do you run?",
+    "answer": "We run two to three times a week. Most of our experiences happen on weekends, with one run during the week. Some runs are designed for intermediate and advanced runners, while many are beginner-friendly and open to everyone."
   },
   {
-    "id": "training",
+    "id": "what-to-expect",
     "number": "06",
-    "question": "Do you offer training programmes?",
-    "answer": "Yes. Our Training Lead designs structured blocks for every goal: 5K build-ups, half-marathon plans, and full marathon prep. Follow the community feed or check the Events page for upcoming training cycles."
+    "question": "What to expect at a Stride experience?",
+    "answer": "A Stride Run Club experience is more than just a run. Every event combines movement with a social mixer, so you can meet new people in a fun, judgment-free environment. You can expect guided workouts by certified trainers, interactive games and icebreakers, and brand experiences with product trials and samples at select events. Whether you come alone or with friends, you'll leave with new connections. We don't care how fast or how far you go, we simply celebrate that you showed up."
   }
 ]

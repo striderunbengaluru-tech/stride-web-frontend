@@ -1,6 +1,13 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
+import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
+
+// Events flagged `is_test_event` exist so features can be exercised against real
+// data without the live site showing them. They resolve normally on staging,
+// previews and local dev, and are invisible on the production deployment — this
+// is the single place that decision is made.
+const SHOW_TEST_EVENTS = PREVIEW_FEATURES_ENABLED
 
 // Cached event reads shared by the events pages. Two layers:
 // - unstable_cache: cross-request cache with tags, so pages don't hit the DB
@@ -24,7 +31,7 @@ const EVENT_DETAIL_COLUMNS =
   'id, name, slug, subtitle, details, status, event_date, end_date, location, location_url, ' +
   'post_run_location, post_run_location_url, strava_route_url, capacity, price_paise, ' +
   'cover_url, banner_images, additional_fields, terms_and_conditions, distance_km, ' +
-  'difficulty, show_spots_left'
+  'difficulty, show_spots_left, is_test_event'
 
 export type EventDetailRow = {
   id: string
@@ -49,6 +56,7 @@ export type EventDetailRow = {
   distance_km: number | null
   difficulty: string | null
   show_spots_left: boolean | null
+  is_test_event: boolean | null
 }
 
 export type EventListRow = {
@@ -61,16 +69,21 @@ export type EventListRow = {
   price_paise: number
   cover_url: string | null
   banner_images: string | null
+  is_test_event: boolean | null
 }
 
 export const getEventBySlug = cache((slug: string): Promise<EventDetailRow | null> =>
   unstable_cache(
     async () => {
-      const { data } = await adminClient
+      const query = adminClient
         .from('events')
         .select(EVENT_DETAIL_COLUMNS)
         .eq('slug', slug)
-        .single()
+      // On production a test event's page must 404, not render — returning null
+      // lets the page's existing notFound() handle it.
+      if (!SHOW_TEST_EVENTS) query.eq('is_test_event', false)
+
+      const { data } = await query.single()
       return (data as EventDetailRow | null) ?? null
     },
     ['event-by-slug', slug],
@@ -96,11 +109,13 @@ export const getConfirmedCount = cache((eventId: string): Promise<number> =>
 export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
   unstable_cache(
     async () => {
-      const { data } = await adminClient
+      const query = adminClient
         .from('events')
-        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images')
+        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event')
         .eq('status', 'PUBLISHED')
-        .order('event_date', { ascending: true })
+      if (!SHOW_TEST_EVENTS) query.eq('is_test_event', false)
+
+      const { data } = await query.order('event_date', { ascending: true })
       return (data ?? []) as EventListRow[]
     },
     ['published-events'],

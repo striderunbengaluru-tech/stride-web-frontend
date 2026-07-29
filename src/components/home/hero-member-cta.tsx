@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { useAuth } from '@/components/auth/auth-provider'
-import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 
 // Client island so the homepage can stay static. Signed-in visitors are
 // already members — and the middleware bounces them off /become-a-member back
 // to `/` — so the CTA renders only once the local session resolves signed-out.
 export function HeroMemberCta() {
   const { status } = useAuth()
-  if (status !== 'signed-out' || !PREVIEW_FEATURES_ENABLED) return null
+  if (status !== 'signed-out') return null
 
   return (
     <div

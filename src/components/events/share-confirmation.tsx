@@ -8,7 +8,10 @@ import { buildStoryCanvas } from '@/components/events/story-banner-download'
 type Props = {
   eventName: string
   eventDate: string | null      // pre-formatted, e.g. "Sat, 28 Jun · 7:15 AM"
+  eventDateLabel: string | null // date only, e.g. "Sat, 28 Jun"
+  eventTimeLabel: string | null // time only, e.g. "7:15 AM"
   eventLocation: string | null
+  eventDistanceKm: number | null
   eventSlug: string
   eventBannerUrl: string | null
 }
@@ -16,7 +19,8 @@ type Props = {
 const STRIDE_HANDLE = '@stride_runclub_bengaluru'
 
 export function ShareConfirmation({
-  eventName, eventDate, eventLocation, eventSlug, eventBannerUrl,
+  eventName, eventDate, eventDateLabel, eventTimeLabel,
+  eventLocation, eventDistanceKm, eventSlug, eventBannerUrl,
 }: Props) {
   const [generatingImage, setGeneratingImage] = useState(false)
   // Build the share URL from the live address bar so it always reflects the
@@ -26,12 +30,21 @@ export function ShareConfirmation({
     setEventUrl(`${window.location.origin}/events/${eventSlug}`)
   }, [eventSlug])
 
-  // Plain-text message, no emojis (older devices render them as garbage chars).
-  const whatsappText =
-    `I'm running ${eventName}` +
-    (eventDate ? ` on ${eventDate}` : '') +
-    ` with Stride Run Club.\n\n` +
-    `Come run with me: ${eventUrl}`
+  // Each detail line is dropped when the event doesn't carry that field, so the
+  // message never shows an empty "Date:" row.
+  const detailLines = [
+    eventDateLabel ? `📅 Date: ${eventDateLabel}` : null,
+    eventTimeLabel ? `⏰ Time: ${eventTimeLabel}` : null,
+    eventLocation ? `📍 Location: ${eventLocation}` : null,
+    eventDistanceKm ? `📏 Distance: ${eventDistanceKm} km` : null,
+  ].filter(Boolean) as string[]
+
+  const whatsappText = [
+    `🏃 I'm running ${eventName} with Stride Run Club!`,
+    ...(detailLines.length ? ['', ...detailLines] : []),
+    '',
+    `Come run with me 👉 ${eventUrl}`,
+  ].join('\n')
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`
 
   async function handleInstagram() {

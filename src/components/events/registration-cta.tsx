@@ -20,12 +20,14 @@ const EMPTY_INITIAL = {
 const getViewerState = reactCache(async (eventId: string) => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { isLoggedIn: false, isRegistered: false, initial: EMPTY_INITIAL }
+  if (!user) {
+    return { isLoggedIn: false, isRegistered: false, registrationId: null, initial: EMPTY_INITIAL }
+  }
 
   const [{ data: reg }, { data: profile }] = await Promise.all([
     adminClient
       .from('event_registrations')
-      .select('status')
+      .select('id, status')
       .eq('event_id', eventId)
       .eq('user_id', user.id)
       .maybeSingle(),
@@ -50,7 +52,15 @@ const getViewerState = reactCache(async (eventId: string) => {
       }
     : { ...EMPTY_INITIAL, fullName: oauthName }
 
-  return { isLoggedIn: true, isRegistered: reg?.status === 'CONFIRMED', initial }
+  const isRegistered = reg?.status === 'CONFIRMED'
+  // Only surfaced for a CONFIRMED row — that's the only state the confirmation
+  // page will render (it re-checks session, ownership and status itself).
+  return {
+    isLoggedIn: true,
+    isRegistered,
+    registrationId: isRegistered ? reg.id : null,
+    initial,
+  }
 })
 
 type SharedProps = {
@@ -78,7 +88,7 @@ function statusText(opts: { isRegistered: boolean; isPast: boolean; isFull: bool
 
 // Desktop box interior: status line + price row + button
 export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
-  const { isLoggedIn, isRegistered, initial } = await getViewerState(props.eventId)
+  const { isLoggedIn, isRegistered, registrationId, initial } = await getViewerState(props.eventId)
   return (
     <>
       <div className='flex items-center justify-between gap-4 mb-4'>
@@ -96,6 +106,7 @@ export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras)
         pricePaise={props.pricePaise}
         isFull={props.isFull}
         isRegistered={isRegistered}
+        registrationId={registrationId}
         isPast={props.isPast}
         isLoggedIn={isLoggedIn}
         initial={initial}
@@ -109,7 +120,7 @@ export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras)
 
 // Mobile sticky bar: just the button
 export async function RegistrationCtaMobile(props: SharedProps) {
-  const { isLoggedIn, isRegistered, initial } = await getViewerState(props.eventId)
+  const { isLoggedIn, isRegistered, registrationId, initial } = await getViewerState(props.eventId)
   return (
     <RegisterButton
       eventId={props.eventId}
@@ -117,6 +128,7 @@ export async function RegistrationCtaMobile(props: SharedProps) {
       pricePaise={props.pricePaise}
       isFull={props.isFull}
       isRegistered={isRegistered}
+      registrationId={registrationId}
       isPast={props.isPast}
       isLoggedIn={isLoggedIn}
       initial={initial}

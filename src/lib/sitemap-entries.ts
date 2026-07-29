@@ -45,22 +45,22 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }))
 
-  // Published events (dynamic — from Supabase). /events is gated on production,
-  // so skip the query and its URLs there to avoid advertising 404s to crawlers.
-  let eventRoutes: MetadataRoute.Sitemap = []
-  if (PREVIEW_FEATURES_ENABLED) {
-    const { data: events } = await adminClient
-      .from('events')
-      .select('slug, updated_at')
-      .eq('status', 'PUBLISHED')
+  // Published events (dynamic — from Supabase). Test events are staging-only,
+  // so on production they'd be 404s: never advertise them to crawlers.
+  const eventQuery = adminClient
+    .from('events')
+    .select('slug, updated_at')
+    .eq('status', 'PUBLISHED')
+  if (!PREVIEW_FEATURES_ENABLED) eventQuery.eq('is_test_event', false)
 
-    eventRoutes = (events ?? []).map(event => ({
-      url: `${SITE_URL}/events/${event.slug}`,
-      lastModified: event.updated_at ?? now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }))
-  }
+  const { data: events } = await eventQuery
+
+  const eventRoutes: MetadataRoute.Sitemap = (events ?? []).map(event => ({
+    url: `${SITE_URL}/events/${event.slug}`,
+    lastModified: event.updated_at ?? now,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  }))
 
   const allRoutes = [...staticRoutes, ...blogRoutes, ...originalsRoutes, ...eventRoutes]
 

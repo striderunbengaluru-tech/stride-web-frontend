@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface AccordionItem {
@@ -13,6 +14,38 @@ export interface AccordionItem {
 interface InteractiveAccordionProps {
   items: AccordionItem[];
   defaultOpenId?: string;
+}
+
+// Answers occasionally need to point visitors at another page. Instead of
+// pulling a markdown renderer into the homepage bundle, an answer may embed an
+// internal link as `[label](/path)`. A single leading slash is part of the
+// pattern, so only same-site paths can ever be linked — `javascript:`, absolute
+// and protocol-relative (`//host`) targets don't match and render as literal
+// text.
+const INLINE_LINK = /\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g;
+
+function renderAnswer(answer: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+
+  for (const match of answer.matchAll(INLINE_LINK)) {
+    const [raw, label, href] = match;
+    const start = match.index ?? 0;
+    if (start > cursor) nodes.push(answer.slice(cursor, start));
+    nodes.push(
+      <Link
+        key={`${href}-${start}`}
+        href={href}
+        className='text-stride-yellow-accent hover:underline underline-offset-2 transition-colors'
+      >
+        {label}
+      </Link>
+    );
+    cursor = start + raw.length;
+  }
+
+  if (cursor < answer.length) nodes.push(answer.slice(cursor));
+  return nodes;
 }
 
 export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccordionProps) {
@@ -135,7 +168,7 @@ export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccord
                       exit={{ y: -8 }}
                       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     >
-                      {item.answer}
+                      {renderAnswer(item.answer)}
                     </motion.p>
                   </motion.div>
                 )}

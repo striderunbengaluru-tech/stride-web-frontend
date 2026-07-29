@@ -5,7 +5,8 @@ import type { Metadata } from 'next'
 import type { UserProfile, OfficialRun, Prompt } from '@/types/user'
 import { adminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
+import { MILESTONE_TIERS, getMilestone, avatarFrameStyle } from '@/lib/milestones'
+import { TierBadge } from '@/components/ui/tier-badge'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { SignOutButton } from '@/components/profile/sign-out-button'
 import { DeleteAccountButton } from '@/components/profile/delete-account-button'
@@ -200,7 +201,7 @@ export default async function ProfilePage({ params }: Props) {
               <div className='mt-2'>
                 {isOwnProfile ? (
                   <>
-                    <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} />
+                    <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} frameRingColor={currentTier.frameRing} />
                     <ProfileVisibilityToggle initialPublic={profile.profile_public} />
                   </>
                 ) : publicAvatarUrl ? (
@@ -208,12 +209,13 @@ export default async function ProfilePage({ params }: Props) {
                     src={publicAvatarUrl}
                     alt={displayName}
                     frameColor={currentTier.frame}
+                    frameRingColor={currentTier.frameRing}
                     className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg object-cover border-4'
                   />
                 ) : (
                   <div
                     className='w-36 h-36 sm:w-44 sm:h-44 rounded-lg bg-stride-yellow-accent/20 border-4 flex items-center justify-center'
-                    style={{ borderColor: currentTier.frame }}
+                    style={avatarFrameStyle(currentTier.frame, currentTier.frameRing)}
                   >
                     <span className='text-stride-yellow-accent text-5xl font-bold'>{displayName.charAt(0).toUpperCase()}</span>
                   </div>
@@ -221,8 +223,8 @@ export default async function ProfilePage({ params }: Props) {
               </div>
 
               {/* Public milestone badge */}
-              <div className={`mt-4 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${currentTier.chip}`}>
-                <span aria-hidden='true'>{currentTier.emoji}</span>
+              <div className={`mt-4 inline-flex items-center gap-2 text-sm font-semibold pl-2 pr-4 py-1.5 rounded-full border ${currentTier.chip}`}>
+                <TierBadge tier={currentTier} size='xl' />
                 {currentTier.label}
               </div>
 
@@ -282,16 +284,14 @@ export default async function ProfilePage({ params }: Props) {
                     <span className='text-5xl font-bold text-white tabular-nums leading-none font-mono'>{runsCompleted}</span>
                     <span className='text-white/35 text-sm'>official runs</span>
                   </div>
-                  <p className='text-white/30 text-xs mt-2'>
-                    {currentTier.nextAt
-                      ? `${currentTier.nextAt - runsCompleted} more to ${MILESTONE_TIERS[tierIndex + 1]?.label ?? ''}`
-                      : '👑 Maximum tier reached'}
-                  </p>
+                  {/* Nothing shown on the top tier — there's no next one to chase */}
+                  {currentTier.nextAt && (
+                    <p className='text-white/30 text-xs mt-2'>
+                      {currentTier.nextAt - runsCompleted} more to {MILESTONE_TIERS[tierIndex + 1]?.label ?? ''}
+                    </p>
+                  )}
                 </div>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${currentTier.chip}`}>
-                  <span aria-hidden='true'>{currentTier.emoji}</span>
-                  {currentTier.label}
-                </span>
+                {/* No tier pill here — the badge under the avatar already says it */}
               </div>
 
               {/* Progress bar */}
@@ -324,7 +324,7 @@ export default async function ProfilePage({ params }: Props) {
                           : 'bg-white/3 border-white/6'
                       }`}
                     >
-                      <span className={`text-base leading-none ${isActive || isPast ? '' : 'opacity-40 grayscale'}`} aria-hidden='true'>{tier.emoji}</span>
+                      <TierBadge tier={tier} size='lg' locked={!isActive && !isPast} />
                       <p className={`text-[9px] font-semibold leading-none text-center ${
                         isActive ? 'text-stride-yellow-accent' : isPast ? 'text-white/45' : 'text-white/20'
                       }`}>{tier.label}</p>

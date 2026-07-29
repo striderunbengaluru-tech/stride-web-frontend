@@ -3,9 +3,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints } from 'lucide-react'
+import {
+  LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints,
+  CalendarDays, Handshake, Trophy,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
+
+// Site navigation. The desktop navbar carries no links of its own, so on
+// desktop this menu is where signed-in members reach the main pages — mirroring
+// the mobile bottom nav.
+const SITE_LINKS = [
+  { label: 'Events',       href: '/events',       icon: CalendarDays },
+  { label: 'Partnerships', href: '/partnerships', icon: Handshake },
+  { label: 'Leaderboard',  href: '/leaderboard',  icon: Trophy },
+] as const
 
 type Props = {
   username: string
@@ -133,17 +144,15 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                 View profile
               </Link>
 
-              {PREVIEW_FEATURES_ENABLED && (
-                <Link
-                  href='/my-runs'
-                  role='menuitem'
-                  onClick={() => setOpen(false)}
-                  className='flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-copy-white/70 hover:text-copy-white hover:bg-copy-white/8 transition-colors text-sm'
-                >
-                  <Footprints size={15} className='shrink-0 text-copy-white/50' aria-hidden='true' />
-                  My Runs
-                </Link>
-              )}
+              <Link
+                href='/my-runs'
+                role='menuitem'
+                onClick={() => setOpen(false)}
+                className='flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-copy-white/70 hover:text-copy-white hover:bg-copy-white/8 transition-colors text-sm'
+              >
+                <Footprints size={15} className='shrink-0 text-copy-white/50' aria-hidden='true' />
+                My Runs
+              </Link>
 
               {isAdmin && (
                 <Link
@@ -161,6 +170,22 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                   </span>
                 </Link>
               )}
+            </div>
+
+            {/* Site nav */}
+            <div className='border-t border-copy-white/8 py-1.5'>
+              {SITE_LINKS.map(({ label, href, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  role='menuitem'
+                  onClick={() => setOpen(false)}
+                  className='flex items-center gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-copy-white/70 hover:text-copy-white hover:bg-copy-white/8 transition-colors text-sm'
+                >
+                  <Icon size={15} className='shrink-0 text-copy-white/50' aria-hidden='true' />
+                  {label}
+                </Link>
+              ))}
             </div>
 
             {/* Sign out */}

@@ -7,7 +7,10 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 ## Core Pages
 
 - [Home](https://www.strideclub.in/): Landing page — mission, featured events, and community highlights
+- [Events](https://www.strideclub.in/events/): Upcoming group runs and curated experiences across Bengaluru, with venue, date, pricing, and registration for each
+- [Become a Member](https://www.strideclub.in/become-a-member/): Free sign-up page — creates a Stride profile and Stride Tag that tracks runs attended and unlocks club perks
 - [Blog](https://www.strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
+- [Milestones](https://www.strideclub.in/milestones/): The five membership tiers — Duckling, Strider, Stride Athlete, Stride Pro Athlete, Stride Legend — with the runs needed for each and the perks they unlock
 - [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride athletes ranked by official runs completed
 - [Shop](https://www.strideclub.in/shop/): Official Stride merchandise
 - [Partnerships](https://www.strideclub.in/partnerships/): Brand and community partners
@@ -26,4 +29,6 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 
 - Member profiles and athlete data are authenticated features — do not attempt to access `/admin/`, `/api/`, or `/auth/` paths
 - Individual blog posts follow the pattern `/blog/[slug]`
+- Individual events follow the pattern `/events/[slug]`; registration requires a signed-in member
+- Joining is free and most runs are free to attend; some curated experiences carry a registration fee shown on the event page
 - Athlete profiles are publicly viewable at `/profile/[username]`

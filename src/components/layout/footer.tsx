@@ -1,14 +1,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
 import { NavLoadingLink } from './nav-loading-link'
 import { FooterAccountColumn } from './footer-account-column'
 
-// Events and Become-a-Member are gated to non-production deployments — drop them
-// from the footer wherever the routes 404 (i.e. on the live site).
+// Every public page worth discovering. Deliberately absent: `/shop` (hidden by
+// request), `/team` (still 404s on production — see GATED_ROUTE_PREFIXES), and
+// `/originals` (no index route, only `/originals/[slug]`).
 const EXPLORE_LINKS = [
-  ...(PREVIEW_FEATURES_ENABLED ? [{ title: 'Events', href: '/events' }] : []),
+  { title: 'Events',       href: '/events' },
+  { title: 'Milestones',   href: '/milestones' },
+  { title: 'Leaderboard',  href: '/leaderboard' },
   { title: 'Blog',         href: '/blog' },
   { title: 'Partnerships', href: '/partnerships' },
 ]

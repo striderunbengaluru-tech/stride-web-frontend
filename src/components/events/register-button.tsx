@@ -11,6 +11,8 @@ type Props = {
   pricePaise: number
   isFull: boolean
   isRegistered: boolean
+  /** The viewer's CONFIRMED registration id — links to their ticket. */
+  registrationId?: string | null
   isPast: boolean
   isLoggedIn: boolean
   initial: {
@@ -31,6 +33,7 @@ export function RegisterButton({
   pricePaise,
   isFull,
   isRegistered,
+  registrationId,
   isPast,
   isLoggedIn,
   initial,
@@ -45,7 +48,17 @@ export function RegisterButton({
   const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !isRegistered && !isFull && !isPast))
 
   if (isRegistered) {
-    return (
+    // Plain <a>, not <Link>: the confirmation page is `force-dynamic` and
+    // per-user, so prefetching it on hover would cost a wasted server render.
+    // Without an id there's nothing to link to — fall back to the flat state.
+    return registrationId ? (
+      <a
+        href={`/events/${eventSlug}/confirmation/${registrationId}`}
+        className='block w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm text-center min-h-11 hover:bg-stride-yellow-accent/90 transition-colors'
+      >
+        View my ticket
+      </a>
+    ) : (
       <button
         disabled
         className='w-full py-3.5 rounded-md bg-white/10 text-white/50 font-semibold text-sm cursor-not-allowed min-h-11'
