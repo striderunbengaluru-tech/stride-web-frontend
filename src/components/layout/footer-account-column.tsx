@@ -5,8 +5,10 @@ import { NavLoadingLink } from './nav-loading-link'
 
 // Client island so the footer (and the whole layout) can stay static. The
 // heading always renders; only the links depend on the session:
-//   signed out → Become a Member
+//   signed out → Become a Member + Log In
 //   signed in  → My Profile + My Runs (no point offering to join twice)
+// Both signed-out links point at /become-a-member — that page is the sign-in
+// page as well as the join pitch — so the list is keyed by title, not href.
 // While the session resolves we render placeholder bars rather than guessing,
 // so the column never shows the wrong links and never shifts height.
 // Markup mirrors the server-rendered Column in footer.tsx.
@@ -23,7 +25,10 @@ export function FooterAccountColumn() {
             : []),
           { title: 'My Runs', href: '/my-runs' },
         ]
-      : [{ title: 'Become a Member', href: '/become-a-member' }]
+      : [
+          { title: 'Become a Member', href: '/become-a-member' },
+          { title: 'Log In', href: '/become-a-member' },
+        ]
 
   return (
     <nav aria-label='Account links' className='flex flex-col gap-3.5'>
@@ -39,7 +44,7 @@ export function FooterAccountColumn() {
       ) : (
         <ul className='flex flex-col gap-3'>
           {links.map(link => (
-            <li key={link.href}>
+            <li key={link.title}>
               <NavLoadingLink
                 href={link.href}
                 className='text-white/70 text-sm hover:text-stride-yellow-accent transition-colors duration-150 font-figtree inline-block'

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { revalidateLeaderboard } from '@/lib/leaderboard'
 
 const STORAGE_PUBLIC_PREFIX = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/'
 
@@ -67,6 +68,8 @@ export async function POST(request: Request) {
     .update({ avatar_url: versionedUrl, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
+  revalidateLeaderboard()
+
   return NextResponse.json({ url: versionedUrl })
 }
 
@@ -107,6 +110,8 @@ export async function DELETE() {
     console.error('[Avatar delete]', dbError)
     return NextResponse.json({ error: 'Could not remove photo' }, { status: 500 })
   }
+
+  revalidateLeaderboard()
 
   return NextResponse.json({ ok: true })
 }

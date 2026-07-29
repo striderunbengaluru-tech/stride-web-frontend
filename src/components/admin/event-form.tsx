@@ -15,7 +15,7 @@ import {
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
 } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
-import type { AdditionalField, AdditionalFieldType } from '@/types/event'
+import { isChoiceFieldType, MAX_FIELD_OPTIONS, type AdditionalField, type AdditionalFieldType } from '@/types/event'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { UploadProgress } from '@/components/ui/upload-progress'
@@ -135,6 +135,54 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   function updateField(index: number, patch: Partial<AdditionalField>) {
     setAdditionalFields(prev => prev.map((f, i) => i === index ? { ...f, ...patch } : f))
     markDirty()
+  }
+  // Switching type carries the option list in or out: choice types start with two
+  // blank rows to fill in, free-entry types drop options entirely so they can't
+  // linger in the saved JSON.
+  function changeFieldType(index: number, type: AdditionalFieldType) {
+    setAdditionalFields(prev => prev.map((f, i) => {
+      if (i !== index) return f
+      if (!isChoiceFieldType(type)) {
+        const next: AdditionalField = { ...f, type }
+        delete next.options
+        return next
+      }
+      return { ...f, type, options: f.options?.length ? f.options : ['', ''] }
+    }))
+    markDirty()
+  }
+  function updateOption(fieldIndex: number, optionIndex: number, value: string) {
+    setAdditionalFields(prev => prev.map((f, i) =>
+      i === fieldIndex
+        ? { ...f, options: (f.options ?? []).map((o, oi) => oi === optionIndex ? value : o) }
+        : f
+    ))
+    markDirty()
+  }
+  function addOption(fieldIndex: number) {
+    setAdditionalFields(prev => prev.map((f, i) =>
+      i === fieldIndex && (f.options?.length ?? 0) < MAX_FIELD_OPTIONS
+        ? { ...f, options: [...(f.options ?? []), ''] }
+        : f
+    ))
+    markDirty()
+  }
+  function removeOption(fieldIndex: number, optionIndex: number) {
+    setAdditionalFields(prev => prev.map((f, i) =>
+      i === fieldIndex ? { ...f, options: (f.options ?? []).filter((_, oi) => oi !== optionIndex) } : f
+    ))
+    markDirty()
+  }
+
+  // A choice question with no filled-in options is dropped on save, so block the
+  // submit and say which one rather than letting it disappear silently.
+  const [fieldsError, setFieldsError] = useState('')
+  function validateAdditionalFields(): string {
+    const broken = additionalFields.find(
+      f => isChoiceFieldType(f.type) && !(f.options ?? []).some(o => o.trim())
+    )
+    if (!broken) return ''
+    return `Add at least one option to the "${broken.label.trim() || 'untitled'}" question.`
   }
   function removeField(index: number) {
     setAdditionalFields(prev => prev.filter((_, i) => i !== index))
@@ -430,14 +478,22 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
         >
           <form
             action={action}
-            onSubmit={() => setIsDirty(false)}
+            onSubmit={(e) => {
+              const problem = validateAdditionalFields()
+              setFieldsError(problem)
+              if (problem) {
+                e.preventDefault()
+                return
+              }
+              setIsDirty(false)
+            }}
             onInput={markDirty}
             className='space-y-5 lg:pr-2'
           >
 
-            {errorMessage && (
+            {(errorMessage || fieldsError) && (
               <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm'>
-                {errorMessage}
+                {errorMessage || fieldsError}
               </div>
             )}
 
@@ -657,6 +713,8 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   {additionalFields.map((field, i) => {
                     const isOver = fieldDragOver === i && fieldDragSrc !== i
                     const isDragging = fieldDragSrc === i
+                    const isChoice = isChoiceFieldType(field.type)
+                    const options = field.options ?? []
                     return (
                       <div
                         key={field.id}
@@ -677,35 +735,88 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                           <GripVertical size={16} />
                         </button>
 
-                        <div className='flex-1 min-w-0 grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2'>
-                          <input
-                            type='text'
-                            value={field.label}
-                            onChange={e => updateField(i, { label: e.target.value })}
-                            placeholder='e.g. T-shirt size'
-                            className={inputBase}
-                          />
-                          <div className='relative'>
-                            <select
-                              value={field.type}
-                              onChange={e => updateField(i, { type: e.target.value as AdditionalFieldType })}
-                              className={`${inputBase} appearance-none pr-8 cursor-pointer`}
-                            >
-                              <option value='text'>Text</option>
-                              <option value='number'>Number</option>
-                              <option value='link'>Link</option>
-                            </select>
-                            <ChevronDown size={14} className='absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none' />
-                          </div>
-                          <label className='flex items-center gap-2 px-3 rounded-lg border border-white/10 bg-white/5 cursor-pointer hover:border-white/20'>
+                        <div className='flex-1 min-w-0 flex flex-col gap-2'>
+                          <div className='grid grid-cols-1 md:grid-cols-[1fr_150px_auto] gap-2'>
                             <input
-                              type='checkbox'
-                              checked={field.required}
-                              onChange={e => updateField(i, { required: e.target.checked })}
-                              className='accent-stride-yellow-accent w-3.5 h-3.5'
+                              type='text'
+                              value={field.label}
+                              onChange={e => updateField(i, { label: e.target.value })}
+                              placeholder='e.g. T-shirt size'
+                              className={inputBase}
                             />
-                            <span className='text-white/70 text-xs whitespace-nowrap'>Required</span>
-                          </label>
+                            <div className='relative'>
+                              <select
+                                value={field.type}
+                                onChange={e => changeFieldType(i, e.target.value as AdditionalFieldType)}
+                                aria-label='Answer type'
+                                className={`${inputBase} appearance-none pr-8 cursor-pointer`}
+                              >
+                                <option value='text'>Text</option>
+                                <option value='number'>Number</option>
+                                <option value='link'>Link</option>
+                                <option value='mcq'>Multiple choice</option>
+                                <option value='dropdown'>Dropdown</option>
+                              </select>
+                              <ChevronDown size={14} className='absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none' />
+                            </div>
+                            <label className='flex items-center gap-2 px-3 rounded-lg border border-white/10 bg-white/5 cursor-pointer hover:border-white/20'>
+                              <input
+                                type='checkbox'
+                                checked={field.required}
+                                onChange={e => updateField(i, { required: e.target.checked })}
+                                className='accent-stride-yellow-accent w-3.5 h-3.5'
+                              />
+                              <span className='text-white/70 text-xs whitespace-nowrap'>Required</span>
+                            </label>
+                          </div>
+
+                          {/* Choices — only the option-backed types have them. Blank
+                              rows are ignored on save; at least one is required. */}
+                          {isChoice && (
+                            <div className='flex flex-col gap-1.5 pl-1 border-l-2 border-white/10'>
+                              <p className='text-white/40 text-[11px] pl-2'>
+                                {field.type === 'mcq'
+                                  ? 'Options — shown as a list of radio buttons'
+                                  : 'Options — shown in a dropdown'}
+                              </p>
+                              {options.map((option, oi) => (
+                                <div key={oi} className='flex items-center gap-1.5 pl-2'>
+                                  <span className='text-white/25 text-[11px] font-mono w-4 shrink-0 text-right'>{oi + 1}</span>
+                                  <input
+                                    type='text'
+                                    value={option}
+                                    onChange={e => updateOption(i, oi, e.target.value)}
+                                    placeholder={`Option ${oi + 1}`}
+                                    aria-label={`Option ${oi + 1}`}
+                                    className={`${inputBase} py-1.5 text-xs`}
+                                  />
+                                  <button
+                                    type='button'
+                                    onClick={() => removeOption(i, oi)}
+                                    className='shrink-0 p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors'
+                                    aria-label={`Remove option ${oi + 1}`}
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              ))}
+                              {options.length < MAX_FIELD_OPTIONS && (
+                                <button
+                                  type='button'
+                                  onClick={() => addOption(i)}
+                                  className='self-start ml-8 flex items-center gap-1 px-2 py-1 rounded text-white/45 hover:text-stride-yellow-accent text-[11px] transition-colors'
+                                >
+                                  <Plus size={11} />
+                                  Add option
+                                </button>
+                              )}
+                              {!options.some(o => o.trim()) && (
+                                <p className='text-amber-400/80 text-[11px] pl-2'>
+                                  Add at least one option — otherwise this question is dropped when you save.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <button type='button' onClick={() => removeField(i)} className='shrink-0 mt-2 p-1.5 rounded-lg text-white/35 hover:text-red-400 hover:bg-red-500/10 transition-colors' aria-label='Remove field'>

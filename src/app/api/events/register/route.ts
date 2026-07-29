@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
-import type { AdditionalField } from '@/types/event'
+import { isChoiceFieldType, type AdditionalField } from '@/types/event'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -89,6 +89,16 @@ export async function POST(request: Request) {
       try { new URL(str) }
       catch {
         return NextResponse.json({ error: `"${field.label}" must be a valid URL (start with http:// or https://)`, fieldId: field.id }, { status: 400 })
+      }
+      filteredResponses[field.id] = str
+      continue
+    }
+    if (isChoiceFieldType(field.type)) {
+      // Only the admin's own options may be stored — a hand-rolled request must
+      // not be able to write arbitrary text into a choice answer.
+      const str = String(raw).trim()
+      if (!(field.options ?? []).includes(str)) {
+        return NextResponse.json({ error: `"${field.label}" must be one of the listed options`, fieldId: field.id }, { status: 400 })
       }
       filteredResponses[field.id] = str
       continue
