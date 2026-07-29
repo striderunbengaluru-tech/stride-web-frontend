@@ -17,7 +17,7 @@ export function HeroMemberCta() {
     >
       <Link
         href='/become-a-member'
-        className='cta-shimmer cta-glow relative inline-flex items-center justify-center overflow-hidden rounded-md bg-stride-yellow-accent px-8 py-3 min-h-11 text-copy-black font-bold text-base md:text-lg hover:scale-[1.03] active:scale-[0.97] transition-transform duration-150'
+        className='cta-glow relative inline-flex items-center justify-center rounded-md bg-stride-yellow-accent px-8 py-3 min-h-11 text-copy-black font-bold text-base md:text-lg hover:scale-[1.03] active:scale-[0.97] transition-transform duration-150'
       >
         Become a Member
       </Link>
