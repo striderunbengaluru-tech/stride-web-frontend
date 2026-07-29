@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches } from '@/lib/auth/session-cache'
 
 // supabase-js and sonner are BOTH loaded lazily and deliberately absent from
 // the static import graph. This provider lives in the root layout, so anything
@@ -12,10 +13,6 @@ import dynamic from 'next/dynamic'
 // interactive before that JS has even been fetched.
 const Toaster = dynamic(() => import('sonner').then(m => m.Toaster), { ssr: false })
 
-// sessionStorage keys — cleared on sign-out so the next real sign-in shows the
-// toast again / refetches the nav profile.
-const AUTHED_KEY = '_stride_authed'
-const NAV_PROFILE_KEY = '_stride_nav_profile'
 
 export type NavProfile = {
   username: string
@@ -51,17 +48,6 @@ function readCachedProfile(userId: string): NavProfile | null {
     return raw ? (JSON.parse(raw) as NavProfile) : null
   } catch {
     return null
-  }
-}
-
-function clearCachedProfiles() {
-  try {
-    for (let i = sessionStorage.length - 1; i >= 0; i--) {
-      const key = sessionStorage.key(i)
-      if (key?.startsWith(NAV_PROFILE_KEY)) sessionStorage.removeItem(key)
-    }
-  } catch {
-    // sessionStorage unavailable — nothing to clear
   }
 }
 
@@ -118,11 +104,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // best-effort cache only
           }
           setState({ status: 'signed-in', navProfile })
-        } else if (!cached) {
-          // Signed in but no profile row yet (fresh OAuth user mid-trigger) —
-          // still report signed-in so the UI doesn't show sign-up CTAs.
-          setState({ status: 'signed-in', navProfile: null })
+          return
         }
+
+        // No profile row. Two very different causes: a brand-new OAuth user
+        // whose row is still being created by the handle_new_user trigger, or an
+        // account that has since been erased. getSession() above can't tell them
+        // apart — it only reads the locally stored token — so ask the auth
+        // server, which is the one party that knows whether the user still
+        // exists. Without this, a deleted account kept rendering from its
+        // sessionStorage cache: the row was gone, but this branch left the
+        // cached name and avatar on screen untouched.
+        const { data: { user: liveUser } } = await supabase.auth.getUser()
+        if (cancelled) return
+
+        if (!liveUser) {
+          // Erased elsewhere (this device, another device, or the inactivity
+          // purge). Drop the caches and the local session cookie so the tab
+          // stops presenting a signed-in account that no longer exists.
+          clearAuthCaches()
+          try {
+            await supabase.auth.signOut({ scope: 'local' })
+          } catch {
+            // Already unauthenticated as far as the server is concerned.
+          }
+          if (!cancelled) setState({ status: 'signed-out', navProfile: null })
+          return
+        }
+
+        // Genuinely mid-signup — report signed-in so the UI doesn't offer
+        // sign-up CTAs to someone who just signed up.
+        if (!cached) setState({ status: 'signed-in', navProfile: null })
       }
 
       // Initial state from the locally-stored session — no network round trip
@@ -142,8 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             toast.success('Signed in successfully!', { id: 'signed-in' })
           }
         } else if (event === 'SIGNED_OUT') {
-          sessionStorage.removeItem(AUTHED_KEY)
-          clearCachedProfiles()
+          clearAuthCaches()
           setState({ status: 'signed-out', navProfile: null })
           router.refresh()
           toast.info('Signed out successfully.', { id: 'signed-out' })
