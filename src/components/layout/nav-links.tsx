@@ -5,10 +5,11 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import { useAuth } from '@/components/auth/auth-provider'
 
+// No Partnerships entry — the signed-out auth corner already carries a
+// "Partner With Us" CTA pointing at the same page.
 const NAV_LINKS = [
-  { label: 'Events',       href: '/events' },
-  { label: 'Partnerships', href: '/partnerships' },
-  { label: 'Leaderboard',  href: '/leaderboard' },
+  { label: 'Events',      href: '/events' },
+  { label: 'Leaderboard', href: '/leaderboard' },
 ] as const
 
 export default function NavLinks() {
