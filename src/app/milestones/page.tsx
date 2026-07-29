@@ -1,12 +1,36 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { ArrowLeft } from 'lucide-react'
 import { MilestoneJourney, MilestoneJourneySkeleton } from '@/components/milestones/milestone-journey'
 
+// Title carries no brand suffix — the root layout's template appends
+// " | Stride Run Club". openGraph/twitter are declared in full because a child
+// that omits them inherits the layout's objects wholesale, which had every
+// shared link to this page previewing as the homepage.
 export const metadata: Metadata = {
-  title: 'Milestones — Stride Run Club',
-  description: 'Earn badges and rewards as you run with Stride. Progress from Duckling to Stride Legend.',
+  title: 'Milestones & Member Rewards',
+  description:
+    'Show up, climb the tiers. Check in at Stride runs to progress from Duckling to Stride Legend and unlock rewards for the club’s most committed members.',
+  keywords: ['Stride Run Club milestones', 'running rewards Bengaluru', 'run club membership tiers', 'running badges', 'Stride Legend'],
+  alternates: { canonical: '/milestones' },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'Stride Run Club',
+    url: '/milestones',
+    title: 'Milestones & Member Rewards — Stride Run Club',
+    description:
+      'Five tiers, from Duckling to Stride Legend. You don’t have to be the fastest runner to earn recognition — just keep showing up.',
+    images: [{ url: DEFAULT_OG_IMAGE, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: 'Stride Run Club — milestones and member rewards' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Milestones & Member Rewards — Stride Run Club',
+    description: 'Five tiers, from Duckling to Stride Legend. Just keep showing up.',
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 export default function MilestonesPage() {

@@ -9,6 +9,7 @@ import { AuthorCard } from '@/components/blog/author-card'
 import { TldrBlock } from '@/components/blog/tldr-block'
 import { MdRenderer } from '@/components/blog/md-renderer'
 import { formatIST } from '@/lib/utils/ist'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -51,7 +52,7 @@ export default async function BlogPostPage({ params }: Props) {
   const post = BLOG_POSTS.find((p) => p.slug === slug)
   if (!post) notFound()
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stride-web-frontend.vercel.app'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PRODUCTION_SITE_URL
   const postUrl = `${siteUrl}/blog/${post.slug}`
 
   const jsonLd = {

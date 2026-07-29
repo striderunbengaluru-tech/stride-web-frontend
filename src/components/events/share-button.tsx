@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Share2, Check, Copy } from 'lucide-react'
+// `Share` (not `Share2`) — the same glyph the profile share button uses, so the
+// share affordance reads identically wherever it appears.
+import { Share, Check, Copy } from 'lucide-react'
 
 type Props = { url: string; text?: string }
 
@@ -60,7 +62,7 @@ export function ShareButton({ url: initialUrl, text }: Props) {
         </>
       ) : (
         <>
-          <Share2 size={15} className='shrink-0' />
+          <Share size={15} className='shrink-0' />
           Share event
         </>
       )}

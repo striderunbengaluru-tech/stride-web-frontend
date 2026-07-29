@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trash2, AlertTriangle, X } from 'lucide-react'
 import { deleteAccountAction } from '@/lib/actions/account'
+import { clearAuthCaches } from '@/lib/auth/session-cache'
 import { Spinner } from '@/components/ui/spinner'
 
 const CONFIRM_PHRASE = 'DELETE'
@@ -42,16 +43,27 @@ export function DeleteAccountButton() {
     setError(null)
     try {
       const result = await deleteAccountAction()
-      // Server action redirects on success — a return value means it refused.
-      if (result?.error) {
+      if ('error' in result) {
         setError(result.error)
         setSubmitting(false)
+        return
       }
+
+      // The account is gone and the server expired the auth cookies. This tab
+      // still holds a supabase-js client with the old session in memory and the
+      // cached nav profile in sessionStorage, so tear both down and leave via a
+      // full document load. A soft navigation would keep the deleted account's
+      // name and avatar in the navbar.
+      clearAuthCaches()
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        await createClient().auth.signOut({ scope: 'local' })
+      } catch {
+        // The cookies are already expired — there is nothing left to revoke.
+      }
+      window.location.replace('/')
     } catch (err) {
-      // Next's redirect() throws a NEXT_REDIRECT — that's expected, swallow it
-      const msg = err instanceof Error ? err.message : 'Something went wrong'
-      if (msg.includes('NEXT_REDIRECT')) return
-      setError(msg)
+      setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
     }
   }

@@ -96,17 +96,33 @@ export async function hardDeleteUser(userId: string): Promise<HardDeleteResult> 
     console.warn('[hardDeleteUser] storage cleanup issues', { userId, storageErrors })
   }
 
-  // ── 2. Delete the public.users row. event_registrations.user_id has
-  //       ON DELETE CASCADE, so all registrations go with it.
+  // ── 2. Dependent rows, deleted explicitly. event_registrations.user_id is
+  //       declared ON DELETE CASCADE, but an erasure guarantee must not rest on
+  //       a constraint the app can't verify at runtime: if that cascade is ever
+  //       dropped, the users delete below would fail on a foreign-key violation
+  //       and the account would survive. Doing it here makes the guarantee the
+  //       code's, and keeps the operation correct either way.
+  const { error: regError } = await adminClient
+    .from('event_registrations')
+    .delete()
+    .eq('user_id', userId)
+  if (regError) {
+    console.error('[hardDeleteUser] failed to delete registrations', { userId, regError })
+    return { ok: false, userId, storageErrors, fatalError: `registrations delete: ${regError.message}` }
+  }
+
+  // ── 3. Delete the public.users row — every profile field, including the
+  //       contact numbers and date of birth.
   const { error: dbError } = await adminClient.from('users').delete().eq('id', userId)
   if (dbError) {
     console.error('[hardDeleteUser] failed to delete users row', { userId, dbError })
     return { ok: false, userId, storageErrors, fatalError: `users delete: ${dbError.message}` }
   }
 
-  // ── 3. Delete the auth.users record so the credentials are gone and the
-  //       user can no longer sign in. "Not found" counts as success so the
-  //       operation stays idempotent on retries.
+  // ── 4. Delete the auth.users record so the credentials are gone and the
+  //       user can no longer sign in. This also drops their refresh tokens and
+  //       sessions server-side, so no device can mint a new access token.
+  //       "Not found" counts as success so the operation stays idempotent.
   const { error: authError } = await adminClient.auth.admin.deleteUser(userId)
   if (authError && authError.status !== 404) {
     // The profile row is already gone (no PII survives); a re-login would

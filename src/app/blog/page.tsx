@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
+import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { PostCard } from '@/components/blog/post-card'
 import { Reveal } from '@/components/ui/reveal'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://stride-web-frontend.vercel.app'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
 
 const blogJsonLd = {
   '@context': 'https://schema.org',
@@ -30,21 +31,31 @@ const blogJsonLd = {
   })),
 }
 
+// The brand suffix comes from the root layout's title template, so it isn't
+// repeated here — "Blog | Stride Run Club" rendered as
+// "Blog | Stride Run Club | Stride Run Club". The openGraph block was also
+// missing `url` and `images`, so shares of this page had no preview image and
+// resolved their og:url to the site root.
 export const metadata: Metadata = {
-  title: 'Blog | Stride Run Club',
+  title: 'Blog — Run Reports & Community Stories',
   description:
-    'Stories, run reports, and community moments from Stride Run Club Bengaluru. Real miles, real people.',
+    'Stories, run reports and community moments from Stride Run Club Bengaluru. Real miles, real people, written by the crew who showed up.',
+  keywords: ['Stride Run Club blog', 'running stories Bengaluru', 'run reports', 'running community blog India'],
+  alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'Blog | Stride Run Club',
-    description:
-      'Stories, run reports, and community moments from Stride Run Club Bengaluru.',
     type: 'website',
+    locale: 'en_IN',
+    siteName: 'Stride Run Club',
+    url: '/blog',
+    title: 'Blog — Stride Run Club',
+    description: 'Run reports, collabs and community moments. From the Stride crew to every athlete who shows up.',
+    images: [{ url: DEFAULT_OG_IMAGE, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: 'Stride Run Club blog — run reports and community stories' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Blog — Stride Run Club',
-    description:
-      'Stories, run reports, and community moments from Stride Run Club Bengaluru.',
+    description: 'Run reports, collabs and community moments from Stride Run Club Bengaluru.',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 

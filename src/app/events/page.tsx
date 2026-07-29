@@ -1,12 +1,40 @@
 import type { Metadata } from 'next'
+import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { getPublishedEvents } from '@/lib/data/events'
 import { EventsClient } from '@/components/events/events-client'
 import { UpNextBanner } from '@/components/events/up-next-banner'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 
+// The title omits the brand: the root layout's title template appends
+// " | Stride Run Club", and repeating it here produced
+// "Events - Stride Run Club | Stride Run Club".
+//
+// openGraph/twitter are spelled out rather than left to inherit. A child that
+// doesn't declare them takes the layout's objects wholesale, so shared links to
+// this page previewed as the homepage — site-wide title, site-wide description,
+// and an og:url pointing at "/".
 export const metadata: Metadata = {
-  title: 'Events - Stride Run Club',
-  description: 'Every Stride run, race, and meetup in one place.',
+  title: 'Upcoming Runs & Events',
+  description:
+    'Every Stride run, race and meetup in Bengaluru. Two to three community runs a week, all fitness levels welcome — find your next start line and register.',
+  keywords: ['Stride Run Club events', 'group runs Bengaluru', 'running events Bengaluru', 'run club calendar', '5K Bengaluru', '10K Bengaluru'],
+  alternates: { canonical: '/events' },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'Stride Run Club',
+    url: '/events',
+    title: 'Upcoming Runs & Events — Stride Run Club',
+    description:
+      'Two to three community runs a week across Bengaluru, and every race we show up for. All fitness levels welcome.',
+    images: [{ url: DEFAULT_OG_IMAGE, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: 'Stride Run Club — upcoming runs and events' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Upcoming Runs & Events — Stride Run Club',
+    description: 'Two to three community runs a week across Bengaluru. All fitness levels welcome.',
+    images: [DEFAULT_OG_IMAGE],
+  },
 }
 
 // ISR: rebuilt in the background at most every 60s, and purged instantly by
