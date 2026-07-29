@@ -1,5 +1,6 @@
 import type { BlogAuthor } from '@/content/blog/index'
 import { User } from 'lucide-react'
+import { formatIST } from '@/lib/utils/ist'
 
 type Props = {
   author: BlogAuthor
@@ -8,11 +9,7 @@ type Props = {
 }
 
 function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(dateStr))
+  return formatIST(dateStr, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export function AuthorCard({ author, publishedAt, readingTimeMin }: Props) {

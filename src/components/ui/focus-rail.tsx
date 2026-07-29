@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { formatDateNumericIST } from '@/lib/utils/ist'
 
 export type FocusRailItem = {
   id: string | number;
@@ -58,11 +59,7 @@ function wrap(min: number, max: number, v: number) {
 }
 
 function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(dateStr));
+  return formatDateNumericIST(dateStr);
 }
 
 const BASE_SPRING = {

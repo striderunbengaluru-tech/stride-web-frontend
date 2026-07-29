@@ -8,17 +8,14 @@ import { ReadingProgress } from '@/components/blog/reading-progress'
 import { AuthorCard } from '@/components/blog/author-card'
 import { TldrBlock } from '@/components/blog/tldr-block'
 import { MdRenderer } from '@/components/blog/md-renderer'
+import { formatIST } from '@/lib/utils/ist'
 
 type Props = {
   params: Promise<{ slug: string }>
 }
 
 function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(dateStr))
+  return formatIST(dateStr, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export function generateStaticParams() {

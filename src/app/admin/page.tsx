@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { DashboardCharts } from '@/components/admin/dashboard-charts'
 import { CalendarRange, ClipboardCheck, Users, Package, LayoutDashboard, ArrowUpRight } from 'lucide-react'
+import { formatDayMonthIST } from '@/lib/utils/ist'
 
 export const metadata = { title: 'Admin — Stride Run Club' }
 
@@ -21,7 +22,7 @@ function weekKey(d: Date): string {
 }
 
 function weekLabel(d: Date): string {
-  return startOfWeek(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  return formatDayMonthIST(startOfWeek(d))
 }
 
 function ageBucket(dob: string): '18-24' | '25-34' | '35-44' | '45+' | null {

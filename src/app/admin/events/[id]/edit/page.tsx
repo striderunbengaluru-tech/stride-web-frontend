@@ -2,15 +2,11 @@ import { notFound } from 'next/navigation'
 import { adminClient } from '@/lib/supabase/admin'
 import { EventForm } from '@/components/admin/event-form'
 import { updateEventAction } from '@/lib/actions/admin'
+import { utcIsoToIstLocal } from '@/lib/utils/ist'
 
 type Props = { params: Promise<{ id: string }> }
 
 export const metadata = { title: 'Edit Event — Admin' }
-
-function toDatetimeLocal(d: string | null | undefined) {
-  if (!d) return undefined
-  return new Date(d).toISOString().slice(0, 16)
-}
 
 export default async function EditEventPage({ params }: Props) {
   const { id } = await params
@@ -40,8 +36,8 @@ export default async function EditEventPage({ params }: Props) {
           postRunLocation: event.post_run_location ?? undefined,
           postRunLocationUrl: event.post_run_location_url ?? undefined,
           stravaRouteUrl: event.strava_route_url ?? undefined,
-          eventDate: toDatetimeLocal(event.event_date),
-          endDate: toDatetimeLocal(event.end_date),
+          eventDate: utcIsoToIstLocal(event.event_date),
+          endDate: utcIsoToIstLocal(event.end_date),
           capacity: event.capacity ?? undefined,
           priceRupees: event.price_paise / 100,
           showSpotsLeft: event.show_spots_left ?? false,

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isPlausibleDob, MIN_REGISTRATION_AGE } from '@/lib/utils/age'
 
 // 10 or 11 digits, digits only — no spaces, letters, or symbols.
 const phoneNumber = (label: string) =>
@@ -6,7 +7,12 @@ const phoneNumber = (label: string) =>
 
 export const participantDetailsSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name is required'),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date of birth'),
+  // Shape *and* plausibility: a well-formed date that makes the runner 0 years
+  // old is a mis-set picker, not a participant. Mirrors the client so the form
+  // and the API agree on what a real date of birth is.
+  dateOfBirth: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date of birth')
+    .refine(isPlausibleDob, `Please check your date of birth — you must be at least ${MIN_REGISTRATION_AGE} to register`),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY']),
   contactNumber: phoneNumber('contact number'),
   emergencyContactNumber: phoneNumber('emergency contact number'),

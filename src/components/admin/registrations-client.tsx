@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar } from 'lucide-react'
 import type { RunnerRow, EventWithAttendees } from '@/app/admin/registrations/page'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
+import { formatMonthIST, formatDayIST } from '@/lib/utils/ist'
+import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
 
 type Props = {
   runners: RunnerRow[]
@@ -27,13 +29,11 @@ const STATUS_PILL: Record<string, string> = {
 }
 
 function fmtDate(d: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return d ? formatDateNumericIST(d) : '—'
 }
 
 function fmtTime(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  return d ? formatTimeIST(d) : null
 }
 
 function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: number | null }) {
@@ -205,10 +205,10 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                           {event.event_date ? (
                             <>
                               <span className='text-stride-yellow-accent text-[8px] font-bold font-mono uppercase tracking-widest'>
-                                {new Date(event.event_date).toLocaleDateString('en-IN', { month: 'short' })}
+                                {formatMonthIST(event.event_date)}
                               </span>
                               <span className='text-white font-bold text-sm'>
-                                {new Date(event.event_date).getDate()}
+                                {formatDayIST(event.event_date)}
                               </span>
                             </>
                           ) : <Calendar size={14} className='text-white/30' />}

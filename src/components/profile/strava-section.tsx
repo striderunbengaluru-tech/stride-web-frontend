@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { RefreshCw, Unlink, ExternalLink } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import type { StravaPBs, StravaActivity } from '@/types/strava'
+import { formatDateNumericIST } from '@/lib/utils/ist'
 
 const STRAVA_ICON = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/strava-icon.svg'
 
@@ -46,8 +47,7 @@ function formatDistance(meters: number): string {
 }
 
 function formatRelativeDate(isoString: string): string {
-  const date = new Date(isoString)
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return formatDateNumericIST(isoString)
 }
 
 export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActivities, stravaSyncedAt, isOwnProfile }: Props) {

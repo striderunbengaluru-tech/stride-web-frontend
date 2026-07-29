@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { checkInByRegistrationId, type CheckInResult } from '@/lib/check-in'
 import { RunnerTagCheckIn } from '@/components/admin/runner-tag-check-in'
+import { formatTimeIST, formatDayMonthIST } from '@/lib/utils/ist'
 
 export const metadata = { title: 'Check-in — Stride Admin' }
 
@@ -38,7 +39,7 @@ function ScanResult({ result }: { result: CheckInResult }) {
         <p className='text-white text-lg font-semibold mt-2'>{result.attendeeName}</p>
         <p className='text-white/60 text-sm'>{result.eventName}</p>
         <p className='text-white/40 text-xs mt-2 font-mono'>
-          Run #{result.runsCompleted} · {new Date(result.checkedInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+          Run #{result.runsCompleted} · {formatTimeIST(result.checkedInAt)}
         </p>
       </div>
     )
@@ -57,7 +58,7 @@ function ScanResult({ result }: { result: CheckInResult }) {
       {result.eventName && <p className='text-white/60 text-sm'>{result.eventName}</p>}
       {result.checkedInAt && (
         <p className='text-white/40 text-xs mt-2 font-mono'>
-          Checked in at {new Date(result.checkedInAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+          Checked in at {formatDayMonthIST(result.checkedInAt)}, {formatTimeIST(result.checkedInAt)}
         </p>
       )}
     </div>

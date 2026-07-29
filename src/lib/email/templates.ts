@@ -197,6 +197,8 @@ export function welcomeEmail(params: {
 }): EmailContent {
   const { fullName, username, siteUrl } = params
   const profileUrl = `${siteUrl}/profile/${encodeURIComponent(username)}`
+  const eventsUrl = `${siteUrl}/events`
+  const milestonesUrl = `${siteUrl}/milestones`
 
   const bodyContent = `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:0 0 8px;">
@@ -223,19 +225,20 @@ export function welcomeEmail(params: {
           <tr>
             <td style="padding:34px 32px 0;">
               <h2 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:23px;line-height:1.3;color:${TEXT};">Hey ${firstName(fullName)},</h2>
-              <p class="t" style="margin:16px 0 0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Your Stride profile is live. Welcome to Bengaluru&#39;s fastest-growing running community: first run or fiftieth race, there&#39;s a place for you here. <strong>All paces, all fitness levels, one crew.</strong></p>
+              <p class="t" style="margin:16px 0 0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">You&#39;re officially a Stride Run Club member. Welcome to India&#39;s fastest-growing fitness community.</p>
+              <p class="t" style="margin:16px 0 0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Whether you&#39;re chasing your first 5K or your next marathon, you&#39;ll train alongside a community that makes fitness more fun and keeps you going.</p>
               ${ctaButton(profileUrl, 'View your profile', true)}
             </td>
           </tr>
           <tr>
             <td style="padding:52px 32px 0;text-align:center;">
-              <h2 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:26px;line-height:1.3;letter-spacing:-0.3px;font-weight:normal;color:${TEXT};">Here&#39;s your <strong style="font-weight:bold;color:${YELLOW};">next steps</strong></h2>
+              <h2 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:26px;line-height:1.3;letter-spacing:-0.3px;font-weight:normal;color:${TEXT};">Here are your <strong style="font-weight:bold;color:${YELLOW};">next steps</strong></h2>
             </td>
           </tr>
           ${featureCard(
             'footprints',
-            'Weekly runs, new routes',
-            `Cafe hops, lake loops, hill repeats, track nights. We run somewhere new across Bengaluru every week, and <a href="${INSTAGRAM_URL}" target="_blank" style="color:${YELLOW};text-decoration:underline;">@stride_runclub_bengaluru</a> is where the next one drops.`
+            'Join your first experience',
+            `No matter your fitness level, you&#39;ll always find a run that&#39;s right for you. We organize 2&#8211;3 community runs every week. <a href="${eventsUrl}" target="_blank" style="color:${YELLOW};text-decoration:underline;">Join the next experience here</a>.`
           )}
           ${featureCard(
             'circle-user-round',
@@ -243,9 +246,9 @@ export function welcomeEmail(params: {
             'Add a photo, link your Strava, and tell your story so the crew can find you. Your Stride Tag is your check-in pass at every run.'
           )}
           ${featureCard(
-            'heart-handshake',
-            'Bring a friend',
-            '63% of our runners last year were first-timers. Runs are better with company, so bring someone along for their first 5K.'
+            'circle-check-big',
+            'Show up. Earn Rewards.',
+            `You don&#39;t have to be the fastest runner to earn recognition. Just keep showing up. Attend more runs, climb through our membership tiers, and unlock rewards reserved for our most committed members. <a href="${milestonesUrl}" target="_blank" style="color:${YELLOW};text-decoration:underline;">View the milestones here</a>.`
           )}
           <tr><td style="padding:0 0 44px;"></td></tr>
           ${footer()}
