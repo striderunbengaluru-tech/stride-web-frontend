@@ -21,6 +21,7 @@ import { PromptsSection } from '@/components/profile/prompts-section'
 import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import { EventsAttendedSection } from '@/components/profile/events-attended-section'
 import { ChevronRight, ScanLine } from 'lucide-react'
+import { formatMonthYearIST } from '@/lib/utils/ist'
 
 type Props = { params: Promise<{ username: string }> }
 
@@ -168,7 +169,7 @@ export default async function ProfilePage({ params }: Props) {
   const publicAvatarUrl = profile.avatar_url
 
   const displayName   = profile.full_name ?? profile.username ?? username
-  const joinedLabel   = new Date(profile.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+  const joinedLabel   = formatMonthYearIST(profile.created_at)
   const runsCompleted = profile.runs_completed ?? 0
   const currentTier   = getMilestone(runsCompleted)
   const profileUrl    = `${SITE_URL}/profile/${username}`

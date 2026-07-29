@@ -15,6 +15,9 @@ import { Reveal } from '@/components/ui/reveal'
 import { ShareButton } from '@/components/events/share-button'
 import { ArrowLeft, MapPin, Route, Users, ExternalLink, Gauge, Activity } from 'lucide-react'
 import type { AdditionalField } from '@/types/event'
+import {
+  formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST,
+} from '@/lib/utils/ist'
 import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
@@ -66,19 +69,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+// Event times are always IST — see @/lib/utils/event-date.
 function fmtDateLong(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return d ? formatDateLongIST(d) : null
 }
 function fmtTime(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-}
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()
-}
-function fmtDay(d: string) {
-  return new Date(d).getDate()
+  return d ? formatTimeIST(d) : null
 }
 
 export default async function EventDetailPage({ params }: Props) {
@@ -219,10 +215,10 @@ export default async function EventDetailPage({ params }: Props) {
                     {/* Mini calendar chip */}
                     <div className='w-11 h-11 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center shrink-0 leading-none gap-0.5 mt-0.5'>
                       <span className='text-stride-yellow-accent text-[8px] font-black font-mono uppercase tracking-widest'>
-                        {fmtMonth(event.event_date)}
+                        {formatMonthIST(event.event_date)}
                       </span>
                       <span className='text-white font-bold text-base leading-none font-mono'>
-                        {fmtDay(event.event_date)}
+                        {formatDayIST(event.event_date)}
                       </span>
                     </div>
                     <div className='flex-1 min-w-0'>

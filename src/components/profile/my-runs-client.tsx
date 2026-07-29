@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CalendarDays, MapPin, CheckCircle2, ChevronRight } from 'lucide-react'
+import { formatDateFullIST } from '@/lib/utils/ist'
 
 export type MyRun = {
   id: string
@@ -33,9 +34,9 @@ function priceLabel(paise: number): string {
   return paise === 0 ? 'Free' : `₹${(paise / 100).toLocaleString('en-IN')}`
 }
 
+// IST-pinned — see @/lib/utils/event-date.
 function dateLabel(iso: string | null): string | null {
-  if (!iso) return null
-  return new Date(iso).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  return iso ? formatDateFullIST(iso) : null
 }
 
 export function MyRunsClient({ upcoming, past }: { upcoming: MyRun[]; past: MyRun[] }) {

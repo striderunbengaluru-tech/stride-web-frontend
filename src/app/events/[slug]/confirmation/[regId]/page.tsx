@@ -14,6 +14,7 @@ import { ShareConfirmation } from '@/components/events/share-confirmation'
 import { Reveal } from '@/components/ui/reveal'
 import { PostCard } from '@/components/blog/post-card'
 import { BLOG_POSTS } from '@/content/blog/index'
+import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
 
 // Re-fetch on every visit. Confirmation state is per-user, not cacheable, and
 // we want to always reflect the live registration row.
@@ -29,15 +30,12 @@ export const metadata: Metadata = {
   description: 'Your event registration is confirmed.',
 }
 
+// Event times are always IST — see @/lib/utils/event-date.
 function formatDateShort(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  })
+  return d ? formatDateShortIST(d) : null
 }
 function formatTime(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  return d ? formatTimeIST(d) : null
 }
 
 

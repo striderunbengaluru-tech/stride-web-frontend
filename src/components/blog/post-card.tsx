@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowUpRight, Clock } from 'lucide-react'
 import type { BlogPost } from '@/content/blog/index'
+import { formatDateNumericIST } from '@/lib/utils/ist'
 
 type Props = {
   post: BlogPost
@@ -9,11 +10,7 @@ type Props = {
 }
 
 function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(dateStr))
+  return formatDateNumericIST(dateStr)
 }
 
 export function PostCard({ post, featured = false }: Props) {

@@ -7,6 +7,7 @@ import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
 import { TierBadge } from '@/components/ui/tier-badge'
+import { formatDateNumericIST } from '@/lib/utils/ist'
 
 type Run = { eventName: string; eventDate: string | null; checkedInAt: string }
 
@@ -69,8 +70,7 @@ const ROLE_STYLES: Record<string, string> = {
 }
 
 function fmtDate(d: string | null) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return d ? formatDateNumericIST(d) : '—'
 }
 
 function Avatar({ url, name }: { url: string | null; name: string | null }) {

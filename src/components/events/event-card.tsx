@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
 
 type EventCardProps = {
   name: string
@@ -50,11 +51,12 @@ export function EventCard({ name, subtitle, slug, eventDate, location, pricePais
   const isPast = eventDate ? eventDate < new Date() : false
   const priceLabel = pricePaise === 0 ? 'Free' : `₹${(pricePaise / 100).toLocaleString('en-IN')}`
 
-  // Date formatted: "Sat, 28 Jun · 7:15 AM"
+  // "Sat, 28 Jun · 07:15 am" — pinned to IST, so the card reads the same for a
+  // visitor abroad as it does for the runner showing up at the start line.
   const dateLabel = eventDate
-    ? eventDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) +
+    ? formatDateShortIST(eventDate.toISOString()) +
       ' · ' +
-      eventDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+      formatTimeIST(eventDate.toISOString())
     : null
 
   return (

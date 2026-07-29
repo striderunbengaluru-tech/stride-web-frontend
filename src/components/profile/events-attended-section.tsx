@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, ChevronRight, Footprints } from 'lucide-react'
+import { formatDateNumericIST } from '@/lib/utils/ist'
 
 type AttendedEvent = {
   id: string
@@ -18,13 +19,9 @@ type Props = {
   isOwnProfile: boolean
 }
 
+// IST-pinned — see @/lib/utils/event-date.
 function formatEventDate(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+  return d ? formatDateNumericIST(d) : null
 }
 
 function firstBanner(raw: string | null): string | null {

@@ -8,6 +8,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { EVENTS_TAG, eventTag } from '@/lib/data/events'
 import { eventSchema, productSchema, additionalFieldSchema } from '@/lib/validations/admin'
 import { slugify } from '@/lib/utils/slug'
+import { istLocalToUtcIso } from '@/lib/utils/ist'
 import { isLastAdmin } from '@/lib/account/hard-delete'
 
 // Validates the JSON-encoded additional fields string from the form.
@@ -71,8 +72,10 @@ export async function createEventAction(formData: FormData): Promise<void> {
     id,
     name,
     slug,
-    event_date: eventDate ? new Date(eventDate).toISOString() : null,
-    end_date: endDate ? new Date(endDate).toISOString() : null,
+    // The form posts a bare wall clock; the admin means IST. new Date() on it
+    // would read it as server-local (UTC on Vercel) and shift the run 5h30 late.
+    event_date: istLocalToUtcIso(eventDate),
+    end_date: istLocalToUtcIso(endDate),
     location_url: locationUrl || null,
     post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,
@@ -116,8 +119,10 @@ export async function updateEventAction(id: string, formData: FormData): Promise
 
   const { data: updated } = await adminClient.from('events').update({
     name,
-    event_date: eventDate ? new Date(eventDate).toISOString() : null,
-    end_date: endDate ? new Date(endDate).toISOString() : null,
+    // The form posts a bare wall clock; the admin means IST. new Date() on it
+    // would read it as server-local (UTC on Vercel) and shift the run 5h30 late.
+    event_date: istLocalToUtcIso(eventDate),
+    end_date: istLocalToUtcIso(endDate),
     location_url: locationUrl || null,
     post_run_location: postRunLocation?.trim() || null,
     post_run_location_url: postRunLocationUrl || null,

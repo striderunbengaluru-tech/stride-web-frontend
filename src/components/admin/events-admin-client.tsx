@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
+import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
 
 export type AdminEventRow = {
   id: string
@@ -32,14 +33,13 @@ const STATUS_STYLES: Record<string, string> = {
 
 const SITE_URL = 'https://www.strideclub.in'
 
+// IST-pinned — an admin abroad must see the same start time as the runners.
 function fmtDate(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return d ? formatDateNumericIST(d) : null
 }
 
 function fmtTime(d: string | null) {
-  if (!d) return null
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+  return d ? formatTimeIST(d) : null
 }
 
 function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: number | null }) {

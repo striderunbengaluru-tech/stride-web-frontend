@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, MapPin } from 'lucide-react'
 import { AnimatedNumberCountdown } from '@/components/ui/countdown-number'
+import { formatDateTimeIST } from '@/lib/utils/ist'
 
 // Featured banner for the soonest upcoming run. Shared by the events page and
 // the homepage's "Up next" section so the two can't drift apart.
@@ -16,18 +17,6 @@ export type UpNextEvent = {
   location: string | null
   price_paise: number
   imageUrl: string | null
-}
-
-export function formatEventDateIST(iso: string): string {
-  return new Intl.DateTimeFormat('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(new Date(iso))
 }
 
 type Props = {
@@ -83,7 +72,7 @@ export function UpNextBanner({ event, imagePriority = false, showLabel = true }:
             {event.event_date && (
               <span className='inline-flex items-center gap-2'>
                 <Calendar size={15} className='text-stride-yellow-accent/70 shrink-0' aria-hidden='true' />
-                {formatEventDateIST(event.event_date)}
+                {formatDateTimeIST(event.event_date)}
               </span>
             )}
             {event.location && (

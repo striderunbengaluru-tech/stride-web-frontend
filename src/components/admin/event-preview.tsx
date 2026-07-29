@@ -4,6 +4,10 @@ import { useState } from 'react'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import { Calendar, MapPin, Monitor, Smartphone, Lock, Ticket, Gauge, Activity } from 'lucide-react'
+import {
+  istLocalToUtcIso, formatDateLongIST, formatTimeIST,
+  formatMonthIST, formatDayIST,
+} from '@/lib/utils/ist'
 
 type Props = {
   name: string
@@ -18,24 +22,27 @@ type Props = {
   difficulty?: string | null
 }
 
+// IST-pinned like the public page, so the preview can't disagree with what a
+// runner will see. The datetime-local value being previewed is IST wall clock
+// already, so it's converted to an instant first.
+function previewIso(d: string): string | null {
+  return istLocalToUtcIso(d) ?? (Number.isNaN(new Date(d).getTime()) ? null : new Date(d).toISOString())
+}
 function formatDateLong(d: string) {
-  if (!d) return null
-  try {
-    return new Date(d).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  } catch { return null }
+  const iso = d ? previewIso(d) : null
+  return iso ? formatDateLongIST(iso) : null
 }
 function formatTime(d: string) {
-  if (!d) return null
-  try { return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) }
-  catch { return null }
+  const iso = d ? previewIso(d) : null
+  return iso ? formatTimeIST(iso) : null
 }
 function formatMonth(d: string) {
-  try { return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase() }
-  catch { return '—' }
+  const iso = previewIso(d)
+  return iso ? formatMonthIST(iso) : '—'
 }
 function formatDay(d: string) {
-  try { return new Date(d).getDate() }
-  catch { return '—' }
+  const iso = previewIso(d)
+  return iso ? formatDayIST(iso) : '—'
 }
 
 type ViewMode = 'mobile' | 'desktop'

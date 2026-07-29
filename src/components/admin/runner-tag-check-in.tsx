@@ -6,6 +6,9 @@ import {
   CheckCircle, XCircle, ChevronDown, RotateCcw, Users, Clock, Calendar,
   Search, Hash, UserRound, CheckCircle2,
 } from 'lucide-react'
+import {
+  formatMonthIST, formatDayIST, formatDateShortIST, formatTimeIST,
+} from '@/lib/utils/ist'
 
 type Event = {
   id: string
@@ -58,16 +61,11 @@ function fmtDuration(ms: number): string {
   return `${mins}m`
 }
 
-function fmtMonth(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()
-}
-function fmtDay(d: string) { return new Date(d).getDate() }
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-}
-function fmtTime(d: string) {
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-}
+// IST-pinned — see @/lib/utils/event-date.
+const fmtMonth = formatMonthIST
+const fmtDay = formatDayIST
+const fmtDate = formatDateShortIST
+const fmtTime = formatTimeIST
 
 function statusFor(e: Event, nowMs: number): {
   label: string
@@ -616,7 +614,7 @@ export function RunnerTagCheckIn() {
                 {state.runsCompleted} run{state.runsCompleted !== 1 ? 's' : ''}
               </span>
               <span className='text-white/35 text-xs'>
-                {new Date(state.checkedInAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                {formatTimeIST(state.checkedInAt)}
               </span>
             </div>
             <button
