@@ -13,6 +13,7 @@ const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { isChoiceFieldType, type AdditionalField } from '@/types/event'
+import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -41,8 +42,7 @@ const inputErrorBorder = 'border-red-500/60 focus:border-red-500/60'
 // submit-time backstop. Return a message, or null when valid.
 const validateFullName = (v: string) =>
   v.trim().length < 2 ? 'Please enter your full name' : null
-const validateDob = (v: string) =>
-  !/^\d{4}-\d{2}-\d{2}$/.test(v) ? 'Please enter your date of birth' : null
+const validateDob = (v: string) => dobError(v)
 const validatePhone = (v: string) =>
   !/^\d{10,11}$/.test(v) ? 'Enter a valid 10 or 11 digit number (digits only)' : null
 
@@ -65,16 +65,6 @@ function validateCustomField(field: AdditionalField, raw: string): string | null
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null
   return <p className='text-red-400 text-[11px] mt-1.5'>{msg}</p>
-}
-
-function ageFromDob(dob: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null
-  const birth = new Date(dob)
-  const now = new Date()
-  let age = now.getFullYear() - birth.getFullYear()
-  const monthDiff = now.getMonth() - birth.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--
-  return age
 }
 
 type Props = {
@@ -140,10 +130,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   const isPaid = pricePaise > 0
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
 
-  // Guardian-consent checkbox appears only for participants under 18,
-  // computed live from the date-of-birth field.
-  const age = ageFromDob(dateOfBirth)
-  const isMinor = age !== null && age < 18
+  // Guardian-consent checkbox appears only once a plausible date of birth is on
+  // the form AND it belongs to someone under 18. An empty field, a partial entry
+  // or a nonsense year (the native picker opens on the current one, which
+  // computes to age 0) all count as "not set" and keep the checkbox hidden.
+  const isMinor = requiresGuardianConsent(dateOfBirth)
 
   // Reset state when modal closes
   useEffect(() => {
