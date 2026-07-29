@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic'
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import type { AdditionalField } from '@/types/event'
+import { isChoiceFieldType, type AdditionalField } from '@/types/event'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -53,6 +53,11 @@ function validateCustomField(field: AdditionalField, raw: string): string | null
   if (field.type === 'number' && Number.isNaN(Number(v))) return `"${field.label}" must be a number`
   if (field.type === 'link') {
     try { new URL(v) } catch { return `"${field.label}" must start with http:// or https://` }
+  }
+  // Choice answers must come from the event's own option list. The inputs make
+  // that true already; this catches a stale form after an admin edits options.
+  if (isChoiceFieldType(field.type) && !(field.options ?? []).includes(v)) {
+    return `Please pick one of the listed options for "${field.label}"`
   }
   return null
 }
@@ -459,7 +464,48 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                       <label className='block text-white/70 text-xs font-medium mb-1.5'>
                         {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
                       </label>
-                      {field.type === 'number' ? (
+                      {field.type === 'mcq' ? (
+                        <div
+                          role='radiogroup'
+                          aria-label={field.label || 'Untitled'}
+                          className='flex flex-col gap-2'
+                        >
+                          {(field.options ?? []).map(option => (
+                            <label
+                              key={option}
+                              className='flex items-center gap-2.5 min-h-11 px-3.5 rounded-lg border border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10 transition-colors'
+                            >
+                              <input
+                                type='radio'
+                                name={`custom-${field.id}`}
+                                value={option}
+                                checked={customResponses[field.id] === option}
+                                onChange={() => handleChange(option)}
+                                className='accent-stride-yellow-accent w-4 h-4 shrink-0'
+                                required={field.required}
+                              />
+                              <span className='text-white/85 text-sm'>{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : field.type === 'dropdown' ? (
+                        <select
+                          value={customResponses[field.id] ?? ''}
+                          onChange={e => handleChange(e.target.value)}
+                          onBlur={handleBlur}
+                          className={`${className} cursor-pointer`}
+                          required={field.required}
+                        >
+                          <option value='' className='bg-stride-purple-primary'>
+                            Select an option
+                          </option>
+                          {(field.options ?? []).map(option => (
+                            <option key={option} value={option} className='bg-stride-purple-primary'>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === 'number' ? (
                         <input
                           type='number'
                           inputMode='numeric'

@@ -1,12 +1,27 @@
 import { z } from 'zod'
+import { MAX_FIELD_OPTIONS, isChoiceFieldType, type AdditionalField } from '@/types/event'
 
 export const additionalFieldSchema = z.object({
   id:          z.string().min(1),
   label:       z.string().trim().min(1).max(80),
-  type:        z.enum(['text', 'number', 'link']),
+  type:        z.enum(['text', 'number', 'link', 'mcq', 'dropdown']),
   required:    z.boolean(),
   placeholder: z.string().max(120).optional(),
+  // Choices for the mcq/dropdown types. Stored trimmed, de-duplicated and with
+  // blanks dropped, so the saved list is exactly what the runner may answer and
+  // what the register route validates against.
+  options:     z.array(z.string().trim().max(80)).max(MAX_FIELD_OPTIONS).optional(),
 })
+  .transform(({ options, ...field }): AdditionalField => {
+    if (!isChoiceFieldType(field.type)) return field
+    return { ...field, options: [...new Set((options ?? []).filter(Boolean))] }
+  })
+  // A choice question with nothing to choose from would render an empty radio
+  // group, and (if required) could never be satisfied.
+  .refine(
+    (field) => !isChoiceFieldType(field.type) || (field.options?.length ?? 0) > 0,
+    'Multiple-choice and dropdown questions need at least one option',
+  )
 
 export const additionalFieldsArraySchema = z.array(additionalFieldSchema)
 

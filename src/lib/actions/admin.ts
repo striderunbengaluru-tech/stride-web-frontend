@@ -6,18 +6,25 @@ import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { EVENTS_TAG, eventTag } from '@/lib/data/events'
-import { eventSchema, productSchema, additionalFieldsArraySchema } from '@/lib/validations/admin'
+import { eventSchema, productSchema, additionalFieldSchema } from '@/lib/validations/admin'
 import { slugify } from '@/lib/utils/slug'
 import { isLastAdmin } from '@/lib/account/hard-delete'
 
 // Validates the JSON-encoded additional fields string from the form.
 // Returns a canonical JSON string ('[]' on any error) — never blocks the save.
+// Entries are validated one at a time on purpose: parsing the array as a whole
+// meant a single malformed question (e.g. a dropdown saved with no options)
+// silently wiped every other question on the event.
 function sanitiseAdditionalFields(raw: string | undefined): string {
   if (!raw) return '[]'
   try {
     const parsed = JSON.parse(raw)
-    const result = additionalFieldsArraySchema.safeParse(parsed)
-    return result.success ? JSON.stringify(result.data) : '[]'
+    if (!Array.isArray(parsed)) return '[]'
+    const clean = parsed.flatMap(entry => {
+      const result = additionalFieldSchema.safeParse(entry)
+      return result.success ? [result.data] : []
+    })
+    return JSON.stringify(clean)
   } catch { return '[]' }
 }
 
