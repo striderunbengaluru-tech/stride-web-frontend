@@ -12,6 +12,14 @@ const PRESET_DISTANCES = ['5K', '10K', '21.1K', '42.2K'] as const
 const LEGACY_DISTANCES: Record<string, string> = { 'Half Marathon': '21.1K', 'Marathon': '42.2K' }
 const CUSTOM_DISTANCE_RE = /^(\d+(?:\.\d+)?)K$/
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
+
+// Canonical distances already carry the K (5K, 21.1K). Rows saved before the
+// segmented control could hold legacy names or a bare number, so normalise both
+// on the way out: "Half Marathon" -> "21.1K", "21.1" -> "21.1K".
+function formatDistance(raw: string): string {
+  const value = LEGACY_DISTANCES[raw] ?? raw.trim()
+  return /^\d+(?:\.\d+)?$/.test(value) ? `${value}K` : value
+}
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i)
 
@@ -169,9 +177,9 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
         </div>
       )}
 
-      {/* Runs list */}
+      {/* Runs — tall poster-style cards, content anchored to the bottom */}
       {runs.length > 0 && (
-        <div className='space-y-2.5'>
+        <div className='grid grid-cols-2 lg:grid-cols-3 gap-3'>
           {runs.map((run, i) => {
             const isEditing = editingId === run.id
             const isOver = dragOver === i && dragSrc !== i
@@ -203,65 +211,65 @@ export function OfficialRunsSection({ initialRuns, isOwnProfile }: Props) {
                 onDragOver={e => { e.preventDefault(); if (i !== dragOver) setDragOver(i) }}
                 onDrop={() => handleDrop(i)}
                 onDragEnd={() => { setDragSrc(null); setDragOver(null) }}
-                className={`group flex items-center gap-3.5 rounded-2xl border bg-white/6 backdrop-blur-md px-4 py-4 transition-all ${
+                // Text-only card: sized to its content rather than a fixed
+                // aspect, with the date on top and the run block beneath it.
+                className={`group relative flex min-h-36 flex-col justify-between gap-4 rounded-2xl border bg-white/6 p-4 backdrop-blur-md transition-all ${
                   isOver ? 'border-stride-yellow-accent bg-stride-yellow-accent/5'
                     : isDragging ? 'border-white/10 opacity-40'
                     : 'border-white/12 hover:border-stride-yellow-accent/40'
                 }`}
               >
-                {isOwnProfile && (
-                  <span className='shrink-0 text-white/20 hover:text-white/50 cursor-grab active:cursor-grabbing' aria-label='Drag to reorder'>
-                    <GripVertical size={16} />
+                {/* Date */}
+                {(run.month || run.year) && (
+                  <span className={`font-mono text-[13px] font-bold uppercase tracking-wide text-white/50 ${isOwnProfile ? 'pr-20' : ''}`}>
+                    {run.month ? MONTHS[run.month - 1] : ''}{run.month && run.year ? ' ' : ''}{run.year ?? ''}
                   </span>
                 )}
 
-                {/* Calendar chip — month + year (matches the events page) */}
-                <div className='shrink-0 w-12 h-12 rounded-xl bg-white/8 border border-white/12 flex flex-col items-center justify-center leading-none gap-0.5'>
-                  {run.month || run.year ? (
-                    <>
-                      {run.month && (
-                        <span className='text-stride-yellow-accent text-[8px] font-black font-mono uppercase tracking-widest'>
-                          {MONTHS[run.month - 1]}
-                        </span>
-                      )}
-                      {run.year && (
-                        <span className='text-white font-bold text-sm leading-none font-mono tabular-nums'>{run.year}</span>
-                      )}
-                    </>
-                  ) : (
-                    <Trophy size={18} className='text-stride-yellow-accent' />
-                  )}
-                </div>
-
-                {/* Name + distance chip */}
-                <div className='min-w-0 flex-1'>
-                  <p className='text-white font-semibold text-sm leading-snug line-clamp-1'>{run.name}</p>
-                  {run.distance && (
-                    <span className='mt-1.5 inline-flex items-center rounded-md bg-stride-yellow-accent/15 border border-stride-yellow-accent/25 px-2 py-0.5 text-[11px] font-mono font-bold text-stride-yellow-accent'>
-                      {run.distance}
-                    </span>
-                  )}
-                </div>
-
-                {/* Finish time — the hero stat of a race card */}
-                {run.time && (
-                  <div className='shrink-0 text-right'>
-                    <p className='text-[9px] font-mono uppercase tracking-[0.2em] text-white/35'>Finish</p>
-                    <p className='text-white font-bold font-mono tabular-nums text-base leading-tight'>{run.time}</p>
-                  </div>
-                )}
-
                 {isOwnProfile && (
-                  <div className='flex items-center gap-1 shrink-0'>
-                    <button onClick={() => startEdit(run)} className='text-white/25 hover:text-white transition-colors p-1.5' aria-label='Edit race'>
-                      <Pencil size={14} />
+                  <div className='absolute right-2.5 top-2.5 z-10 flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100'>
+                    <span
+                      className='flex h-7 w-7 cursor-grab items-center justify-center text-white/35 transition-colors hover:text-white active:cursor-grabbing'
+                      aria-label='Drag to reorder'
+                    >
+                      <GripVertical size={14} />
+                    </span>
+                    <button
+                      onClick={() => startEdit(run)}
+                      className='flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/10 hover:text-white'
+                      aria-label='Edit race'
+                    >
+                      <Pencil size={13} />
                     </button>
-                    <button onClick={() => handleDelete(run.id)} disabled={deletingId === run.id}
-                      className='text-white/20 hover:text-red-400 transition-colors disabled:opacity-50 p-1.5' aria-label='Delete race'>
-                      {deletingId === run.id ? <Spinner /> : <X size={14} />}
+                    <button
+                      onClick={() => handleDelete(run.id)}
+                      disabled={deletingId === run.id}
+                      className='flex h-7 w-7 items-center justify-center rounded-lg text-white/35 transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50'
+                      aria-label='Delete race'
+                    >
+                      {deletingId === run.id ? <Spinner /> : <X size={13} />}
                     </button>
                   </div>
                 )}
+
+                {/* Distance · run name · finish time */}
+                <div>
+                  {run.distance && (
+                    <p className='font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-stride-yellow-accent'>
+                      {formatDistance(run.distance)}
+                    </p>
+                  )}
+
+                  <p className='mt-1 text-lg font-bold leading-tight tracking-tight text-white text-balance line-clamp-3'>
+                    {run.name}
+                  </p>
+
+                  {run.time && (
+                    <p className='mt-1.5 font-mono text-sm font-semibold tabular-nums text-white/70'>
+                      {run.time}
+                    </p>
+                  )}
+                </div>
               </div>
             )
           })}

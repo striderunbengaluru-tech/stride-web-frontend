@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Share2, Copy, Check, X } from 'lucide-react'
+import { Share, Copy, Check, X } from 'lucide-react'
 
 type Props = {
   url: string
@@ -59,7 +59,7 @@ export function ShareButton({ url: initialUrl, title }: Props) {
         className='w-9 h-9 flex items-center justify-center rounded-full bg-white/6 border border-white/12 text-white/40 hover:text-white hover:border-white/25 transition-colors'
         aria-label='Share profile'
       >
-        <Share2 size={15} aria-hidden='true' />
+        <Share size={15} aria-hidden='true' />
       </button>
 
       {showFallback && (

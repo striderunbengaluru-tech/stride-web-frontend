@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pencil, X, Check, Flag, Mountain, Trees, Zap, Heart, Sunrise, Moon, Clock, Star, Footprints } from 'lucide-react'
@@ -56,13 +57,18 @@ export function EditSpecialtiesSection({ skills: initialSkills, isOwnProfile }: 
 
   async function save() {
     setSaving(true)
-    await fetch('/api/profile/update', {
+    const res = await fetch('/api/profile/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ skills }),
     })
     setSaving(false)
+    if (!res.ok) {
+      toast.error('Couldn’t save your specialties. Please try again.')
+      return
+    }
     setEditing(false)
+    toast.success('Specialties updated!')
     router.refresh()
   }
 

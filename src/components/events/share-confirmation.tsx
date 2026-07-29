@@ -55,7 +55,6 @@ export function ShareConfirmation({
         eventDate,
         eventLocation,
         eventBannerUrl,
-        eventSlug,
       })
       if (!blob) return
 
