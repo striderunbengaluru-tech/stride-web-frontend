@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { revalidateLeaderboard } from '@/lib/leaderboard'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -101,6 +102,10 @@ export async function POST(request: Request) {
     .from('users')
     .update({ runs_completed: newRunsCompleted })
     .eq('id', runner.id)
+
+  // A check-in changes run counts, so it can reorder the board and move an
+  // athlete into a new tier.
+  revalidateLeaderboard()
 
   return NextResponse.json({
     success: true,

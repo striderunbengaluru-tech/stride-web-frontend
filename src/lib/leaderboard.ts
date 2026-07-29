@@ -1,7 +1,25 @@
+import { revalidatePath } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
 
 // Single source of truth for leaderboard ordering, shared by the board itself
 // and the "your position" endpoint so the two can never disagree.
+
+export const LEADERBOARD_PATH = '/leaderboard'
+
+/**
+ * Purges the ISR cache behind the leaderboard. Any write that changes a column
+ * the board renders — `profile_public`, `full_name`, `avatar_url`,
+ * `runs_completed` — must call this, or the page keeps serving its pre-write
+ * snapshot for the rest of its revalidate window. That window is why a profile
+ * switched to public still rendered as private (unlinked, initials instead of a
+ * photo, no tier) minutes after the toggle.
+ *
+ * Route handlers and server actions only — Next.js throws if this runs during a
+ * render pass.
+ */
+export function revalidateLeaderboard(): void {
+  revalidatePath(LEADERBOARD_PATH)
+}
 
 export type LeaderboardRow = {
   username: string

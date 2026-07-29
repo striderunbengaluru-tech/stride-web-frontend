@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { revalidateLeaderboard } from '@/lib/leaderboard'
 
 // At least one letter, only letters / spaces / ' . - (no digits), max 500.
 const NAME_RE = /^(?=.*\p{L})[\p{L}\s'.-]+$/u
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
   const { skills, linkedinUrl, instagramUrl, stravaUrl, xUrl, name, profilePublic, ...rest } = parsed.data
 
-  await adminClient
+  const { error: updateError } = await adminClient
     .from('users')
     .update({
       ...rest,
@@ -61,6 +62,16 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)
+
+  // A swallowed error here reads as success to the caller — the visibility
+  // toggle would keep its optimistic "on" state over a row that never changed.
+  if (updateError) {
+    console.error('[Profile update]', updateError)
+    return NextResponse.json({ error: 'Could not save your changes' }, { status: 500 })
+  }
+
+  // Name, photo and visibility all show on the board.
+  revalidateLeaderboard()
 
   return NextResponse.json({ ok: true })
 }
