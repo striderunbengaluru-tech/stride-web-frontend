@@ -1,23 +1,31 @@
-import { revalidatePath } from 'next/cache'
+import { cache } from 'react'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
 
 // Single source of truth for leaderboard ordering, shared by the board itself
 // and the "your position" endpoint so the two can never disagree.
 
 export const LEADERBOARD_PATH = '/leaderboard'
+export const LEADERBOARD_TAG = 'leaderboard'
+
+// Matches the board page's own ISR window, so the cached ranking and the
+// rendered page can't disagree by more than one window between writes.
+const RANKED_REVALIDATE = 300
 
 /**
- * Purges the ISR cache behind the leaderboard. Any write that changes a column
- * the board renders — `profile_public`, `full_name`, `avatar_url`,
- * `runs_completed` — must call this, or the page keeps serving its pre-write
- * snapshot for the rest of its revalidate window. That window is why a profile
- * switched to public still rendered as private (unlinked, initials instead of a
- * photo, no tier) minutes after the toggle.
+ * Purges everything behind the leaderboard: the tagged ranking read and the
+ * page's ISR entry. Any write that changes a column the board renders —
+ * `profile_public`, `full_name`, `avatar_url`, `runs_completed` — must call
+ * this, or the page keeps serving its pre-write snapshot for the rest of its
+ * revalidate window. That window is why a profile switched to public still
+ * rendered as private (unlinked, initials instead of a photo, no tier) minutes
+ * after the toggle.
  *
  * Route handlers and server actions only — Next.js throws if this runs during a
  * render pass.
  */
 export function revalidateLeaderboard(): void {
+  revalidateTag(LEADERBOARD_TAG, 'max')
   revalidatePath(LEADERBOARD_PATH)
 }
 
@@ -59,30 +67,49 @@ function compare(
  * Every athlete in ranked order. Reads the whole users table plus confirmed
  * check-ins — the tie-break needs both, and a `LIMIT` before sorting would pick
  * the wrong rows. Callers slice after ranking.
+ *
+ * Two cache layers, matching the events reads in @/lib/data/events:
+ * - `unstable_cache` makes this a tagged cross-request read. It used to run
+ *   uncached on every call, and `/api/leaderboard/me` is per-viewer and
+ *   `no-store`, so each signed-in visitor to the board triggered a fresh scan of
+ *   both tables. That cost grows with membership and piles load onto the
+ *   database exactly when it's already slow.
+ * - React `cache()` dedupes within a single request, so the page body and
+ *   anything else rendering alongside it share one read.
+ *
+ * The cached value is the same for everyone — the ranking, with no viewer in it —
+ * so there's nothing per-user to key on. `/api/leaderboard/me` finds the caller's
+ * own position within it.
  */
-export async function getRankedAthletes(): Promise<RawRow[]> {
-  const [{ data: users }, { data: checkIns }] = await Promise.all([
-    adminClient
-      .from('users')
-      .select('id, username, full_name, avatar_url, profile_public, runs_completed'),
-    adminClient
-      .from('event_registrations')
-      .select('user_id, checked_in_at')
-      .eq('status', 'CONFIRMED')
-      .not('checked_in_at', 'is', null),
-  ])
+export const getRankedAthletes = cache((): Promise<RawRow[]> =>
+  unstable_cache(
+    async () => {
+      const [{ data: users }, { data: checkIns }] = await Promise.all([
+        adminClient
+          .from('users')
+          .select('id, username, full_name, avatar_url, profile_public, runs_completed'),
+        adminClient
+          .from('event_registrations')
+          .select('user_id, checked_in_at')
+          .eq('status', 'CONFIRMED')
+          .not('checked_in_at', 'is', null),
+      ])
 
-  // Latest confirmed check-in per athlete = when they reached their current total.
-  const reachedAt = new Map<string, string>()
-  for (const row of checkIns ?? []) {
-    const at = row.checked_in_at as string | null
-    if (!at) continue
-    const current = reachedAt.get(row.user_id)
-    if (!current || at > current) reachedAt.set(row.user_id, at)
-  }
+      // Latest confirmed check-in per athlete = when they reached their current total.
+      const reachedAt = new Map<string, string>()
+      for (const row of checkIns ?? []) {
+        const at = row.checked_in_at as string | null
+        if (!at) continue
+        const current = reachedAt.get(row.user_id)
+        if (!current || at > current) reachedAt.set(row.user_id, at)
+      }
 
-  return ((users ?? []) as RawRow[]).sort((a, b) => compare(a, b, reachedAt))
-}
+      return ((users ?? []) as RawRow[]).sort((a, b) => compare(a, b, reachedAt))
+    },
+    ['ranked-athletes'],
+    { tags: [LEADERBOARD_TAG], revalidate: RANKED_REVALIDATE }
+  )()
+)
 
 /**
  * Projects to exactly the public fields. Listed explicitly rather than spreading
