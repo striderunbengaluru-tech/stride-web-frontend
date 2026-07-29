@@ -2,8 +2,12 @@ import { adminClient } from '@/lib/supabase/admin'
 import { sendEmail } from './brevo'
 import { registrationConfirmedEmail, welcomeEmail } from './templates'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
+// Emails are read long after the deployment that sent them, and go to real
+// inboxes — so every link uses the canonical origin rather than whichever
+// environment happened to trigger the send.
+const SITE_URL = PRODUCTION_SITE_URL
 
 /**
  * Send the welcome email exactly once per user. The conditional UPDATE is an

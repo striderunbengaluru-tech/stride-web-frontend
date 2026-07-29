@@ -8,6 +8,7 @@ import { CheckCircle2, MapPin, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 import { RunnerTagTicket } from '@/components/events/runner-tag-ticket'
 import { WalletPassSection, WalletPassSectionSkeleton } from '@/components/events/wallet-pass-section'
 import { ShareConfirmation } from '@/components/events/share-confirmation'
@@ -98,8 +99,10 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
 
   const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
 
-  // Add-to-calendar — only for runs that haven't concluded yet
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
+  // Add-to-calendar — only for runs that haven't concluded yet. The links inside
+  // the calendar entry use the canonical origin, never NEXT_PUBLIC_SITE_URL: the
+  // entry sits in the runner's calendar long after this deployment is gone, and
+  // adding a run from a local build wrote http://localhost:3000 links into it.
   const concludesAt = event.end_date ?? event.event_date
   const isConcluded = !!concludesAt && new Date(concludesAt).getTime() < Date.now()
 
@@ -110,7 +113,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         endIso: event.end_date ?? null,
         location: event.location ?? null,
         description: calendarDescription({
-          siteUrl,
+          siteUrl: PRODUCTION_SITE_URL,
           eventSlug: event.slug,
           registrationId: registration.id,
           runnerTag: profile?.runner_tag ?? null,
