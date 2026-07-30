@@ -32,7 +32,7 @@ type Attendee = {
 type CheckInState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'success'; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
+  | { status: 'success'; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns: boolean }
   | { status: 'error'; message: string }
 
 type Mode = 'tag' | 'search'
@@ -339,12 +339,14 @@ export function RunnerTagCheckIn() {
         }
         return false
       }
-      const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
+      const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns?: boolean }
       setState({
         status: 'success',
         attendeeName: d.attendeeName,
         eventName: d.eventName,
         runsCompleted: d.runsCompleted,
+        // Absent on an older deploy — treat as counted, the previous behaviour.
+        countedTowardRuns: d.countedTowardRuns !== false,
         checkedInAt: d.checkedInAt,
       })
       // Optimistically mark in the search list — the counter is derived from
@@ -731,6 +733,16 @@ export function RunnerTagCheckIn() {
               <span className='text-white/35 text-xs'>
                 {formatTimeIST(state.checkedInAt)}
               </span>
+              {/* Without this the run count simply doesn't move and the admin is
+                  left wondering whether the check-in worked. */}
+              {!state.countedTowardRuns && (
+                <span
+                  title='Test event — checked in, but it does not count toward runs or the leaderboard.'
+                  className='bg-white/10 text-white/55 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full'
+                >
+                  Test · not counted
+                </span>
+              )}
             </div>
             <button
               onClick={handleReset}

@@ -29,6 +29,8 @@ type EventRow = {
   location: string | null
   banner_images: string | null
   price_paise: number | null
+  /** Staging-only rehearsal event — never counted as a completed run. */
+  is_test_event: boolean | null
 }
 
 function firstBanner(raw: string | null): string | null {
@@ -61,7 +63,7 @@ export default async function MyRunsPage() {
   const { data: eventData } = eventIds.length
     ? await adminClient
         .from('events')
-        .select('id, name, slug, event_date, location, banner_images, price_paise')
+        .select('id, name, slug, event_date, location, banner_images, price_paise, is_test_event')
         .in('id', eventIds)
     : { data: [] as EventRow[] }
 
@@ -97,9 +99,12 @@ export default async function MyRunsPage() {
     .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (a.eventDate ?? '').localeCompare(b.eventDate ?? ''))
 
-  // Past = runs the member actually checked in to.
+  // Past = runs the member actually checked in to. Test events are left out:
+  // checking in to one doesn't credit runs_completed (see @/lib/check-in), so
+  // counting it as a completed run here would disagree with the member's own
+  // total and tier. Their upcoming registration for it still shows above.
   const past: MyRun[] = paired
-    .filter(({ reg }) => reg.checked_in_at)
+    .filter(({ reg, event }) => reg.checked_in_at && !event.is_test_event)
     .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (b.eventDate ?? '').localeCompare(a.eventDate ?? ''))
 

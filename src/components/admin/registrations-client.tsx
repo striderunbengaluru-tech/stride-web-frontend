@@ -259,9 +259,9 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                               <span className='text-[10px] px-1.5 py-0.5 rounded bg-white/8 text-white/30'>Completed</span>
                             )}
                             <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                              event.price_paise === 0 ? 'bg-green-500/15 text-green-400' : 'bg-white/8 text-white/50'
+                              event.is_free ? 'bg-green-500/15 text-green-400' : 'bg-white/8 text-white/50'
                             }`}>
-                              {event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`}
+                              {event.price_label}
                             </span>
                           </div>
 

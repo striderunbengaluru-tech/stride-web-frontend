@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events-admin-client'
 import { validatePackageSpots } from '@/lib/events/package-spots'
+import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import type { EventPackage } from '@/types/event'
 
 export const metadata = { title: 'Events — Admin' }
@@ -45,6 +46,7 @@ export default async function AdminEventsPage() {
     const spotsMismatch = Boolean(
       validatePackageSpots(packages, e.capacity ?? null, e.packages_enabled ?? false)
     )
+    const priceLabel = eventPriceLabel(e.price_paise ?? 0, packages, e.packages_enabled ?? false)
 
     return {
       id: e.id,
@@ -58,6 +60,11 @@ export default async function AdminEventsPage() {
       pricePaise: e.price_paise ?? 0,
       capacity: e.capacity ?? null,
       confirmedCount: confirmedByEvent.get(e.id) ?? 0,
+      // Reuses the `packages` already parsed above. Deriving the label from
+      // pricePaise alone showed "Free" for every package event, since packages
+      // leave that column at 0.
+      priceLabel,
+      isFree: priceLabel === FREE_LABEL,
       spotsMismatch,
       thumbUrl,
       createdAt: e.created_at ?? '',
