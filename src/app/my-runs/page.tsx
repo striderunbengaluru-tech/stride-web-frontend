@@ -15,6 +15,10 @@ type RegRow = {
   event_id: string
   status: string | null
   checked_in_at: string | null
+  /** Captured by Razorpay. Null for free registrations. */
+  amount_paid_paise: number | null
+  /** What this registration owed — the package sum, when packages were used. */
+  amount_due_paise: number | null
 }
 
 type EventRow = {
@@ -47,7 +51,7 @@ export default async function MyRunsPage() {
   // on the event_id → events foreign key being present, which can't be assumed.
   const { data: regData } = await adminClient
     .from('event_registrations')
-    .select('id, event_id, status, checked_in_at')
+    .select('id, event_id, status, checked_in_at, amount_paid_paise, amount_due_paise')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -71,7 +75,10 @@ export default async function MyRunsPage() {
     eventDate: e.event_date,
     location: e.location,
     bannerUrl: firstBanner(e.banner_images),
-    pricePaise: e.price_paise ?? 0,
+    // The card labels this "paid", so it has to be what THIS registration cost,
+    // not the event's list price — with packages the two differ, and
+    // events.price_paise is ignored entirely.
+    pricePaise: r.amount_paid_paise ?? r.amount_due_paise ?? e.price_paise ?? 0,
     checkedIn: !!r.checked_in_at,
     // Rows link to the booking confirmation (the member's receipt) — only
     // confirmed registrations have one, others fall back to the event page.

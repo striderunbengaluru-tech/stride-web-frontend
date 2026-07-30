@@ -2,7 +2,7 @@ import { cache as reactCache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { RegisterButton } from './register-button'
-import type { AdditionalField } from '@/types/event'
+import type { AdditionalField, EventPackage } from '@/types/event'
 
 // Async server component streamed in via <Suspense>. The event page's shell
 // (hero, details, price) renders instantly from cached data; only this
@@ -71,6 +71,10 @@ type SharedProps = {
   isPast: boolean
   additionalFields: AdditionalField[]
   termsAndConditions?: string | null
+  /** Priced tiers. Empty unless packagesEnabled. */
+  packages: EventPackage[]
+  packagesEnabled: boolean
+  packagesMultiSelect: boolean
   razorpayKeyId?: string
 }
 
@@ -112,6 +116,9 @@ export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras)
         initial={initial}
         additionalFields={props.additionalFields}
         termsAndConditions={props.termsAndConditions}
+        packages={props.packages}
+        packagesEnabled={props.packagesEnabled}
+        packagesMultiSelect={props.packagesMultiSelect}
         razorpayKeyId={props.razorpayKeyId}
       />
     </>
@@ -134,6 +141,9 @@ export async function RegistrationCtaMobile(props: SharedProps) {
       initial={initial}
       additionalFields={props.additionalFields}
       termsAndConditions={props.termsAndConditions}
+      packages={props.packages}
+      packagesEnabled={props.packagesEnabled}
+      packagesMultiSelect={props.packagesMultiSelect}
       razorpayKeyId={props.razorpayKeyId}
     />
   )

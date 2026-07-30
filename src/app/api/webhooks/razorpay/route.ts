@@ -43,11 +43,31 @@ export async function POST(request: Request) {
     // an already-CONFIRMED row).
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, status, event_id')
+      .select('id, status, event_id, amount_due_paise, events(price_paise)')
       .eq('razorpay_order_id', orderId)
       .maybeSingle()
 
     if (reg && reg.status !== 'CONFIRMED') {
+      // The captured amount must match what this registration actually owed.
+      // This route previously confirmed on the strength of the signature alone
+      // and wrote whatever amount the payload claimed. With a single fixed price
+      // that was merely loose; with per-registration package totals it would
+      // confirm an underpaid registration, so the check is now enforced here too
+      // — not just in verify-payment.
+      const linkedEvent = reg.events as unknown as { price_paise: number } | null
+      const expectedAmount = reg.amount_due_paise ?? linkedEvent?.price_paise ?? -1
+
+      if (capturedAmount !== expectedAmount) {
+        console.error('[razorpay-webhook] Captured amount does not match amount due', {
+          registrationId: reg.id,
+          capturedAmount,
+          expectedAmount,
+        })
+        // 200 so Razorpay stops retrying a payload that will never be valid; the
+        // registration stays PENDING for manual review.
+        return NextResponse.json({ ok: true })
+      }
+
       // Same atomic, capacity-guarded confirm path as verify-payment — records
       // the captured amount and never oversells.
       const { data: outcome } = await adminClient.rpc('confirm_registration', {

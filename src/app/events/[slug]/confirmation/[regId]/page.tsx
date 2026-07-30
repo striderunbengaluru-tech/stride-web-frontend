@@ -16,6 +16,8 @@ import { Reveal } from '@/components/ui/reveal'
 import { PostCard } from '@/components/blog/post-card'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
+import { priceLabel as priceOf } from '@/lib/utils/money'
+import { sumPackageAmountPaise, type SelectedPackage } from '@/types/event'
 
 // Re-fetch on every visit. Confirmation state is per-user, not cacheable, and
 // we want to always reflect the live registration row.
@@ -67,7 +69,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     adminClient
       .from('event_registrations')
       .select(
-        'id, user_id, status, amount_paid_paise, razorpay_payment_id, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, distance_km, confirmation_text)'
+        'id, user_id, status, amount_paid_paise, razorpay_payment_id, selected_packages, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, distance_km, confirmation_text)'
       )
       .eq('id', regId)
       .single(),
@@ -97,7 +99,17 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     eventBannerUrl = banners[0] ?? null
   } catch { /* keep null */ }
 
-  const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
+  // What this runner actually bought, snapshotted at registration — so an admin
+  // editing package prices later can't rewrite their receipt.
+  let selectedPackages: SelectedPackage[] = []
+  try { selectedPackages = JSON.parse(registration.selected_packages ?? '[]') as SelectedPackage[] }
+  catch { selectedPackages = [] }
+
+  // The poster shows what the runner paid when there were packages, since the
+  // event's own price_paise is meaningless in that case.
+  const priceLabel = selectedPackages.length > 0
+    ? priceOf(registration.amount_paid_paise ?? sumPackageAmountPaise(selectedPackages))
+    : priceOf(event.price_paise)
 
   // Add-to-calendar — only for runs that haven't concluded yet. The links inside
   // the calendar entry use the canonical origin, never NEXT_PUBLIC_SITE_URL: the
@@ -228,23 +240,38 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
           </Link>
         </Reveal>
 
-        {/* ── Payment receipt — paid registrations only. Both values are read
-            straight from the DB (server-verified against Razorpay), never from
-            the client. ── */}
-        {registration.amount_paid_paise != null && (
+        {/* ── Receipt — what they picked and what they paid. Every value is read
+            straight from the DB (the amount server-verified against Razorpay),
+            never from the client. Rendered whenever there's either a payment or a
+            package to show: a ₹0 package confirms without a payment, so keying
+            this off amount_paid_paise alone would hide the package they chose. ── */}
+        {(registration.amount_paid_paise != null || selectedPackages.length > 0) && (
           <Reveal>
             {/* backdrop-blur is softened on mobile: backdrop-filter forces the
                 browser to re-render and re-filter everything behind the element,
                 which is one of the costliest things you can do on a low-end
                 phone. Desktop keeps the full glass effect. */}
             <div className='rounded-xl bg-white/10 backdrop-blur-sm md:backdrop-blur-md border border-white/15 px-5 py-4'>
-              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>Payment</p>
-              <div className='flex items-center justify-between gap-4'>
-                <span className='text-white/60 text-sm'>Amount paid</span>
+              <p className='text-white/50 text-[10px] font-bold font-mono uppercase tracking-widest mb-3'>
+                {selectedPackages.length > 0 ? 'Your package' : 'Payment'}
+              </p>
+
+              {selectedPackages.map(pkg => (
+                <div key={pkg.id} className='flex items-baseline justify-between gap-4 mb-2.5'>
+                  <span className='text-white/75 text-sm min-w-0'>{pkg.name}</span>
+                  <span className='text-white/75 text-sm shrink-0'>{priceOf(pkg.amountPaise)}</span>
+                </div>
+              ))}
+
+              <div className={`flex items-center justify-between gap-4 ${selectedPackages.length > 0 ? 'pt-2.5 border-t border-white/8' : ''}`}>
+                <span className='text-white/60 text-sm'>
+                  {registration.amount_paid_paise != null ? 'Amount paid' : 'Total'}
+                </span>
                 <span className='text-white font-bold text-sm'>
-                  ₹{(registration.amount_paid_paise / 100).toLocaleString('en-IN')}
+                  {priceOf(registration.amount_paid_paise ?? sumPackageAmountPaise(selectedPackages))}
                 </span>
               </div>
+
               {registration.razorpay_payment_id && (
                 <div className='flex items-center justify-between gap-4 mt-2.5 pt-2.5 border-t border-white/8'>
                   <span className='text-white/60 text-sm shrink-0'>Payment ID</span>

@@ -2,24 +2,37 @@ import { cache } from 'react'
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
 
-// Single source of truth for leaderboard ordering, shared by the board itself
-// and the "your position" endpoint so the two can never disagree.
+// Single source of truth for leaderboard reads, shared by the board itself and
+// the "your position" endpoint so the two can never disagree.
+//
+// The ranking itself lives in Postgres (`leaderboard_top` /
+// `leaderboard_rank_for`, added in
+// supabase-migrations/2026-07-30-event-packages-and-leaderboard.sql). It used to
+// be a JS sort over the whole users table plus every confirmed check-in, with
+// only the top 50 ever rendered — so one board render moved ~200 rows to display
+// 50, and /api/leaderboard/me pulled the entire ranking just to find one array
+// index. Ranking in SQL makes a board refresh cost 50 rows and a rank lookup
+// cost one.
 
 export const LEADERBOARD_PATH = '/leaderboard'
 export const LEADERBOARD_TAG = 'leaderboard'
 
-// Matches the board page's own ISR window, so the cached ranking and the
-// rendered page can't disagree by more than one window between writes.
-const RANKED_REVALIDATE = 300
+// 3 hours. Deliberately long: run counts only change at check-in, and the point
+// of this cache is that traffic volume no longer drives database load. Keep in
+// lockstep with `export const revalidate` in app/leaderboard/page.tsx, or the
+// cached reads and the rendered page can drift by more than one window.
+const LEADERBOARD_REVALIDATE = 10_800
 
 /**
- * Purges everything behind the leaderboard: the tagged ranking read and the
- * page's ISR entry. Any write that changes a column the board renders —
- * `profile_public`, `full_name`, `avatar_url`, `runs_completed` — must call
- * this, or the page keeps serving its pre-write snapshot for the rest of its
- * revalidate window. That window is why a profile switched to public still
- * rendered as private (unlinked, initials instead of a photo, no tier) minutes
- * after the toggle.
+ * Purges everything behind the leaderboard: the tagged reads and the page's ISR
+ * entry.
+ *
+ * Called only for writes whose staleness is *confusing* rather than merely
+ * out-of-date. A profile switched to public but still rendering as private
+ * (unlinked, initials instead of a photo, no tier) reads as a bug; a run count
+ * that lags by an hour does not. So profile edits purge and check-ins do not —
+ * check-ins arrive in bursts on run days, which is exactly when a purge per
+ * write would hammer the database. They surface at the next window instead.
  *
  * Route handlers and server actions only — Next.js throws if this runs during a
  * render pass.
@@ -38,89 +51,103 @@ export type LeaderboardRow = {
   profile_public: boolean
 }
 
-type RawRow = LeaderboardRow & { id: string }
+/** A `leaderboard_top` row: the public fields plus the total, repeated per row. */
+type TopRow = LeaderboardRow & { total_athletes: number }
 
-/**
- * Ranking rule, as stated on the page: most runs first, and when two athletes
- * have the same count the one who got there first ranks higher. "Got there
- * first" is the timestamp of their most recent confirmed check-in — the run that
- * took them to their current total. Athletes with no check-ins (0 runs) sort
- * last among their tie, then by username so the order is at least stable.
- */
-function compare(
-  a: RawRow,
-  b: RawRow,
-  reachedAt: Map<string, string>
-): number {
-  if (a.runs_completed !== b.runs_completed) return b.runs_completed - a.runs_completed
+export type LeaderboardBoard = {
+  rows: LeaderboardRow[]
+  totalAthletes: number
+}
 
-  const at = reachedAt.get(a.id)
-  const bt = reachedAt.get(b.id)
-  if (at && bt) return at.localeCompare(bt)   // earlier timestamp ranks higher
-  if (at) return -1
-  if (bt) return 1
-
-  return a.username.localeCompare(b.username)
+export type ViewerRank = {
+  rank: number
+  totalAthletes: number
+  runsCompleted: number
+  username: string
+  fullName: string | null
+  avatarUrl: string | null
 }
 
 /**
- * Every athlete in ranked order. Reads the whole users table plus confirmed
- * check-ins — the tie-break needs both, and a `LIMIT` before sorting would pick
- * the wrong rows. Callers slice after ranking.
+ * The top `limit` athletes in ranked order, plus the total number of athletes.
+ *
+ * Ranking rule, as stated on the page: most runs first, and when two athletes
+ * have the same count the one who got there first ranks higher — "got there
+ * first" being their most recent confirmed check-in, the run that took them to
+ * their current total. Athletes with no check-ins sort last within their tie,
+ * then by username so the order is stable. All of that now lives in
+ * `leaderboard_top`; changing the rule means changing the SQL.
  *
  * Two cache layers, matching the events reads in @/lib/data/events:
- * - `unstable_cache` makes this a tagged cross-request read. It used to run
- *   uncached on every call, and `/api/leaderboard/me` is per-viewer and
- *   `no-store`, so each signed-in visitor to the board triggered a fresh scan of
- *   both tables. That cost grows with membership and piles load onto the
- *   database exactly when it's already slow.
- * - React `cache()` dedupes within a single request, so the page body and
- *   anything else rendering alongside it share one read.
+ * - `unstable_cache` makes this a tagged cross-request read, so the board is
+ *   rebuilt ~8×/day rather than once per expiry.
+ * - React `cache()` dedupes within a single request.
  *
- * The cached value is the same for everyone — the ranking, with no viewer in it —
- * so there's nothing per-user to key on. `/api/leaderboard/me` finds the caller's
- * own position within it.
+ * The cached value is the same for everyone — the board has no viewer in it — so
+ * there's nothing per-user to key on.
  */
-export const getRankedAthletes = cache((): Promise<RawRow[]> =>
+export const getLeaderboardTop = cache((limit: number): Promise<LeaderboardBoard> =>
   unstable_cache(
     async () => {
-      const [{ data: users }, { data: checkIns }] = await Promise.all([
-        adminClient
-          .from('users')
-          .select('id, username, full_name, avatar_url, profile_public, runs_completed'),
-        adminClient
-          .from('event_registrations')
-          .select('user_id, checked_in_at')
-          .eq('status', 'CONFIRMED')
-          .not('checked_in_at', 'is', null),
-      ])
+      const { data, error } = await adminClient.rpc('leaderboard_top', { p_limit: limit })
 
-      // Latest confirmed check-in per athlete = when they reached their current total.
-      const reachedAt = new Map<string, string>()
-      for (const row of checkIns ?? []) {
-        const at = row.checked_in_at as string | null
-        if (!at) continue
-        const current = reachedAt.get(row.user_id)
-        if (!current || at > current) reachedAt.set(row.user_id, at)
+      if (error) {
+        console.error('[leaderboard] leaderboard_top failed', error)
+        return { rows: [], totalAthletes: 0 }
       }
 
-      return ((users ?? []) as RawRow[]).sort((a, b) => compare(a, b, reachedAt))
+      const rows = (data ?? []) as TopRow[]
+      return {
+        // Projected field by field rather than spread-minus-total, so a column
+        // added to the SQL function can never reach the client by default.
+        rows: rows.map(row => ({
+          username: row.username,
+          full_name: row.full_name,
+          avatar_url: row.avatar_url,
+          runs_completed: row.runs_completed,
+          profile_public: row.profile_public,
+        })),
+        // Repeated on every row by the window function; an empty board has none.
+        totalAthletes: rows[0]?.total_athletes ?? 0,
+      }
     },
-    ['ranked-athletes'],
-    { tags: [LEADERBOARD_TAG], revalidate: RANKED_REVALIDATE }
+    ['leaderboard-top', String(limit)],
+    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
   )()
 )
 
 /**
- * Projects to exactly the public fields. Listed explicitly rather than spreading
- * minus `id`, so a new internal column can never leak to the client by default.
+ * Where one athlete sits in that same ranking. Keyed per user and cached on the
+ * same window as the board, so the two always tell the same story.
+ *
+ * Returns null when the caller has no `users` row yet.
  */
-export function toPublicRow(row: RawRow): LeaderboardRow {
-  return {
-    username: row.username,
-    full_name: row.full_name,
-    avatar_url: row.avatar_url,
-    runs_completed: row.runs_completed,
-    profile_public: row.profile_public,
-  }
-}
+export const getViewerRank = cache((userId: string): Promise<ViewerRank | null> =>
+  unstable_cache(
+    async () => {
+      const { data, error } = await adminClient.rpc('leaderboard_rank_for', {
+        p_user_id: userId,
+      })
+
+      if (error) {
+        console.error('[leaderboard] leaderboard_rank_for failed', error)
+        return null
+      }
+
+      const row = (data ?? [])[0]
+      if (!row) return null
+
+      // rank/total come back as bigint, which PostgREST serialises as a string.
+      return {
+        rank: Number(row.rank),
+        totalAthletes: Number(row.total_athletes),
+        runsCompleted: row.runs_completed,
+        username: row.username,
+        fullName: row.full_name,
+        avatarUrl: row.avatar_url,
+      }
+    },
+    ['leaderboard-rank', userId],
+    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
+  )()
+)

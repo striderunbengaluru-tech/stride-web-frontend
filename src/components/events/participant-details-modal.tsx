@@ -12,8 +12,9 @@ import dynamic from 'next/dynamic'
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { isChoiceFieldType, type AdditionalField } from '@/types/event'
+import { isChoiceFieldType, sumPackageAmountPaise, type AdditionalField, type EventPackage } from '@/types/event'
 import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
+import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -106,10 +107,14 @@ type Props = {
   }
   additionalFields?: AdditionalField[]
   termsAndConditions?: string | null
+  /** Priced tiers. Only meaningful when packagesEnabled. */
+  packages?: EventPackage[]
+  packagesEnabled?: boolean
+  packagesMultiSelect?: boolean
   razorpayKeyId?: string
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, razorpayKeyId }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, razorpayKeyId }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -121,6 +126,12 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   const [emergencyContactNumber, setEmergencyContactNumber] = useState(initial.emergencyContactNumber ?? '')
   const [customResponses, setCustomResponses] = useState<Record<string, string>>(
     () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
+  )
+  // Single-select defaults to the first package, so the common path is one tap.
+  // Multi-select starts empty — pre-ticking something they'd be charged for isn't
+  // a default we get to make for them.
+  const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(
+    () => (packagesEnabled && !packagesMultiSelect && packages[0] ? [packages[0].id] : [])
   )
   const [accepted, setAccepted] = useState(false)
   // Terms scroll state. `atEnd` is transient and drives the fade at the bottom
@@ -174,8 +185,26 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   const validateEmergency = (v: string, contact: string) =>
     validatePhone(v) ?? (v === contact ? 'Emergency number must be different from your contact number' : null)
 
-  const isPaid = pricePaise > 0
+  // With packages the amount depends on what's selected, so it's derived rather
+  // than taken from the pricePaise prop. This total is for DISPLAY only — the
+  // server recomputes it from the event's own package rows and never trusts
+  // anything the client sends about money.
+  const hasPackages = packagesEnabled && packages.length > 0
+  const selectedPackages = hasPackages
+    ? packages.filter(pkg => selectedPackageIds.includes(pkg.id))
+    : []
+  const totalPaise = hasPackages ? sumPackageAmountPaise(selectedPackages) : pricePaise
+  const isPaid = totalPaise > 0
+
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
+
+  function togglePackage(id: string) {
+    setSelectedPackageIds(prev => {
+      if (!packagesMultiSelect) return [id]
+      return prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    })
+    setFieldError('packages', null)
+  }
 
   // Guardian-consent checkbox appears only once a plausible date of birth is on
   // the form AND it belongs to someone under 18. An empty field, a partial entry
@@ -194,7 +223,15 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       setAgreedSafety(false)
       setFieldErrors({})
       setDirtyFields({})
+      // Back to the default selection, not to whatever they last picked — a
+      // reopened modal should read the same as a fresh one.
+      setSelectedPackageIds(
+        packagesEnabled && !packagesMultiSelect && packages[0] ? [packages[0].id] : []
+      )
     }
+    // packages is a fresh array identity on every server render of the parent, so
+    // it's intentionally not a dependency — only `open` should drive this reset.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Esc key to close
@@ -236,6 +273,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
     }
     if (!gender) return setError('Please select your gender')
 
+    if (hasPackages && selectedPackageIds.length === 0) {
+      setFieldError('packages', 'Please choose a package')
+      return setError(packagesMultiSelect ? 'Please choose at least one package' : 'Please choose a package')
+    }
+
     if (hasTerms && !accepted) return setError('Please accept the terms & conditions to continue')
     if (!agreedPolicies) return setError('Please agree to the Privacy Policy and Terms of Service')
     if (isMinor && !agreedGuardian) return setError('Please confirm you have your guardian’s consent to attend')
@@ -255,6 +297,10 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
           emergencyContactNumber: emergencyContactNumber.trim(),
           acceptedTerms: hasTerms ? accepted : undefined,
           customResponses,
+          // Ids only. The server looks up each one on the event and sums the
+          // amounts itself — sending prices from here would be a price the
+          // client got to choose.
+          selectedPackageIds,
         }),
       })
       const data = await res.json()
@@ -482,6 +528,68 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <p className='text-white/30 text-[11px] mt-1.5'>Someone we can reach if anything happens during the run.</p>
             </div>
 
+            {/* Package selection — the runner builds their own total here */}
+            {hasPackages && (
+              <div className='pt-5 mt-2 border-t border-white/10'>
+                <h3 className={sectionHeading}>
+                  Choose your package <span className='text-stride-yellow-accent'>*</span>
+                </h3>
+                <p className='text-white/40 text-[11px] mt-1 mb-3'>
+                  {packagesMultiSelect
+                    ? 'Pick as many as you like — you’ll pay the total.'
+                    : 'Pick the one you want.'}
+                </p>
+
+                <div
+                  role={packagesMultiSelect ? 'group' : 'radiogroup'}
+                  aria-label='Event packages'
+                  className='flex flex-col gap-2'
+                >
+                  {packages.map(pkg => {
+                    const checked = selectedPackageIds.includes(pkg.id)
+                    return (
+                      <label
+                        key={pkg.id}
+                        className='flex items-start gap-2.5 min-h-11 px-3.5 py-3 rounded-lg border border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10 transition-colors'
+                      >
+                        <input
+                          type={packagesMultiSelect ? 'checkbox' : 'radio'}
+                          name={packagesMultiSelect ? `package-${pkg.id}` : 'event-package'}
+                          value={pkg.id}
+                          checked={checked}
+                          onChange={() => togglePackage(pkg.id)}
+                          className='accent-stride-yellow-accent w-4 h-4 shrink-0 mt-0.5'
+                        />
+                        <span className='min-w-0 flex-1'>
+                          <span className='flex items-baseline justify-between gap-3'>
+                            <span className='text-white/90 text-sm font-medium'>{pkg.name}</span>
+                            <span className='text-white text-sm font-semibold font-mono shrink-0'>
+                              {priceOf(pkg.amountPaise)}
+                            </span>
+                          </span>
+                          {pkg.details.trim() && (
+                            <span className={`block mt-1.5 ${termsProse}`}>
+                              <ReactMarkdown>{pkg.details}</ReactMarkdown>
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+
+                <FieldError msg={fieldErrors.packages} />
+
+                {/* The confirmation of what they're about to be charged. */}
+                <div className='flex items-center justify-between gap-3 mt-3 pt-3 border-t border-white/10'>
+                  <span className='text-white/60 text-sm'>
+                    {selectedPackages.length > 1 ? `Total · ${selectedPackages.length} packages` : 'Total'}
+                  </span>
+                  <span className='text-white font-bold text-lg font-mono'>{priceOf(totalPaise)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Event-specific custom fields */}
             {additionalFields.length > 0 && (
               <div className='pt-5 mt-2 border-t border-white/10 space-y-4'>
@@ -694,7 +802,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                 <><Spinner /> Processing…</>
               ) : isPaid ? (
                 <>
-                  Pay ₹{(pricePaise / 100).toLocaleString('en-IN')} securely via
+                  Pay {formatRupees(totalPaise)} securely via
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/razorpay-full-icon.svg'

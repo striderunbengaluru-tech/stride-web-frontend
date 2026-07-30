@@ -47,6 +47,9 @@ export default async function EditEventPage({ params }: Props) {
           termsText: event.terms_and_conditions ?? undefined,
           bannerImages: event.banner_images ?? '[]',
           additionalFields: event.additional_fields ?? '[]',
+          packages: event.packages ?? '[]',
+          packagesEnabled: event.packages_enabled ?? false,
+          packagesMultiSelect: event.packages_multi_select ?? false,
           distanceKm: event.distance_km ?? undefined,
           difficulty: event.difficulty ?? undefined,
         }}

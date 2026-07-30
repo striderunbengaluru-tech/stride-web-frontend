@@ -6,7 +6,8 @@ import { nanoid } from 'nanoid'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { EVENTS_TAG, eventTag } from '@/lib/data/events'
-import { eventSchema, productSchema, additionalFieldSchema } from '@/lib/validations/admin'
+import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema } from '@/lib/validations/admin'
+import { MAX_PACKAGES } from '@/types/event'
 import { slugify } from '@/lib/utils/slug'
 import { istLocalToUtcIso } from '@/lib/utils/ist'
 import { isLastAdmin } from '@/lib/account/hard-delete'
@@ -27,6 +28,34 @@ function sanitiseAdditionalFields(raw: string | undefined): string {
     })
     return JSON.stringify(clean)
   } catch { return '[]' }
+}
+
+// Same contract as sanitiseAdditionalFields, including the per-entry validation:
+// one malformed package must not wipe the rest. Capped at MAX_PACKAGES so a
+// hand-posted form can't make the registration modal unusable.
+function sanitisePackages(raw: string | undefined): string {
+  if (!raw) return '[]'
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return '[]'
+    const clean = parsed.flatMap(entry => {
+      const result = eventPackageSchema.safeParse(entry)
+      return result.success ? [result.data] : []
+    })
+    return JSON.stringify(clean.slice(0, MAX_PACKAGES))
+  } catch { return '[]' }
+}
+
+// Enabling packages with nothing authored would leave the event unregisterable:
+// the register route requires a selection, and there'd be nothing to select. So
+// the flag can only be true when at least one package survived validation.
+function packageColumns(rawPackages: string | undefined, enabled: boolean, multiSelect: boolean) {
+  const packages = sanitisePackages(rawPackages)
+  return {
+    packages,
+    packages_enabled: enabled && packages !== '[]',
+    packages_multi_select: multiSelect,
+  }
 }
 
 async function requireAdmin() {
@@ -54,7 +83,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -85,6 +114,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
     terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
     additional_fields: sanitiseAdditionalFields(additionalFields),
+    ...packageColumns(packages, packagesEnabled, packagesMultiSelect),
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
@@ -115,7 +145,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
 
   const { data: updated } = await adminClient.from('events').update({
     name,
@@ -132,6 +162,7 @@ export async function updateEventAction(id: string, formData: FormData): Promise
     terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
     additional_fields: sanitiseAdditionalFields(additionalFields),
+    ...packageColumns(packages, packagesEnabled, packagesMultiSelect),
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,

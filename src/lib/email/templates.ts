@@ -87,6 +87,20 @@ function firstName(fullName: string | null): string {
   return first ? escapeHtml(first) : 'runner'
 }
 
+// Deliberately local rather than imported from @/lib/utils/money. This module has
+// NO imports on purpose: scripts/build-email-artifact.mjs runs it through
+// ts.transpileModule and imports the output directly, with no bundler and no path
+// alias resolution, so a single value import would break the preview build.
+function formatRupees(paise: number): string {
+  return `₹${(paise / 100).toLocaleString('en-IN')}`
+}
+function priceLabel(paise: number): string {
+  return paise === 0 ? 'Free' : formatRupees(paise)
+}
+
+/** Structural, for the same no-imports reason. Mirrors SelectedPackage. */
+type EmailPackage = { id: string; name: string; amountPaise: number }
+
 function formatEventDateIST(eventDate: string): string {
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: 'Asia/Kolkata',
@@ -275,8 +289,9 @@ export function registrationConfirmedEmail(params: {
   confirmationUrl: string
   amountPaidPaise: number | null
   paymentId: string | null
+  selectedPackages?: EmailPackage[]
 }): EmailContent {
-  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId } = params
+  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [] } = params
 
   const ticketLabel = (text: string) =>
     `<p class="t-muted" style="margin:0 0 5px;font-family:${MONO_FONT};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:${MUTED};">${text}</p>`
@@ -314,11 +329,24 @@ export function registrationConfirmedEmail(params: {
       </tr>`
     : ''
 
+  // What they picked, when the event was priced with packages. Package names are
+  // admin-authored free text, so every one is escaped. No background colour and
+  // both text classes present, per the dark-mode strategy at the top of this file.
+  const packagesRow = selectedPackages.length > 0
+    ? `<tr>
+        <td style="padding:20px 28px 0;">
+          ${ticketLabel(selectedPackages.length > 1 ? 'Your packages' : 'Your package')}
+          ${selectedPackages.map(pkg => `
+          <p class="t" style="margin:0 0 4px;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:${TEXT};">${escapeHtml(pkg.name)} <span class="t-muted" style="color:${MUTED};">· ${priceLabel(pkg.amountPaise)}</span></p>`).join('')}
+        </td>
+      </tr>`
+    : ''
+
   const paymentRow = amountPaidPaise != null
     ? `<tr>
         <td style="padding:20px 28px 0;">
           ${ticketLabel('Amount paid')}
-          <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:${TEXT};">₹${(amountPaidPaise / 100).toLocaleString('en-IN')}${
+          <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:${TEXT};">${formatRupees(amountPaidPaise)}${
             paymentId
               ? ` <span class="t-muted" style="font-family:${MONO_FONT};font-size:12px;color:${MUTED};">· ${escapeHtml(paymentId)}</span>`
               : ''
@@ -376,6 +404,7 @@ export function registrationConfirmedEmail(params: {
                 </tr>
                 ${whenRow}
                 ${whereRow}
+                ${packagesRow}
                 ${paymentRow}
                 <tr>
                   <td style="padding:26px 28px 0;">

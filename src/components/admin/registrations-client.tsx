@@ -7,6 +7,7 @@ import type { RunnerRow, EventWithAttendees } from '@/app/admin/registrations/pa
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { formatMonthIST, formatDayIST } from '@/lib/utils/ist'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
+import { priceLabel as priceOf } from '@/lib/utils/money'
 
 type Props = {
   runners: RunnerRow[]
@@ -54,6 +55,8 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
   const [tab, setTab] = useState<Tab>('runners')
   const [search, setSearch] = useState('')
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  /** '' = no package filter. Only applies to the By event tab. */
+  const [packageFilter, setPackageFilter] = useState('')
 
   const filteredRunners = useMemo(() => {
     if (!search.trim()) return runners
@@ -66,11 +69,25 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
     )
   }, [runners, search])
 
+  // Every package name across every event, for the filter dropdown. Empty when
+  // no event uses packages, in which case the control is hidden entirely.
+  const allPackageNames = useMemo(
+    () => [...new Set(events.flatMap(e => e.package_names))].sort(),
+    [events]
+  )
+
   const filteredEvents = useMemo(() => {
-    if (!search.trim()) return events
-    const q = search.toLowerCase()
-    return events.filter(e => e.name.toLowerCase().includes(q))
-  }, [events, search])
+    const q = search.trim().toLowerCase()
+    return events
+      .filter(e => !q || e.name.toLowerCase().includes(q))
+      // Filtering by package narrows the ATTENDEE list too, not just which events
+      // show — otherwise expanding a match would still list everyone.
+      .map(e => packageFilter
+        ? { ...e, attendees: e.attendees.filter(a => a.packages.some(p => p.name === packageFilter)) }
+        : e
+      )
+      .filter(e => !packageFilter || e.attendees.length > 0)
+  }, [events, search, packageFilter])
 
   return (
     <div>
@@ -107,6 +124,26 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
             className='w-full bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
           />
         </div>
+
+        {/* Package filter — only meaningful on the By event tab, and only shown
+            when at least one event actually uses packages. */}
+        {tab === 'events' && allPackageNames.length > 0 && (
+          <div className='relative shrink-0'>
+            <label htmlFor='package-filter' className='sr-only'>Filter by package</label>
+            <select
+              id='package-filter'
+              value={packageFilter}
+              onChange={e => setPackageFilter(e.target.value)}
+              className='w-full sm:w-auto appearance-none bg-white/8 border border-white/20 rounded-xl pl-4 pr-9 py-2.5 text-white text-sm cursor-pointer focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
+            >
+              <option value='' className='bg-stride-purple-primary'>All packages</option>
+              {allPackageNames.map(name => (
+                <option key={name} value={name} className='bg-stride-purple-primary'>{name}</option>
+              ))}
+            </select>
+            <ChevronDown size={15} className='absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
+          </div>
+        )}
       </div>
 
       {/* ── Tab A: All Runners — card list ── */}
@@ -294,6 +331,14 @@ export function RegistrationsClient({ runners, events, totalConfirmed }: Props) 
                                     {a.full_name ?? '—'}
                                   </p>
                                   <p className='text-white/30 text-xs truncate'>{a.email}</p>
+                                  {a.packages.length > 0 && (
+                                    <p className='text-stride-yellow-accent/70 text-xs mt-1 line-clamp-1'>
+                                      {a.packages.map(p => p.name).join(' + ')}
+                                      {a.amount_due_paise != null && (
+                                        <span className='text-white/30'> · {priceOf(a.amount_due_paise)}</span>
+                                      )}
+                                    </p>
+                                  )}
                                 </div>
 
                                 {/* Status + check-in */}

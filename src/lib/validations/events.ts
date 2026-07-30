@@ -24,6 +24,9 @@ export const participantDetailsSchema = z.object({
 export const registerEventSchema = z.object({
   eventId: z.string().min(1),
   acceptedTerms: z.boolean().optional(),
+  // Package IDS ONLY. Amounts are never accepted from the client — the register
+  // route looks each id up on the event row and sums the admin's own prices.
+  selectedPackageIds: z.array(z.string().min(1)).max(50).optional().default([]),
   customResponses: z.record(z.string(), z.union([z.string(), z.number()])).optional().default({}),
 }).and(participantDetailsSchema)
 
