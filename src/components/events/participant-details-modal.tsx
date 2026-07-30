@@ -12,9 +12,10 @@ import dynamic from 'next/dynamic'
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { isChoiceFieldType, sumPackageAmountPaise, type AdditionalField, type EventPackage } from '@/types/event'
+import { isChoiceFieldType, sumPackageAmountPaise, hasSpotBudget, type AdditionalField, type EventPackage } from '@/types/event'
 import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
+import { reportFormError } from '@/lib/utils/form-errors'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -64,6 +65,10 @@ const termsProse =
 // means scrollTop often lands just short of the exact bottom.
 const SCROLL_END_SLOP_PX = 8
 
+// Below this many spots left, a package says so. Mirrors the event page's own
+// "Hurry!" threshold so the two surfaces agree on what counts as scarce.
+const PACKAGE_SCARCITY_THRESHOLD = 10
+
 // Per-field validators — shared by live (blur/change) validation and the
 // submit-time backstop. Return a message, or null when valid.
 const validateFullName = (v: string) =>
@@ -93,6 +98,26 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className='text-red-400 text-[11px] mt-1.5'>{msg}</p>
 }
 
+/**
+ * Spots left on a package, or null when it carries no budget (packages authored
+ * before spots existed — those register against total event capacity alone).
+ */
+function spotsLeftFor(pkg: EventPackage, taken: Record<string, number>): number | null {
+  if (!hasSpotBudget(pkg)) return null
+  return Math.max(0, (pkg.spotsTotal ?? 0) - (taken[pkg.id] ?? 0))
+}
+
+function defaultPackageSelection(
+  packages: EventPackage[],
+  enabled: boolean,
+  multiSelect: boolean,
+  taken: Record<string, number>,
+): string[] {
+  if (!enabled || multiSelect) return []
+  const first = packages.find(pkg => spotsLeftFor(pkg, taken) !== 0)
+  return first ? [first.id] : []
+}
+
 type Props = {
   open: boolean
   onClose: () => void
@@ -111,10 +136,16 @@ type Props = {
   packages?: EventPackage[]
   packagesEnabled?: boolean
   packagesMultiSelect?: boolean
+  /**
+   * Spots already taken per package id. Drives the "N left" hint and disables
+   * sold-out tiers. Advisory only — register_for_event re-checks every budget
+   * under a row lock, so a stale count here can't oversell anything.
+   */
+  packageSpotsTaken?: Record<string, number>
   razorpayKeyId?: string
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, razorpayKeyId }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packageSpotsTaken = {}, razorpayKeyId }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -127,11 +158,12 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   const [customResponses, setCustomResponses] = useState<Record<string, string>>(
     () => Object.fromEntries(additionalFields.map(f => [f.id, '']))
   )
-  // Single-select defaults to the first package, so the common path is one tap.
-  // Multi-select starts empty — pre-ticking something they'd be charged for isn't
-  // a default we get to make for them.
+  // Single-select defaults to the first package that still has spots, so the
+  // common path is one tap and a sold-out first tier doesn't pre-select a choice
+  // the server would immediately reject. Multi-select starts empty — pre-ticking
+  // something they'd be charged for isn't a default we get to make for them.
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(
-    () => (packagesEnabled && !packagesMultiSelect && packages[0] ? [packages[0].id] : [])
+    () => defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken)
   )
   const [accepted, setAccepted] = useState(false)
   // Terms scroll state. `atEnd` is transient and drives the fade at the bottom
@@ -163,6 +195,18 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   }
   function markFieldDirty(key: string) {
     setDirtyFields(prev => (prev[key] ? prev : { ...prev, [key]: true }))
+  }
+
+  /**
+   * The single failure path. Keeps the persistent messages (banner + inline text
+   * under the control) and adds a toast plus a scroll-to-focus on the offending
+   * field — the banner sits above the submit button and was easy to miss on a
+   * phone, where the failing input is often several screens up.
+   */
+  function fail(message: string, field?: string) {
+    setError(message)
+    if (field) setFieldError(field, message)
+    reportFormError({ message, field })
   }
 
   // Measured on attach rather than in an effect — terms that fit without
@@ -226,7 +270,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       // Back to the default selection, not to whatever they last picked — a
       // reopened modal should read the same as a fresh one.
       setSelectedPackageIds(
-        packagesEnabled && !packagesMultiSelect && packages[0] ? [packages[0].id] : []
+        defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken)
       )
     }
     // packages is a fresh array identity on every server render of the parent, so
@@ -266,22 +310,26 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       ),
     ]
     for (const [key, msg] of submitChecks) {
-      if (msg) {
-        setFieldError(key, msg)
-        return setError(msg)
-      }
+      if (msg) return fail(msg, key)
     }
-    if (!gender) return setError('Please select your gender')
+    if (!gender) return fail('Please select your gender', 'gender')
 
     if (hasPackages && selectedPackageIds.length === 0) {
-      setFieldError('packages', 'Please choose a package')
-      return setError(packagesMultiSelect ? 'Please choose at least one package' : 'Please choose a package')
+      return fail(packagesMultiSelect ? 'Please choose at least one package' : 'Please choose a package', 'packages')
+    }
+    // A tier can sell out while the modal is open. The server re-checks under a
+    // lock either way; catching it here saves a round trip and names the tier.
+    const soldOut = packages.find(pkg =>
+      selectedPackageIds.includes(pkg.id) && spotsLeftFor(pkg, packageSpotsTaken) === 0
+    )
+    if (soldOut) {
+      return fail(`"${soldOut.name}" is sold out — please pick another package.`, 'packages')
     }
 
-    if (hasTerms && !accepted) return setError('Please accept the terms & conditions to continue')
-    if (!agreedPolicies) return setError('Please agree to the Privacy Policy and Terms of Service')
-    if (isMinor && !agreedGuardian) return setError('Please confirm you have your guardian’s consent to attend')
-    if (!agreedSafety) return setError('Please accept the safety declaration to continue')
+    if (hasTerms && !accepted) return fail('Please accept the terms & conditions to continue', 'acceptedTerms')
+    if (!agreedPolicies) return fail('Please agree to the Privacy Policy and Terms of Service', 'agreedPolicies')
+    if (isMinor && !agreedGuardian) return fail('Please confirm you have your guardian’s consent to attend', 'agreedGuardian')
+    if (!agreedSafety) return fail('Please accept the safety declaration to continue', 'agreedSafety')
 
     setLoading(true)
     try {
@@ -306,7 +354,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error ?? 'Registration failed')
+        // The route names the offending control: `field` for the package list,
+        // `fieldId` for a custom question. Either one gets scrolled into view.
+        fail(data.error ?? 'Registration failed', data.field ?? data.fieldId)
         setLoading(false)
         return
       }
@@ -342,11 +392,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             if (verifyRes.ok && verifyData.success) {
               router.push(`/events/${data.slug}/confirmation/${data.registrationId}`)
             } else {
-              setError(verifyData.error ?? 'Payment verification failed. Please contact support.')
+              fail(verifyData.error ?? 'Payment verification failed. Please contact support.')
               setLoading(false)
             }
           } catch {
-            setError('Verification error. Please contact support.')
+            fail('Verification error. Please contact support.')
             setLoading(false)
           }
         },
@@ -358,7 +408,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
       })
       rzp.open()
     } catch {
-      setError('Something went wrong. Please try again.')
+      fail('Something went wrong. Please try again.')
       setLoading(false)
     }
   }
@@ -414,6 +464,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Full name *</label>
               <input
                 type='text'
+                data-field='fullName'
                 value={fullName}
                 onChange={e => {
                   setFullName(e.target.value)
@@ -433,6 +484,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Date of birth *</label>
               <input
                 type='date'
+                data-field='dateOfBirth'
                 value={dateOfBirth}
                 onChange={e => {
                   setDateOfBirth(e.target.value)
@@ -450,14 +502,14 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             {/* Gender */}
             <div>
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Gender *</label>
-              <div className='grid grid-cols-4 gap-1.5'>
+              <div data-field='gender' tabIndex={-1} className='grid grid-cols-4 gap-1.5'>
                 {GENDER_OPTIONS.map(opt => {
                   const active = gender === opt.value
                   return (
                     <button
                       key={opt.value}
                       type='button'
-                      onClick={() => setGender(opt.value)}
+                      onClick={() => { setGender(opt.value); setFieldError('gender', null) }}
                       aria-pressed={active}
                       className={`relative flex flex-col items-center justify-center gap-1 px-2 py-3 rounded-xl text-[11px] font-medium leading-tight text-center transition-all duration-200 border ${
                         active
@@ -471,6 +523,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                   )
                 })}
               </div>
+              <FieldError msg={fieldErrors.gender} />
             </div>
 
             {/* Contact number */}
@@ -478,6 +531,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Contact number *</label>
               <input
                 type='tel'
+                data-field='contactNumber'
                 value={contactNumber}
                 onChange={e => {
                   const v = e.target.value.replace(/\D/g, '')
@@ -505,6 +559,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Emergency contact number *</label>
               <input
                 type='tel'
+                data-field='emergencyContactNumber'
                 value={emergencyContactNumber}
                 onChange={e => {
                   const v = e.target.value.replace(/\D/g, '')
@@ -543,30 +598,50 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                 <div
                   role={packagesMultiSelect ? 'group' : 'radiogroup'}
                   aria-label='Event packages'
+                  data-field='packages'
+                  tabIndex={-1}
                   className='flex flex-col gap-2'
                 >
                   {packages.map(pkg => {
                     const checked = selectedPackageIds.includes(pkg.id)
+                    const left = spotsLeftFor(pkg, packageSpotsTaken)
+                    const soldOut = left === 0
                     return (
                       <label
                         key={pkg.id}
-                        className='flex items-start gap-2.5 min-h-11 px-3.5 py-3 rounded-lg border border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10 transition-colors'
+                        aria-disabled={soldOut}
+                        className={`flex items-start gap-2.5 min-h-11 px-3.5 py-3 rounded-lg border transition-colors ${
+                          soldOut
+                            ? 'border-white/10 bg-white/3 cursor-not-allowed'
+                            : 'border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10'
+                        }`}
                       >
                         <input
                           type={packagesMultiSelect ? 'checkbox' : 'radio'}
                           name={packagesMultiSelect ? `package-${pkg.id}` : 'event-package'}
                           value={pkg.id}
                           checked={checked}
+                          disabled={soldOut}
                           onChange={() => togglePackage(pkg.id)}
-                          className='accent-stride-yellow-accent w-4 h-4 shrink-0 mt-0.5'
+                          className='accent-stride-yellow-accent w-4 h-4 shrink-0 mt-0.5 disabled:opacity-40'
                         />
-                        <span className='min-w-0 flex-1'>
+                        <span className={`min-w-0 flex-1 ${soldOut ? 'opacity-45' : ''}`}>
                           <span className='flex items-baseline justify-between gap-3'>
                             <span className='text-white/90 text-sm font-medium'>{pkg.name}</span>
                             <span className='text-white text-sm font-semibold font-mono shrink-0'>
                               {priceOf(pkg.amountPaise)}
                             </span>
                           </span>
+                          {/* Spots are shown once a tier is genuinely scarce, or
+                              when it's gone. A cheerful "40 left" on an empty run
+                              is noise; "3 left" is the thing worth saying. */}
+                          {soldOut ? (
+                            <span className='block mt-1 text-red-400/90 text-[11px] font-semibold'>Sold out</span>
+                          ) : left !== null && left <= PACKAGE_SCARCITY_THRESHOLD ? (
+                            <span className='block mt-1 text-stride-yellow-accent text-[11px] font-semibold tabular-nums'>
+                              Only {left} {left === 1 ? 'spot' : 'spots'} left
+                            </span>
+                          ) : null}
                           {pkg.details.trim() && (
                             <span className={`block mt-1.5 ${termsProse}`}>
                               <ReactMarkdown>{pkg.details}</ReactMarkdown>
@@ -606,7 +681,10 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                   }
                   const className = `${inputBase} ${err ? inputErrorBorder : ''}`
                   return (
-                    <div key={field.id}>
+                    // data-field: the register route reports a failing custom
+                    // question by its id, and the controls inside don't carry it
+                    // as a `name` — this wrapper is what focusField scrolls to.
+                    <div key={field.id} data-field={field.id} tabIndex={-1}>
                       <label className='block text-white/70 text-xs font-medium mb-1.5'>
                         {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
                       </label>
@@ -726,6 +804,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                 <label className='mt-1 flex min-h-11 items-center gap-2.5 cursor-pointer select-none group'>
                   <input
                     type='checkbox'
+                    data-field='acceptedTerms'
                     checked={accepted}
                     onChange={e => setAccepted(e.target.checked)}
                     className='accent-stride-yellow-accent w-4 h-4 shrink-0 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stride-yellow-accent'
@@ -742,6 +821,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='flex items-start gap-2.5 cursor-pointer select-none'>
                 <input
                   type='checkbox'
+                  data-field='agreedPolicies'
                   checked={agreedPolicies}
                   onChange={e => setAgreedPolicies(e.target.checked)}
                   className={checkboxBase}
@@ -762,6 +842,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                 <label className='flex items-start gap-2.5 cursor-pointer select-none'>
                   <input
                     type='checkbox'
+                    data-field='agreedGuardian'
                     checked={agreedGuardian}
                     onChange={e => setAgreedGuardian(e.target.checked)}
                     className={checkboxBase}
@@ -775,6 +856,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <label className='flex items-start gap-2.5 cursor-pointer select-none'>
                 <input
                   type='checkbox'
+                  data-field='agreedSafety'
                   checked={agreedSafety}
                   onChange={e => setAgreedSafety(e.target.checked)}
                   className={checkboxBase}
@@ -785,9 +867,10 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               </label>
             </div>
 
-            {/* Error */}
+            {/* Error — also announced as a toast by fail(), which is what
+                actually gets noticed on a phone where this sits below the fold. */}
             {error && (
-              <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs'>
+              <div role='alert' className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs'>
                 {error}
               </div>
             )}

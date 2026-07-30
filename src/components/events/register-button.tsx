@@ -27,6 +27,8 @@ type Props = {
   packages?: EventPackage[]
   packagesEnabled?: boolean
   packagesMultiSelect?: boolean
+  /** Spots already taken per package id — drives "N left" / sold-out in the modal. */
+  packageSpotsTaken?: Record<string, number>
   razorpayKeyId?: string
 }
 
@@ -45,6 +47,7 @@ export function RegisterButton({
   packages,
   packagesEnabled,
   packagesMultiSelect,
+  packageSpotsTaken,
   razorpayKeyId,
 }: Props) {
   // ?register=1 (returning from login) is read here client-side so the server
@@ -131,6 +134,7 @@ export function RegisterButton({
         packages={packages}
         packagesEnabled={packagesEnabled}
         packagesMultiSelect={packagesMultiSelect}
+        packageSpotsTaken={packageSpotsTaken}
         razorpayKeyId={razorpayKeyId}
       />
     </>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
@@ -19,6 +19,8 @@ export type AdminEventRow = {
   pricePaise: number
   capacity: number | null
   confirmedCount: number
+  /** Packages are on but their spots don't add up to capacity — save is blocked. */
+  spotsMismatch: boolean
   thumbUrl: string | null
   createdAt: string
 }
@@ -222,6 +224,15 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       </span>
                       {isPast && event.status === 'PUBLISHED' && (
                         <span className='text-[10px] px-2 py-0.5 rounded-md bg-white/8 text-white/30 shrink-0'>Completed</span>
+                      )}
+                      {event.spotsMismatch && (
+                        <span
+                          title='Package spots don’t add up to capacity. Registration still works, but you’ll need to fix this before you can save the event again.'
+                          className='flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 shrink-0'
+                        >
+                          <TriangleAlert size={10} aria-hidden='true' />
+                          SPOTS
+                        </span>
                       )}
                     </div>
                     {event.subtitle && (

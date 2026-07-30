@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle, XCircle, ChevronDown, RotateCcw, Users, Clock, Calendar,
@@ -39,6 +40,14 @@ type Mode = 'tag' | 'search'
 // Check-in is allowed from event_date - 6h up to end_date + 24h (or event_date + 24h if no end_date).
 const CHECKIN_PRE_WINDOW_MS = 6 * 60 * 60 * 1000
 const CHECKIN_POST_WINDOW_MS = 24 * 60 * 60 * 1000
+
+// How often the attendee list re-reads while the tab is visible. 3s is the
+// latency budget for "two admins never see the same runner as available"; each
+// poll is a `since` delta, so the usual response carries zero rows.
+const ATTENDEE_POLL_MS = 3_000
+// Every Nth poll takes the full list instead. A delta surfaces check-ins but not
+// someone who REGISTERS after check-in opened, so ~18s covers that case too.
+const ATTENDEE_RESYNC_EVERY = 6
 
 function eventWindow(e: Event) {
   if (!e.event_date) return null
@@ -184,25 +193,117 @@ export function RunnerTagCheckIn() {
     }
   }, [selectedEventId, attendees])
 
-  // Load attendees for search mode (admin-gated API)
-  const loadAttendees = useCallback(async (eventId: string) => {
-    setLoadingAttendees(true)
-    try {
-      const res = await fetch(`/api/admin/event-attendees?eventId=${encodeURIComponent(eventId)}`)
-      const data = await res.json() as { attendees?: Attendee[] }
-      if (res.ok && data.attendees) setAttendees(data.attendees)
-      else setAttendees([])
-    } catch {
-      setAttendees([])
-    } finally {
-      setLoadingAttendees(false)
-    }
+  // ── Attendee list: initial load + live polling ─────────────────────────────
+  // Several admins check runners in from separate phones at the same run. Without
+  // refreshing, each device kept showing everyone as un-checked-in and two admins
+  // would work the same athlete. (The check-in API is already race-safe — the
+  // loser gets "Already checked in" — so this removes the confusion, not a
+  // correctness hole.)
+  //
+  // `lastSync` is the server's own clock, not the browser's: a phone whose clock
+  // is a minute fast would ask for changes "since" a future instant and silently
+  // miss every check-in.
+  const lastSyncRef = useRef<string | null>(null)
+  // Bumped on every local mutation. A poll that was already in flight when a
+  // check-in landed resolves with pre-check-in data; comparing sequence numbers
+  // lets us drop it instead of wiping the row we just marked.
+  const mutationSeqRef = useRef(0)
+  const pollTickRef = useRef(0)
+
+  const fetchAttendees = useCallback(async (eventId: string, since: string | null) => {
+    const params = new URLSearchParams({ eventId })
+    if (since) params.set('since', since)
+    const res = await fetch(`/api/admin/event-attendees?${params}`, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`attendees ${res.status}`)
+    return await res.json() as { attendees: Attendee[]; serverTime: string; mode: 'full' | 'delta' }
   }, [])
 
+  // Full list, with the skeleton. Used on event selection and for the periodic
+  // resync that picks up runners who registered after check-in opened.
+  const loadAttendees = useCallback(async (eventId: string, opts?: { quiet?: boolean }) => {
+    const seenSeq = mutationSeqRef.current
+    if (!opts?.quiet) setLoadingAttendees(true)
+    try {
+      const data = await fetchAttendees(eventId, null)
+      if (mutationSeqRef.current !== seenSeq) return
+      setAttendees(data.attendees)
+      lastSyncRef.current = data.serverTime
+    } catch {
+      if (!opts?.quiet) setAttendees([])
+    } finally {
+      if (!opts?.quiet) setLoadingAttendees(false)
+    }
+  }, [fetchAttendees])
+
+  // Silent delta merge. Rows only ever gain a checkedInAt, so merging by
+  // registrationId is complete — and a payload of zero rows is the common case.
+  const refreshAttendees = useCallback(async (eventId: string) => {
+    const since = lastSyncRef.current
+    if (!since) { await loadAttendees(eventId, { quiet: true }); return }
+
+    const seenSeq = mutationSeqRef.current
+    try {
+      const data = await fetchAttendees(eventId, since)
+      if (mutationSeqRef.current !== seenSeq) return
+      lastSyncRef.current = data.serverTime
+      if (data.attendees.length === 0) return
+      setAttendees(prev => {
+        const updates = new Map(data.attendees.map(a => [a.registrationId, a]))
+        return prev.map(a => updates.get(a.registrationId) ?? a)
+      })
+    } catch {
+      // A dropped poll is not worth surfacing — the next tick retries.
+    }
+  }, [fetchAttendees, loadAttendees])
+
   useEffect(() => {
-    if (!selectedEventId) { setAttendees([]); return }
+    if (!selectedEventId) {
+      setAttendees([])
+      lastSyncRef.current = null
+      return
+    }
+    lastSyncRef.current = null
+    pollTickRef.current = 0
     loadAttendees(selectedEventId)
   }, [selectedEventId, loadAttendees])
+
+  // The poll loop. Paused entirely while the tab is hidden — a phone in a pocket
+  // shouldn't be hitting the API — and refetches immediately on refocus so the
+  // list is current the instant an admin looks at it again.
+  useEffect(() => {
+    if (!selectedEventId) return
+
+    function tick() {
+      pollTickRef.current += 1
+      // Every ATTENDEE_RESYNC_EVERY-th tick, take the whole list instead of a
+      // delta: a delta reports check-ins but can't reveal a new registration.
+      if (pollTickRef.current % ATTENDEE_RESYNC_EVERY === 0) {
+        void loadAttendees(selectedEventId, { quiet: true })
+      } else {
+        void refreshAttendees(selectedEventId)
+      }
+    }
+
+    let id = document.visibilityState === 'visible'
+      ? window.setInterval(tick, ATTENDEE_POLL_MS)
+      : 0
+
+    function onVisibility() {
+      window.clearInterval(id)
+      id = 0
+      if (document.visibilityState !== 'visible') return
+      void refreshAttendees(selectedEventId)
+      id = window.setInterval(tick, ATTENDEE_POLL_MS)
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', onVisibility)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', onVisibility)
+    }
+  }, [selectedEventId, loadAttendees, refreshAttendees])
 
   // Local filter for the search input
   const filteredAttendees = useMemo(() => {
@@ -227,7 +328,15 @@ export function RunnerTagCheckIn() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setState({ status: 'error', message: (data as { error?: string }).error ?? 'Check-in failed' })
+        const message = (data as { error?: string }).error ?? 'Check-in failed'
+        setState({ status: 'error', message })
+        // Another admin got there first — pull their check-in in immediately so
+        // this device stops offering the same runner.
+        if (res.status === 409) {
+          mutationSeqRef.current += 1
+          void loadAttendees(selectedEventId, { quiet: true })
+          toast.error(message)
+        }
         return false
       }
       const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string }
@@ -239,10 +348,16 @@ export function RunnerTagCheckIn() {
         checkedInAt: d.checkedInAt,
       })
       // Optimistically mark in the search list — the counter is derived from
-      // this list, so it advances in lockstep without a separate update.
+      // this list, so it advances in lockstep without a separate update. Bumping
+      // the mutation sequence first invalidates any poll already in flight, which
+      // would otherwise resolve with pre-check-in data and undo this.
+      mutationSeqRef.current += 1
       setAttendees(prev => prev.map(a => a.runnerTag?.toUpperCase() === tag.toUpperCase()
         ? { ...a, checkedInAt: d.checkedInAt }
         : a))
+      // Then confirm against the server, so this device holds truth rather than
+      // an optimistic guess — and picks up anything the other admins just did.
+      void loadAttendees(selectedEventId, { quiet: true })
       return true
     } catch {
       setState({ status: 'error', message: 'Network error — please try again' })

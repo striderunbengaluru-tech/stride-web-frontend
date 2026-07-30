@@ -23,6 +23,9 @@ export const eventRegsTag = (eventId: string) => `event-regs:${eventId}`
 const EVENTS_LIST_REVALIDATE = 60
 const EVENT_DETAIL_REVALIDATE = 60
 const CONFIRMED_COUNT_REVALIDATE = 30
+// An in-checkout PENDING registration reserves its spot for this long, matching
+// the window register_for_event enforces.
+const PENDING_HOLD_MS = 15 * 60 * 1000
 
 // Every column the detail page + metadata need — replaces select('*'), which
 // pulled the full wide row (details/terms markdown etc. are needed; unused
@@ -106,6 +109,47 @@ export const getConfirmedCount = cache((eventId: string): Promise<number> =>
       return count ?? 0
     },
     ['event-confirmed-count', eventId],
+    { tags: [eventRegsTag(eventId)], revalidate: CONFIRMED_COUNT_REVALIDATE }
+  )()
+)
+
+/**
+ * How many spots each package of an event has taken, keyed by package id.
+ *
+ * Counts CONFIRMED registrations plus PENDING holds younger than the 15-minute
+ * checkout window — the same definition register_for_event enforces, so the
+ * "N left" the runner sees matches what the RPC will actually allow.
+ *
+ * Tagged with eventRegsTag, so every existing purge in the registration APIs and
+ * the admin event actions already refreshes it. No new invalidation wiring.
+ */
+export const getPackageSpotsTaken = cache((eventId: string): Promise<Record<string, number>> =>
+  unstable_cache(
+    async () => {
+      const { data } = await adminClient
+        .from('event_registrations')
+        .select('status, created_at, selected_packages')
+        .eq('event_id', eventId)
+        .not('selected_packages', 'is', null)
+
+      const cutoff = Date.now() - PENDING_HOLD_MS
+      const taken: Record<string, number> = {}
+
+      for (const row of data ?? []) {
+        const holds = row.status === 'CONFIRMED'
+          || (row.status === 'PENDING' && new Date(row.created_at as string).getTime() > cutoff)
+        if (!holds) continue
+
+        try {
+          const chosen = JSON.parse(row.selected_packages as string) as { id: string }[]
+          if (!Array.isArray(chosen)) continue
+          for (const pkg of chosen) taken[pkg.id] = (taken[pkg.id] ?? 0) + 1
+        } catch { continue }
+      }
+
+      return taken
+    },
+    ['event-package-spots-taken', eventId],
     { tags: [eventRegsTag(eventId)], revalidate: CONFIRMED_COUNT_REVALIDATE }
   )()
 )

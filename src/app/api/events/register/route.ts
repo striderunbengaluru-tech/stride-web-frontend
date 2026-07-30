@@ -116,6 +116,9 @@ export async function POST(request: Request) {
   // whitelist idiom as the choice fields above.
   let chargeTotalPaise = event.price_paise
   let selectedPackagesJson: string | null = null
+  // Populated alongside the price resolution so a PACKAGE_FULL outcome can be
+  // reported using the name the runner actually saw, not an opaque id.
+  let packageNameById = new Map<string, string>()
 
   if (event.packages_enabled) {
     let defined: EventPackage[] = []
@@ -148,6 +151,7 @@ export async function POST(request: Request) {
 
     chargeTotalPaise = sumPackageAmountPaise(chosen)
     selectedPackagesJson = JSON.stringify(chosen)
+    packageNameById = new Map(defined.map(pkg => [pkg.id, pkg.name]))
   }
 
   const { data: existing } = await adminClient
@@ -190,6 +194,21 @@ export async function POST(request: Request) {
 
   const registrationId = nanoid()
 
+  // register_for_event returns 'PACKAGE_FULL:<id>' when that package's own spot
+  // budget is exhausted, checked under the same event-row lock as total
+  // capacity. Nothing was inserted, so there is no hold to release. `field` lets
+  // the modal scroll the package list back into view.
+  const PACKAGE_FULL_PREFIX = 'PACKAGE_FULL:'
+  function packageFullResponse(outcome: string) {
+    const name = packageNameById.get(outcome.slice(PACKAGE_FULL_PREFIX.length))
+    return NextResponse.json({
+      error: name
+        ? `"${name}" is sold out — please pick another package.`
+        : 'That package is sold out — please pick another.',
+      field: 'packages',
+    }, { status: 409 })
+  }
+
   // Nothing to charge — confirm immediately. Keyed off the resolved total, not
   // event.price_paise, so a ₹0 package (or an all-free selection) skips Razorpay
   // exactly like a free event does. The seat cap is enforced atomically inside
@@ -211,6 +230,9 @@ export async function POST(request: Request) {
     }
     if (outcome === 'CAPACITY_FULL') {
       return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+    }
+    if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
+      return packageFullResponse(outcome)
     }
     if (outcome !== 'INSERTED') {
       console.error('[Register] Unexpected registration outcome', outcome)
@@ -247,6 +269,9 @@ export async function POST(request: Request) {
   }
   if (outcome === 'CAPACITY_FULL') {
     return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+  }
+  if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
+    return packageFullResponse(outcome)
   }
   if (outcome !== 'INSERTED') {
     console.error('[Register] Unexpected registration outcome', outcome)
