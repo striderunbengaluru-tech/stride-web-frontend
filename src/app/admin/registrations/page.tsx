@@ -1,6 +1,7 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { RegistrationsClient } from '@/components/admin/registrations-client'
 import type { SelectedPackage } from '@/types/event'
+import { eventRowPriceLabel, priceLabel, FREE_LABEL } from '@/lib/utils/money'
 
 export const metadata = { title: 'Registrations — Admin' }
 
@@ -30,6 +31,9 @@ export type EventSummary = {
   slug: string
   event_date: string | null
   price_paise: number
+  /** Resolved server-side so a package event reads "From ₹X", not "Free". */
+  price_label: string
+  is_free: boolean
   capacity: number | null
   status: string
   total_registrations: number
@@ -73,7 +77,7 @@ export type EventWithAttendees = EventSummary & {
 }
 
 export default async function AdminRegistrationsPage() {
-  const [{ data: flatRows }, { data: eventSummaries }, { data: packageRows }] = await Promise.all([
+  const [{ data: flatRows }, { data: eventSummaries }, { data: packageRows }, { data: eventPricingRows }] = await Promise.all([
     adminClient
       .from('admin_registrations_flat')
       .select('*')
@@ -89,6 +93,13 @@ export default async function AdminRegistrationsPage() {
     adminClient
       .from('event_registrations')
       .select('id, selected_packages, amount_due_paise'),
+    // Same reasoning as above: admin_event_summary is a hand-authored view whose
+    // DDL isn't in this repo, so the two package columns come straight from the
+    // table and are joined in JS. Without them the price badge read "Free" for
+    // every package event, since packages leave price_paise at 0.
+    adminClient
+      .from('events')
+      .select('id, price_paise, packages, packages_enabled'),
   ])
 
   const rows = (flatRows ?? []) as FlatRow[]
@@ -100,6 +111,13 @@ export default async function AdminRegistrationsPage() {
     try { packages = JSON.parse(row.selected_packages ?? '[]') as SelectedPackage[] }
     catch { packages = [] }
     packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise })
+  }
+
+  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null }
+  const priceLabelByEvent = new Map<string, { label: string; isFree: boolean }>()
+  for (const row of (eventPricingRows ?? []) as PricingRow[]) {
+    const label = eventRowPriceLabel(row.price_paise ?? 0, row.packages, row.packages_enabled)
+    priceLabelByEvent.set(row.id, { label, isFree: label === FREE_LABEL })
   }
 
   // Build runner summaries (unique users with aggregate stats)
@@ -155,8 +173,13 @@ export default async function AdminRegistrationsPage() {
 
   const events: EventWithAttendees[] = ((eventSummaries ?? []) as EventSummary[]).map(e => {
     const attendees = attendeesMap.get(e.id) ?? []
+    const pricing = priceLabelByEvent.get(e.id)
     return {
       ...e,
+      // admin_event_summary has no package columns, so the label is attached here
+      // from the events table rather than derived from price_paise.
+      price_label: pricing?.label ?? priceLabel(e.price_paise ?? 0),
+      is_free: pricing?.isFree ?? (e.price_paise ?? 0) === 0,
       attendees,
       package_names: [...new Set(attendees.flatMap(a => a.packages.map(p => p.name)))].sort(),
     }

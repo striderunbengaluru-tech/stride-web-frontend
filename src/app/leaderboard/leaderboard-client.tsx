@@ -122,7 +122,17 @@ function PodiumColumn({ user, rank }: { user: LeaderboardUser; rank: 1 | 2 | 3 }
         </span>
       )}
 
-      <p className='text-white/60 text-xs font-mono tabular-nums'>{runLabel(user.runs_completed)}</p>
+      {/* Run count is the whole point of the board, so the number carries the
+          weight and the unit shrinks to a label beside it. As one 12px line it
+          was the smallest text in the podium. */}
+      <p className='flex items-baseline gap-1 font-mono tabular-nums'>
+        <span className={`font-bold leading-none text-white ${rank === 1 ? 'text-3xl' : 'text-2xl'}`}>
+          {user.runs_completed}
+        </span>
+        <span className='text-[11px] font-medium text-white/50'>
+          {user.runs_completed === 1 ? 'run' : 'runs'}
+        </span>
+      </p>
     </motion.div>
   )
 
@@ -318,8 +328,16 @@ export default function LeaderboardClient({
                       )}
                     </div>
                   </div>
-                  <span className='text-right font-mono text-sm font-semibold tabular-nums text-white/70'>
-                    {user.runs_completed}
+                  {/* Same treatment as the podium: a bare 14px numeral read as
+                      incidental next to the name, when it's the value the whole
+                      row is ordered by. */}
+                  <span className='text-right font-mono tabular-nums'>
+                    <span className='block text-xl font-bold leading-none text-white'>
+                      {user.runs_completed}
+                    </span>
+                    <span className='mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/40'>
+                      {user.runs_completed === 1 ? 'run' : 'runs'}
+                    </span>
                   </span>
                 </>
               )

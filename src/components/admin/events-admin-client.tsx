@@ -19,6 +19,9 @@ export type AdminEventRow = {
   pricePaise: number
   capacity: number | null
   confirmedCount: number
+  /** Resolved server-side so a package event reads "From ₹X", not "Free". */
+  priceLabel: string
+  isFree: boolean
   /** Packages are on but their spots don't add up to capacity — save is blocked. */
   spotsMismatch: boolean
   thumbUrl: string | null
@@ -243,22 +246,24 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                     <div className='flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5'>
                       {event.eventDate && (
                         <span className='flex items-center gap-1 text-white/40 text-xs'>
-                          <Calendar size={10} />
+                          <Calendar size={10} className='shrink-0' />
                           {fmtDate(event.eventDate)}{fmtTime(event.eventDate) ? ` · ${fmtTime(event.eventDate)}` : ''}
                         </span>
                       )}
+                      {/* shrink-0 on the pin, truncate on the text — not on the
+                          flex container. With `truncate` on the container the
+                          icon was a shrinkable flex item, so a long location
+                          ("Atal Bihari Vajpayee Stadium, HSR Layout") squeezed it
+                          to zero width and the pin vanished on exactly the rows
+                          that needed it most. Ellipsis needs the text node too. */}
                       {event.location && (
-                        <span className='flex items-center gap-1 text-white/40 text-xs truncate max-w-[180px]'>
-                          <MapPin size={10} />
-                          {event.location}
+                        <span className='flex items-center gap-1 text-white/40 text-xs min-w-0 max-w-45'>
+                          <MapPin size={10} className='shrink-0' />
+                          <span className='truncate'>{event.location}</span>
                         </span>
                       )}
-                      <span className='text-white/40 text-xs'>
-                        {event.pricePaise === 0 ? (
-                          <span className='text-green-400'>Free</span>
-                        ) : (
-                          `₹${(event.pricePaise / 100).toLocaleString('en-IN')}`
-                        )}
+                      <span className={`text-xs ${event.isFree ? 'text-green-400' : 'text-white/40'}`}>
+                        {event.priceLabel}
                       </span>
                     </div>
                   </div>

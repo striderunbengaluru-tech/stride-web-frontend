@@ -31,7 +31,7 @@ export async function checkInByRegistrationId(registrationId: string): Promise<C
   const [{ data: event }, { data: runner }] = await Promise.all([
     adminClient
       .from('events')
-      .select('name, status, event_date, end_date')
+      .select('name, status, event_date, end_date, is_test_event')
       .eq('id', registration.event_id)
       .single(),
     adminClient
@@ -89,11 +89,21 @@ export async function checkInByRegistrationId(registrationId: string): Promise<C
     return { ok: false, code: 'already', message: 'Already checked in.', attendeeName, eventName, checkedInAt }
   }
 
-  const runsCompleted = (runner?.runs_completed ?? 0) + 1
-  await adminClient
-    .from('users')
-    .update({ runs_completed: runsCompleted })
-    .eq('id', registration.user_id)
+  // Test events are rehearsals against real data: the check-in is recorded so the
+  // flow can be exercised, but it must not credit a run. runs_completed drives
+  // the leaderboard and the milestone tier, and neither should move for a run
+  // that only ever existed on staging.
+  const isTestEvent = event.is_test_event === true
+  const runsCompleted = isTestEvent
+    ? (runner?.runs_completed ?? 0)
+    : (runner?.runs_completed ?? 0) + 1
+
+  if (!isTestEvent) {
+    await adminClient
+      .from('users')
+      .update({ runs_completed: runsCompleted })
+      .eq('id', registration.user_id)
+  }
 
   return { ok: true, attendeeName, eventName, runsCompleted, checkedInAt: now }
 }

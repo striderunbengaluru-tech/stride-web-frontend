@@ -49,11 +49,15 @@ async function AttendedRunsSection({ userId, isOwnProfile }: { userId: string; i
     ((attendedRegs ?? []) as { event_id: string | null }[]).map(r => r.event_id).filter(Boolean)
   )] as string[]
 
+  // Test events are excluded: a staging rehearsal doesn't credit runs_completed
+  // (see @/lib/check-in), so listing it here as a run attended would contradict
+  // the run count and milestone tier shown directly above it.
   const { data: attendedEventRows } = attendedIds.length
     ? await adminClient
         .from('events')
         .select('id, name, slug, event_date, location, banner_images')
         .in('id', attendedIds)
+        .eq('is_test_event', false)
     : { data: [] as AttendedEvent[] }
 
   // Re-order to match the registrations (latest check-in first) — `.in()`

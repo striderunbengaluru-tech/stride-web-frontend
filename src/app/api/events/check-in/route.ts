@@ -29,9 +29,11 @@ export async function POST(request: Request) {
   }
 
   // ── Enforce check-in window: open until 24h after end_date (or event_date if no end_date) ──
+  // is_test_event comes along because it decides whether this check-in counts
+  // toward the runner's total — see COUNTS_TOWARD_RUNS below.
   const { data: eventWindow } = await adminClient
     .from('events')
-    .select('event_date, end_date, status')
+    .select('event_date, end_date, status, name, is_test_event')
     .eq('id', eventId)
     .single()
 
@@ -92,15 +94,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Check-in failed' }, { status: 500 })
   }
 
-  const [{ data: eventData }] = await Promise.all([
-    adminClient.from('events').select('name').eq('id', eventId).single(),
-  ])
+  // A test event exists to exercise this exact flow against real data, so the
+  // check-in itself must succeed and be recorded. What it must NOT do is credit
+  // the runner with a run: runs_completed drives the leaderboard and the
+  // milestone tier, and a staging rehearsal is not a run anyone attended.
+  const isTestEvent = eventWindow.is_test_event === true
+  const newRunsCompleted = isTestEvent
+    ? (runner.runs_completed ?? 0)
+    : (runner.runs_completed ?? 0) + 1
 
-  const newRunsCompleted = (runner.runs_completed ?? 0) + 1
-  await adminClient
-    .from('users')
-    .update({ runs_completed: newRunsCompleted })
-    .eq('id', runner.id)
+  if (!isTestEvent) {
+    await adminClient
+      .from('users')
+      .update({ runs_completed: newRunsCompleted })
+      .eq('id', runner.id)
+  }
 
   // Deliberately does NOT purge the leaderboard cache. Check-ins arrive in
   // bursts on run days, so a purge per check-in meant a full re-read of the
@@ -111,7 +119,9 @@ export async function POST(request: Request) {
     success: true,
     checkedInAt: now,
     attendeeName: runner.full_name ?? 'Runner',
-    eventName: eventData?.name ?? '',
+    eventName: eventWindow.name ?? '',
     runsCompleted: newRunsCompleted,
+    /** False on a test event: checked in, but the run total is untouched. */
+    countedTowardRuns: !isTestEvent,
   })
 }
