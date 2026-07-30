@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect, useTransition } from 'react'
+import { useState, useMemo, useEffect, useRef, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow, X } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
@@ -90,6 +90,10 @@ function Avatar({ url, name }: { url: string | null; name: string | null }) {
 export function UsersClient({ users }: { users: UserRow[] }) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
+  // '' = no tier filter. Otherwise a MilestoneTier.key.
+  const [tierFilter, setTierFilter] = useState<string>('')
+  const [tierPickerOpen, setTierPickerOpen] = useState(false)
+  const tierPickerRef = useRef<HTMLDivElement>(null)
   const [sortKey, setSortKey] = useState<SortKey>('joined')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -111,9 +115,37 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     GUEST: users.filter(u => u.role === 'GUEST').length,
   }), [users])
 
+  // Headcount per tier, shown next to each option so the admin can see where the
+  // club actually sits before filtering to an empty band.
+  const tierCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const u of users) {
+      const key = getMilestone(u.runs_completed).key
+      counts[key] = (counts[key] ?? 0) + 1
+    }
+    return counts
+  }, [users])
+
+  const selectedTier = tierFilter ? MILESTONE_TIERS.find(t => t.key === tierFilter) ?? null : null
+
+  // Click-outside to close, matching the event picker on /admin/check-in.
+  useEffect(() => {
+    if (!tierPickerOpen) return
+    function onDown(e: MouseEvent | TouchEvent) {
+      if (tierPickerRef.current && !tierPickerRef.current.contains(e.target as Node)) setTierPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('touchstart', onDown, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('touchstart', onDown)
+    }
+  }, [tierPickerOpen])
+
   const filtered = useMemo(() => {
     let result = users
     if (roleFilter !== 'ALL') result = result.filter(u => u.role === roleFilter)
+    if (tierFilter) result = result.filter(u => getMilestone(u.runs_completed).key === tierFilter)
     const q = search.trim().toLowerCase()
     if (q) result = result.filter(u =>
       u.full_name?.toLowerCase().includes(q) ||
@@ -136,7 +168,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       return dir * (a.runs_completed - b.runs_completed)
     })
     return sorted
-  }, [users, search, roleFilter, sortKey, sortDir])
+  }, [users, search, roleFilter, tierFilter, sortKey, sortDir])
 
   // ── Role-change confirmation modal ──
   const makingAdmin = roleTarget?.role !== 'ADMIN'
@@ -230,6 +262,77 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           ))}
         </div>
 
+        {/* Milestone tier filter — badge + name, clearable */}
+        <div ref={tierPickerRef} className='relative shrink-0'>
+          <div className='flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1'>
+            <button
+              type='button'
+              onClick={() => setTierPickerOpen(o => !o)}
+              aria-expanded={tierPickerOpen}
+              aria-haspopup='listbox'
+              className='flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/70 hover:text-white hover:bg-white/8 transition-colors min-h-8'
+            >
+              {selectedTier ? (
+                <>
+                  <TierBadge tier={selectedTier} size='xs' decorative />
+                  <span className='text-white'>{selectedTier.label}</span>
+                </>
+              ) : (
+                <span>All tiers</span>
+              )}
+              <ChevronDown size={13} className={`text-white/40 transition-transform ${tierPickerOpen ? 'rotate-180' : ''}`} aria-hidden='true' />
+            </button>
+            {selectedTier && (
+              <button
+                type='button'
+                onClick={() => { setTierFilter(''); setTierPickerOpen(false) }}
+                aria-label='Clear milestone filter'
+                className='flex items-center justify-center min-w-8 h-8 rounded-lg text-white/50 hover:text-white hover:bg-white/8 transition-colors'
+              >
+                <X size={14} aria-hidden='true' />
+              </button>
+            )}
+          </div>
+
+          {tierPickerOpen && (
+            <div
+              role='listbox'
+              aria-label='Filter by milestone tier'
+              className='absolute left-0 sm:right-0 sm:left-auto top-full mt-1 z-30 w-60 bg-stride-purple-primary border border-white/15 rounded-xl shadow-2xl overflow-hidden'
+            >
+              <button
+                type='button'
+                role='option'
+                aria-selected={!tierFilter}
+                onClick={() => { setTierFilter(''); setTierPickerOpen(false) }}
+                className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-xs transition-colors border-b border-white/8 hover:bg-white/5 ${
+                  !tierFilter ? 'bg-stride-yellow-accent/8 text-white' : 'text-white/70'
+                }`}
+              >
+                <span className='w-5 shrink-0' aria-hidden='true' />
+                <span className='flex-1 font-medium'>All tiers</span>
+                <span className='text-white/40 tabular-nums'>{users.length}</span>
+              </button>
+              {MILESTONE_TIERS.map(tier => (
+                <button
+                  key={tier.key}
+                  type='button'
+                  role='option'
+                  aria-selected={tierFilter === tier.key}
+                  onClick={() => { setTierFilter(tier.key); setTierPickerOpen(false) }}
+                  className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-xs transition-colors border-b border-white/8 last:border-b-0 hover:bg-white/5 ${
+                    tierFilter === tier.key ? 'bg-stride-yellow-accent/8 text-white' : 'text-white/70'
+                  }`}
+                >
+                  <TierBadge tier={tier} size='sm' decorative />
+                  <span className='flex-1 font-medium line-clamp-1'>{tier.label}</span>
+                  <span className='text-white/40 tabular-nums'>{tierCounts[tier.key] ?? 0}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Sort — key picker + direction toggle */}
         <div className='flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-1 shrink-0'>
           {(['joined', 'runs', 'tier'] as SortKey[]).map(k => (
@@ -262,7 +365,20 @@ export function UsersClient({ users }: { users: UserRow[] }) {
       {/* Empty state */}
       {filtered.length === 0 && (
         <div className='text-center py-16'>
-          <p className='text-white/30 text-sm'>No users match your search.</p>
+          <p className='text-white/30 text-sm'>
+            {selectedTier
+              ? `No ${selectedTier.label} athletes match these filters.`
+              : 'No users match your search.'}
+          </p>
+          {selectedTier && (
+            <button
+              type='button'
+              onClick={() => setTierFilter('')}
+              className='mt-3 text-stride-yellow-accent text-xs font-semibold underline underline-offset-2 hover:no-underline min-h-11'
+            >
+              Clear the milestone filter
+            </button>
+          )}
         </div>
       )}
 
@@ -318,9 +434,12 @@ export function UsersClient({ users }: { users: UserRow[] }) {
 
                 {/* Milestone tier — hidden on the narrowest rows so the runs
                     count and role pill keep their fixed slots */}
-                <div className='hidden md:flex items-center gap-1.5 w-36 shrink-0'>
+                {/* Badge always, label only where there's room — with a tier
+                    filter available the badge has to be visible on a phone for a
+                    filtered result to make sense. */}
+                <div className='flex items-center gap-1.5 w-8 md:w-36 shrink-0'>
                   <TierBadge tier={getMilestone(u.runs_completed)} size='md' />
-                  <span className='text-white/60 text-xs font-medium line-clamp-1'>
+                  <span className='hidden md:line-clamp-1 text-white/60 text-xs font-medium'>
                     {getMilestone(u.runs_completed).label}
                   </span>
                 </div>

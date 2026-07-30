@@ -249,26 +249,37 @@ update public.event_registrations set confirmation_email_sent_at = now() where s
 -- serialize on that lock; the CONFIRMED count is then re-read under the lock and
 -- the row is inserted only if a seat is genuinely free — all in one transaction.
 --
--- Semantics preserved from the previous application-level gate:
+-- Semantics:
 --   * capacity IS NULL  → unlimited (no cap enforced)
---   * only CONFIRMED rows count toward the cap (matches getConfirmedCount() and
---     the "spots left" display); PENDING holds are not counted
+--   * CONFIRMED rows count toward the cap, PLUS PENDING holds younger than 15
+--     minutes — an in-checkout hold reserves a seat, and abandoned holds lazily
+--     expire so the seat frees itself (no cron needed)
+--   * each package carries its own spotsTotal budget, enforced under the same
+--     lock. A budget of 0 or absent means "not budgeted" (packages authored
+--     before the field existed) and falls back to total capacity alone.
 -- Returns one of:
---   'INSERTED'        → registration row created
---   'CAPACITY_FULL'   → event at capacity (route returns the existing 409 "Event is full")
---   'EVENT_NOT_FOUND' → no such event id
+--   'INSERTED'            → registration row created
+--   'CAPACITY_FULL'       → event at capacity (route returns 409 "Event is full")
+--   'PACKAGE_FULL:<id>'   → that package is sold out (route names it for the runner)
+--   'EVENT_NOT_FOUND'     → no such event id
 --
 -- SECURITY DEFINER + execute restricted to service_role: the route's adminClient
 -- (service_role) is the only caller. anon/authenticated must NOT be able to call
 -- it directly, as it inserts a registration with a caller-supplied user_id/status
 -- and would otherwise bypass RLS. Idempotent: safe to re-run.
+--
+-- Kept in step with supabase-migrations/2026-07-31-package-spots.sql — that file
+-- is what was actually applied; this copy exists so the schema file isn't a
+-- source of a stale, breaking function definition.
 create or replace function public.register_for_event(
   p_registration_id   text,
   p_event_id          text,
   p_user_id           text,
   p_status            text,
   p_custom_responses  text,
-  p_razorpay_order_id text default null
+  p_razorpay_order_id text default null,
+  p_selected_packages text default null,
+  p_amount_due_paise  int  default null
 )
 returns text
 language plpgsql
@@ -277,12 +288,21 @@ set search_path = public
 as $$
 declare
   v_capacity  int;
-  v_confirmed int;
+  v_reserved  int;
+  v_packages  jsonb;
+  v_selected  jsonb;
+  v_pkg_id    text;
+  v_limit     int;
+  v_used      int;
+  v_held_ids  text[] := '{}';
+  v_held_done boolean := false;
+  v_reg       record;
+  v_reg_json  jsonb;
 begin
   -- Serialize concurrent registrations for this event; the lock is held until
-  -- this function's transaction commits, so the count below sees every prior
+  -- this function's transaction commits, so the counts below see every prior
   -- committed insert.
-  select capacity into v_capacity
+  select capacity, packages into v_capacity, v_packages
   from public.events
   where id = p_event_id
   for update;
@@ -291,11 +311,8 @@ begin
     return 'EVENT_NOT_FOUND';
   end if;
 
-  -- Capacity counts CONFIRMED registrations PLUS fresh PENDING holds (created
-  -- within the last 15 minutes): an in-checkout hold reserves a seat, and
-  -- abandoned holds lazily expire so the seat frees itself (no cron needed).
   if v_capacity is not null then
-    select count(*) into v_confirmed
+    select count(*) into v_reserved
     from public.event_registrations
     where event_id = p_event_id
       and (
@@ -303,24 +320,96 @@ begin
         or (status = 'PENDING' and created_at > now() - interval '15 minutes')
       );
 
-    if v_confirmed >= v_capacity then
+    if v_reserved >= v_capacity then
       return 'CAPACITY_FULL';
     end if;
   end if;
 
+  -- Per-package budgets. Counted from each registration's selected_packages
+  -- snapshot rather than a foreign key, so renaming or repricing a package
+  -- cannot lose track of what it has sold.
+  if p_selected_packages is not null and p_selected_packages <> '' and p_selected_packages <> '[]' then
+    begin
+      v_selected := p_selected_packages::jsonb;
+    exception when others then
+      v_selected := '[]'::jsonb;
+    end;
+
+    if v_packages is null or jsonb_typeof(v_packages) <> 'array' then
+      v_packages := '[]'::jsonb;
+    end if;
+
+    if jsonb_typeof(v_selected) = 'array' then
+      for v_pkg_id in select sel->>'id' from jsonb_array_elements(v_selected) sel loop
+        -- jsonb_typeof guard: a non-numeric spotsTotal would make the ::int
+        -- cast throw and fail the registration outright. Anything that isn't a
+        -- number reads as "not budgeted", same as absent.
+        select case when jsonb_typeof(pkg->'spotsTotal') = 'number'
+                    then (pkg->>'spotsTotal')::int
+               end
+          into v_limit
+        from jsonb_array_elements(v_packages) pkg
+        where pkg->>'id' = v_pkg_id
+        limit 1;
+
+        if v_limit is not null and v_limit > 0 then
+          -- Flattened once, row by row with a per-row exception handler:
+          -- selected_packages is TEXT, so one malformed value would otherwise
+          -- abort the cast and take down registration for the whole event.
+          if not v_held_done then
+            for v_reg in
+              select selected_packages
+              from public.event_registrations
+              where event_id = p_event_id
+                and selected_packages is not null
+                and (
+                  status = 'CONFIRMED'
+                  or (status = 'PENDING' and created_at > now() - interval '15 minutes')
+                )
+            loop
+              -- A NULL sentinel rather than CONTINUE from inside the handler:
+              -- same effect, and it keeps all control flow in the loop body.
+              begin
+                v_reg_json := v_reg.selected_packages::jsonb;
+              exception when others then
+                v_reg_json := null;
+              end;
+
+              if v_reg_json is not null and jsonb_typeof(v_reg_json) = 'array' then
+                v_held_ids := v_held_ids
+                  || array(select sel->>'id' from jsonb_array_elements(v_reg_json) sel);
+              end if;
+            end loop;
+            v_held_done := true;
+          end if;
+
+          select count(*) into v_used
+          from unnest(v_held_ids) held
+          where held = v_pkg_id;
+
+          if v_used >= v_limit then
+            return 'PACKAGE_FULL:' || v_pkg_id;
+          end if;
+        end if;
+      end loop;
+    end if;
+  end if;
+
   insert into public.event_registrations
-    (id, event_id, user_id, status, razorpay_order_id, custom_responses)
+    (id, event_id, user_id, status, razorpay_order_id, custom_responses,
+     selected_packages, amount_due_paise)
   values
-    (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id, p_custom_responses);
+    (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id,
+     p_custom_responses, p_selected_packages, p_amount_due_paise);
 
   return 'INSERTED';
 end;
 $$;
 
-revoke all    on function public.register_for_event(text, text, text, text, text, text) from public;
-revoke all    on function public.register_for_event(text, text, text, text, text, text) from anon;
-revoke all    on function public.register_for_event(text, text, text, text, text, text) from authenticated;
-grant  execute on function public.register_for_event(text, text, text, text, text, text) to service_role;
+revoke all    on function public.register_for_event(text, text, text, text, text, text, text, int) from public;
+revoke all    on function public.register_for_event(text, text, text, text, text, text, text, int) from anon;
+revoke all    on function public.register_for_event(text, text, text, text, text, text, text, int) from authenticated;
+grant  execute on function public.register_for_event(text, text, text, text, text, text, text, int) to service_role;
 
 -- ─── Atomic payment confirmation ──────────────────────────────────────────────
 -- Applied manually via the Supabase SQL Editor. The single confirm path used by

@@ -1,6 +1,7 @@
 import { cache as reactCache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { getPackageSpotsTaken } from '@/lib/data/events'
 import { RegisterButton } from './register-button'
 import type { AdditionalField, EventPackage } from '@/types/event'
 
@@ -90,9 +91,20 @@ function statusText(opts: { isRegistered: boolean; isPast: boolean; isFull: bool
   return 'Secure your spot below.'
 }
 
+// Per-package spot counts, read only when the event actually has packages.
+// getPackageSpotsTaken is a cached read tagged with the event's registration tag,
+// so the desktop and mobile CTAs share one fetch and every registration purges it.
+async function packageSpots(props: SharedProps): Promise<Record<string, number>> {
+  if (!props.packagesEnabled || props.packages.length === 0) return {}
+  return getPackageSpotsTaken(props.eventId)
+}
+
 // Desktop box interior: status line + price row + button
 export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
-  const { isLoggedIn, isRegistered, registrationId, initial } = await getViewerState(props.eventId)
+  const [{ isLoggedIn, isRegistered, registrationId, initial }, packageSpotsTaken] = await Promise.all([
+    getViewerState(props.eventId),
+    packageSpots(props),
+  ])
   return (
     <>
       <div className='flex items-center justify-between gap-4 mb-4'>
@@ -119,6 +131,7 @@ export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras)
         packages={props.packages}
         packagesEnabled={props.packagesEnabled}
         packagesMultiSelect={props.packagesMultiSelect}
+        packageSpotsTaken={packageSpotsTaken}
         razorpayKeyId={props.razorpayKeyId}
       />
     </>
@@ -127,7 +140,10 @@ export async function RegistrationCtaDesktop(props: SharedProps & DesktopExtras)
 
 // Mobile sticky bar: just the button
 export async function RegistrationCtaMobile(props: SharedProps) {
-  const { isLoggedIn, isRegistered, registrationId, initial } = await getViewerState(props.eventId)
+  const [{ isLoggedIn, isRegistered, registrationId, initial }, packageSpotsTaken] = await Promise.all([
+    getViewerState(props.eventId),
+    packageSpots(props),
+  ])
   return (
     <RegisterButton
       eventId={props.eventId}
@@ -144,6 +160,7 @@ export async function RegistrationCtaMobile(props: SharedProps) {
       packages={props.packages}
       packagesEnabled={props.packagesEnabled}
       packagesMultiSelect={props.packagesMultiSelect}
+      packageSpotsTaken={packageSpotsTaken}
       razorpayKeyId={props.razorpayKeyId}
     />
   )

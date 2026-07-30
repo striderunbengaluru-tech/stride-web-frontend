@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useFormStatus } from 'react-dom'
 import { createPortal } from 'react-dom'
@@ -13,13 +13,15 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
-  Boxes, ListChecks,
+  Boxes, ListChecks, Scale,
 } from 'lucide-react'
-import type { EventFormData } from '@/lib/validations/admin'
+import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
-  isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise,
+  isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
   type AdditionalField, type AdditionalFieldType, type EventPackage,
 } from '@/types/event'
+import { validatePackageSpots, splitSpotsEvenly } from '@/lib/events/package-spots'
+import { reportFormError, type FieldError } from '@/lib/utils/form-errors'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { UploadProgress } from '@/components/ui/upload-progress'
@@ -50,14 +52,17 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 type Props = {
-  action: (formData: FormData) => Promise<void>
+  // useActionState's shape: (previousState, formData). Rejections come back as
+  // the returned state instead of a redirect, so the admin keeps everything they
+  // had typed and uploaded.
+  action: (prev: EventActionResult, formData: FormData) => Promise<EventActionResult>
   defaultValues?: Partial<EventFormData & { eventDate?: string; endDate?: string }>
   submitLabel: string
-  errorMessage?: string
 }
 
-export function EventForm({ action, defaultValues = {}, submitLabel, errorMessage }: Props) {
+export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
   const router = useRouter()
+  const [actionResult, formAction] = useActionState(action, undefined)
 
   // Controlled state for live preview
   const [name, setName] = useState(defaultValues.name ?? '')
@@ -67,10 +72,26 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   const [termsText, setTermsText] = useState(defaultValues.termsText ?? '')
   const [location, setLocation] = useState(defaultValues.location ?? '')
   // Admin edits the price in rupees (the edit page converts stored paise → rupees).
-  const [priceRupees, setPriceRupees] = useState(defaultValues.priceRupees ?? 0)
+  // Held as a string, like distanceKm: Number('') is 0, so a numeric state would
+  // make "blank" and "deliberately free" indistinguishable and there'd be no way
+  // to insist the admin actually states the price.
+  const [priceRupees, setPriceRupees] = useState<string>(
+    defaultValues.priceRupees !== undefined && defaultValues.priceRupees !== null
+      ? String(defaultValues.priceRupees)
+      : ''
+  )
   // Integer paise for the live preview + what the DB stores (Razorpay's unit).
-  const pricePaise = Math.round(priceRupees * 100)
+  const pricePaise = Math.round((Number(priceRupees) || 0) * 100)
   const [eventDate, setEventDate] = useState(defaultValues.eventDate ?? '')
+  // Capacity is controlled so the package allocation readout can compare against
+  // it live. Kept as a string so a cleared input stays cleared.
+  const [capacity, setCapacity] = useState<string>(
+    defaultValues.capacity !== undefined && defaultValues.capacity !== null
+      ? String(defaultValues.capacity)
+      : ''
+  )
+  const capacityNum = Math.floor(Number(capacity))
+  const capacityValue = Number.isFinite(capacityNum) && capacityNum > 0 ? capacityNum : 0
   const [status, setStatus] = useState<Status>((defaultValues.status as Status) ?? 'DRAFT')
   const [distanceKm, setDistanceKm] = useState<string>(
     defaultValues.distanceKm !== undefined && defaultValues.distanceKm !== null
@@ -99,6 +120,16 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty])
+
+  // A rejection from the server action: raise the same toast + focus treatment a
+  // client-side problem gets, and restore the unsaved-changes guard that the
+  // optimistic setIsDirty(false) in onSubmit cleared.
+  useEffect(() => {
+    if (!actionResult?.error) return
+    setFormError({ message: actionResult.error, field: actionResult.field })
+    reportFormError({ message: actionResult.error, field: actionResult.field })
+    setIsDirty(true)
+  }, [actionResult])
 
   // Banner images
   const bannerFileRef = useRef<HTMLInputElement>(null)
@@ -181,7 +212,6 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
 
   // A choice question with no filled-in options is dropped on save, so block the
   // submit and say which one rather than letting it disappear silently.
-  const [fieldsError, setFieldsError] = useState('')
   function validateAdditionalFields(): string {
     const broken = additionalFields.find(
       f => isChoiceFieldType(f.type) && !(f.options ?? []).some(o => o.trim())
@@ -224,7 +254,17 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
 
   function addPackage() {
     if (packages.length >= MAX_PACKAGES) return
-    setPackages(prev => [...prev, { id: nanoid(8), name: '', details: '', amountPaise: 0 }])
+    // Seed the new package with whatever capacity is still unallocated, so the
+    // common case (one package taking the whole event) needs no extra typing and
+    // the allocation lands balanced straight away.
+    const unallocated = capacityValue - sumPackageSpots(packages)
+    setPackages(prev => [...prev, {
+      id: nanoid(8),
+      name: '',
+      details: '',
+      amountPaise: 0,
+      spotsTotal: unallocated > 0 ? unallocated : undefined,
+    }])
     markDirty()
   }
   function updatePackage(index: number, patch: Partial<EventPackage>) {
@@ -237,6 +277,21 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   function updatePackageAmount(index: number, rupees: string) {
     const parsed = Number(rupees)
     updatePackage(index, { amountPaise: Number.isFinite(parsed) ? Math.round(parsed * 100) : 0 })
+  }
+  // Blank stays blank (undefined) rather than collapsing to 0 — the allocation
+  // check below reports "needs a spot count" for it, which is more useful than
+  // silently treating an unfilled box as zero spots.
+  function updatePackageSpots(index: number, raw: string) {
+    const parsed = Math.floor(Number(raw))
+    updatePackage(index, {
+      spotsTotal: raw.trim() === '' || !Number.isFinite(parsed) || parsed < 1 ? undefined : parsed,
+    })
+  }
+  function splitSpotsAcrossPackages() {
+    if (capacityValue < 1 || packages.length === 0) return
+    const shares = splitSpotsEvenly(capacityValue, packages.length)
+    setPackages(prev => prev.map((p, i) => ({ ...p, spotsTotal: shares[i] })))
+    markDirty()
   }
   function removePackage(index: number) {
     setPackages(prev => prev.filter((_, i) => i !== index))
@@ -258,15 +313,38 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   }
   function resetPkgDrag() { setPkgDragSrc(null); setPkgDragOver(null) }
 
-  // A package with a blank name is dropped on save, and enabling packages with
-  // none at all leaves the event unregisterable. Block the submit and say so
-  // rather than letting either happen silently.
-  const [packagesError, setPackagesError] = useState('')
-  function validatePackages(): string {
-    if (!packagesEnabled) return ''
-    if (packages.length === 0) return 'Add at least one package, or turn Event packages off.'
-    if (packages.some(p => !p.name.trim())) return 'Give every package a name.'
-    return ''
+  // ── Whole-form validation ──────────────────────────────────────────────────
+  // Returns the FIRST problem in visual top-to-bottom order, or null. One
+  // problem at a time on purpose: the toast names it, focusField scrolls to it,
+  // and the admin fixes it without hunting through a list.
+  //
+  // Every rule here is mirrored in eventSchema on the server, so a hand-rolled
+  // POST is rejected the same way — this copy exists for the feedback, not the
+  // enforcement.
+  const [formError, setFormError] = useState<FieldError | null>(null)
+  const spotsProblem = validatePackageSpots(packages, capacityValue || null, packagesEnabled)
+
+  function validateForm(): FieldError | null {
+    if (!name.trim()) return { message: 'Event name is required', field: 'name' }
+    if (!details.trim()) return { message: 'Full details are required', field: 'details' }
+    if (!eventDate.trim()) return { message: 'Start date & time is required', field: 'eventDate' }
+    if (capacityValue < 1) {
+      return {
+        message: capacity.trim() === '' ? 'Capacity is required' : 'Capacity must be at least 1',
+        field: 'capacity',
+      }
+    }
+    if (!packagesEnabled && priceRupees.trim() === '') {
+      return { message: 'Price is required — enter 0 for a free event', field: 'priceRupees' }
+    }
+    if (!location.trim()) return { message: 'Location name is required', field: 'location' }
+    if (spotsProblem) return spotsProblem
+    const fieldProblem = validateAdditionalFields()
+    if (fieldProblem) return { message: fieldProblem, field: 'additionalFields' }
+    if (bannerImages.length === 0) {
+      return { message: 'Add at least one banner image', field: 'bannerImages' }
+    }
+    return null
   }
 
   // Draggable split pane
@@ -544,15 +622,19 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
           style={{ ['--form-w' as string]: `${formWidthPct}%` } as React.CSSProperties}
           className='w-full lg:w-(--form-w) lg:shrink-0 min-w-0'
         >
+          {/* noValidate: the browser's own constraint bubbles would fire before
+              our toast and can't be scrolled to or styled. `required` stays on
+              the inputs as an accessibility signal; validateForm() does the
+              blocking. */}
           <form
-            action={action}
+            action={formAction}
+            noValidate
             onSubmit={(e) => {
-              const fieldProblem = validateAdditionalFields()
-              const packageProblem = validatePackages()
-              setFieldsError(fieldProblem)
-              setPackagesError(packageProblem)
-              if (fieldProblem || packageProblem) {
+              const problem = validateForm()
+              setFormError(problem)
+              if (problem) {
                 e.preventDefault()
+                reportFormError(problem)
                 return
               }
               setIsDirty(false)
@@ -561,9 +643,9 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             className='space-y-5 lg:pr-2'
           >
 
-            {(errorMessage || fieldsError || packagesError) && (
-              <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm'>
-                {errorMessage || fieldsError || packagesError}
+            {formError && (
+              <div role='alert' className='bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm'>
+                {formError.message}
               </div>
             )}
 
@@ -627,10 +709,16 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
               <div className='flex flex-col gap-1.5 mt-4'>
                 <div className='flex items-center gap-1.5'>
                   <FileText size={14} className='text-white/40' />
-                  <label className='text-white/70 text-sm font-medium'>Full details</label>
+                  <label className='text-white/70 text-sm font-medium'>
+                    Full details
+                    <span className='text-stride-yellow-accent ml-0.5'>*</span>
+                  </label>
                   <HelpHint text='The long-form description of the event. Supports headings, lists, links, bold. Shown in the "About the experience" section on the public page.' />
                 </div>
-                <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
+                {/* data-field: the markdown editor is not an input named
+                    "details" (that's the hidden mirror above), so focusField
+                    needs an explicit anchor to scroll to. */}
+                <div data-field='details' tabIndex={-1} data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/20'>
                   <MDEditor value={details} onChange={(v) => { setDetails(v ?? ''); markDirty() }} height={260} preview='edit' className='bg-transparent!' />
                 </div>
               </div>
@@ -640,7 +728,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             <Widget icon={<Calendar size={15} />} title='When'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <Field
-                  icon={<Calendar size={14} />} label='Start date & time'
+                  icon={<Calendar size={14} />} label='Start date & time' required
                   name='eventDate' type='datetime-local' value={eventDate} onChange={setEventDate}
                   help='When the run starts. Picked in your local timezone.'
                 />
@@ -653,28 +741,30 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
                 <Field
-                  icon={<Users size={14} />} label='Capacity'
-                  name='capacity' type='number' defaultValue={String(defaultValues.capacity ?? '')}
+                  icon={<Users size={14} />} label='Capacity' required
+                  name='capacity' type='number' value={capacity} onChange={setCapacity}
                   placeholder='e.g. 50'
-                  help='Max number of runners. Leave blank for unlimited.'
+                  help='Max number of runners. Raise it any time — including on a live, sold-out run — and the extra spots open immediately. Lowering it is blocked below the number already confirmed.'
                 />
                 <div className='flex flex-col gap-1.5'>
                   <div className='flex items-center gap-1.5'>
                     <IndianRupee size={14} className='text-white/40' />
-                    <label className='text-white/70 text-sm font-medium'>Price (₹)</label>
+                    <label className='text-white/70 text-sm font-medium'>
+                      Price (₹)
+                      {!packagesEnabled && <span className='text-stride-yellow-accent ml-0.5'>*</span>}
+                    </label>
                     <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events. Ignored when Event packages is on — the packages set the price then.' />
                   </div>
                   {/* readOnly, not disabled: a disabled input is not submitted, so
-                      disabling it would post nothing, fall through to the Zod
-                      default of 0 and silently wipe the stored price the moment
-                      packages were switched on. */}
+                      disabling it would post nothing and silently wipe the stored
+                      price the moment packages were switched on. */}
                   <input
                     type='number'
                     name='priceRupees'
                     step='0.01'
                     min='0'
                     value={priceRupees}
-                    onChange={e => setPriceRupees(Number(e.target.value))}
+                    onChange={e => setPriceRupees(e.target.value)}
                     placeholder='0 for free'
                     readOnly={packagesEnabled}
                     aria-disabled={packagesEnabled}
@@ -706,7 +796,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             <Widget icon={<MapPin size={15} />} title='Where'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <Field
-                  icon={<MapPin size={14} />} label='Location name'
+                  icon={<MapPin size={14} />} label='Location name' required
                   name='location' value={location} onChange={setLocation}
                   placeholder='e.g. Cubbon Park'
                   help='The neighbourhood or park name shown on the event page.'
@@ -778,7 +868,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                 <input type='hidden' name='packagesMultiSelect' value={packagesMultiSelect ? 'true' : 'false'} />
 
                 {packagesEnabled && (
-                  <div className='mt-4 space-y-3'>
+                  <div data-field='packages' tabIndex={-1} className='mt-4 space-y-3'>
                     <div className='flex items-center justify-between gap-3'>
                       <div className='flex items-center gap-1.5'>
                         <ListChecks size={14} className='text-white/40' />
@@ -808,7 +898,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                           pkgDragOver === i ? 'border-stride-yellow-accent/50' : 'border-white/10'
                         }`}
                       >
-                        <div className='flex items-center gap-2'>
+                        {/* flex-wrap: with a name, an amount AND a spot count the
+                            row no longer fits 375px on one line — the two number
+                            inputs drop to a second line instead of squeezing. */}
+                        <div className='flex flex-wrap items-center gap-2'>
                           <button
                             type='button'
                             aria-label={`Reorder ${pkg.name.trim() || 'package'}`}
@@ -822,7 +915,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                             onChange={e => updatePackage(i, { name: e.target.value })}
                             placeholder='Package name — e.g. Run + tee'
                             aria-label='Package name'
-                            className={`${inputBase} flex-1 min-w-0`}
+                            className={`${inputBase} flex-1 basis-40 min-w-0`}
                           />
                           <div className='flex items-center gap-1 shrink-0'>
                             <IndianRupee size={13} className='text-white/40' />
@@ -835,6 +928,19 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                               placeholder='0'
                               aria-label={`Amount in rupees for ${pkg.name.trim() || 'this package'}`}
                               className={`${inputBase} scheme-dark w-24`}
+                            />
+                          </div>
+                          <div className='flex items-center gap-1 shrink-0'>
+                            <Users size={13} className='text-white/40' />
+                            <input
+                              type='number'
+                              step='1'
+                              min='1'
+                              value={pkg.spotsTotal ?? ''}
+                              onChange={e => updatePackageSpots(i, e.target.value)}
+                              placeholder='Spots'
+                              aria-label={`Spots for ${pkg.name.trim() || 'this package'}`}
+                              className={`${inputBase} scheme-dark w-20`}
                             />
                           </div>
                           <button
@@ -875,11 +981,46 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                     )}
 
                     {packages.length > 0 && (
-                      <p className='text-white/40 text-xs'>
-                        {packagesMultiSelect
-                          ? `Runners can combine any of these — up to ${formatRupees(sumPackageAmountPaise(packages))} if they pick everything.`
-                          : 'Runners pick exactly one of these.'}
-                      </p>
+                      <>
+                        {/* Spot allocation. The sum has to equal capacity exactly:
+                            each package enforces its own budget at registration,
+                            so an under-allocation would strand spots nobody can
+                            book and an over-allocation would oversell the run. */}
+                        <div
+                          className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2.5 text-xs ${
+                            spotsProblem
+                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                              : 'bg-green-500/10 border-green-500/30 text-green-300'
+                          }`}
+                        >
+                          <Scale size={13} className='shrink-0' />
+                          <span className='font-semibold tabular-nums'>
+                            Spots allocated {sumPackageSpots(packages)} / {capacityValue || '—'}
+                          </span>
+                          {capacityValue > 0 && sumPackageSpots(packages) !== capacityValue && (
+                            <span className='opacity-80 tabular-nums'>
+                              {sumPackageSpots(packages) > capacityValue
+                                ? `${sumPackageSpots(packages) - capacityValue} over capacity`
+                                : `${capacityValue - sumPackageSpots(packages)} unallocated`}
+                            </span>
+                          )}
+                          {capacityValue > 0 && (
+                            <button
+                              type='button'
+                              onClick={splitSpotsAcrossPackages}
+                              className='ml-auto underline underline-offset-2 font-semibold hover:no-underline'
+                            >
+                              Split evenly
+                            </button>
+                          )}
+                        </div>
+
+                        <p className='text-white/40 text-xs'>
+                          {packagesMultiSelect
+                            ? `Runners can combine any of these — up to ${formatRupees(sumPackageAmountPaise(packages))} if they pick everything.`
+                            : 'Runners pick exactly one of these.'}
+                        </p>
+                      </>
                     )}
                   </div>
                 )}
@@ -916,7 +1057,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   <HelpHint text='Extra questions runners must answer to register — e.g. "T-shirt size", "Strava handle". Drag to reorder. Answers stored on each registration.' />
                 </div>
 
-                <div className='flex flex-col gap-2'>
+                <div data-field='additionalFields' tabIndex={-1} className='flex flex-col gap-2'>
                   {additionalFields.map((field, i) => {
                     const isOver = fieldDragOver === i && fieldDragSrc !== i
                     const isDragging = fieldDragSrc === i
@@ -1044,11 +1185,14 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             {/* ── IMAGES ── */}
             <Widget icon={<ImageIcon size={15} />} title='Images'>
               <div className='flex items-center gap-1.5 mb-2'>
-                <label className='text-white/70 text-sm font-medium'>Banner images</label>
+                <label className='text-white/70 text-sm font-medium'>
+                  Banner images
+                  <span className='text-stride-yellow-accent ml-0.5'>*</span>
+                </label>
                 <HelpHint text='Up to 5 images. First image is the thumbnail and Open Graph preview. Drag to reorder, pencil to crop, X to remove.' />
               </div>
               <p className='text-white/30 text-xs mb-3'>Select multiple at once · Drag to reorder · Pencil to crop</p>
-              <div className='flex flex-wrap gap-3 items-end'>
+              <div data-field='bannerImages' tabIndex={-1} className='flex flex-wrap gap-3 items-end'>
                 {bannerImages.map((url, i) => (
                   <div
                     key={url}

@@ -44,6 +44,22 @@ export type EventPackage = {
   /** Markdown, rendered with react-markdown. Never as raw HTML. */
   details: string
   amountPaise: number
+  /**
+   * How many of the event's spots this package may take. The admin form
+   * requires every package to carry one and requires the sum to equal
+   * `events.capacity`.
+   *
+   * Absent or `<= 0` means "not budgeted": packages authored before spots
+   * existed, which the migration backfilled with 0. Those keep registering
+   * against the event's total capacity alone, so a live event can't break —
+   * but the admin form blocks the next save until real numbers are entered.
+   */
+  spotsTotal?: number
+}
+
+/** Is this package's spot budget set, i.e. should registration enforce it? */
+export function hasSpotBudget(pkg: Pick<EventPackage, 'spotsTotal'>): boolean {
+  return typeof pkg.spotsTotal === 'number' && pkg.spotsTotal > 0
 }
 
 /**
@@ -62,4 +78,15 @@ export function sumPackageAmountPaise(
   packages: readonly { amountPaise: number }[]
 ): number {
   return packages.reduce((total, pkg) => total + pkg.amountPaise, 0)
+}
+
+/**
+ * Sums the spot budgets. Single source of truth for "does the allocation add up
+ * to capacity". Unset budgets count as 0, which is exactly what makes a legacy
+ * event fail the equality check and force the admin to fill the numbers in.
+ */
+export function sumPackageSpots(
+  packages: readonly { spotsTotal?: number }[]
+): number {
+  return packages.reduce((total, pkg) => total + (pkg.spotsTotal ?? 0), 0)
 }

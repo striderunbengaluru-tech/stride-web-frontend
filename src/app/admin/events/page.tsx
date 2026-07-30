@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events-admin-client'
+import { validatePackageSpots } from '@/lib/events/package-spots'
+import type { EventPackage } from '@/types/event'
 
 export const metadata = { title: 'Events — Admin' }
 
@@ -8,7 +10,7 @@ export default async function AdminEventsPage() {
   const [{ data: allEvents }, { data: regCounts }] = await Promise.all([
     adminClient
       .from('events')
-      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at')
+      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, packages, packages_enabled')
       .order('event_date', { ascending: false }),
     adminClient
       .from('event_registrations')
@@ -30,6 +32,20 @@ export default async function AdminEventsPage() {
       if (arr[0]) thumbUrl = arr[0]
     } catch { /* keep cover_url */ }
 
+    // Events whose package spots don't add up to capacity — the state the
+    // spotsTotal backfill leaves legacy events in. They still register fine
+    // (unbudgeted packages fall back to total capacity), but the next save is
+    // blocked until fixed, so flag them here rather than letting the admin find
+    // out mid-edit.
+    let packages: EventPackage[] = []
+    try {
+      const parsed = JSON.parse(e.packages ?? '[]')
+      if (Array.isArray(parsed)) packages = parsed as EventPackage[]
+    } catch { /* treated as no packages */ }
+    const spotsMismatch = Boolean(
+      validatePackageSpots(packages, e.capacity ?? null, e.packages_enabled ?? false)
+    )
+
     return {
       id: e.id,
       name: e.name ?? '',
@@ -42,6 +58,7 @@ export default async function AdminEventsPage() {
       pricePaise: e.price_paise ?? 0,
       capacity: e.capacity ?? null,
       confirmedCount: confirmedByEvent.get(e.id) ?? 0,
+      spotsMismatch,
       thumbUrl,
       createdAt: e.created_at ?? '',
     }
