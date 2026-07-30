@@ -77,6 +77,13 @@ export type EventListRow = {
   cover_url: string | null
   banner_images: string | null
   is_test_event: boolean | null
+  /**
+   * Needed for the headline price. Without these a package event reads as
+   * `price_paise = 0` and every listing card claimed it was "Free" while the
+   * detail page correctly said "From ₹X".
+   */
+  packages: string | null
+  packages_enabled: boolean | null
 }
 
 export const getEventBySlug = cache((slug: string): Promise<EventDetailRow | null> =>
@@ -159,7 +166,7 @@ export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
     async () => {
       const query = adminClient
         .from('events')
-        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event')
+        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event, packages, packages_enabled')
         .eq('status', 'PUBLISHED')
       if (!SHOW_TEST_EVENTS) query.eq('is_test_event', false)
 

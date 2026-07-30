@@ -1,5 +1,6 @@
 import { getPublishedEvents, type EventListRow } from '@/lib/data/events'
 import { UpNextBanner, type UpNextEvent } from '@/components/events/up-next-banner'
+import { eventRowPriceLabel } from '@/lib/utils/money'
 
 // Kept out of the component body: reading the clock during render trips
 // react-hooks/purity, and the selection is easier to reason about on its own.
@@ -37,6 +38,7 @@ export async function UpNextSection() {
     location: next.location,
     price_paise: next.price_paise,
     imageUrl,
+    priceLabel: eventRowPriceLabel(next.price_paise, next.packages, next.packages_enabled),
   }
 
   return (

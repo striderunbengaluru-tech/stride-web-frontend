@@ -60,7 +60,12 @@ export function EventHero({ images, eventName }: Props) {
   return (
     // Posters are 3:4 everywhere (admin crops to 3:4), shown edge-to-edge with
     // object-cover — full-bleed on mobile and in the desktop left column.
-    <div className='relative w-full overflow-hidden rounded-md aspect-3/4'>
+    //
+    // The hairline yellow border plus a dark drop shadow lifts the poster off the
+    // purple page so it reads as a physical print rather than a flat panel. Both
+    // are desktop-only: at mobile widths the poster is full-bleed against the
+    // screen edges, where a frame has nothing to sit on.
+    <div className='relative w-full overflow-hidden rounded-md aspect-3/4 lg:border lg:border-stride-yellow-accent lg:shadow-[0_14px_36px_-10px_rgba(0,0,0,0.55)]'>
       <AnimatePresence mode='sync'>
         <motion.div
           key={src}
