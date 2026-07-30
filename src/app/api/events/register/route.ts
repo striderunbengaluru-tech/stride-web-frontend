@@ -7,7 +7,10 @@ import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
-import { isChoiceFieldType, type AdditionalField } from '@/types/event'
+import {
+  isChoiceFieldType, sumPackageAmountPaise,
+  type AdditionalField, type EventPackage, type SelectedPackage,
+} from '@/types/event'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses, selectedPackageIds } = parsed.data
 
   // Persist participant details on the user row — idempotent (re-running with
   // the same values is a no-op). full_name overwrites any previous value so
@@ -43,7 +46,7 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, packages, packages_enabled, packages_multi_select')
     .eq('id', eventId)
     .single()
 
@@ -107,6 +110,46 @@ export async function POST(request: Request) {
   }
   const customResponsesJson = JSON.stringify(filteredResponses)
 
+  // ── Resolve what this registration costs ───────────────────────────────────
+  // The client sends package IDS. Every amount is read back from the event's own
+  // package list, so a hand-rolled request cannot name its own price. Same
+  // whitelist idiom as the choice fields above.
+  let chargeTotalPaise = event.price_paise
+  let selectedPackagesJson: string | null = null
+
+  if (event.packages_enabled) {
+    let defined: EventPackage[] = []
+    try { defined = JSON.parse(event.packages ?? '[]') as EventPackage[] }
+    catch { defined = [] }
+
+    if (defined.length === 0) {
+      // packages_enabled with nothing to pick — the admin action prevents this,
+      // so a row in this state is corrupt rather than merely misconfigured.
+      console.error('[Register] packages_enabled but no valid packages', { eventId })
+      return NextResponse.json({ error: 'Registration is unavailable for this event.' }, { status: 409 })
+    }
+
+    const ids = [...new Set(selectedPackageIds)]
+    if (ids.length === 0) {
+      return NextResponse.json({ error: 'Please choose a package' }, { status: 400 })
+    }
+    if (!event.packages_multi_select && ids.length > 1) {
+      return NextResponse.json({ error: 'Only one package can be selected for this event' }, { status: 400 })
+    }
+
+    const chosen: SelectedPackage[] = []
+    for (const id of ids) {
+      const match = defined.find(pkg => pkg.id === id)
+      if (!match) {
+        return NextResponse.json({ error: 'That package is no longer available' }, { status: 400 })
+      }
+      chosen.push({ id: match.id, name: match.name, amountPaise: match.amountPaise })
+    }
+
+    chargeTotalPaise = sumPackageAmountPaise(chosen)
+    selectedPackagesJson = JSON.stringify(chosen)
+  }
+
   const { data: existing } = await adminClient
     .from('event_registrations')
     .select('id, status')
@@ -147,16 +190,20 @@ export async function POST(request: Request) {
 
   const registrationId = nanoid()
 
-  // Free event — confirm immediately. The seat cap is enforced atomically
-  // inside register_for_event (SELECT ... FOR UPDATE on the event row) so two
+  // Nothing to charge — confirm immediately. Keyed off the resolved total, not
+  // event.price_paise, so a ₹0 package (or an all-free selection) skips Razorpay
+  // exactly like a free event does. The seat cap is enforced atomically inside
+  // register_for_event (SELECT ... FOR UPDATE on the event row) so two
   // concurrent last-seat registrations cannot both insert a CONFIRMED row.
-  if (event.price_paise === 0) {
+  if (chargeTotalPaise === 0) {
     const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
       p_registration_id: registrationId,
       p_event_id: eventId,
       p_user_id: user.id,
       p_status: 'CONFIRMED',
       p_custom_responses: customResponsesJson,
+      p_selected_packages: selectedPackagesJson,
+      p_amount_due_paise: chargeTotalPaise,
     })
     if (rpcError) {
       console.error('[Register] Registration failed', rpcError)
@@ -188,6 +235,11 @@ export async function POST(request: Request) {
     p_user_id: user.id,
     p_status: 'PENDING',
     p_custom_responses: customResponsesJson,
+    p_selected_packages: selectedPackagesJson,
+    // Persisted so verify-payment and the webhook can compare the captured
+    // amount against this registration's own total. It can't be re-derived from
+    // events.price_paise once packages are in play.
+    p_amount_due_paise: chargeTotalPaise,
   })
   if (rpcError) {
     console.error('[Register] Registration failed', rpcError)
@@ -209,7 +261,7 @@ export async function POST(request: Request) {
   let order
   try {
     order = await razorpay.orders.create({
-      amount: event.price_paise,
+      amount: chargeTotalPaise,
       currency: 'INR',
       receipt: registrationId,
     })
@@ -234,7 +286,7 @@ export async function POST(request: Request) {
     registrationId,
     slug: event.slug,
     razorpayOrderId: order.id,
-    amount: event.price_paise,
+    amount: chargeTotalPaise,
     currency: 'INR',
     eventName: event.name,
     userName: fullName,

@@ -3,6 +3,7 @@ import { sendEmail } from './brevo'
 import { registrationConfirmedEmail, welcomeEmail } from './templates'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import type { SelectedPackage } from '@/types/event'
 
 // Emails are read long after the deployment that sent them, and go to real
 // inboxes — so every link uses the canonical origin rather than whichever
@@ -68,7 +69,7 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
 
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, amount_paid_paise, razorpay_payment_id, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
+      .select('id, amount_paid_paise, razorpay_payment_id, selected_packages, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
       .eq('id', registrationId)
       .single()
 
@@ -86,6 +87,12 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
 
     let bannerUrl: string | null = null
     try { bannerUrl = (JSON.parse(event.banner_images ?? '[]') as string[])[0] ?? null } catch { /* keep null */ }
+
+    // The package snapshot taken at registration, so the ticket email shows what
+    // they actually bought even if an admin edits the event's packages later.
+    let selectedPackages: SelectedPackage[] = []
+    try { selectedPackages = JSON.parse(reg?.selected_packages ?? '[]') as SelectedPackage[] }
+    catch { selectedPackages = [] }
 
     const calendarUrl = event.event_date
       ? buildGoogleCalendarUrl({
@@ -115,6 +122,7 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
       confirmationUrl: `${SITE_URL}/events/${event.slug}/confirmation/${registrationId}`,
       amountPaidPaise: reg?.amount_paid_paise ?? null,
       paymentId: reg?.razorpay_payment_id ?? null,
+      selectedPackages,
     })
     await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
   } catch (err) {

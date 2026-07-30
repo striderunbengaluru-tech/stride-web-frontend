@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-import { revalidateLeaderboard } from '@/lib/leaderboard'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -103,9 +102,10 @@ export async function POST(request: Request) {
     .update({ runs_completed: newRunsCompleted })
     .eq('id', runner.id)
 
-  // A check-in changes run counts, so it can reorder the board and move an
-  // athlete into a new tier.
-  revalidateLeaderboard()
+  // Deliberately does NOT purge the leaderboard cache. Check-ins arrive in
+  // bursts on run days, so a purge per check-in meant a full re-read of the
+  // board for every scan — heaviest load at the worst moment. The new run count
+  // surfaces at the board's next 3h window instead. See @/lib/leaderboard.
 
   return NextResponse.json({
     success: true,

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import LeaderboardClient from './leaderboard-client'
-import { getRankedAthletes, toPublicRow, type LeaderboardRow } from '@/lib/leaderboard'
+import { getLeaderboardTop, type LeaderboardRow } from '@/lib/leaderboard'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 
 // Previously an untyped object with a title only: no description for search
@@ -29,8 +29,10 @@ export const metadata: Metadata = {
   },
 }
 
-// Revalidate every 5 minutes so the board stays reasonably fresh
-export const revalidate = 300
+// 3 hours — keep in lockstep with LEADERBOARD_REVALIDATE in @/lib/leaderboard.
+// Long on purpose: the board only changes at check-in, and this cache exists so
+// that traffic volume doesn't drive database load.
+export const revalidate = 10_800
 
 export type LeaderboardUser = LeaderboardRow
 
@@ -45,12 +47,10 @@ export default async function LeaderboardPage() {
   // It also used to select `total_distance_meters` for a second "Distance"
   // board. No such column exists on `users`: PostgREST rejected the query, the
   // data came back null, and the whole board rendered "No athletes yet".
-  const ranked = await getRankedAthletes()
+  //
+  // Ranking and the LIMIT both happen in Postgres, so this reads BOARD_SIZE rows
+  // rather than every athlete.
+  const { rows, totalAthletes } = await getLeaderboardTop(BOARD_SIZE)
 
-  return (
-    <LeaderboardClient
-      byRuns={ranked.slice(0, BOARD_SIZE).map(toPublicRow)}
-      totalAthletes={ranked.length}
-    />
-  )
+  return <LeaderboardClient byRuns={rows} totalAthletes={totalAthletes} />
 }

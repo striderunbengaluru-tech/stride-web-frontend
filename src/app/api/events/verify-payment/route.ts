@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   // check below — the amount is never trusted from the client.
   const { data: registration } = await adminClient
     .from('event_registrations')
-    .select('id, user_id, status, event_id, razorpay_order_id, events(slug, price_paise)')
+    .select('id, user_id, status, event_id, razorpay_order_id, amount_due_paise, events(slug, price_paise)')
     .eq('id', registrationId)
     .single()
 
@@ -84,7 +84,11 @@ export async function POST(request: Request) {
   }
 
   const capturedAmount = Number(payment.amount)
-  const expectedAmount = event?.price_paise ?? -1
+  // Packages make the charge per-registration, so the expected amount is the
+  // total persisted when the order was created. Falls back to the event price for
+  // registrations made before packages existed — including any PENDING row still
+  // in flight at deploy time, whose amount_due_paise is null.
+  const expectedAmount = registration.amount_due_paise ?? event?.price_paise ?? -1
 
   if (payment.order_id !== razorpay_order_id || payment.status !== 'captured' || capturedAmount !== expectedAmount) {
     console.error('[verify-payment] Payment does not match order', {

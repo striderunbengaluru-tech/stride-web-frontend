@@ -13,9 +13,13 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
+  Boxes, ListChecks,
 } from 'lucide-react'
 import type { EventFormData } from '@/lib/validations/admin'
-import { isChoiceFieldType, MAX_FIELD_OPTIONS, type AdditionalField, type AdditionalFieldType } from '@/types/event'
+import {
+  isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise,
+  type AdditionalField, type AdditionalFieldType, type EventPackage,
+} from '@/types/event'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { UploadProgress } from '@/components/ui/upload-progress'
@@ -23,6 +27,7 @@ import { HelpHint } from '@/components/ui/help-hint'
 import { EventPreview } from '@/components/admin/event-preview'
 import { slugify } from '@/lib/utils/slug'
 import { uploadWithProgress } from '@/lib/utils/upload'
+import { formatRupees } from '@/lib/utils/money'
 
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false })
 
@@ -203,6 +208,66 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
     resetFieldDrag()
   }
   function resetFieldDrag() { setFieldDragSrc(null); setFieldDragOver(null) }
+
+  // ── Event packages ─────────────────────────────────────────────────────────
+  // When enabled these replace the single price: the runner picks one (or
+  // several, with multi-select) and is charged the sum. Amounts are edited in
+  // rupees and stored as integer paise, same as priceRupees above.
+  const [packages, setPackages] = useState<EventPackage[]>(() => {
+    try { return JSON.parse(defaultValues.packages ?? '[]') as EventPackage[] }
+    catch { return [] }
+  })
+  const [packagesEnabled, setPackagesEnabled] = useState(defaultValues.packagesEnabled ?? false)
+  const [packagesMultiSelect, setPackagesMultiSelect] = useState(defaultValues.packagesMultiSelect ?? false)
+  const [pkgDragSrc, setPkgDragSrc] = useState<number | null>(null)
+  const [pkgDragOver, setPkgDragOver] = useState<number | null>(null)
+
+  function addPackage() {
+    if (packages.length >= MAX_PACKAGES) return
+    setPackages(prev => [...prev, { id: nanoid(8), name: '', details: '', amountPaise: 0 }])
+    markDirty()
+  }
+  function updatePackage(index: number, patch: Partial<EventPackage>) {
+    setPackages(prev => prev.map((p, i) => i === index ? { ...p, ...patch } : p))
+    markDirty()
+  }
+  // Clearing the rupee input yields Number('') → NaN, which Zod rejects, which
+  // makes sanitisePackages drop the whole package on save without saying so.
+  // Treat an unparseable amount as 0 instead.
+  function updatePackageAmount(index: number, rupees: string) {
+    const parsed = Number(rupees)
+    updatePackage(index, { amountPaise: Number.isFinite(parsed) ? Math.round(parsed * 100) : 0 })
+  }
+  function removePackage(index: number) {
+    setPackages(prev => prev.filter((_, i) => i !== index))
+    markDirty()
+  }
+  function handlePkgDragStart(i: number) { setPkgDragSrc(i) }
+  function handlePkgDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    if (i !== pkgDragOver) setPkgDragOver(i)
+  }
+  function handlePkgDrop(i: number) {
+    if (pkgDragSrc === null || pkgDragSrc === i) { resetPkgDrag(); return }
+    const next = [...packages]
+    const [moved] = next.splice(pkgDragSrc, 1)
+    next.splice(i, 0, moved)
+    setPackages(next)
+    markDirty()
+    resetPkgDrag()
+  }
+  function resetPkgDrag() { setPkgDragSrc(null); setPkgDragOver(null) }
+
+  // A package with a blank name is dropped on save, and enabling packages with
+  // none at all leaves the event unregisterable. Block the submit and say so
+  // rather than letting either happen silently.
+  const [packagesError, setPackagesError] = useState('')
+  function validatePackages(): string {
+    if (!packagesEnabled) return ''
+    if (packages.length === 0) return 'Add at least one package, or turn Event packages off.'
+    if (packages.some(p => !p.name.trim())) return 'Give every package a name.'
+    return ''
+  }
 
   // Draggable split pane
   const containerRef = useRef<HTMLDivElement>(null)
@@ -398,7 +463,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
   }
 
   function handlePreview() {
-    const previewData = { name, subtitle, pricePaise, eventDate, location, details, bannerImages, distanceKm, difficulty }
+    const previewData = {
+      name, subtitle, pricePaise, eventDate, location, details, bannerImages, distanceKm, difficulty,
+      packages: packagesEnabled ? packages : [], packagesMultiSelect,
+    }
     try { sessionStorage.setItem('event_form_preview', JSON.stringify(previewData)) } catch {}
     window.open('/admin/events/preview', '_blank')
   }
@@ -479,9 +547,11 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
           <form
             action={action}
             onSubmit={(e) => {
-              const problem = validateAdditionalFields()
-              setFieldsError(problem)
-              if (problem) {
+              const fieldProblem = validateAdditionalFields()
+              const packageProblem = validatePackages()
+              setFieldsError(fieldProblem)
+              setPackagesError(packageProblem)
+              if (fieldProblem || packageProblem) {
                 e.preventDefault()
                 return
               }
@@ -491,9 +561,9 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             className='space-y-5 lg:pr-2'
           >
 
-            {(errorMessage || fieldsError) && (
+            {(errorMessage || fieldsError || packagesError) && (
               <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm'>
-                {errorMessage || fieldsError}
+                {errorMessage || fieldsError || packagesError}
               </div>
             )}
 
@@ -503,6 +573,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
             <input type='hidden' name='termsText' value={termsText} />
             <input type='hidden' name='bannerImages' value={JSON.stringify(bannerImages)} readOnly />
             <input type='hidden' name='additionalFields' value={JSON.stringify(additionalFields)} readOnly />
+            <input type='hidden' name='packages' value={JSON.stringify(packages)} readOnly />
             <input type='hidden' name='status' value={status} />
 
             {/* ── STATUS PILLS ── */}
@@ -591,8 +662,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   <div className='flex items-center gap-1.5'>
                     <IndianRupee size={14} className='text-white/40' />
                     <label className='text-white/70 text-sm font-medium'>Price (₹)</label>
-                    <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events.' />
+                    <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events. Ignored when Event packages is on — the packages set the price then.' />
                   </div>
+                  {/* readOnly, not disabled: a disabled input is not submitted, so
+                      disabling it would post nothing, fall through to the Zod
+                      default of 0 and silently wipe the stored price the moment
+                      packages were switched on. */}
                   <input
                     type='number'
                     name='priceRupees'
@@ -601,8 +676,13 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                     value={priceRupees}
                     onChange={e => setPriceRupees(Number(e.target.value))}
                     placeholder='0 for free'
-                    className={`${inputBase} scheme-dark`}
+                    readOnly={packagesEnabled}
+                    aria-disabled={packagesEnabled}
+                    className={`${inputBase} scheme-dark read-only:opacity-40 read-only:cursor-not-allowed`}
                   />
+                  {packagesEnabled && (
+                    <p className='text-white/40 text-xs'>Packages set the price — see Registration below.</p>
+                  )}
                 </div>
               </div>
 
@@ -676,6 +756,133 @@ export function EventForm({ action, defaultValues = {}, submitLabel, errorMessag
                   label='Show spots left on the event page'
                 />
                 <input type='hidden' name='showSpotsLeft' value={showSpotsLeft ? 'true' : 'false'} />
+              </div>
+
+              {/* ── Packages ── */}
+              <div className='border-t border-white/10 pt-4 mb-4'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-1.5'>
+                    <Boxes size={14} className='text-white/40' />
+                    <label className='text-white/70 text-sm font-medium'>Event packages?</label>
+                    <HelpHint text='Offer priced tiers instead of one fixed price — e.g. “Run only” free, “Run + tee” ₹800. The runner picks at registration and is charged the total. Turning this on ignores the Price field above.' />
+                  </div>
+                  <Switch
+                    checked={packagesEnabled}
+                    onCheckedChange={(v) => { setPackagesEnabled(v); markDirty() }}
+                    label='Offer packages instead of a single price'
+                  />
+                  <input type='hidden' name='packagesEnabled' value={packagesEnabled ? 'true' : 'false'} />
+                </div>
+
+                {/* Always posted so the value survives a save with packages off. */}
+                <input type='hidden' name='packagesMultiSelect' value={packagesMultiSelect ? 'true' : 'false'} />
+
+                {packagesEnabled && (
+                  <div className='mt-4 space-y-3'>
+                    <div className='flex items-center justify-between gap-3'>
+                      <div className='flex items-center gap-1.5'>
+                        <ListChecks size={14} className='text-white/40' />
+                        <label className='text-white/70 text-sm font-medium'>Allow multiple</label>
+                        <HelpHint text='Off: the runner picks exactly one package (radio buttons). On: they can tick several and pay the sum of all of them.' />
+                      </div>
+                      <Switch
+                        checked={packagesMultiSelect}
+                        onCheckedChange={(v) => { setPackagesMultiSelect(v); markDirty() }}
+                        label='Let runners select more than one package'
+                      />
+                    </div>
+
+                    {packages.length === 0 && (
+                      <p className='text-white/40 text-xs'>No packages yet. Add at least one.</p>
+                    )}
+
+                    {packages.map((pkg, i) => (
+                      <div
+                        key={pkg.id}
+                        draggable
+                        onDragStart={() => handlePkgDragStart(i)}
+                        onDragOver={(e) => handlePkgDragOver(e, i)}
+                        onDrop={() => handlePkgDrop(i)}
+                        onDragEnd={resetPkgDrag}
+                        className={`bg-white/5 border rounded-xl p-3 space-y-2.5 transition-colors ${
+                          pkgDragOver === i ? 'border-stride-yellow-accent/50' : 'border-white/10'
+                        }`}
+                      >
+                        <div className='flex items-center gap-2'>
+                          <button
+                            type='button'
+                            aria-label={`Reorder ${pkg.name.trim() || 'package'}`}
+                            className='text-white/30 hover:text-white/60 cursor-grab shrink-0 min-h-11 flex items-center'
+                          >
+                            <GripVertical size={14} />
+                          </button>
+                          <input
+                            type='text'
+                            value={pkg.name}
+                            onChange={e => updatePackage(i, { name: e.target.value })}
+                            placeholder='Package name — e.g. Run + tee'
+                            aria-label='Package name'
+                            className={`${inputBase} flex-1 min-w-0`}
+                          />
+                          <div className='flex items-center gap-1 shrink-0'>
+                            <IndianRupee size={13} className='text-white/40' />
+                            <input
+                              type='number'
+                              step='0.01'
+                              min='0'
+                              value={pkg.amountPaise / 100}
+                              onChange={e => updatePackageAmount(i, e.target.value)}
+                              placeholder='0'
+                              aria-label={`Amount in rupees for ${pkg.name.trim() || 'this package'}`}
+                              className={`${inputBase} scheme-dark w-24`}
+                            />
+                          </div>
+                          <button
+                            type='button'
+                            onClick={() => removePackage(i)}
+                            aria-label={`Remove ${pkg.name.trim() || 'package'}`}
+                            className='text-white/30 hover:text-red-400 transition-colors shrink-0 min-h-11 flex items-center'
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        <div data-color-mode='dark' className='rounded-lg overflow-hidden border border-white/15'>
+                          <MDEditor
+                            value={pkg.details}
+                            onChange={(v) => updatePackage(i, { details: v ?? '' })}
+                            height={120}
+                            preview='edit'
+                            textareaProps={{ placeholder: 'What’s included? Markdown supported.' }}
+                            className='bg-transparent!'
+                          />
+                        </div>
+
+                        {pkg.amountPaise === 0 && (
+                          <p className='text-white/40 text-xs'>Free package — picking only this skips payment entirely.</p>
+                        )}
+                      </div>
+                    ))}
+
+                    {packages.length < MAX_PACKAGES && (
+                      <button
+                        type='button'
+                        onClick={addPackage}
+                        className='flex items-center gap-1.5 text-stride-yellow-accent text-xs font-semibold min-h-11'
+                      >
+                        <Plus size={14} /> Add package
+                      </button>
+                    )}
+
+                    {packages.length > 0 && (
+                      <p className='text-white/40 text-xs'>
+                        {packagesMultiSelect
+                          ? `Runners can combine any of these — up to ${formatRupees(sumPackageAmountPaise(packages))} if they pick everything.`
+                          : 'Runners pick exactly one of these.'}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className='flex flex-col gap-1.5'>

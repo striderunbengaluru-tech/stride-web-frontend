@@ -1,5 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { RegistrationsClient } from '@/components/admin/registrations-client'
+import type { SelectedPackage } from '@/types/event'
 
 export const metadata = { title: 'Registrations — Admin' }
 
@@ -51,21 +52,28 @@ export type RunnerRow = {
   last_event_date: string | null
 }
 
+export type Attendee = {
+  registration_id: string
+  user_id: string
+  full_name: string | null
+  runner_tag: string | null
+  email: string | null
+  status: string
+  registered_at: string
+  checked_in_at: string | null
+  /** Packages bought, snapshotted at registration. Empty for non-package events. */
+  packages: SelectedPackage[]
+  amount_due_paise: number | null
+}
+
 export type EventWithAttendees = EventSummary & {
-  attendees: {
-    registration_id: string
-    user_id: string
-    full_name: string | null
-    runner_tag: string | null
-    email: string | null
-    status: string
-    registered_at: string
-    checked_in_at: string | null
-  }[]
+  attendees: Attendee[]
+  /** Distinct package names across this event's attendees — drives the filter. */
+  package_names: string[]
 }
 
 export default async function AdminRegistrationsPage() {
-  const [{ data: flatRows }, { data: eventSummaries }] = await Promise.all([
+  const [{ data: flatRows }, { data: eventSummaries }, { data: packageRows }] = await Promise.all([
     adminClient
       .from('admin_registrations_flat')
       .select('*')
@@ -74,9 +82,25 @@ export default async function AdminRegistrationsPage() {
       .from('admin_event_summary')
       .select('*')
       .order('event_date', { ascending: false }),
+    // Read straight from the table rather than adding these to
+    // admin_registrations_flat: that view was created by hand and its definition
+    // isn't in this repo, so widening it means dumping and re-authoring DDL we
+    // can't see. Two narrow columns on an admin-only page is the cheaper trade.
+    adminClient
+      .from('event_registrations')
+      .select('id, selected_packages, amount_due_paise'),
   ])
 
   const rows = (flatRows ?? []) as FlatRow[]
+
+  type PackageRow = { id: string; selected_packages: string | null; amount_due_paise: number | null }
+  const packageByRegistration = new Map<string, { packages: SelectedPackage[]; amountDue: number | null }>()
+  for (const row of (packageRows ?? []) as PackageRow[]) {
+    let packages: SelectedPackage[] = []
+    try { packages = JSON.parse(row.selected_packages ?? '[]') as SelectedPackage[] }
+    catch { packages = [] }
+    packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise })
+  }
 
   // Build runner summaries (unique users with aggregate stats)
   const runnerMap = new Map<string, RunnerRow>()
@@ -111,9 +135,10 @@ export default async function AdminRegistrationsPage() {
   )
 
   // Build attendees per event
-  const attendeesMap = new Map<string, EventWithAttendees['attendees']>()
+  const attendeesMap = new Map<string, Attendee[]>()
   for (const row of rows) {
     if (!attendeesMap.has(row.event_id)) attendeesMap.set(row.event_id, [])
+    const bought = packageByRegistration.get(row.registration_id)
     attendeesMap.get(row.event_id)!.push({
       registration_id: row.registration_id,
       user_id: row.user_id,
@@ -123,13 +148,19 @@ export default async function AdminRegistrationsPage() {
       status: row.status,
       registered_at: row.registered_at,
       checked_in_at: row.checked_in_at,
+      packages: bought?.packages ?? [],
+      amount_due_paise: bought?.amountDue ?? null,
     })
   }
 
-  const events: EventWithAttendees[] = ((eventSummaries ?? []) as EventSummary[]).map(e => ({
-    ...e,
-    attendees: attendeesMap.get(e.id) ?? [],
-  }))
+  const events: EventWithAttendees[] = ((eventSummaries ?? []) as EventSummary[]).map(e => {
+    const attendees = attendeesMap.get(e.id) ?? []
+    return {
+      ...e,
+      attendees,
+      package_names: [...new Set(attendees.flatMap(a => a.packages.map(p => p.name)))].sort(),
+    }
+  })
 
   const totalUniqueRunners = runnerMap.size
   const totalCheckIns = runners.reduce((s, r) => s + r.checked_in_count, 0)

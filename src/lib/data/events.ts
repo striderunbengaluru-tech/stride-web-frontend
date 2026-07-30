@@ -31,7 +31,7 @@ const EVENT_DETAIL_COLUMNS =
   'id, name, slug, subtitle, details, status, event_date, end_date, location, location_url, ' +
   'post_run_location, post_run_location_url, strava_route_url, capacity, price_paise, ' +
   'cover_url, banner_images, additional_fields, terms_and_conditions, distance_km, ' +
-  'difficulty, show_spots_left, is_test_event'
+  'difficulty, show_spots_left, is_test_event, packages, packages_enabled, packages_multi_select'
 
 export type EventDetailRow = {
   id: string
@@ -57,6 +57,10 @@ export type EventDetailRow = {
   difficulty: string | null
   show_spots_left: boolean | null
   is_test_event: boolean | null
+  /** JSON array of EventPackage. When packages_enabled, these set the price. */
+  packages: string | null
+  packages_enabled: boolean | null
+  packages_multi_select: boolean | null
 }
 
 export type EventListRow = {

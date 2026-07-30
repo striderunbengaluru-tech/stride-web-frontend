@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ParticipantDetailsModal } from '@/components/events/participant-details-modal'
-import type { AdditionalField } from '@/types/event'
+import type { AdditionalField, EventPackage } from '@/types/event'
 
 type Props = {
   eventId: string
@@ -24,6 +24,9 @@ type Props = {
   }
   additionalFields?: AdditionalField[]
   termsAndConditions?: string | null
+  packages?: EventPackage[]
+  packagesEnabled?: boolean
+  packagesMultiSelect?: boolean
   razorpayKeyId?: string
 }
 
@@ -39,6 +42,9 @@ export function RegisterButton({
   initial,
   additionalFields,
   termsAndConditions,
+  packages,
+  packagesEnabled,
+  packagesMultiSelect,
   razorpayKeyId,
 }: Props) {
   // ?register=1 (returning from login) is read here client-side so the server
@@ -122,6 +128,9 @@ export function RegisterButton({
         initial={initial}
         additionalFields={additionalFields}
         termsAndConditions={termsAndConditions}
+        packages={packages}
+        packagesEnabled={packagesEnabled}
+        packagesMultiSelect={packagesMultiSelect}
         razorpayKeyId={razorpayKeyId}
       />
     </>

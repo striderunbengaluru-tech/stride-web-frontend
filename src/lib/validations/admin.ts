@@ -25,6 +25,18 @@ export const additionalFieldSchema = z.object({
 
 export const additionalFieldsArraySchema = z.array(additionalFieldSchema)
 
+// A priced tier the runner picks at registration. `amountPaise` is integer paise
+// so it never suffers float rounding, and 0 is allowed on purpose — a free
+// package can sit alongside paid ones ("run only" vs "run + tee").
+export const eventPackageSchema = z.object({
+  id:          z.string().min(1),
+  name:        z.string().trim().min(1).max(80),
+  details:     z.string().max(2000).default(''),
+  amountPaise: z.number().int().min(0).max(100_000_000),
+})
+
+export const eventPackagesArraySchema = z.array(eventPackageSchema)
+
 export const eventSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   subtitle: z.string().max(200).optional(),
@@ -54,6 +66,11 @@ export const eventSchema = z.object({
   termsText: z.string().max(5000).optional(),
   bannerImages: z.string().optional(), // JSON array of uploaded image URLs
   additionalFields: z.string().optional(), // JSON array of AdditionalField objects
+  packages: z.string().optional(), // JSON array of EventPackage objects
+  // When enabled the charge is the sum of the packages the runner picks and
+  // priceRupees is ignored. Multi-select lets them combine several.
+  packagesEnabled: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  packagesMultiSelect: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
 })
 
 export type EventFormData = z.infer<typeof eventSchema>

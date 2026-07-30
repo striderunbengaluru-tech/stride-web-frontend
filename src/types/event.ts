@@ -25,3 +25,41 @@ export type AdditionalField = {
 }
 
 export type CustomResponses = Record<string, string | number>
+
+/** Upper bound on packages per event — keeps the registration modal usable. */
+export const MAX_PACKAGES = 10
+
+/**
+ * A priced tier an event can offer instead of a single fixed price. When
+ * `events.packages_enabled` is true the charge is the sum of the packages the
+ * runner picks, and `events.price_paise` is ignored.
+ *
+ * `amountPaise` is integer paise (Razorpay's unit), the same as
+ * `events.price_paise`. Zero is valid — a free package alongside paid ones lets
+ * an event offer "run only" next to "run + tee".
+ */
+export type EventPackage = {
+  id: string
+  name: string
+  /** Markdown, rendered with react-markdown. Never as raw HTML. */
+  details: string
+  amountPaise: number
+}
+
+/**
+ * What a registration actually bought, snapshotted onto the registration row.
+ * Stored rather than referenced by id so a later admin price or name edit can't
+ * rewrite someone's existing receipt.
+ */
+export type SelectedPackage = {
+  id: string
+  name: string
+  amountPaise: number
+}
+
+/** Sums a selection. Single source of truth for "what do we charge". */
+export function sumPackageAmountPaise(
+  packages: readonly { amountPaise: number }[]
+): number {
+  return packages.reduce((total, pkg) => total + pkg.amountPaise, 0)
+}

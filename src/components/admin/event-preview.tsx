@@ -8,6 +8,8 @@ import {
   istLocalToUtcIso, formatDateLongIST, formatTimeIST,
   formatMonthIST, formatDayIST,
 } from '@/lib/utils/ist'
+import { eventPriceLabel, priceLabel as priceOf } from '@/lib/utils/money'
+import type { EventPackage } from '@/types/event'
 
 type Props = {
   name: string
@@ -20,6 +22,9 @@ type Props = {
   slug?: string
   distanceKm?: string | number | null
   difficulty?: string | null
+  /** Empty when the event is priced with a single fixed amount. */
+  packages?: EventPackage[]
+  packagesMultiSelect?: boolean
 }
 
 // IST-pinned like the public page, so the preview can't disagree with what a
@@ -50,11 +55,16 @@ type ViewMode = 'mobile' | 'desktop'
 // Renders the same Luma-style layout as the public event page:
 // - Mobile: image on top, content stacked below
 // - Desktop: image left (~44%), content right
-function PreviewContent({ name, subtitle, pricePaise, eventDate, location, details, bannerImages, distanceKm, difficulty, layout }: Omit<Props, 'slug'> & { layout: ViewMode }) {
+function PreviewContent({ name, subtitle, pricePaise, eventDate, location, details, bannerImages, distanceKm, difficulty, packages = [], packagesMultiSelect = false, layout }: Omit<Props, 'slug'> & { layout: ViewMode }) {
   const hasImage = bannerImages.length > 0
   const dateLong = formatDateLong(eventDate)
   const startTime = formatTime(eventDate)
-  const priceLabel = pricePaise === 0 ? 'Free' : `₹${(pricePaise / 100).toLocaleString('en-IN')}`
+  const hasPackages = packages.length > 0
+  const priceLabel = eventPriceLabel(pricePaise, packages, hasPackages)
+  // With packages the CTA can't name one amount — the runner builds the total.
+  const ctaLabel = hasPackages
+    ? 'Register — choose a package'
+    : pricePaise === 0 ? 'RSVP Free' : `Register — ${priceLabel}`
   const distance = distanceKm !== undefined && distanceKm !== null && distanceKm !== '' ? distanceKm : null
 
   const imageBlock = (
@@ -136,8 +146,23 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
             <p className='text-white/55 text-xs'>Sign up and lace up.</p>
             <p className='text-lg font-bold text-white'>{priceLabel}</p>
           </div>
+
+          {hasPackages && (
+            <div className='mb-2.5 space-y-1.5'>
+              <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest'>
+                {packagesMultiSelect ? 'Pick any' : 'Pick one'}
+              </p>
+              {packages.map(pkg => (
+                <div key={pkg.id} className='flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-white/3 px-2.5 py-1.5'>
+                  <span className='text-white/75 text-[11px] line-clamp-2'>{pkg.name.trim() || 'Untitled package'}</span>
+                  <span className='text-white text-[11px] font-semibold shrink-0'>{priceOf(pkg.amountPaise)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <button disabled className='w-full py-2 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-xs opacity-70 cursor-default'>
-            {pricePaise === 0 ? 'RSVP Free' : `Register — ${priceLabel}`}
+            {ctaLabel}
           </button>
         </div>
       </div>
@@ -172,7 +197,7 @@ function PreviewContent({ name, subtitle, pricePaise, eventDate, location, detai
   )
 }
 
-export function EventPreview({ name, subtitle, pricePaise, eventDate, location, details, bannerImages, slug, distanceKm, difficulty }: Props) {
+export function EventPreview({ name, subtitle, pricePaise, eventDate, location, details, bannerImages, slug, distanceKm, difficulty, packages, packagesMultiSelect }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('mobile')
 
   const urlSlug = slug || 'your-event-name'
@@ -230,6 +255,7 @@ export function EventPreview({ name, subtitle, pricePaise, eventDate, location, 
               name={name} subtitle={subtitle} pricePaise={pricePaise} eventDate={eventDate}
               location={location} details={details} bannerImages={bannerImages}
               distanceKm={distanceKm} difficulty={difficulty}
+              packages={packages} packagesMultiSelect={packagesMultiSelect}
               layout='mobile'
             />
           </div>
@@ -252,6 +278,7 @@ export function EventPreview({ name, subtitle, pricePaise, eventDate, location, 
             name={name} subtitle={subtitle} pricePaise={pricePaise} eventDate={eventDate}
             location={location} details={details} bannerImages={bannerImages}
             distanceKm={distanceKm} difficulty={difficulty}
+            packages={packages} packagesMultiSelect={packagesMultiSelect}
             layout='desktop'
           />
         </div>

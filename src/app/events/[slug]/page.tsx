@@ -14,10 +14,11 @@ import { EventHero } from '@/components/events/event-hero'
 import { Reveal } from '@/components/ui/reveal'
 import { ShareButton } from '@/components/events/share-button'
 import { ArrowLeft, MapPin, Route, Users, ExternalLink, Gauge, Activity } from 'lucide-react'
-import type { AdditionalField } from '@/types/event'
+import type { AdditionalField, EventPackage } from '@/types/event'
 import {
   formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST,
 } from '@/lib/utils/ist'
+import { eventPriceLabel } from '@/lib/utils/money'
 import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
@@ -118,11 +119,18 @@ export default async function EventDetailPage({ params }: Props) {
   try { additionalFields = JSON.parse(event.additional_fields ?? '[]') as AdditionalField[] }
   catch { additionalFields = [] }
 
+  // Priced tiers, when the admin chose those over a single fixed price.
+  let packages: EventPackage[] = []
+  try { packages = JSON.parse(event.packages ?? '[]') as EventPackage[] }
+  catch { packages = [] }
+  const packagesEnabled = (event.packages_enabled ?? false) && packages.length > 0
+
   const hasBanners = bannerImages.length > 0
   const dateLong  = fmtDateLong(event.event_date)
   const startTime = fmtTime(event.event_date)
   const endTime   = fmtTime(event.end_date)
-  const priceLabel = event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
+  // With packages the headline can only be a "From ₹X" — the runner picks the total.
+  const priceLabel = eventPriceLabel(event.price_paise, packages, packagesEnabled)
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   // `overflow-clip`, NOT `overflow-hidden`: hidden makes this a scroll container,
@@ -371,6 +379,9 @@ export default async function EventDetailPage({ params }: Props) {
                     isPast={isPast}
                     additionalFields={additionalFields}
                     termsAndConditions={event.terms_and_conditions}
+                    packages={packages}
+                    packagesEnabled={packagesEnabled}
+                    packagesMultiSelect={event.packages_multi_select ?? false}
                     razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                     priceLabel={priceLabel}
                     spotsLine={spotsLine}
@@ -420,6 +431,9 @@ export default async function EventDetailPage({ params }: Props) {
                 isPast={isPast}
                 additionalFields={additionalFields}
                 termsAndConditions={event.terms_and_conditions}
+                packages={packages}
+                packagesEnabled={packagesEnabled}
+                packagesMultiSelect={event.packages_multi_select ?? false}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />
             </Suspense>

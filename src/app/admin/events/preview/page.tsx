@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { EventPreview } from '@/components/admin/event-preview'
+import type { EventPackage } from '@/types/event'
 
 type PreviewData = {
   name: string
@@ -13,6 +14,8 @@ type PreviewData = {
   location: string
   details: string
   bannerImages: string[]
+  packages?: EventPackage[]
+  packagesMultiSelect?: boolean
 }
 
 export default function EventPreviewPage() {
