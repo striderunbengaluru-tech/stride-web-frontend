@@ -17,6 +17,12 @@ export type UpNextEvent = {
   location: string | null
   price_paise: number
   imageUrl: string | null
+  /**
+   * Resolved by the caller with eventRowPriceLabel, so a package event reads
+   * "From ₹X". Deriving it from price_paise here showed "Free" for every
+   * package event, since packages leave that column at 0.
+   */
+  priceLabel: string
 }
 
 type Props = {
@@ -31,8 +37,7 @@ type Props = {
 }
 
 export function UpNextBanner({ event, imagePriority = false, showLabel = true }: Props) {
-  const priceLabel =
-    event.price_paise === 0 ? 'Free' : `₹${(event.price_paise / 100).toLocaleString('en-IN')}`
+  const priceLabel = event.priceLabel
 
   return (
     <Link href={`/events/${event.slug}`} className='group block'>

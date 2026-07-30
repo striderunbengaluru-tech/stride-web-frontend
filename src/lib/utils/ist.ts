@@ -45,6 +45,34 @@ export function utcIsoToIstLocal(iso: string | null | undefined): string | undef
   return new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 16)
 }
 
+/**
+ * Whole IST **calendar** days from `from` (default: now) to `value`.
+ * Same IST day → 0, next IST day → 1, and so on. Negative for a past day.
+ *
+ * Elapsed time divided by 24h is NOT the same thing, and using it produced a
+ * real bug: at 11 pm IST on 30 Jul, a run at 6:30 am on 1 Aug is ~31 hours away,
+ * so `floor(31 / 24)` said "1" and the badge read "Tomorrow" — but in IST
+ * calendar terms 31 Jul is tomorrow and 1 Aug is two days out. "Tomorrow" is a
+ * property of the date, not of the gap.
+ *
+ * Shifting the epoch by the fixed IST offset and flooring to whole days yields
+ * an IST civil-date index; the difference of two indices is exact because IST
+ * has no DST.
+ */
+export function istCalendarDaysUntil(
+  value: string | Date,
+  from: string | Date | number = Date.now()
+): number {
+  const MS_PER_DAY = 86_400_000
+  const istDayIndex = (ms: number) => Math.floor((ms + IST_OFFSET_MS) / MS_PER_DAY)
+
+  const target = new Date(value).getTime()
+  const origin = typeof from === 'number' ? from : new Date(from).getTime()
+  if (Number.isNaN(target) || Number.isNaN(origin)) return NaN
+
+  return istDayIndex(target) - istDayIndex(origin)
+}
+
 /** Escape hatch for one-off option sets — always IST, always en-IN. */
 export function formatIST(value: string | Date, options: Intl.DateTimeFormatOptions): string {
   return new Intl.DateTimeFormat('en-IN', { timeZone: IST, ...options }).format(new Date(value))

@@ -14,6 +14,9 @@ type Event = {
   price_paise: number
   cover_url: string | null
   imageUrl: string | null
+  /** Resolved on the server so package events read "From ₹X", not "Free". */
+  priceLabel: string
+  isFree: boolean
 }
 
 type Filter = 'upcoming' | 'past' | 'all'
@@ -101,7 +104,8 @@ export function EventsClient({ events }: { events: Event[] }) {
                   slug={event.slug}
                   eventDate={event.event_date ? new Date(event.event_date) : null}
                   location={event.location}
-                  pricePaise={event.price_paise}
+                  priceLabel={event.priceLabel}
+                  isFree={event.isFree}
                   coverUrl={event.imageUrl}
                 />
               </motion.div>

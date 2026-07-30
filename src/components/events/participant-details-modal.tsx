@@ -778,14 +778,14 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
               <div className='pt-5 mt-2 border-t border-white/10'>
                 <div className='flex items-baseline justify-between gap-3 mb-2'>
                   <h3 className={sectionHeading}>Event terms</h3>
-                  <span
-                    aria-live='polite'
-                    className={`text-[11px] tabular-nums transition-colors duration-200 motion-reduce:transition-none ${
-                      termsRead ? 'text-stride-yellow-accent' : 'text-white/40'
-                    }`}
-                  >
-                    {termsRead ? 'Read' : 'Scroll to read'}
-                  </span>
+                  {/* Only the prompt, never a "Read" confirmation: once they've
+                      scrolled through, the acknowledgement that matters is the
+                      checkbox below, and a second badge saying so was noise. */}
+                  {!termsRead && (
+                    <span aria-live='polite' className='text-[11px] text-white/40'>
+                      Scroll to read
+                    </span>
+                  )}
                 </div>
 
                 <div

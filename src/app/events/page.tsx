@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { getPublishedEvents } from '@/lib/data/events'
+import { eventRowPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { EventsClient } from '@/components/events/events-client'
 import { UpNextBanner } from '@/components/events/up-next-banner'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
@@ -51,6 +52,13 @@ type EventRow = {
   price_paise: number
   cover_url: string | null
   imageUrl: string | null
+  /**
+   * Resolved here rather than in the card: the packages live in a JSON column,
+   * and deriving the label server-side keeps the parse off the client and
+   * guarantees the card agrees with the detail page.
+   */
+  priceLabel: string
+  isFree: boolean
 }
 
 async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow | null }> {
@@ -64,7 +72,8 @@ async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow
         if (arr[0]) imageUrl = arr[0]
       } catch { /* keep cover_url fallback */ }
     }
-    return { ...event, imageUrl }
+    const priceLabel = eventRowPriceLabel(event.price_paise, event.packages, event.packages_enabled)
+    return { ...event, imageUrl, priceLabel, isFree: priceLabel === FREE_LABEL }
   })
 
   // The soonest event that hasn't happened yet — events arrive date-ascending.
