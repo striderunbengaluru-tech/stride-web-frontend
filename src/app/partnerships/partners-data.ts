@@ -101,7 +101,10 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
     description:
       "From GPS wearables to quick commerce, Stride's community lives an active, tech-forward life.",
     partners: [
-      { id: 'garmin', name: 'Garmin', logoUrl: 'https://cdn.simpleicons.org/garmin' },
+      // Self-hosted copy of the Simple Icons glyph — a genuine single-path
+      // vector, unlike the other logos. Kept on our own storage so Vercel's
+      // image optimizer can fetch it (it rejects unlisted external hosts).
+      { id: 'garmin', name: 'Garmin', logoUrl: `${SUPABASE_LOGOS}/garmin-logo.svg` },
       { id: 'zepto', name: 'Zepto', logoUrl: `${SUPABASE_LOGOS}/zepto-logo.webp` },
       { id: 'ponds', name: "Pond's", logoUrl: `${SUPABASE_LOGOS}/ponds-logo.webp` },
       {
