@@ -23,6 +23,12 @@ export function telHref(number: string | null | undefined): string | null {
   return cleaned.replace(/\D/g, '').length >= 6 ? `tel:${cleaned}` : null
 }
 
+/** `mailto:` target for a stored address, or null when there's nothing to mail. */
+export function mailtoHref(email: string | null | undefined): string | null {
+  const trimmed = email?.trim()
+  return trimmed && trimmed.includes('@') ? `mailto:${trimmed}` : null
+}
+
 /**
  * Avatars are user-uploaded or Google-hosted, so the hostname isn't known at
  * build time — a plain `<img>` per the project's image rules.
