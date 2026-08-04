@@ -24,8 +24,8 @@ const STICKER_LABEL = 'ADD LINK STICKER'
 // Leaves the poster clear of Instagram's own bottom chrome.
 const BOTTOM_MARGIN = 70
 
-// The Stride wordmark logo (same SVG used in the navbar/footer).
-const LOGO_URL = '/assets/images/stride-logo-color-transparent.svg'
+// The Stride wordmark logo (same raster used in the navbar/footer).
+const LOGO_URL = '/assets/images/stride-logo-color-transparent.png'
 
 // Fallback stacks if the site fonts haven't loaded; the real families
 // (resolved from the page's CSS variables at draw time) match the website.

@@ -258,14 +258,5 @@ h1, h2, h3, h4, h5, h6 {
   .cta-shimmer::after { animation: none; display: none; }
 }
 
-/* ── Logo marquee — used on /partnerships ── */
-@keyframes marquee {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 60s linear infinite;
-}
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
+/* The /partnerships logo marquee is driven by RAF + translateX in
+   `logo-marquee.tsx` (one track for every breakpoint), so it needs no keyframes. */

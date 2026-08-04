@@ -95,7 +95,7 @@ const jsonLd = {
       url: SITE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/assets/images/stride-logo-color-transparent.svg`,
+        url: `${SITE_URL}/assets/images/stride-logo-color-transparent.png`,
         width: 280,
         height: 92,
       },

@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     canonical: CANONICAL_URL,
   },
   other: {
-    'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+    'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
   },
 }
 
@@ -81,7 +81,7 @@ const schemaOrg = {
       name: 'Stride Run Club Bengaluru',
       alternateName: 'Stride Run Club',
       url: SITE_ORIGIN,
-      logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+      logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
       description:
         "India's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
       location: {
@@ -124,11 +124,11 @@ const SUPABASE_LOGOS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/obje
 const SUPABASE_WEB_ASSETS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets'
 
 const PARTNERSHIP_REELS = [
-  { url: 'https://www.instagram.com/p/DW29ahUkeP9/',  title: 'A stellar partnership with Fuaark',        logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.svg`,     partnerHandle: '@fuaark_official',  thumbnailUrl: `${SUPABASE_WEB_ASSETS}/fuaark-insta-thumb.webp` },
-  { url: 'https://www.instagram.com/p/DWmkXvok3p9/', title: "Declared India's fittest club by peakst8", logoUrl: `${SUPABASE_LOGOS}/peakst8-logo.svg`,     partnerHandle: '@peakst8',          thumbnailUrl: `${SUPABASE_WEB_ASSETS}/peakst8-insta-thumb.webp`,   darkChip: true },
-  { url: 'https://www.instagram.com/p/DU2q0Iyj3rn/', title: 'Valentines Day partnership with PUMA and HYROX',  logoUrl: `${SUPABASE_LOGOS}/puma-hyrox-logo.svg`,  partnerHandle: '@pumaindia',        thumbnailUrl: `${SUPABASE_WEB_ASSETS}/puma-hyrox-insta-thumb.webp` },
-  { url: 'https://www.instagram.com/p/DMu5SCTPXzG/', title: 'Ran hard, raved harder with Zepto',        logoUrl: `${SUPABASE_LOGOS}/zepto-logo.svg`,       partnerHandle: '@zeptoapp',         thumbnailUrl: `${SUPABASE_WEB_ASSETS}/zepto-insta-thumb.webp` },
-  { url: 'https://www.instagram.com/p/DLo1vcfua88/', title: 'With Olympian Neeraj Chopra',              logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.svg`,  partnerHandle: '@underarmourind',   thumbnailUrl: `${SUPABASE_WEB_ASSETS}/neeraj-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DW29ahUkeP9/',  title: 'A stellar partnership with Fuaark',        logoUrl: `${SUPABASE_LOGOS}/fuaark-logo.webp`,     partnerHandle: '@fuaark_official',  thumbnailUrl: `${SUPABASE_WEB_ASSETS}/fuaark-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DWmkXvok3p9/', title: "Declared India's fittest club by peakst8", logoUrl: `${SUPABASE_LOGOS}/peakst8-logo.webp`,     partnerHandle: '@peakst8',          thumbnailUrl: `${SUPABASE_WEB_ASSETS}/peakst8-insta-thumb.webp`,   darkChip: true },
+  { url: 'https://www.instagram.com/p/DU2q0Iyj3rn/', title: 'Valentines Day partnership with PUMA and HYROX',  logoUrl: `${SUPABASE_LOGOS}/puma-hyrox-logo.webp`,  partnerHandle: '@pumaindia',        thumbnailUrl: `${SUPABASE_WEB_ASSETS}/puma-hyrox-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DMu5SCTPXzG/', title: 'Ran hard, raved harder with Zepto',        logoUrl: `${SUPABASE_LOGOS}/zepto-logo.webp`,       partnerHandle: '@zeptoapp',         thumbnailUrl: `${SUPABASE_WEB_ASSETS}/zepto-insta-thumb.webp` },
+  { url: 'https://www.instagram.com/p/DLo1vcfua88/', title: 'With Olympian Neeraj Chopra',              logoUrl: `${SUPABASE_LOGOS}/under-armour-logo.webp`,  partnerHandle: '@underarmourind',   thumbnailUrl: `${SUPABASE_WEB_ASSETS}/neeraj-insta-thumb.webp` },
 ]
 
 export default function PartnershipsPage() {

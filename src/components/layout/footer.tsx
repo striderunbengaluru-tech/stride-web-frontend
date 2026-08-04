@@ -62,7 +62,7 @@ export default function Footer() {
           <div className='flex flex-col gap-5 md:max-w-xs'>
             <Link href='/' aria-label='Stride Run Club home' className='block w-fit'>
               <Image
-                src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg'
+                src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png'
                 alt='Stride Run Club'
                 width={120}
                 height={40}

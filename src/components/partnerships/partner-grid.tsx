@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import clsx from 'clsx'
 import type { PartnerCategory } from '@/app/partnerships/partners-data'
 import PartnerWithUsButton from './partner-with-us-button'
@@ -63,12 +64,13 @@ export default function PartnerGrid({ categories }: Props) {
           >
             <div className='w-full h-16 bg-white rounded-lg flex items-center justify-center mb-3 px-4 py-2'>
               {partner.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={partner.logoUrl}
                   alt={partner.name}
+                  width={160}
+                  height={48}
+                  sizes='160px'
                   className='max-h-full w-auto max-w-full object-contain'
-                  loading='lazy'
                 />
               ) : (
                 <span className='text-stride-purple-primary font-bold text-xl'>
