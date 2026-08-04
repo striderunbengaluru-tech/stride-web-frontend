@@ -2,6 +2,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { RegistrationsClient } from '@/components/admin/registrations-client'
 import type { SelectedPackage } from '@/types/event'
 import { eventRowPriceLabel, priceLabel, FREE_LABEL } from '@/lib/utils/money'
+import { ageFromDob } from '@/lib/utils/age'
 
 export const metadata = { title: 'Registrations — Admin' }
 
@@ -60,6 +61,7 @@ export type Attendee = {
   registration_id: string
   user_id: string
   full_name: string | null
+  username: string | null
   runner_tag: string | null
   email: string | null
   status: string
@@ -68,6 +70,21 @@ export type Attendee = {
   /** Packages bought, snapshotted at registration. Empty for non-package events. */
   packages: SelectedPackage[]
   amount_due_paise: number | null
+  // ── Profile columns, joined from `users` ──
+  // Drives the tier badge, the contact line and the CSV export.
+  avatar_url: string | null
+  contact_number: string | null
+  emergency_contact_number: string | null
+  gender: string | null
+  /**
+   * Resolved server-side. Only the age reaches the browser — a date of birth is
+   * a far stronger identifier than a year count, and nothing on this screen or
+   * in the CSV needs it.
+   */
+  age: number | null
+  location: string | null
+  runs_completed: number
+  role: string
 }
 
 export type EventWithAttendees = EventSummary & {
@@ -77,7 +94,13 @@ export type EventWithAttendees = EventSummary & {
 }
 
 export default async function AdminRegistrationsPage() {
-  const [{ data: flatRows }, { data: eventSummaries }, { data: packageRows }, { data: eventPricingRows }] = await Promise.all([
+  const [
+    { data: flatRows },
+    { data: eventSummaries },
+    { data: packageRows },
+    { data: eventPricingRows },
+    { data: profileRows },
+  ] = await Promise.all([
     adminClient
       .from('admin_registrations_flat')
       .select('*')
@@ -100,6 +123,12 @@ export default async function AdminRegistrationsPage() {
     adminClient
       .from('events')
       .select('id, price_paise, packages, packages_enabled'),
+    // Profile columns the hand-authored admin_registrations_flat view doesn't
+    // carry. Same trade as the two reads above: join in JS rather than re-author
+    // DDL this repo can't see.
+    adminClient
+      .from('users')
+      .select('id, avatar_url, contact_number, emergency_contact_number, gender, date_of_birth, location'),
   ])
 
   const rows = (flatRows ?? []) as FlatRow[]
@@ -152,15 +181,29 @@ export default async function AdminRegistrationsPage() {
     (a, b) => b.confirmed_count - a.confirmed_count
   )
 
+  type ProfileRow = {
+    id: string
+    avatar_url: string | null
+    contact_number: string | null
+    emergency_contact_number: string | null
+    gender: string | null
+    date_of_birth: string | null
+    location: string | null
+  }
+  const profileByUser = new Map<string, ProfileRow>()
+  for (const row of (profileRows ?? []) as ProfileRow[]) profileByUser.set(row.id, row)
+
   // Build attendees per event
   const attendeesMap = new Map<string, Attendee[]>()
   for (const row of rows) {
     if (!attendeesMap.has(row.event_id)) attendeesMap.set(row.event_id, [])
     const bought = packageByRegistration.get(row.registration_id)
+    const profile = profileByUser.get(row.user_id)
     attendeesMap.get(row.event_id)!.push({
       registration_id: row.registration_id,
       user_id: row.user_id,
       full_name: row.full_name,
+      username: row.username,
       runner_tag: row.runner_tag,
       email: row.email,
       status: row.status,
@@ -168,6 +211,14 @@ export default async function AdminRegistrationsPage() {
       checked_in_at: row.checked_in_at,
       packages: bought?.packages ?? [],
       amount_due_paise: bought?.amountDue ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+      contact_number: profile?.contact_number ?? null,
+      emergency_contact_number: profile?.emergency_contact_number ?? null,
+      gender: profile?.gender ?? null,
+      age: ageFromDob(profile?.date_of_birth ?? null),
+      location: profile?.location ?? null,
+      runs_completed: row.runs_completed,
+      role: row.role,
     })
   }
 
@@ -187,7 +238,6 @@ export default async function AdminRegistrationsPage() {
 
   const totalUniqueRunners = runnerMap.size
   const totalCheckIns = runners.reduce((s, r) => s + r.checked_in_count, 0)
-  const totalConfirmed = runners.reduce((s, r) => s + r.confirmed_count, 0)
 
   return (
     <div>
@@ -211,7 +261,6 @@ export default async function AdminRegistrationsPage() {
       <RegistrationsClient
         runners={runners}
         events={events}
-        totalConfirmed={totalConfirmed}
       />
     </div>
   )
