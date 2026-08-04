@@ -7,6 +7,8 @@ import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
 import { TierBadge } from '@/components/ui/tier-badge'
+import { Avatar, Fact, GENDER_LABEL, telHref } from '@/components/admin/user-facts'
+import { ageFromDob } from '@/lib/utils/age'
 import { formatDateNumericIST } from '@/lib/utils/ist'
 
 type Run = { eventName: string; eventDate: string | null; checkedInAt: string }
@@ -30,20 +32,6 @@ export type UserRow = {
   confirmed_count: number
   last_active_at: string | null
   runs: Run[]
-}
-
-const GENDER_LABEL: Record<string, string> = {
-  MALE: 'Male',
-  FEMALE: 'Female',
-  OTHER: 'Other',
-  PREFER_NOT_TO_SAY: 'Prefer not to say',
-}
-
-function calcAge(dob: string | null): number | null {
-  if (!dob) return null
-  const ms = Date.now() - new Date(dob).getTime()
-  if (!Number.isFinite(ms) || ms <= 0) return null
-  return Math.floor(ms / (365.25 * 86_400_000))
 }
 
 type RoleFilter = 'ALL' | 'ADMIN' | 'GUEST'
@@ -71,20 +59,6 @@ const ROLE_STYLES: Record<string, string> = {
 
 function fmtDate(d: string | null) {
   return d ? formatDateNumericIST(d) : '—'
-}
-
-function Avatar({ url, name }: { url: string | null; name: string | null }) {
-  const initial = (name ?? '?').charAt(0).toUpperCase()
-  return (
-    <div className='w-10 h-10 rounded-full overflow-hidden border-2 border-white/15 bg-stride-yellow-accent/20 flex items-center justify-center shrink-0'>
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={name ?? ''} className='w-full h-full object-cover' loading='lazy' fetchPriority='low' />
-      ) : (
-        <span className='text-stride-yellow-accent font-bold text-sm'>{initial}</span>
-      )}
-    </div>
-  )
 }
 
 export function UsersClient({ users }: { users: UserRow[] }) {
@@ -502,11 +476,21 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                       <Fact icon={<Activity size={12} />} label='Last active' value={u.last_active_at ? fmtDate(u.last_active_at) : '—'} />
                       <Fact icon={<UserRound size={12} />} label='Gender' value={u.gender ? GENDER_LABEL[u.gender] ?? u.gender : '—'} />
                       <Fact icon={<Cake size={12} />} label='Age' value={(() => {
-                        const age = calcAge(u.date_of_birth)
+                        const age = ageFromDob(u.date_of_birth)
                         return age !== null ? `${age} years` : '—'
                       })()} />
-                      <Fact icon={<Phone size={12} />} label='Contact' value={u.contact_number ?? '—'} />
-                      <Fact icon={<AlertCircle size={12} />} label='Emergency contact' value={u.emergency_contact_number ?? '—'} />
+                      <Fact
+                        icon={<Phone size={12} />}
+                        label='Contact'
+                        value={u.contact_number ?? '—'}
+                        href={telHref(u.contact_number)}
+                      />
+                      <Fact
+                        icon={<AlertCircle size={12} />}
+                        label='Emergency contact'
+                        value={u.emergency_contact_number ?? '—'}
+                        href={telHref(u.emergency_contact_number)}
+                      />
                       <Fact icon={<MapPin size={12} />} label='Location' value={u.location ?? '—'} />
                       <Fact
                         icon={<span className='text-stride-yellow-accent text-[11px] font-bold'>✓</span>}
@@ -539,20 +523,6 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             </div>
           )
         })}
-      </div>
-    </div>
-  )
-}
-
-function Fact({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className='flex items-start gap-2.5'>
-      <span className='shrink-0 mt-0.5 w-5 h-5 rounded-md bg-white/8 border border-white/10 flex items-center justify-center text-white/45'>
-        {icon}
-      </span>
-      <div className='min-w-0 flex-1'>
-        <p className='text-white/30 text-[10px] font-mono uppercase tracking-widest'>{label}</p>
-        <p className='text-white/75 text-sm truncate'>{value}</p>
       </div>
     </div>
   )
