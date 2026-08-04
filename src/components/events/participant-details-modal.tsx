@@ -37,6 +37,13 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
 const inputBase =
   'bg-white/8 border border-white/20 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/70 focus:bg-white/10 transition-colors w-full'
 
+// iOS Safari sizes `input[type=date]` to its native intrinsic content width and
+// ignores `width: 100%`, which pushes the field out of the modal. Killing the
+// native appearance and clamping the inner value shadow-parts makes it behave
+// like every other text input on the form.
+const dateInputFix =
+  'appearance-none block min-w-0 max-w-full [&::-webkit-date-and-time-value]:text-left [&::-webkit-date-and-time-value]:min-w-0 [&::-webkit-date-and-time-value]:w-full [&::-webkit-datetime-edit]:min-w-0 [&::-webkit-datetime-edit]:p-0'
+
 const checkboxBase = 'mt-0.5 accent-stride-yellow-accent w-4 h-4 shrink-0'
 const inputErrorBorder = 'border-red-500/60 focus:border-red-500/60'
 
@@ -480,7 +487,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             </div>
 
             {/* Date of birth */}
-            <div>
+            <div className='min-w-0'>
               <label className='block text-white/70 text-xs font-medium mb-1.5'>Date of birth *</label>
               <input
                 type='date'
@@ -493,7 +500,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                 }}
                 onBlur={() => { if (dirtyFields.dateOfBirth) setFieldError('dateOfBirth', validateDob(dateOfBirth)) }}
                 max={new Date().toISOString().split('T')[0]}
-                className={`${inputBase} scheme-dark ${fieldErrors.dateOfBirth ? inputErrorBorder : ''}`}
+                className={`${inputBase} scheme-dark ${dateInputFix} ${fieldErrors.dateOfBirth ? inputErrorBorder : ''}`}
                 required
               />
               <FieldError msg={fieldErrors.dateOfBirth} />

@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EventCard } from './event-card'
+
+const DUCKY_URL =
+  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
 
 type Event = {
   id: string
@@ -82,10 +86,21 @@ export function EventsClient({ events }: { events: Event[] }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className='py-20 text-center'
+            className='py-20 flex flex-col items-center text-center'
           >
-            <p className='text-white/30 text-lg font-medium'>No {filter === 'all' ? '' : filter} events right now.</p>
-            <p className='text-white/20 text-sm mt-2'>We run two to three times a week; new dates are posted here.</p>
+            {/* Ducky mascot — same mascot the 404 and loading screens use */}
+            <div className='relative mb-5'>
+              <div className='absolute inset-0 rounded-full bg-stride-yellow-accent/15 blur-2xl scale-90' aria-hidden='true' />
+              <Image
+                src={DUCKY_URL}
+                alt='Ducky the Stride mascot, waiting for the next run'
+                width={200}
+                height={200}
+                className='relative w-32 h-32 sm:w-40 sm:h-40 object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.45)]'
+              />
+            </div>
+            <p className='text-white text-lg font-semibold'>No {filter === 'all' ? '' : filter} events right now.</p>
+            <p className='text-white/70 text-sm mt-2 max-w-xs'>We run two to three times a week; new dates are posted here.</p>
           </motion.div>
         ) : (
           <motion.div
