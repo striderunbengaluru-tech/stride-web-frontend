@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com',
       },
+      // Simple Icons — the one partner logo we don't self-host (Garmin).
+      // Serves genuine vector SVG; the sandbox CSP above still applies to it.
+      {
+        protocol: 'https',
+        hostname: 'cdn.simpleicons.org',
+        pathname: '/**',
+      },
     ],
   },
 };
