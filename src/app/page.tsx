@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     canonical: CANONICAL_URL,
   },
   other: {
-    'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+    'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
   },
 }
 
@@ -109,7 +109,7 @@ const schemaOrg = {
       url: SITE_ORIGIN,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
         width: 400,
         height: 130,
       },

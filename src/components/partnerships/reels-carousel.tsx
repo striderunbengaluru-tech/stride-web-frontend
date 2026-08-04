@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -101,15 +102,16 @@ export default function ReelsCarousel({ reels }: Props) {
                   reel.darkChip ? 'bg-copy-black' : 'bg-white/5'
                 )}>
                   {reel.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={reel.logoUrl}
                       alt=''
+                      width={160}
+                      height={64}
+                      sizes='160px'
                       className={clsx(
                         'h-16 w-auto max-w-[160px] object-contain',
                         !reel.darkChip && 'opacity-15'
                       )}
-                      loading='lazy'
                     />
                   ) : reel.emoji ? (
                     <span className='text-6xl leading-none'>{reel.emoji}</span>
@@ -125,12 +127,13 @@ export default function ReelsCarousel({ reels }: Props) {
                 {/* Partner logo + handle */}
                 <div className='flex items-center gap-2.5 mb-3'>
                   {reel.logoUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={reel.logoUrl}
                       alt=''
+                      width={72}
+                      height={24}
+                      sizes='72px'
                       className='h-6 w-auto max-w-[72px] object-contain brightness-0 invert'
-                      loading='lazy'
                     />
                   )}
                   {reel.emoji && !reel.logoUrl && (

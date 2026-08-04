@@ -888,7 +888,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                   Pay {formatRupees(totalPaise)} securely via
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/razorpay-full-icon.svg'
+                    src='https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/razorpay-full-icon.webp'
                     alt='Razorpay'
                     className='h-5 w-auto'
                   />

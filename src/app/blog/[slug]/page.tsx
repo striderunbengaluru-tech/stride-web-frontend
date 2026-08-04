@@ -74,7 +74,7 @@ export default async function BlogPostPage({ params }: Props) {
       name: 'Stride Run Club',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.svg',
+        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
       },
     },
     url: postUrl,
