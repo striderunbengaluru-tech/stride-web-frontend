@@ -10,7 +10,7 @@ import {
 import type { RunnerRow, EventWithAttendees, Attendee } from '@/app/admin/registrations/page'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { TierBadge } from '@/components/ui/tier-badge'
-import { Avatar, Fact, GENDER_LABEL, telHref } from '@/components/admin/user-facts'
+import { Avatar, Fact, GENDER_LABEL, telHref, mailtoHref } from '@/components/admin/user-facts'
 import { getMilestone } from '@/lib/milestones'
 import { formatMonthIST, formatDayIST } from '@/lib/utils/ist'
 import { formatDateNumericIST, formatTimeIST, formatDateTimeIST } from '@/lib/utils/ist'
@@ -501,7 +501,12 @@ export function RegistrationsClient({ runners, events }: Props) {
                                   {isOpen && (
                                     <div className='px-4 pb-4 pt-1 bg-white/2 border-t border-white/5'>
                                       <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 pt-3'>
-                                        <Fact icon={<Mail size={12} />} label='Email' value={a.email ?? CSV_EMPTY} />
+                                        <Fact
+                                          icon={<Mail size={12} />}
+                                          label='Email'
+                                          value={a.email ?? CSV_EMPTY}
+                                          href={mailtoHref(a.email)}
+                                        />
                                         <Fact icon={<UserRound size={12} />} label='Username' value={a.username ? `@${a.username}` : CSV_EMPTY} />
                                         <Fact icon={<Cake size={12} />} label='Age' value={a.age !== null ? `${a.age} years` : CSV_EMPTY} />
                                         <Fact
