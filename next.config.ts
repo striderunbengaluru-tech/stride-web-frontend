@@ -1,6 +1,47 @@
 import type { NextConfig } from "next";
 
+/**
+ * RFC 8288 `Link` header for the homepage — machine-readable discovery for
+ * agents and crawlers that read headers before they parse HTML.
+ *
+ * Emitted as ONE header with a comma-separated list rather than several `Link`
+ * headers: RFC 8288 defines the field as a list, and a single value sidesteps
+ * any question of how duplicate keys in `headers()` are merged.
+ *
+ * Targets are relative URI-references, resolved by the client against the
+ * request URL (RFC 8288 §3). That keeps staging pointing at staging rather than
+ * hardcoding the production origin into both deployments.
+ *
+ * Relation types are IANA-registered wherever one fits:
+ *   describedby      RFC 8288 — /llms.txt is the prose description of this site
+ *   canonical        RFC 6596
+ *   privacy-policy   RFC 6903
+ *   terms-of-service RFC 6903
+ *   sitemap          NOT registered, but the de-facto token; robots.txt already
+ *                    declares the same two files by the standard mechanism
+ *
+ * Deliberately absent: `api-catalog` and `service-doc`. Stride has no public
+ * API — /api/* is internal and `Disallow`ed in robots.txt — and advertising a
+ * catalog that doesn't exist would send agents at authenticated endpoints.
+ */
+const HOMEPAGE_LINK_HEADER = [
+  '</llms.txt>; rel="describedby"; type="text/plain"',
+  '</>; rel="canonical"',
+  '</sitemap.xml>; rel="sitemap"; type="application/xml"',
+  '</sitemap.txt>; rel="sitemap"; type="text/plain"',
+  '</privacy-policy>; rel="privacy-policy"',
+  '</terms-of-service>; rel="terms-of-service"',
+].join(', ')
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/',
+        headers: [{ key: 'Link', value: HOMEPAGE_LINK_HEADER }],
+      },
+    ]
+  },
   experimental: {
     // Per-icon code splitting for the 60+ files importing lucide-react
     optimizePackageImports: ['lucide-react'],
