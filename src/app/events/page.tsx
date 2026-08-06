@@ -3,7 +3,7 @@ import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { getPublishedEvents } from '@/lib/data/events'
 import { eventRowPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { EventsClient } from '@/components/events/events-client'
-import { UpNextBanner } from '@/components/events/up-next-banner'
+import { UpNextCarousel } from '@/components/events/up-next-carousel'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 
 // The title omits the brand: the root layout's title template appends
@@ -52,6 +52,8 @@ type EventRow = {
   price_paise: number
   cover_url: string | null
   imageUrl: string | null
+  /** Registering is a free application Stride approves. */
+  invite_only: boolean | null
   /**
    * Resolved here rather than in the card: the packages live in a JSON column,
    * and deriving the label server-side keeps the parse off the client and
@@ -61,7 +63,7 @@ type EventRow = {
   isFree: boolean
 }
 
-async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow | null }> {
+async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow[] }> {
   const allEvents = await getPublishedEvents()
 
   const events: EventRow[] = (allEvents ?? []).map(event => {
@@ -76,9 +78,12 @@ async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow
     return { ...event, imageUrl, priceLabel, isFree: priceLabel === FREE_LABEL }
   })
 
-  // The soonest event that hasn't happened yet — events arrive date-ascending.
+  // Every event still ahead of us, soonest first — the carousel rotates through
+  // them, and falls back to a plain banner when there's only one.
   const now = Date.now()
-  const upNext = events.find(e => e.event_date && new Date(e.event_date).getTime() >= now) ?? null
+  const upNext = events
+    .filter(e => e.event_date && new Date(e.event_date).getTime() >= now)
+    .sort((a, b) => new Date(a.event_date!).getTime() - new Date(b.event_date!).getTime())
 
   return { events, upNext }
 }
@@ -103,9 +108,9 @@ export default async function EventsPage() {
           </p>
         </div>
 
-        {upNext && (
+        {upNext.length > 0 && (
           <div className='mb-14'>
-            <UpNextBanner event={upNext} imagePriority />
+            <UpNextCarousel events={upNext} imagePriority />
           </div>
         )}
 

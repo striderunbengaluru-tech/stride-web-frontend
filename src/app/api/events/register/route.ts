@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
+import { CLEARABLE_REGISTRATION_STATUSES } from '@/lib/events/invite-only'
 import {
   isChoiceFieldType, sumPackageAmountPaise,
   type AdditionalField, type EventPackage, type SelectedPackage,
@@ -46,13 +47,19 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, packages, packages_enabled, packages_multi_select')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, invite_only, packages, packages_enabled, packages_multi_select')
     .eq('id', eventId)
     .single()
 
   if (!event || event.status !== 'PUBLISHED') {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
+
+  // Invite-only: this registration is a free application an admin has to
+  // approve. Price and packages are ignored for the duration — see the branch
+  // below and the matching guard inside register_for_event, which reads the
+  // flag under the event-row lock and is the authoritative one.
+  const inviteOnly = event.invite_only === true
 
   // If the event has terms, acceptance is mandatory — defense in depth (UI also gates this).
   if (event.terms_and_conditions && event.terms_and_conditions.trim().length > 0 && acceptedTerms !== true) {
@@ -114,13 +121,17 @@ export async function POST(request: Request) {
   // The client sends package IDS. Every amount is read back from the event's own
   // package list, so a hand-rolled request cannot name its own price. Same
   // whitelist idiom as the choice fields above.
-  let chargeTotalPaise = event.price_paise
+  // Invite-only applications are free, whatever the event's price says. Any
+  // selectedPackageIds that arrive are ignored rather than rejected: a runner
+  // whose page was cached from before the toggle flipped should not hit an
+  // error. The DB discards them too, so this is belt and braces.
+  let chargeTotalPaise = inviteOnly ? 0 : event.price_paise
   let selectedPackagesJson: string | null = null
   // Populated alongside the price resolution so a PACKAGE_FULL outcome can be
   // reported using the name the runner actually saw, not an opaque id.
   let packageNameById = new Map<string, string>()
 
-  if (event.packages_enabled) {
+  if (event.packages_enabled && !inviteOnly) {
     let defined: EventPackage[] = []
     try { defined = JSON.parse(event.packages ?? '[]') as EventPackage[] }
     catch { defined = [] }
@@ -165,22 +176,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Already registered' }, { status: 409 })
   }
 
-  // A leftover PENDING (abandoned Razorpay checkout) or CANCELLED row would trip
-  // the unique(event_id, user_id) constraint and keep holding a reserved seat.
-  // Clear it so the user can retry — only a CONFIRMED registration blocks.
+  // One application per invite-only window. An applicant awaiting a decision
+  // must not be able to re-submit, and a runner who wasn't selected must not be
+  // able to re-apply — but once the mode is switched off they CAN buy a ticket
+  // like anyone else, which is why REJECTED is only blocking while it's on.
+  if (existing?.status === 'APPLIED') {
+    return NextResponse.json({ error: "Your application is already in — we'll be in touch." }, { status: 409 })
+  }
+  if (existing?.status === 'REJECTED' && inviteOnly) {
+    return NextResponse.json({ error: 'Applications for this event are closed for your account.' }, { status: 409 })
+  }
+
+  // A leftover PENDING (abandoned Razorpay checkout), CANCELLED (failed
+  // payment) or REJECTED (not selected, event now open to all) row would trip
+  // the unique(event_id, user_id) constraint. Clear it so the runner can start
+  // again. A positive allowlist rather than `.neq('CONFIRMED')`: when a sixth
+  // status appears later, this no-ops instead of destroying the row.
   if (existing) {
-    const { error: delError } = await adminClient
+    const { data: cleared, error: delError } = await adminClient
       .from('event_registrations')
       .delete()
       .eq('id', existing.id)
-      .neq('status', 'CONFIRMED')
+      .in('status', CLEARABLE_REGISTRATION_STATUSES)
+      .select('id')
     if (delError) {
       console.error('[Register] Failed to clear prior registration', delError)
       return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
     }
+    // Matched nothing: a concurrent request re-inserted, or the row moved to a
+    // status we must not clear. Previously the insert below then violated the
+    // unique constraint and surfaced as a 500.
+    if (!cleared?.length) {
+      return NextResponse.json({ error: 'You already have a registration for this event.' }, { status: 409 })
+    }
   }
 
-  if (event.capacity) {
+  // Applications are unlimited — capacity gates approvals, not applying.
+  if (event.capacity && !inviteOnly) {
     const { count: confirmedCount } = await adminClient
       .from('event_registrations')
       .select('*', { count: 'exact', head: true })
@@ -209,6 +241,41 @@ export async function POST(request: Request) {
     }, { status: 409 })
   }
 
+  // The toggle can flip between the cached event read above and the RPC's
+  // locked read, so BOTH branches below have to tolerate an 'APPLIED' outcome.
+  const appliedResponse = () => {
+    revalidateTag(eventRegsTag(eventId), 'max')
+    revalidatePath(`/events/${event.slug}`)
+    return NextResponse.json({ registrationId, slug: event.slug, applied: true })
+  }
+  const alreadyRegisteredResponse = () =>
+    NextResponse.json({ error: 'You already have a registration for this event.' }, { status: 409 })
+
+  // ── Invite-only: record a free application and stop ────────────────────────
+  // No Razorpay, no confirmation email. The runner hears nothing until an admin
+  // approves them, which is what sends the "You're selected" mail.
+  if (inviteOnly) {
+    const { data: outcome, error: rpcError } = await adminClient.rpc('register_for_event', {
+      p_registration_id: registrationId,
+      p_event_id: eventId,
+      p_user_id: user.id,
+      p_status: 'APPLIED',
+      p_custom_responses: customResponsesJson,
+      p_selected_packages: null,
+      p_amount_due_paise: 0,
+    })
+    if (rpcError) {
+      console.error('[Register] Application failed', rpcError)
+      return NextResponse.json({ error: 'Could not submit your application. Please try again.' }, { status: 500 })
+    }
+    if (outcome === 'ALREADY_REGISTERED') return alreadyRegisteredResponse()
+    if (outcome !== 'APPLIED') {
+      console.error('[Register] Unexpected application outcome', outcome)
+      return NextResponse.json({ error: 'Could not submit your application. Please try again.' }, { status: 500 })
+    }
+    return appliedResponse()
+  }
+
   // Nothing to charge — confirm immediately. Keyed off the resolved total, not
   // event.price_paise, so a ₹0 package (or an all-free selection) skips Razorpay
   // exactly like a free event does. The seat cap is enforced atomically inside
@@ -234,6 +301,9 @@ export async function POST(request: Request) {
     if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
       return packageFullResponse(outcome)
     }
+    // The event became invite-only between our read and the RPC's lock.
+    if (outcome === 'APPLIED') return appliedResponse()
+    if (outcome === 'ALREADY_REGISTERED') return alreadyRegisteredResponse()
     if (outcome !== 'INSERTED') {
       console.error('[Register] Unexpected registration outcome', outcome)
       return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
@@ -273,6 +343,10 @@ export async function POST(request: Request) {
   if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
     return packageFullResponse(outcome)
   }
+  // The event became invite-only between our read and the RPC's lock: the row
+  // was recorded as a free application, so there is nothing to charge.
+  if (outcome === 'APPLIED') return appliedResponse()
+  if (outcome === 'ALREADY_REGISTERED') return alreadyRegisteredResponse()
   if (outcome !== 'INSERTED') {
     console.error('[Register] Unexpected registration outcome', outcome)
     return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })

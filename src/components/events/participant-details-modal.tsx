@@ -150,9 +150,16 @@ type Props = {
    */
   packageSpotsTaken?: Record<string, number>
   razorpayKeyId?: string
+  /** Needed for the redirect — the register route echoes it back, but only on success. */
+  eventSlug?: string
+  /**
+   * Submitting is an APPLICATION, not a registration. No payment, no packages,
+   * and the runner is told plainly that a spot isn't guaranteed.
+   */
+  inviteOnly?: boolean
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packageSpotsTaken = {}, razorpayKeyId }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -240,12 +247,14 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
   // than taken from the pricePaise prop. This total is for DISPLAY only — the
   // server recomputes it from the event's own package rows and never trusts
   // anything the client sends about money.
-  const hasPackages = packagesEnabled && packages.length > 0
+  const hasPackages = !inviteOnly && packagesEnabled && packages.length > 0
   const selectedPackages = hasPackages
     ? packages.filter(pkg => selectedPackageIds.includes(pkg.id))
     : []
   const totalPaise = hasPackages ? sumPackageAmountPaise(selectedPackages) : pricePaise
-  const isPaid = totalPaise > 0
+  // Applying is always free, whatever the event's stored price says — so the
+  // Razorpay script never loads and the button never offers to charge.
+  const isPaid = !inviteOnly && totalPaise > 0
 
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
 
@@ -368,9 +377,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
         return
       }
 
-      // Free event — already confirmed
+      // Free registration, or an invite-only application. Both land on the
+      // confirmation page — it renders the "awaiting a decision" state for an
+      // application and the ticket for a confirmed registration.
       if (!data.razorpayOrderId) {
-        router.push(`/events/${data.slug}/confirmation/${data.registrationId}`)
+        router.push(`/events/${data.slug ?? eventSlug}/confirmation/${data.registrationId}`)
         return
       }
 
@@ -448,8 +459,14 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
             <div className='shrink-0 px-6 pt-6 pb-4 border-b border-white/8'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='min-w-0'>
-                  <h2 className='text-white font-bold text-xl leading-tight'>Tell us about you</h2>
-                  <p className='text-white/50 text-sm mt-1 leading-snug'>Quick details to join the run.</p>
+                  <h2 className='text-white font-bold text-xl leading-tight'>
+                    {inviteOnly ? 'Apply to join' : 'Tell us about you'}
+                  </h2>
+                  <p className='text-white/50 text-sm mt-1 leading-snug'>
+                    {inviteOnly
+                      ? 'Free to apply. Stride reviews every application.'
+                      : 'Quick details to join the run.'}
+                  </p>
                 </div>
                 <button
                   type='button'
@@ -900,10 +917,20 @@ export function ParticipantDetailsModal({ open, onClose, eventId, pricePaise, in
                     className='h-5 w-auto'
                   />
                 </>
+              ) : inviteOnly ? (
+                'Submit application'
               ) : (
                 'Confirm registration'
               )}
             </button>
+
+            {/* Last thing before the button, so nobody submits believing they
+                have a spot. Repeated verbatim on the confirmation page. */}
+            {inviteOnly && (
+              <p className='text-amber-200/80 text-[11px] text-center leading-relaxed'>
+                Submitting does not guarantee your participation — Stride selects the athletes for this run.
+              </p>
+            )}
 
             <p className='text-white/30 text-[11px] text-center'>
               Your details are saved to your Stride profile, so you won&apos;t need to fill this in again.

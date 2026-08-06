@@ -1,13 +1,36 @@
 import { getPublishedEvents, type EventListRow } from '@/lib/data/events'
-import { UpNextBanner, type UpNextEvent } from '@/components/events/up-next-banner'
+import { type UpNextEvent } from '@/components/events/up-next-banner'
+import { UpNextCarousel } from '@/components/events/up-next-carousel'
 import { eventRowPriceLabel } from '@/lib/utils/money'
 
 // Kept out of the component body: reading the clock during render trips
 // react-hooks/purity, and the selection is easier to reason about on its own.
-// Rows arrive date-ascending, so the first future one is the soonest.
-function findUpNext(events: EventListRow[]): EventListRow | undefined {
+// Rows arrive date-ascending, so this stays soonest-first.
+function findUpcoming(events: EventListRow[]): EventListRow[] {
   const now = Date.now()
-  return events.find(e => e.event_date && new Date(e.event_date).getTime() >= now)
+  return events.filter(e => e.event_date && new Date(e.event_date).getTime() >= now)
+}
+
+function toUpNextEvent(row: EventListRow): UpNextEvent {
+  let imageUrl: string | null = row.cover_url ?? null
+  if (row.banner_images) {
+    try {
+      const arr = JSON.parse(row.banner_images) as string[]
+      if (arr[0]) imageUrl = arr[0]
+    } catch { /* keep cover_url fallback */ }
+  }
+
+  return {
+    name: row.name,
+    subtitle: row.subtitle,
+    slug: row.slug,
+    event_date: row.event_date,
+    location: row.location,
+    price_paise: row.price_paise,
+    imageUrl,
+    invite_only: row.invite_only,
+    priceLabel: eventRowPriceLabel(row.price_paise, row.packages, row.packages_enabled),
+  }
 }
 
 // Homepage "Up next" slot. Reads from the same tagged, revalidating cache the
@@ -19,27 +42,8 @@ function findUpNext(events: EventListRow[]): EventListRow | undefined {
 export async function UpNextSection() {
   const events = await getPublishedEvents()
 
-  const next = findUpNext(events)
-  if (!next) return null
-
-  let imageUrl: string | null = next.cover_url ?? null
-  if (next.banner_images) {
-    try {
-      const arr = JSON.parse(next.banner_images) as string[]
-      if (arr[0]) imageUrl = arr[0]
-    } catch { /* keep cover_url fallback */ }
-  }
-
-  const event: UpNextEvent = {
-    name: next.name,
-    subtitle: next.subtitle,
-    slug: next.slug,
-    event_date: next.event_date,
-    location: next.location,
-    price_paise: next.price_paise,
-    imageUrl,
-    priceLabel: eventRowPriceLabel(next.price_paise, next.packages, next.packages_enabled),
-  }
+  const upcoming = findUpcoming(events).map(toUpNextEvent)
+  if (upcoming.length === 0) return null
 
   return (
     <section className='max-w-6xl mx-auto px-4 md:px-6 pt-8 pb-10 md:pt-12 md:pb-16'>
@@ -54,7 +58,7 @@ export async function UpNextSection() {
         </h2>
       </div>
 
-      <UpNextBanner event={event} showLabel={false} />
+      <UpNextCarousel events={upcoming} showLabel={false} />
     </section>
   )
 }

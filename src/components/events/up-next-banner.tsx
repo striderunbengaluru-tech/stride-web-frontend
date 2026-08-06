@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { Calendar, MapPin } from 'lucide-react'
 import { AnimatedNumberCountdown } from '@/components/ui/countdown-number'
 import { formatDateTimeIST } from '@/lib/utils/ist'
+import { InviteOnlyBadge } from './invite-only-badge'
 
 // Featured banner for the soonest upcoming run. Shared by the events page and
 // the homepage's "Up next" section so the two can't drift apart.
@@ -23,6 +24,8 @@ export type UpNextEvent = {
    * package event, since packages leave that column at 0.
    */
   priceLabel: string
+  /** Registering is a free application Stride approves. */
+  invite_only?: boolean | null
 }
 
 type Props = {
@@ -59,11 +62,14 @@ export function UpNextBanner({ event, imagePriority = false, showLabel = true }:
 
         {/* Content */}
         <div className='p-6 sm:p-8 flex flex-col justify-center gap-4 md:order-1'>
-          {showLabel && (
-            <p className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-[0.25em]'>
-              Up next
-            </p>
-          )}
+          <div className='flex items-center gap-3 flex-wrap'>
+            {showLabel && (
+              <p className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-[0.25em]'>
+                Up next
+              </p>
+            )}
+            {event.invite_only && <InviteOnlyBadge size='sm' />}
+          </div>
           <div>
             <h2 className='text-2xl sm:text-3xl font-bold text-white leading-tight line-clamp-2'>
               {event.name}

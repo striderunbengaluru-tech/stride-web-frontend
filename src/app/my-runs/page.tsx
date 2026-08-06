@@ -70,41 +70,65 @@ export default async function MyRunsPage() {
   const eventsById = new Map((eventData ?? []).map(e => [e.id, e as EventRow]))
   const now = new Date()
 
-  const toRun = (r: RegRow, e: EventRow): MyRun => ({
-    id: e.id,
-    name: e.name,
-    slug: e.slug,
-    eventDate: e.event_date,
-    location: e.location,
-    bannerUrl: firstBanner(e.banner_images),
-    // The card labels this "paid", so it has to be what THIS registration cost,
-    // not the event's list price — with packages the two differ, and
-    // events.price_paise is ignored entirely.
-    pricePaise: r.amount_paid_paise ?? r.amount_due_paise ?? e.price_paise ?? 0,
-    checkedIn: !!r.checked_in_at,
-    // Rows link to the booking confirmation (the member's receipt) — only
-    // confirmed registrations have one, others fall back to the event page.
-    confirmationRegId: r.status === 'CONFIRMED' ? r.id : null,
-  })
+  const toRun = (r: RegRow, e: EventRow): MyRun => {
+    const isPastEvent = !!e.event_date && new Date(e.event_date) < now
+    // An application that was never decided before the run happened reads as
+    // "Not selected" too — from the runner's side it is the same outcome, and
+    // leaving it as "awaiting" forever would be a lie.
+    const state: MyRun['state'] =
+      r.status === 'REJECTED' ? 'rejected'
+      : r.status === 'APPLIED' ? (isPastEvent ? 'rejected' : 'applied')
+      : 'active'
+
+    return {
+      id: e.id,
+      name: e.name,
+      slug: e.slug,
+      eventDate: e.event_date,
+      location: e.location,
+      bannerUrl: firstBanner(e.banner_images),
+      // The card labels this "paid", so it has to be what THIS registration
+      // cost, not the event's list price — with packages the two differ, and
+      // events.price_paise is ignored entirely.
+      pricePaise: r.amount_paid_paise ?? r.amount_due_paise ?? e.price_paise ?? 0,
+      checkedIn: !!r.checked_in_at,
+      state,
+      // Rows link to the member's receipt. A rejected runner is deliberately
+      // sent to the EVENT page instead: if the run is now open to everyone,
+      // that's where they can buy a ticket.
+      confirmationRegId:
+        r.status === 'CONFIRMED' || r.status === 'APPLIED' ? r.id : null,
+    }
+  }
 
   // Pair each registration with its event (dropping any orphaned rows).
   const paired = regs
     .map(r => ({ reg: r, event: eventsById.get(r.event_id) }))
     .filter((p): p is { reg: RegRow; event: EventRow } => !!p.event)
 
-  // Upcoming = active (non-cancelled) registration for an event still ahead.
+  // Upcoming = a live registration or a pending application for a run still
+  // ahead. An allowlist, not `!== 'CANCELLED'`: a REJECTED row would otherwise
+  // render here as an ordinary upcoming run.
+  const UPCOMING_STATUSES = new Set(['CONFIRMED', 'PENDING', 'APPLIED'])
   const upcoming: MyRun[] = paired
-    .filter(({ reg }) => reg.status !== 'CANCELLED')
+    .filter(({ reg }) => UPCOMING_STATUSES.has(reg.status ?? ''))
     .filter(({ event }) => event.event_date && new Date(event.event_date) >= now)
     .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (a.eventDate ?? '').localeCompare(b.eventDate ?? ''))
 
-  // Past = runs the member actually checked in to. Test events are left out:
-  // checking in to one doesn't credit runs_completed (see @/lib/check-in), so
-  // counting it as a completed run here would disagree with the member's own
-  // total and tier. Their upcoming registration for it still shows above.
+  // Past = runs the member actually checked in to, plus every application that
+  // didn't come off. Test events are left out of the checked-in half: checking
+  // in to one doesn't credit runs_completed (see @/lib/check-in), so counting
+  // it as a completed run here would disagree with the member's own total and
+  // tier. A rejected application still shows — otherwise the outcome the
+  // runner is waiting on simply vanishes.
   const past: MyRun[] = paired
-    .filter(({ reg, event }) => reg.checked_in_at && !event.is_test_event)
+    .filter(({ reg, event }) => {
+      if (reg.status === 'REJECTED') return true
+      // Undecided when the run happened — same outcome, shown the same way.
+      if (reg.status === 'APPLIED') return !!event.event_date && new Date(event.event_date) < now
+      return !!reg.checked_in_at && !event.is_test_event
+    })
     .map(({ reg, event }) => toRun(reg, event))
     .sort((a, b) => (b.eventDate ?? '').localeCompare(a.eventDate ?? ''))
 

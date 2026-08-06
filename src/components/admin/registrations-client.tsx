@@ -2,11 +2,14 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar,
   Download, Loader2, Phone, AlertCircle, MapPin, Cake, UserRound, Mail, CalendarPlus, Ticket,
+  Star, Check, X, Hourglass,
 } from 'lucide-react'
+import { approveRegistrationsAction, rejectRegistrationsAction } from '@/lib/actions/admin'
 import type { RunnerRow, EventWithAttendees, Attendee } from '@/app/admin/registrations/page'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { TierBadge } from '@/components/ui/tier-badge'
@@ -34,7 +37,13 @@ const STATUS_PILL: Record<string, string> = {
   CONFIRMED: 'bg-green-500/15 text-green-400',
   PENDING:   'bg-yellow-500/15 text-yellow-400',
   CANCELLED: 'bg-red-500/15 text-red-400',
+  // Invite-only. Without these two the pill renders unstyled.
+  APPLIED:   'bg-amber-400/15 text-amber-300',
+  REJECTED:  'bg-white/8 text-white/40',
 }
+
+/** Only an application awaiting a decision can be approved or rejected. */
+const DECIDABLE_STATUS = 'APPLIED'
 
 function fmtDate(d: string | null) {
   return d ? formatDateNumericIST(d) : '—'
@@ -108,6 +117,7 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
 }
 
 export function RegistrationsClient({ runners, events }: Props) {
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>('runners')
   const [search, setSearch] = useState('')
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
@@ -117,6 +127,86 @@ export function RegistrationsClient({ runners, events }: Props) {
   const [exportingEventId, setExportingEventId] = useState<string | null>(null)
   /** '' = no package filter. Only applies to the By event tab. */
   const [packageFilter, setPackageFilter] = useState('')
+
+  // ── Bulk approve / reject ──────────────────────────────────────────────────
+  // Selection is scoped to the ONE expanded event and cleared whenever that
+  // changes: the approval budget is per event, so a selection spanning two of
+  // them could not be capacity-capped correctly.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [decisionPending, setDecisionPending] = useState<'approve' | 'reject' | null>(null)
+
+  function openEvent(eventId: string | null) {
+    setExpandedEventId(eventId)
+    setExpandedAttendeeId(null)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelected(registrationId: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(registrationId)) next.delete(registrationId)
+      else next.add(registrationId)
+      return next
+    })
+  }
+
+  async function decide(event: EventWithAttendees, action: 'approve' | 'reject') {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+
+    setDecisionPending(action)
+    try {
+      const result = action === 'approve'
+        ? await approveRegistrationsAction(event.id, ids)
+        : await rejectRegistrationsAction(event.id, ids)
+
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+
+      const { decided, alreadyDecided, skippedCapacity, capacity, confirmedAfter } = result
+      const noun = decided.length === 1 ? 'applicant' : 'applicants'
+
+      if (decided.length === 0) {
+        toast.error(
+          skippedCapacity.length > 0
+            ? `Nothing approved — the event is full${capacity != null ? ` (${confirmedAfter}/${capacity})` : ''}.`
+            : 'Nothing to decide — those applications were already handled.',
+        )
+        return
+      }
+
+      // Only the clauses that actually happened, so a clean run reads as one
+      // short sentence rather than a report with three empty columns.
+      const notes = [
+        skippedCapacity.length > 0
+          ? `${skippedCapacity.length} skipped — the event is full${capacity != null ? ` (${confirmedAfter}/${capacity})` : ''}.`
+          : null,
+        alreadyDecided.length > 0
+          ? `${alreadyDecided.length} had already been decided by someone else.`
+          : null,
+        action === 'approve' ? 'Selection emails are on their way.' : null,
+      ].filter(Boolean).join(' ')
+
+      const total = decided.length + skippedCapacity.length
+      const headline = action === 'approve'
+        ? (skippedCapacity.length > 0
+            ? `Approved ${decided.length} of ${total}.`
+            : `Approved ${decided.length} ${noun}.`)
+        : `Rejected ${decided.length} ${noun}.`
+
+      toast.success(headline, notes ? { description: notes } : undefined)
+      setSelectedIds(new Set())
+      // The rows come from a server component, so the new statuses only appear
+      // after the route re-renders with the caches the action just purged.
+      router.refresh()
+    } catch {
+      toast.error(`Could not ${action} those applications. Please try again.`)
+    } finally {
+      setDecisionPending(null)
+    }
+  }
 
   async function exportAttendees(event: EventWithAttendees) {
     if (event.attendees.length === 0) {
@@ -313,12 +403,22 @@ export function RegistrationsClient({ runners, events }: Props) {
                 const isExpanded = expandedEventId === event.id
                 const isPast = event.event_date ? new Date(event.event_date) < new Date() : false
 
+                // Applications this admin can act on. Confirmed, cancelled and
+                // already-rejected rows are deliberately not selectable —
+                // un-approving would strand a sent ticket and a wallet pass.
+                const decidableIds = event.attendees
+                  .filter(a => a.status === DECIDABLE_STATUS)
+                  .map(a => a.registration_id)
+                const selectedHere = decidableIds.filter(id => selectedIds.has(id)).length
+                const allDecidableSelected = decidableIds.length > 0 && selectedHere === decidableIds.length
+                const someDecidableSelected = selectedHere > 0
+
                 return (
                   <div key={event.id} className='bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-colors'>
 
                     {/* Event header — clickable to expand */}
                     <button
-                      onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
+                      onClick={() => openEvent(isExpanded ? null : event.id)}
                       className='w-full text-left'
                     >
                       <div className='flex items-center gap-3 px-4 py-3.5'>
@@ -341,6 +441,12 @@ export function RegistrationsClient({ runners, events }: Props) {
                         <div className='flex-1 min-w-0'>
                           <div className='flex items-center gap-2 flex-wrap'>
                             <p className='text-white font-semibold text-sm line-clamp-1'>{event.name}</p>
+                            {event.invite_only && (
+                              <span className='inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-stride-yellow-accent/15 text-stride-yellow-accent'>
+                                <Star size={9} className='fill-stride-yellow-accent' aria-hidden='true' />
+                                INVITE ONLY
+                              </span>
+                            )}
                             {isPast && (
                               <span className='text-[10px] px-1.5 py-0.5 rounded bg-white/8 text-white/30'>Completed</span>
                             )}
@@ -357,6 +463,12 @@ export function RegistrationsClient({ runners, events }: Props) {
                               <Users size={9} />
                               {event.confirmed_count} confirmed
                             </span>
+                            {event.applied_count > 0 && (
+                              <span className='flex items-center gap-1 text-amber-300 text-xs font-semibold'>
+                                <Hourglass size={9} />
+                                {event.applied_count} awaiting review
+                              </span>
+                            )}
                             <span className='text-green-400 text-xs flex items-center gap-1'>
                               <CheckCircle size={9} />
                               {event.checked_in_count} checked in
@@ -415,6 +527,53 @@ export function RegistrationsClient({ runners, events }: Props) {
                           </button>
                         </div>
 
+                        {/* Application review bar. Only appears while there is
+                            something decidable, so an ordinary paid event's
+                            attendee list is untouched. */}
+                        {decidableIds.length > 0 && (
+                          <div className='flex flex-wrap items-center gap-3 px-4 py-3 border-b border-white/8 bg-amber-400/5'>
+                            <label className='flex items-center gap-2 cursor-pointer select-none min-h-11'>
+                              <input
+                                type='checkbox'
+                                checked={allDecidableSelected}
+                                ref={el => { if (el) el.indeterminate = someDecidableSelected && !allDecidableSelected }}
+                                onChange={() => setSelectedIds(new Set(allDecidableSelected ? [] : decidableIds))}
+                                className='accent-stride-yellow-accent w-4 h-4 shrink-0'
+                              />
+                              <span className='text-white/60 text-xs'>
+                                Select all {decidableIds.length} awaiting review
+                              </span>
+                            </label>
+
+                            {selectedIds.size > 0 && (
+                              <div className='flex items-center gap-2 ml-auto'>
+                                <button
+                                  type='button'
+                                  onClick={() => decide(event, 'approve')}
+                                  disabled={decisionPending !== null}
+                                  className='inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-md bg-green-500/20 border border-green-500/40 text-green-300 text-xs font-semibold hover:bg-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                >
+                                  {decisionPending === 'approve'
+                                    ? <Loader2 size={13} className='animate-spin' aria-hidden='true' />
+                                    : <Check size={13} aria-hidden='true' />}
+                                  Approve ({selectedIds.size})
+                                </button>
+                                <button
+                                  type='button'
+                                  onClick={() => decide(event, 'reject')}
+                                  disabled={decisionPending !== null}
+                                  className='inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-md bg-white/8 border border-white/20 text-white/70 text-xs font-semibold hover:bg-white/12 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                                >
+                                  {decisionPending === 'reject'
+                                    ? <Loader2 size={13} className='animate-spin' aria-hidden='true' />
+                                    : <X size={13} aria-hidden='true' />}
+                                  Reject ({selectedIds.size})
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {event.attendees.length === 0 ? (
                           <p className='text-white/30 text-sm px-4 py-5 text-center'>No registrations for this event.</p>
                         ) : (
@@ -428,6 +587,24 @@ export function RegistrationsClient({ runners, events }: Props) {
                               return (
                                 <div key={a.registration_id}>
                                   <div className='flex items-center gap-3 px-4 py-3 hover:bg-white/2'>
+
+                                    {/* Selection — only for a row that can
+                                        actually be decided. A spacer keeps the
+                                        avatars in one column when some rows in
+                                        the list are already decided. */}
+                                    {decidableIds.length > 0 && (
+                                      a.status === DECIDABLE_STATUS ? (
+                                        <input
+                                          type='checkbox'
+                                          checked={selectedIds.has(a.registration_id)}
+                                          onChange={() => toggleSelected(a.registration_id)}
+                                          aria-label={`Select ${a.full_name ?? 'applicant'} for approval or rejection`}
+                                          className='accent-stride-yellow-accent w-4 h-4 shrink-0 cursor-pointer'
+                                        />
+                                      ) : (
+                                        <span className='w-4 shrink-0' aria-hidden='true' />
+                                      )
+                                    )}
 
                                     {/* Avatar */}
                                     <Avatar url={a.avatar_url} name={a.full_name} size='sm' />

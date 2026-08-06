@@ -18,6 +18,8 @@ type Event = {
   price_paise: number
   cover_url: string | null
   imageUrl: string | null
+  /** Registering is a free application Stride approves. Drives the card badge. */
+  invite_only: boolean | null
   /** Resolved on the server so package events read "From ₹X", not "Free". */
   priceLabel: string
   isFree: boolean
@@ -46,9 +48,20 @@ export function EventsClient({ events }: { events: Event[] }) {
   const now = useMemo(() => new Date(), [])
 
   const filtered = useMemo(() => {
-    if (filter === 'upcoming') return events.filter(e => !e.event_date || new Date(e.event_date) >= now)
-    if (filter === 'past') return events.filter(e => !!e.event_date && new Date(e.event_date) < now)
-    return events
+    // Undated events count as upcoming, and sort after the scheduled ones —
+    // "sometime soon" belongs below a run with a date on it, not above.
+    const time = (e: Event) => (e.event_date ? new Date(e.event_date).getTime() : Number.POSITIVE_INFINITY)
+    const nowMs = now.getTime()
+
+    const upcoming = events.filter(e => time(e) >= nowMs).sort((a, b) => time(a) - time(b))
+    // Past runs read newest-first: last week's run is worth more to a visitor
+    // than one from two years ago.
+    const past = events.filter(e => time(e) < nowMs).sort((a, b) => time(b) - time(a))
+
+    if (filter === 'upcoming') return upcoming
+    if (filter === 'past') return past
+    // "All" leads with what's still to come and pushes the archive to the end.
+    return [...upcoming, ...past]
   }, [events, filter, now])
 
   const counts = useMemo(() => ({
@@ -122,6 +135,7 @@ export function EventsClient({ events }: { events: Event[] }) {
                   priceLabel={event.priceLabel}
                   isFree={event.isFree}
                   coverUrl={event.imageUrl}
+                  inviteOnly={event.invite_only ?? false}
                 />
               </motion.div>
             ))}

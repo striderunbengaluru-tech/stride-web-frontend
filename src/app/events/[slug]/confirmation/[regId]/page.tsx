@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
-import { CheckCircle2, MapPin, ArrowRight } from 'lucide-react'
+import { CheckCircle2, MapPin, ArrowRight, Hourglass, XCircle, TriangleAlert } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
@@ -18,6 +18,7 @@ import { BLOG_POSTS } from '@/content/blog/index'
 import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
 import { priceLabel as priceOf } from '@/lib/utils/money'
 import { sumPackageAmountPaise, type SelectedPackage } from '@/types/event'
+import { VIEWABLE_REGISTRATION_STATUSES, APPLICATION_DISCLAIMER } from '@/lib/events/invite-only'
 
 // Re-fetch on every visit. Confirmation state is per-user, not cacheable, and
 // we want to always reflect the live registration row.
@@ -80,9 +81,20 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
       .single(),
   ])
 
-  if (!registration || registration.user_id !== userId || registration.status !== 'CONFIRMED') {
+  // CONFIRMED, plus the two invite-only states: an application awaiting a
+  // decision has a receipt worth showing, and a rejected one needs somewhere to
+  // land other than a 404. PENDING (checkout in flight) and CANCELLED (payment
+  // failed) still 404 — there is nothing to show for either.
+  if (!registration || registration.user_id !== userId
+      || !VIEWABLE_REGISTRATION_STATUSES.has(registration.status)) {
     notFound()
   }
+
+  const isApplication = registration.status === 'APPLIED'
+  const isRejected = registration.status === 'REJECTED'
+  // Gates everything that only means something once a spot is actually held:
+  // the wallet passes, the calendar entry, the Stride Tag ticket, the receipt.
+  const isConfirmed = registration.status === 'CONFIRMED'
 
   // PostgREST returns a to-one embed as an object, but normalise defensively so
   // a relationship-shape surprise can't crash the page.
@@ -152,21 +164,75 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         {/* Top sections — narrower for comfortable reading width */}
         <div className='max-w-2xl mx-auto px-5 sm:px-8 space-y-7'>
 
-        {/* ── Success badge ── */}
+        {/* ── Header badge — green tick only when a spot is actually held ── */}
         <Reveal>
           <div className='flex flex-col items-center text-center'>
             <div className='relative inline-flex items-center justify-center mb-5'>
-              <div className='absolute w-20 h-20 rounded-full bg-green-500/12 animate-ping' style={{ animationDuration: '2.6s' }} aria-hidden='true' />
-              <div className='relative w-16 h-16 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center'>
-                <CheckCircle2 className='text-green-400' size={28} strokeWidth={2.5} />
+              {/* The ping halo is a celebration. An application hasn't been
+                  granted anything yet, and a rejection certainly hasn't. */}
+              {isConfirmed && (
+                <div className='absolute w-20 h-20 rounded-full bg-green-500/12 animate-ping' style={{ animationDuration: '2.6s' }} aria-hidden='true' />
+              )}
+              <div className={`relative w-16 h-16 rounded-full flex items-center justify-center border ${
+                isConfirmed ? 'bg-green-500/20 border-green-500/40'
+                : isRejected ? 'bg-white/8 border-white/20'
+                : 'bg-stride-yellow-accent/15 border-stride-yellow-accent/40'
+              }`}>
+                {isConfirmed ? (
+                  <CheckCircle2 className='text-green-400' size={28} strokeWidth={2.5} />
+                ) : isRejected ? (
+                  <XCircle className='text-white/50' size={28} strokeWidth={2.5} />
+                ) : (
+                  <Hourglass className='text-stride-yellow-accent' size={26} strokeWidth={2.5} />
+                )}
               </div>
             </div>
-            <h1 className='text-3xl sm:text-4xl font-bold text-white leading-tight'>Booking confirmed</h1>
+            <h1 className='text-3xl sm:text-4xl font-bold text-white leading-tight'>
+              {isConfirmed ? 'Booking confirmed'
+                : isRejected ? 'Not selected for this run'
+                : 'Application submitted'}
+            </h1>
             <p className='text-white/45 text-sm mt-2'>
-              Confirmation code <span className='font-mono text-white/70 ml-1'>STRIDE-{registration.id.slice(0, 8).toUpperCase()}</span>
+              {isRejected
+                ? 'Thank you for applying — we hope to see you at the next one.'
+                : <>
+                    {isApplication ? 'Application code' : 'Confirmation code'}
+                    <span className='font-mono text-white/70 ml-1'>STRIDE-{registration.id.slice(0, 8).toUpperCase()}</span>
+                  </>}
             </p>
           </div>
         </Reveal>
+
+        {/* ── The application disclaimer. The single most important thing on
+             this page for an applicant: without it, "Application submitted" on
+             a page that otherwise looks like a ticket reads as a confirmed
+             spot. Same wording as the modal's pre-submit line. ── */}
+        {isApplication && (
+          <Reveal>
+            <div className='rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4'>
+              <p className='flex items-center gap-2 text-amber-200 text-xs font-bold font-mono uppercase tracking-widest'>
+                <TriangleAlert size={13} aria-hidden='true' />
+                Important
+              </p>
+              <p className='text-white/85 text-sm leading-relaxed mt-2'>
+                {APPLICATION_DISCLAIMER}
+              </p>
+              <p className='text-white/50 text-xs leading-relaxed mt-2'>
+                Selection is at Stride Run Club&apos;s discretion. Your ticket and wallet passes appear here once you&apos;re approved.
+              </p>
+            </div>
+          </Reveal>
+        )}
+
+        {isRejected && (
+          <Reveal>
+            <div className='rounded-2xl border border-white/15 bg-white/5 px-5 py-4'>
+              <p className='text-white/70 text-sm leading-relaxed'>
+                You weren&apos;t selected for this run. If registration is now open to everyone, you can still grab a spot from the event page.
+              </p>
+            </div>
+          </Reveal>
+        )}
 
         {/* ── A note from Stride — field only, no label, sits right under the header ── */}
         {event.confirmation_text && event.confirmation_text.trim() && (
@@ -245,7 +311,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
             never from the client. Rendered whenever there's either a payment or a
             package to show: a ₹0 package confirms without a payment, so keying
             this off amount_paid_paise alone would hide the package they chose. ── */}
-        {(registration.amount_paid_paise != null || selectedPackages.length > 0) && (
+        {isConfirmed && (registration.amount_paid_paise != null || selectedPackages.length > 0) && (
           <Reveal>
             {/* backdrop-blur is softened on mobile: backdrop-filter forces the
                 browser to re-render and re-filter everything behind the element,
@@ -282,7 +348,12 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
           </Reveal>
         )}
 
-        {/* ── Here's your next steps — wallet, calendar, share ── */}
+        {/* ── Here's your next steps — wallet, calendar, share.
+             The whole block is gated on a held spot: a wallet pass or a
+             calendar entry for a run you may not be selected for is worse than
+             no affordance at all. It appears the moment an admin approves. ── */}
+        {isConfirmed && (
+        <>
         <Reveal>
           <h2 className='text-white font-bold text-xl leading-tight pt-2'>Here&apos;s your next steps</h2>
         </Reveal>
@@ -350,6 +421,21 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
             userName={profile?.full_name ?? claims.email ?? ''}
           />
         </Reveal>
+        </>
+        )}
+
+        {/* Applicants and rejected runners get one route forward instead. */}
+        {!isConfirmed && (
+          <Reveal>
+            <Link
+              href={`/events/${event.slug}`}
+              className='flex items-center justify-center gap-2 w-full min-h-11 rounded-md bg-white/10 backdrop-blur-md border border-white/15 hover:border-stride-yellow-accent/50 transition-colors text-white font-semibold text-sm px-5 py-3'
+            >
+              Back to the event
+              <ArrowRight size={14} aria-hidden='true' />
+            </Link>
+          </Reveal>
+        )}
 
         </div>
         {/* End narrow column */}

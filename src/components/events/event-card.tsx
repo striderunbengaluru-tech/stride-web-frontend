@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { MapPin } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { formatDateShortIST, formatTimeIST, istCalendarDaysUntil } from '@/lib/utils/ist'
+import { InviteOnlyBadge } from './invite-only-badge'
 
 type EventCardProps = {
   name: string
@@ -22,6 +23,8 @@ type EventCardProps = {
   priceLabel: string
   isFree: boolean
   coverUrl: string | null
+  /** Renders the shimmering INVITE ONLY badge over the poster. */
+  inviteOnly?: boolean
 }
 
 /**
@@ -77,7 +80,7 @@ function useCountdown(eventDate: Date | null): string | null {
   return text
 }
 
-export function EventCard({ name, subtitle, slug, eventDate, location, priceLabel, isFree, coverUrl }: EventCardProps) {
+export function EventCard({ name, subtitle, slug, eventDate, location, priceLabel, isFree, coverUrl, inviteOnly = false }: EventCardProps) {
   const countdown = useCountdown(eventDate)
   const isPast = eventDate ? eventDate < new Date() : false
 
@@ -99,17 +102,18 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
+      className='h-full'
     >
       <Link
         href={`/events/${slug}`}
-        className='group block rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
+        className='group flex flex-col h-full rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
       >
         {/* Image — the frame takes the poster's own ratio once measured, so
             object-contain has nothing left to letterbox and the card shrinks to
             the artwork instead of padding it out with dead space. */}
         <div
           style={{ aspectRatio: String(ratio ?? DEFAULT_POSTER_RATIO) }}
-          className='relative bg-white/5 overflow-hidden'
+          className='relative shrink-0 bg-white/5 overflow-hidden'
         >
           {coverUrl ? (
             <>
@@ -150,10 +154,19 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
           {isPast && (
             <div className='absolute inset-0 bg-black/20' />
           )}
+
+          {/* Scarcity marker, over the artwork where it reads from across a
+              grid. Above the past overlay so it survives the dimming. */}
+          {inviteOnly && (
+            <div className='absolute top-2.5 left-2.5 z-10'>
+              <InviteOnlyBadge size='sm' />
+            </div>
+          )}
         </div>
 
-        {/* Card body */}
-        <div className='px-4 py-4'>
+        {/* Card body — grows to fill the grid row so every card in a row ends
+            at the same edge, whatever its poster ratio or title length. */}
+        <div className='flex flex-col flex-1 px-4 py-4'>
           {/* Date line + countdown */}
           {(dateLabel || countdown) && (
             <div className='flex items-center gap-2 mb-1.5'>
@@ -170,8 +183,10 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
             </div>
           )}
 
-          {/* Name */}
-          <h2 className='text-white font-bold text-xl leading-snug line-clamp-2 group-hover:text-stride-yellow-accent transition-colors duration-200'>
+          {/* Name — always occupies two lines' worth of space (text-xl at
+              leading-snug = 1.71875rem a line) so a one-line title doesn't pull
+              everything below it up relative to its neighbours. */}
+          <h2 className='text-white font-bold text-xl leading-snug line-clamp-2 min-h-13.75 group-hover:text-stride-yellow-accent transition-colors duration-200'>
             {name}
           </h2>
 
@@ -180,8 +195,9 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
             <p className='text-white/40 text-sm mt-1 line-clamp-1'>{subtitle}</p>
           )}
 
-          {/* Location + price row */}
-          <div className='flex items-center justify-between mt-2.5 gap-2'>
+          {/* Location + price row — pinned to the bottom of the body so it
+              lines up across the row even when a card has no subtitle. */}
+          <div className='flex items-center justify-between mt-auto pt-2.5 gap-2'>
             {location ? (
               <span className='flex items-center gap-1.5 text-white/45 text-sm min-w-0'>
                 <MapPin size={12} className='shrink-0 text-white/30' />

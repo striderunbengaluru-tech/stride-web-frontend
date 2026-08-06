@@ -88,6 +88,11 @@ export const eventSchema = z.object({
   // its status. Used to exercise features against real data without the live
   // site showing it.
   isTestEvent: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Registering becomes a free application an admin approves. Price and
+  // packages are ignored while it's on but stay on the row, so the price rule
+  // in superRefine still applies — the admin states the price the event will
+  // charge the moment this is switched back off.
+  inviteOnly: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),

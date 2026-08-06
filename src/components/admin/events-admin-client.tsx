@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert } from 'lucide-react'
+import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert, Star } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
@@ -19,6 +19,9 @@ export type AdminEventRow = {
   pricePaise: number
   capacity: number | null
   confirmedCount: number
+  /** Invite-only applications still awaiting a decision. */
+  appliedCount: number
+  inviteOnly: boolean
   /** Resolved server-side so a package event reads "From ₹X", not "Free". */
   priceLabel: string
   isFree: boolean
@@ -26,6 +29,10 @@ export type AdminEventRow = {
   spotsMismatch: boolean
   thumbUrl: string | null
   createdAt: string
+  updatedAt: string
+  /** Display-name snapshots. Null on events created before attribution existed. */
+  createdBy: string | null
+  updatedBy: string | null
 }
 
 type StatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'CANCELLED'
@@ -45,6 +52,12 @@ function fmtDate(d: string | null) {
 
 function fmtTime(d: string | null) {
   return d ? formatTimeIST(d) : null
+}
+
+/** "06/08/2026, 04:20 pm" — the attribution rows want both halves in one line. */
+function fmtDateTime(d: string | null) {
+  if (!d) return '—'
+  return `${formatDateNumericIST(d)}, ${formatTimeIST(d)}`
 }
 
 function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: number | null }) {
@@ -228,6 +241,23 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       {isPast && event.status === 'PUBLISHED' && (
                         <span className='text-[10px] px-2 py-0.5 rounded-md bg-white/8 text-white/30 shrink-0'>Completed</span>
                       )}
+                      {event.inviteOnly && (
+                        <span
+                          title='Invite-only: registering is a free application you approve in Registrations.'
+                          className='flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-stride-yellow-accent/15 text-stride-yellow-accent shrink-0'
+                        >
+                          <Star size={10} className='fill-stride-yellow-accent' aria-hidden='true' />
+                          INVITE ONLY
+                        </span>
+                      )}
+                      {event.appliedCount > 0 && (
+                        <span
+                          title='Applications waiting on a decision. Approve or reject them in Registrations → by event.'
+                          className='text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 shrink-0'
+                        >
+                          {event.appliedCount} AWAITING
+                        </span>
+                      )}
                       {event.spotsMismatch && (
                         <span
                           title='Package spots don’t add up to capacity. Registration still works, but you’ll need to fix this before you can save the event again.'
@@ -354,9 +384,17 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Shareable link</p>
                       <p className='text-white/40 font-mono break-all'>{SITE_URL}/events/{event.slug}/</p>
                     </div>
+                    {/* Attribution. Events created before these columns existed
+                        carry NULL — an em dash, never a guessed actor. */}
                     <div>
-                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Created</p>
-                      <p className='text-white/40'>{fmtDate(event.createdAt)}</p>
+                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Created by</p>
+                      <p className='text-white/60'>{event.createdBy ?? '—'}</p>
+                      <p className='text-white/30 mt-0.5'>{fmtDateTime(event.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Last modified by</p>
+                      <p className='text-white/60'>{event.updatedBy ?? '—'}</p>
+                      <p className='text-white/30 mt-0.5'>{fmtDateTime(event.updatedAt)}</p>
                     </div>
                     <div className='sm:col-span-2 flex gap-2 pt-1'>
                       <Link
