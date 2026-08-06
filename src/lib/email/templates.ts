@@ -418,7 +418,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
             <td style="padding:32px 32px 0;">
               <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">${
                 isSelection
-                  ? `Hey ${firstName(fullName)}, your application for <strong style="font-weight:bold;">${escapeHtml(eventName)}</strong> has been approved and your spot is now held. See you out there.`
+                  ? `Hey ${firstName(fullName)}, your application for <strong style="font-weight:bold;">${escapeHtml(eventName)}</strong> has been approved and your spot is now confirmed. See you there!`
                   : `Hey ${firstName(fullName)}, your spot is locked in. Bring your energy and we&#39;ll bring the crew.`
               }</p>
             </td>
