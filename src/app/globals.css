@@ -72,6 +72,30 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 6px 1px var(--color-stride-yellow-accent);
 }
 
+/* ── Utility: iOS-safe date / datetime inputs ──
+   iOS Safari sizes `input[type=date]` and `input[type=datetime-local]` to their
+   native intrinsic content width and ignores `width: 100%`, so the field pushes
+   out of its container and out of the page. Killing the native appearance and
+   clamping the inner shadow parts makes them behave like any other text input.
+   Applied to the registration modal's date of birth and the admin event form's
+   start/end datetimes. */
+.date-input-fix {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+.date-input-fix::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+  width: 100%;
+}
+.date-input-fix::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
+}
+
 /* ── Utility: hide scrollbar while keeping scroll functionality ── */
 .scrollbar-hide {
   -ms-overflow-style: none;

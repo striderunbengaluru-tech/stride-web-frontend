@@ -1369,6 +1369,9 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
 const inputBase =
   'bg-white/8 border border-white/20 rounded-lg px-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/70 focus:bg-white/10 transition-colors w-full'
 
+/** Input types that need the iOS overflow fix — see `.date-input-fix`. */
+const TEMPORAL_INPUT_TYPES = new Set(['date', 'datetime-local', 'time', 'month', 'week'])
+
 function Widget({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <section className='bg-white/4 border border-white/10 rounded-2xl px-4 py-4 sm:px-5 sm:py-5'>
@@ -1457,7 +1460,10 @@ function Field({ icon, label, name, type = 'text', as = 'input', defaultValue = 
           onChange={controlled ? e => onChange(e.target.value) : undefined}
           required={required}
           placeholder={placeholder}
-          className={`${inputBase} scheme-dark`}
+          // date-input-fix only for the temporal types: it sets
+          // `appearance: none`, which on a number input would also strip the
+          // spinner arrows the capacity and price fields rely on.
+          className={`${inputBase} scheme-dark ${TEMPORAL_INPUT_TYPES.has(type) ? 'date-input-fix' : ''}`}
         />
       )}
     </div>

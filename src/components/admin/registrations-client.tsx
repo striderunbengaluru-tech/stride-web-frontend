@@ -146,7 +146,7 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
 
 export function RegistrationsClient({ runners, events }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('runners')
+  const [tab, setTab] = useState<Tab>('events')
   const [search, setSearch] = useState('')
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   /** Registration id of the attendee whose full details are open, if any. */
@@ -299,15 +299,6 @@ export function RegistrationsClient({ runners, events }: Props) {
       <div className='flex flex-col sm:flex-row gap-3 mb-6'>
         <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 shrink-0'>
           <button
-            onClick={() => setTab('runners')}
-            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-              tab === 'runners' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
-            }`}
-          >
-            All runners
-            <span className='ml-1.5 text-xs opacity-60'>({runners.length})</span>
-          </button>
-          <button
             onClick={() => setTab('events')}
             className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               tab === 'events' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
@@ -315,6 +306,15 @@ export function RegistrationsClient({ runners, events }: Props) {
           >
             By event
             <span className='ml-1.5 text-xs opacity-60'>({events.length})</span>
+          </button>
+          <button
+            onClick={() => setTab('runners')}
+            className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+              tab === 'runners' ? 'bg-stride-yellow-accent text-copy-black shadow-sm' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            All runners
+            <span className='ml-1.5 text-xs opacity-60'>({runners.length})</span>
           </button>
         </div>
 
@@ -365,8 +365,10 @@ export function RegistrationsClient({ runners, events }: Props) {
                   className='bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 hover:border-white/20 transition-colors'
                 >
 
-                  {/* Top row: tag + name + runs */}
+                  {/* Top row: avatar + tag + name + runs */}
                   <div className='flex items-start gap-3'>
+                    <Avatar url={r.avatar_url} name={r.full_name} size='lg' />
+
                     {/* Runner info */}
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2 flex-wrap'>
@@ -451,18 +453,23 @@ export function RegistrationsClient({ runners, events }: Props) {
                     >
                       <div className='flex items-center gap-3 px-4 py-3.5'>
 
-                        {/* Date chip */}
-                        <div className='w-11 h-11 shrink-0 rounded-xl bg-white/8 border border-white/10 flex flex-col items-center justify-center leading-none'>
-                          {event.event_date ? (
-                            <>
-                              <span className='text-stride-yellow-accent text-[8px] font-bold font-mono uppercase tracking-widest'>
-                                {formatMonthIST(event.event_date)}
-                              </span>
-                              <span className='text-white font-bold text-sm'>
-                                {formatDayIST(event.event_date)}
-                              </span>
-                            </>
-                          ) : <Calendar size={14} className='text-white/30' />}
+                        {/* Poster — 3:4, the ratio the admin cropper produces,
+                            so it fills the frame without letterboxing. Big
+                            enough to recognise the run at a glance, which is
+                            what an admin scanning this list is doing. */}
+                        <div className='w-20 sm:w-24 aspect-3/4 shrink-0 rounded-xl overflow-hidden bg-white/8 border border-white/10 flex items-center justify-center'>
+                          {event.banner_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={event.banner_url}
+                              alt=''
+                              className='w-full h-full object-cover'
+                              loading='lazy'
+                              fetchPriority='low'
+                            />
+                          ) : (
+                            <Calendar size={20} className='text-white/20' />
+                          )}
                         </div>
 
                         {/* Name + stats */}
@@ -503,6 +510,26 @@ export function RegistrationsClient({ runners, events }: Props) {
                             </span>
                             <CapacityBar confirmed={event.confirmed_count} capacity={event.capacity} />
                           </div>
+                        </div>
+
+                        {/* When — to the right of the poster. Hidden below sm:
+                            the row is already carrying the name, four stats and
+                            two icon buttons, and the date repeats in the
+                            expanded panel. */}
+                        <div className='hidden sm:block shrink-0 text-right'>
+                          {event.event_date ? (
+                            <>
+                              <p className='text-white/25 text-[10px] font-bold font-mono uppercase tracking-widest'>
+                                {formatMonthIST(event.event_date)}
+                              </p>
+                              <p className='text-white font-bold text-2xl leading-none tabular-nums mt-0.5'>
+                                {formatDayIST(event.event_date)}
+                              </p>
+                              <p className='text-white/45 text-xs font-mono mt-1'>{fmtTime(event.event_date)}</p>
+                            </>
+                          ) : (
+                            <p className='text-white/25 text-xs'>No date</p>
+                          )}
                         </div>
 
                         {/* Actions — stop propagation so clicks don't toggle expand */}

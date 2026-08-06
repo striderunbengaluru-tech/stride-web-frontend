@@ -374,13 +374,13 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 {/* Avatar */}
                 {profileHref ? (
                   <a href={profileHref} target='_blank' rel='noopener noreferrer' className='shrink-0 relative group/av' onClick={e => e.stopPropagation()}>
-                    <Avatar url={u.avatar_url} name={u.full_name} />
+                    <Avatar url={u.avatar_url} name={u.full_name} size='lg' />
                     <div className='absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/av:opacity-100 flex items-center justify-center transition-opacity'>
                       <ExternalLink size={12} className='text-white' />
                     </div>
                   </a>
                 ) : (
-                  <Avatar url={u.avatar_url} name={displayName} />
+                  <Avatar url={u.avatar_url} name={displayName} size='lg' />
                 )}
 
                 {/* Name + email + tag */}
