@@ -34,7 +34,8 @@ const EVENT_DETAIL_COLUMNS =
   'id, name, slug, subtitle, details, status, event_date, end_date, location, location_url, ' +
   'post_run_location, post_run_location_url, strava_route_url, capacity, price_paise, ' +
   'cover_url, banner_images, additional_fields, terms_and_conditions, distance_km, ' +
-  'difficulty, show_spots_left, is_test_event, packages, packages_enabled, packages_multi_select'
+  'difficulty, show_spots_left, is_test_event, invite_only, packages, packages_enabled, ' +
+  'packages_multi_select'
 
 export type EventDetailRow = {
   id: string
@@ -60,6 +61,12 @@ export type EventDetailRow = {
   difficulty: string | null
   show_spots_left: boolean | null
   is_test_event: boolean | null
+  /**
+   * Selection model, not a visibility model. Registering becomes a free
+   * application an admin must approve; price and packages are ignored for the
+   * duration but stay on the row. The event remains publicly listed.
+   */
+  invite_only: boolean | null
   /** JSON array of EventPackage. When packages_enabled, these set the price. */
   packages: string | null
   packages_enabled: boolean | null
@@ -77,6 +84,8 @@ export type EventListRow = {
   cover_url: string | null
   banner_images: string | null
   is_test_event: boolean | null
+  /** Drives the INVITE ONLY badge on listing cards. */
+  invite_only: boolean | null
   /**
    * Needed for the headline price. Without these a package event reads as
    * `price_paise = 0` and every listing card claimed it was "Free" while the
@@ -166,7 +175,7 @@ export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
     async () => {
       const query = adminClient
         .from('events')
-        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event, packages, packages_enabled')
+        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event, invite_only, packages, packages_enabled')
         .eq('status', 'PUBLISHED')
       if (!SHOW_TEST_EVENTS) query.eq('is_test_event', false)
 

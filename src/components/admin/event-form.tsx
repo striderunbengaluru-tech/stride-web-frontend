@@ -13,7 +13,7 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
-  Boxes, ListChecks, Scale,
+  Boxes, ListChecks, Scale, Star,
 } from 'lucide-react'
 import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
@@ -58,9 +58,15 @@ type Props = {
   action: (prev: EventActionResult, formData: FormData) => Promise<EventActionResult>
   defaultValues?: Partial<EventFormData & { eventDate?: string; endDate?: string }>
   submitLabel: string
+  /**
+   * Applications on this event still awaiting a decision. Drives the warning
+   * shown when invite-only is switched off — turning the mode off does not
+   * cancel them, and the admin should know before they save.
+   */
+  pendingApplications?: number
 }
 
-export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
+export function EventForm({ action, defaultValues = {}, submitLabel, pendingApplications = 0 }: Props) {
   const router = useRouter()
   const [actionResult, formAction] = useActionState(action, undefined)
 
@@ -101,6 +107,11 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
   const [difficulty, setDifficulty] = useState(defaultValues.difficulty ?? '')
   const [showSpotsLeft, setShowSpotsLeft] = useState(defaultValues.showSpotsLeft ?? false)
   const [isTestEvent, setIsTestEvent] = useState(defaultValues.isTestEvent ?? false)
+  const [inviteOnly, setInviteOnly] = useState(defaultValues.inviteOnly ?? false)
+  // True only when the event ARRIVED invite-only, so the "these applications
+  // won't be cancelled" warning appears when the admin switches the mode off —
+  // not when they toggle it on and straight back off on a fresh event.
+  const wasInviteOnly = defaultValues.inviteOnly ?? false
 
   // Cancel confirmation modal — `mounted` flag guards createPortal on SSR
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
@@ -753,11 +764,13 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
                       Price (₹)
                       {!packagesEnabled && <span className='text-stride-yellow-accent ml-0.5'>*</span>}
                     </label>
-                    <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events. Ignored when Event packages is on — the packages set the price then.' />
+                    <HelpHint text='Amount in rupees. Up to 2 decimals — e.g. 2000.50 is ₹2000 and 50 paise. Set to 0 for free events. Ignored when Event packages or Invite-only mode is on.' />
                   </div>
                   {/* readOnly, not disabled: a disabled input is not submitted, so
                       disabling it would post nothing and silently wipe the stored
-                      price the moment packages were switched on. */}
+                      price the moment packages were switched on. Invite-only is
+                      NOT readOnly for the same reason in reverse — the admin sets
+                      the price the event will charge once the mode comes off. */}
                   <input
                     type='number'
                     name='priceRupees'
@@ -768,11 +781,13 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
                     placeholder='0 for free'
                     readOnly={packagesEnabled}
                     aria-disabled={packagesEnabled}
-                    className={`${inputBase} scheme-dark read-only:opacity-40 read-only:cursor-not-allowed`}
+                    className={`${inputBase} scheme-dark read-only:opacity-40 read-only:cursor-not-allowed ${inviteOnly && !packagesEnabled ? 'opacity-60' : ''}`}
                   />
-                  {packagesEnabled && (
+                  {packagesEnabled ? (
                     <p className='text-white/40 text-xs'>Packages set the price — see Registration below.</p>
-                  )}
+                  ) : inviteOnly ? (
+                    <p className='text-white/40 text-xs'>Not charged while invite-only is on — applies again when you switch it off.</p>
+                  ) : null}
                 </div>
               </div>
 
@@ -833,6 +848,39 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
 
             {/* ── REGISTRATION ── */}
             <Widget icon={<Ticket size={15} />} title='Registration'>
+              {/* Invite-only toggle — first, because it decides whether the
+                  price and packages below it apply at all. */}
+              <div className='mb-4 pb-4 border-b border-white/10'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-1.5'>
+                    <Star size={14} className='text-white/40' />
+                    <label className='text-white/70 text-sm font-medium'>Invite-only event mode</label>
+                    <HelpHint text='Registering becomes a free application you review. Price and packages are ignored while this is on (they are kept, and come back the moment you switch it off), and runners are only confirmed — and only emailed — once you approve them in Registrations. The event still shows on the site, with an INVITE ONLY badge.' />
+                  </div>
+                  <Switch
+                    checked={inviteOnly}
+                    onCheckedChange={(v) => { setInviteOnly(v); markDirty() }}
+                    label='Invite-only: applications you approve, instead of open registration'
+                  />
+                  <input type='hidden' name='inviteOnly' value={inviteOnly ? 'true' : 'false'} />
+                </div>
+
+                {inviteOnly && (
+                  <p className='text-white/40 text-xs mt-2'>
+                    Free applications, no payment. Approve runners in Registrations → by event to confirm them and send their ticket.
+                  </p>
+                )}
+
+                {/* Only when an event that WAS invite-only is being switched off
+                    and applications are still undecided. */}
+                {wasInviteOnly && !inviteOnly && pendingApplications > 0 && (
+                  <p className='mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-200 text-xs'>
+                    {pendingApplications} {pendingApplications === 1 ? 'application is' : 'applications are'} still awaiting a decision.
+                    Turning invite-only off will not cancel {pendingApplications === 1 ? 'it' : 'them'} — you can still approve or reject in Registrations.
+                  </p>
+                )}
+              </div>
+
               {/* Spots-left toggle */}
               <div className='flex items-center justify-between gap-3 mb-4'>
                 <div className='flex items-center gap-1.5'>
@@ -863,6 +911,15 @@ export function EventForm({ action, defaultValues = {}, submitLabel }: Props) {
                   />
                   <input type='hidden' name='packagesEnabled' value={packagesEnabled ? 'true' : 'false'} />
                 </div>
+
+                {/* Packages stay editable while invite-only is on: they must be
+                    ready for the moment the mode is switched off. Applicants
+                    simply never see them. */}
+                {inviteOnly && packagesEnabled && (
+                  <p className='text-white/40 text-xs mt-2'>
+                    Hidden from runners while invite-only is on — applications are free.
+                  </p>
+                )}
 
                 {/* Always posted so the value survives a save with packages off. */}
                 <input type='hidden' name='packagesMultiSelect' value={packagesMultiSelect ? 'true' : 'false'} />

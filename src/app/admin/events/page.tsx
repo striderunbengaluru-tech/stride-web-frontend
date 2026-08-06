@@ -11,18 +11,22 @@ export default async function AdminEventsPage() {
   const [{ data: allEvents }, { data: regCounts }] = await Promise.all([
     adminClient
       .from('events')
-      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, packages, packages_enabled')
+      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, packages, packages_enabled')
       .order('event_date', { ascending: false }),
     adminClient
       .from('event_registrations')
       .select('event_id, status'),
   ])
 
-  // Count confirmed registrations per event
+  // Confirmed registrations per event, and — for invite-only events — how many
+  // applications are still waiting on a decision.
   const confirmedByEvent = new Map<string, number>()
+  const appliedByEvent = new Map<string, number>()
   for (const reg of regCounts ?? []) {
     if (reg.status === 'CONFIRMED') {
       confirmedByEvent.set(reg.event_id, (confirmedByEvent.get(reg.event_id) ?? 0) + 1)
+    } else if (reg.status === 'APPLIED') {
+      appliedByEvent.set(reg.event_id, (appliedByEvent.get(reg.event_id) ?? 0) + 1)
     }
   }
 
@@ -60,6 +64,8 @@ export default async function AdminEventsPage() {
       pricePaise: e.price_paise ?? 0,
       capacity: e.capacity ?? null,
       confirmedCount: confirmedByEvent.get(e.id) ?? 0,
+      appliedCount: appliedByEvent.get(e.id) ?? 0,
+      inviteOnly: e.invite_only ?? false,
       // Reuses the `packages` already parsed above. Deriving the label from
       // pricePaise alone showed "Free" for every package event, since packages
       // leave that column at 0.
@@ -68,6 +74,11 @@ export default async function AdminEventsPage() {
       spotsMismatch,
       thumbUrl,
       createdAt: e.created_at ?? '',
+      updatedAt: e.updated_at ?? '',
+      // Null on every event that predates the attribution columns — the card
+      // renders an em dash rather than inventing an actor.
+      createdBy: e.created_by ?? null,
+      updatedBy: e.updated_by ?? null,
     }
   })
 

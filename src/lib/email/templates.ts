@@ -277,7 +277,20 @@ export function welcomeEmail(params: {
   }
 }
 
-export function registrationConfirmedEmail(params: {
+/**
+ * Which ticket email this is.
+ *
+ * `confirmed` — the ordinary "you registered, here's your ticket" mail.
+ * `selected`  — an invite-only application that an admin just approved. Same
+ *               ticket, different framing: the news is the selection, not the
+ *               booking, because the runner has been waiting on a decision.
+ *
+ * One builder rather than two templates: the ticket card, Stride Tag block and
+ * calendar button must never drift between them.
+ */
+type TicketVariant = 'confirmed' | 'selected'
+
+type TicketEmailParams = {
   fullName: string | null
   eventName: string
   eventDate: string | null
@@ -290,8 +303,18 @@ export function registrationConfirmedEmail(params: {
   amountPaidPaise: number | null
   paymentId: string | null
   selectedPackages?: EmailPackage[]
+}
+
+/** An invite-only applicant has been approved — "You're selected for X". */
+export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
+  return registrationConfirmedEmail({ ...params, variant: 'selected' })
+}
+
+export function registrationConfirmedEmail(params: TicketEmailParams & {
+  variant?: TicketVariant
 }): EmailContent {
-  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [] } = params
+  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
+  const isSelection = variant === 'selected'
 
   const ticketLabel = (text: string) =>
     `<p class="t-muted" style="margin:0 0 5px;font-family:${MONO_FONT};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:${MUTED};">${text}</p>`
@@ -384,12 +407,20 @@ export function registrationConfirmedEmail(params: {
           <tr>
             <td style="padding:40px 32px 0;text-align:center;">
               <img src="${ICON_BASE}/circle-check-big.png" alt="" width="44" style="display:inline-block;width:44px;height:44px;border:0;">
-              <h1 class="t" style="margin:18px 0 0;font-family:${HEADING_FONT};font-size:32px;line-height:1.25;letter-spacing:-0.5px;font-weight:normal;color:${TEXT};">See you at the <strong style="font-weight:bold;color:${YELLOW};">start line!</strong></h1>
+              <h1 class="t" style="margin:18px 0 0;font-family:${HEADING_FONT};font-size:32px;line-height:1.25;letter-spacing:-0.5px;font-weight:normal;color:${TEXT};">${
+                isSelection
+                  ? `You&#39;re <strong style="font-weight:bold;color:${YELLOW};">selected!</strong>`
+                  : `See you at the <strong style="font-weight:bold;color:${YELLOW};">start line!</strong>`
+              }</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:32px 32px 0;">
-              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Hey ${firstName(fullName)}, your spot is locked in. Bring your energy and we&#39;ll bring the crew.</p>
+              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">${
+                isSelection
+                  ? `Hey ${firstName(fullName)}, your application for <strong style="font-weight:bold;">${escapeHtml(eventName)}</strong> has been approved and your spot is now held. See you out there.`
+                  : `Hey ${firstName(fullName)}, your spot is locked in. Bring your energy and we&#39;ll bring the crew.`
+              }</p>
             </td>
           </tr>
           <tr>
@@ -435,7 +466,7 @@ export function registrationConfirmedEmail(params: {
   </table>`
 
   return {
-    subject: `Ticket for ${eventName}`,
+    subject: isSelection ? `You're selected for ${eventName}` : `Ticket for ${eventName}`,
     htmlContent: emailDocument(bodyContent),
   }
 }

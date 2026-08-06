@@ -4,8 +4,9 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CalendarDays, MapPin, CheckCircle2, ChevronRight } from 'lucide-react'
+import { CalendarDays, MapPin, CheckCircle2, ChevronRight, Hourglass, X } from 'lucide-react'
 import { formatDateFullIST } from '@/lib/utils/ist'
+import { AWAITING_LABEL, NOT_SELECTED_LABEL } from '@/lib/events/invite-only'
 
 export type MyRun = {
   id: string
@@ -16,8 +17,15 @@ export type MyRun = {
   bannerUrl: string | null
   pricePaise: number
   checkedIn: boolean
-  // Registration id when CONFIRMED — the row links to the booking
-  // confirmation (receipt); null falls back to the event page.
+  /**
+   * Invite-only outcome. `applied` = waiting on Stride's decision,
+   * `rejected` = not selected (or the run happened while undecided),
+   * `active` = an ordinary registration.
+   */
+  state: 'active' | 'applied' | 'rejected'
+  // Registration id when CONFIRMED or APPLIED — the row links to the booking
+  // confirmation (receipt); null falls back to the event page, which is
+  // deliberate for a rejected runner who may now be able to buy a ticket.
   confirmationRegId: string | null
 }
 
@@ -134,9 +142,22 @@ export function MyRunsClient({ upcoming, past }: { upcoming: MyRun[]; past: MyRu
                       )}
 
                       <div className='flex items-center gap-2 mt-1 flex-wrap'>
-                        <span className='inline-flex items-center text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 rounded-md px-2 py-0.5 font-mono'>
-                          {run.pricePaise === 0 ? 'Free' : `${priceLabel(run.pricePaise)} paid`}
-                        </span>
+                        {/* The price chip claims the runner paid, which is
+                            untrue for an application — so the outcome chip
+                            replaces it rather than sitting beside it. */}
+                        {run.state === 'active' ? (
+                          <span className='inline-flex items-center text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 rounded-md px-2 py-0.5 font-mono'>
+                            {run.pricePaise === 0 ? 'Free' : `${priceLabel(run.pricePaise)} paid`}
+                          </span>
+                        ) : run.state === 'applied' ? (
+                          <span className='inline-flex items-center gap-1 text-xs font-medium text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-md px-2 py-0.5'>
+                            <Hourglass size={11} aria-hidden='true' /> {AWAITING_LABEL}
+                          </span>
+                        ) : (
+                          <span className='inline-flex items-center gap-1 text-xs font-medium text-white/55 bg-white/8 border border-white/20 rounded-md px-2 py-0.5'>
+                            <X size={12} strokeWidth={2.5} aria-hidden='true' /> {NOT_SELECTED_LABEL}
+                          </span>
+                        )}
                         {run.checkedIn && (
                           <span className='inline-flex items-center gap-1 text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/25 rounded-md px-2 py-0.5'>
                             <CheckCircle2 size={12} /> Checked in

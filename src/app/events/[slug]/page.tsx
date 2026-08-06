@@ -18,7 +18,8 @@ import type { AdditionalField, EventPackage } from '@/types/event'
 import {
   formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST,
 } from '@/lib/utils/ist'
-import { eventPriceLabel } from '@/lib/utils/money'
+import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
+import { InviteOnlyBadge } from '@/components/events/invite-only-badge'
 import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
@@ -90,15 +91,21 @@ export default async function EventDetailPage({ params }: Props) {
 
   const confirmedCount = await getConfirmedCount(event.id)
 
-  const isFull = !!event.capacity && (confirmedCount ?? 0) >= event.capacity
+  // Invite-only: applying is free and unlimited, and Stride picks who runs.
+  // Capacity gates approvals, not applications — so the page must not close
+  // itself, quote a price, or advertise a spot count.
+  const inviteOnly = event.invite_only === true
+
+  const isFull = !inviteOnly && !!event.capacity && (confirmedCount ?? 0) >= event.capacity
   // Past events (start date has elapsed). Falls back to false for events without a date.
   const isPast = !!event.event_date && new Date(event.event_date).getTime() < Date.now()
 
   // Spots-left indicator — admin-toggled per event; needs a capacity to mean
   // anything. At SPOTS_URGENCY_THRESHOLD or fewer it switches to a red
-  // pulsating "Hurry!" note.
+  // pulsating "Hurry!" note. Suppressed under invite-only: "3 spots left" on a
+  // free application misrepresents a curated process and invites gaming.
   const spotsLeft = event.capacity ? Math.max(0, event.capacity - (confirmedCount ?? 0)) : null
-  const showSpotsLeft = !!event.show_spots_left && spotsLeft !== null && spotsLeft > 0 && !isPast && !isFull
+  const showSpotsLeft = !inviteOnly && !!event.show_spots_left && spotsLeft !== null && spotsLeft > 0 && !isPast && !isFull
   const spotsUrgent = showSpotsLeft && spotsLeft <= SPOTS_URGENCY_THRESHOLD
   const spotsLabel = spotsUrgent
     ? `Hurry! Only ${spotsLeft} ${spotsLeft === 1 ? 'spot' : 'spots'} left`
@@ -123,14 +130,17 @@ export default async function EventDetailPage({ params }: Props) {
   let packages: EventPackage[] = []
   try { packages = JSON.parse(event.packages ?? '[]') as EventPackage[] }
   catch { packages = [] }
-  const packagesEnabled = (event.packages_enabled ?? false) && packages.length > 0
+  // Packages stay on the row so they come back when invite-only is switched
+  // off, but an applicant must never see a priced tier.
+  const packagesEnabled = !inviteOnly && (event.packages_enabled ?? false) && packages.length > 0
 
   const hasBanners = bannerImages.length > 0
   const dateLong  = fmtDateLong(event.event_date)
   const startTime = fmtTime(event.event_date)
   const endTime   = fmtTime(event.end_date)
-  // With packages the headline can only be a "From ₹X" — the runner picks the total.
-  const priceLabel = eventPriceLabel(event.price_paise, packages, packagesEnabled)
+  // With packages the headline can only be a "From ₹X" — the runner picks the
+  // total. Under invite-only there is nothing to charge, so it reads as free.
+  const priceLabel = inviteOnly ? FREE_LABEL : eventPriceLabel(event.price_paise, packages, packagesEnabled)
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   // `overflow-clip`, NOT `overflow-hidden`: hidden makes this a scroll container,
@@ -188,6 +198,13 @@ export default async function EventDetailPage({ params }: Props) {
 
           {/* Title */}
           <Reveal>
+            {/* Above the name, not among the distance pills: it changes what
+                registering MEANS, so it has to be read before the title. */}
+            {inviteOnly && (
+              <div className='mb-3'>
+                <InviteOnlyBadge size='md' />
+              </div>
+            )}
             <h1 className='text-4xl sm:text-5xl font-bold text-white leading-[1.05] tracking-tight'>
               {event.name}
             </h1>
@@ -368,6 +385,7 @@ export default async function EventDetailPage({ params }: Props) {
                       isFull={isFull}
                       priceLabel={priceLabel}
                       spotsLine={spotsLine}
+                      inviteOnly={inviteOnly}
                     />
                   }
                 >
@@ -382,6 +400,7 @@ export default async function EventDetailPage({ params }: Props) {
                     packages={packages}
                     packagesEnabled={packagesEnabled}
                     packagesMultiSelect={event.packages_multi_select ?? false}
+                    inviteOnly={inviteOnly}
                     razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                     priceLabel={priceLabel}
                     spotsLine={spotsLine}
@@ -418,7 +437,7 @@ export default async function EventDetailPage({ params }: Props) {
         )}
         <div className='flex items-center gap-4 max-w-lg mx-auto'>
           <div>
-            <p className='text-white/40 text-xs'>Entry fee</p>
+            <p className='text-white/40 text-xs'>{inviteOnly ? 'To apply' : 'Entry fee'}</p>
             <p className='text-white font-bold text-xl leading-none mt-0.5 font-mono'>{priceLabel}</p>
           </div>
           <div className='flex-1'>
@@ -434,6 +453,7 @@ export default async function EventDetailPage({ params }: Props) {
                 packages={packages}
                 packagesEnabled={packagesEnabled}
                 packagesMultiSelect={event.packages_multi_select ?? false}
+                inviteOnly={inviteOnly}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />
             </Suspense>

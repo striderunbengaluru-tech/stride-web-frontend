@@ -41,6 +41,12 @@ export type EventSummary = {
   confirmed_count: number
   checked_in_count: number
   cancelled_count: number
+  /** Invite-only applications awaiting a decision. Computed in JS — see below. */
+  applied_count: number
+  /** Applications turned down. */
+  rejected_count: number
+  /** Registering on this event is a free application an admin approves. */
+  invite_only: boolean
 }
 
 export type RunnerRow = {
@@ -122,7 +128,7 @@ export default async function AdminRegistrationsPage() {
     // every package event, since packages leave price_paise at 0.
     adminClient
       .from('events')
-      .select('id, price_paise, packages, packages_enabled'),
+      .select('id, price_paise, packages, packages_enabled, invite_only'),
     // Profile columns the hand-authored admin_registrations_flat view doesn't
     // carry. Same trade as the two reads above: join in JS rather than re-author
     // DDL this repo can't see.
@@ -142,11 +148,15 @@ export default async function AdminRegistrationsPage() {
     packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise })
   }
 
-  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null }
-  const priceLabelByEvent = new Map<string, { label: string; isFree: boolean }>()
+  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null }
+  const priceLabelByEvent = new Map<string, { label: string; isFree: boolean; inviteOnly: boolean }>()
   for (const row of (eventPricingRows ?? []) as PricingRow[]) {
     const label = eventRowPriceLabel(row.price_paise ?? 0, row.packages, row.packages_enabled)
-    priceLabelByEvent.set(row.id, { label, isFree: label === FREE_LABEL })
+    priceLabelByEvent.set(row.id, {
+      label,
+      isFree: label === FREE_LABEL,
+      inviteOnly: row.invite_only === true,
+    })
   }
 
   // Build runner summaries (unique users with aggregate stats)
@@ -225,8 +235,14 @@ export default async function AdminRegistrationsPage() {
   const events: EventWithAttendees[] = ((eventSummaries ?? []) as EventSummary[]).map(e => {
     const attendees = attendeesMap.get(e.id) ?? []
     const pricing = priceLabelByEvent.get(e.id)
+    // Counted from the attendee rows rather than added to admin_event_summary:
+    // that view is hand-authored and its DDL isn't in this repo, so widening it
+    // would mean re-writing SQL we can't see. Same trade as the reads above.
     return {
       ...e,
+      applied_count: attendees.filter(a => a.status === 'APPLIED').length,
+      rejected_count: attendees.filter(a => a.status === 'REJECTED').length,
+      invite_only: pricing?.inviteOnly ?? false,
       // admin_event_summary has no package columns, so the label is attached here
       // from the events table rather than derived from price_paise.
       price_label: pricing?.label ?? priceLabel(e.price_paise ?? 0),

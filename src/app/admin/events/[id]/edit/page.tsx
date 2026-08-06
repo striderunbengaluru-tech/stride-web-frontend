@@ -11,11 +11,20 @@ export const metadata = { title: 'Edit Event — Admin' }
 export default async function EditEventPage({ params }: Props) {
   const { id } = await params
 
-  const { data: event } = await adminClient
-    .from('events')
-    .select('*')
-    .eq('id', id)
-    .single()
+  // Applications still awaiting a decision, so the form can warn before an
+  // admin switches invite-only off and assumes they were cancelled.
+  const [{ data: event }, { count: pendingApplications }] = await Promise.all([
+    adminClient
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single(),
+    adminClient
+      .from('event_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .eq('status', 'APPLIED'),
+  ])
 
   if (!event) notFound()
 
@@ -27,6 +36,7 @@ export default async function EditEventPage({ params }: Props) {
       <EventForm
         action={action}
         submitLabel='Save Changes'
+        pendingApplications={pendingApplications ?? 0}
         defaultValues={{
           name: event.name ?? undefined,
           subtitle: event.subtitle ?? undefined,
@@ -42,6 +52,7 @@ export default async function EditEventPage({ params }: Props) {
           priceRupees: event.price_paise / 100,
           showSpotsLeft: event.show_spots_left ?? false,
           isTestEvent: event.is_test_event ?? false,
+          inviteOnly: event.invite_only ?? false,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
           termsText: event.terms_and_conditions ?? undefined,

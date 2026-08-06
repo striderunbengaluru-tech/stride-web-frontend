@@ -115,6 +115,16 @@ create table public.events (
   price_paise      int not null default 0,   -- 0 = free; ₹299 → 29900
   capacity         int,
   cover_url        text,
+  -- Selection model, not a visibility model: the event stays publicly listed,
+  -- but registering becomes a free application an admin must approve. See
+  -- supabase-migrations/2026-08-06-invite-only-events.sql.
+  invite_only      boolean not null default false,
+  -- Display-name snapshots, deliberately not user ids and deliberately without
+  -- a foreign key: hardDeleteUser() erases the users row and attribution must
+  -- survive it. Written by the server actions — adminClient is service_role, so
+  -- auth.uid() is NULL in app writes and a trigger could not populate these.
+  created_by       text,
+  updated_by       text,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
@@ -188,10 +198,20 @@ create table public.event_registrations (
   id                  text primary key,      -- nanoid
   event_id            text not null references public.events(id) on delete cascade,
   user_id             uuid not null references public.users(id) on delete cascade,
+  -- APPLIED / REJECTED belong to invite-only events: an application awaiting
+  -- Stride's decision, and one that was turned down. Distinct from PENDING
+  -- (Razorpay checkout in flight, holds a seat for 15 minutes) and CANCELLED
+  -- (payment failed), both of which the register route clears and lets the
+  -- runner retry.
   status              text not null default 'PENDING'
-                        check (status in ('PENDING', 'CONFIRMED', 'CANCELLED')),
+                        constraint event_registrations_status_check
+                        check (status in ('PENDING', 'CONFIRMED', 'CANCELLED', 'APPLIED', 'REJECTED')),
   cashfree_order_id   text,
   cashfree_payment_id text,
+  -- Who approved or rejected an application, and when. Name snapshot, same
+  -- reasoning as events.created_by.
+  decided_at          timestamptz,
+  decided_by          text,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
   unique (event_id, user_id)                -- prevent duplicate registrations
@@ -287,22 +307,24 @@ security definer
 set search_path = public
 as $$
 declare
-  v_capacity  int;
-  v_reserved  int;
-  v_packages  jsonb;
-  v_selected  jsonb;
-  v_pkg_id    text;
-  v_limit     int;
-  v_used      int;
-  v_held_ids  text[] := '{}';
-  v_held_done boolean := false;
-  v_reg       record;
-  v_reg_json  jsonb;
+  v_capacity    int;
+  v_reserved    int;
+  v_packages    jsonb;
+  v_invite_only boolean;
+  v_selected    jsonb;
+  v_pkg_id      text;
+  v_limit       int;
+  v_used        int;
+  v_held_ids    text[] := '{}';
+  v_held_done   boolean := false;
+  v_reg         record;
+  v_reg_json    jsonb;
 begin
   -- Serialize concurrent registrations for this event; the lock is held until
   -- this function's transaction commits, so the counts below see every prior
   -- committed insert.
-  select capacity, packages into v_capacity, v_packages
+  select capacity, packages, coalesce(invite_only, false)
+    into v_capacity, v_packages, v_invite_only
   from public.events
   where id = p_event_id
   for update;
@@ -311,6 +333,34 @@ begin
     return 'EVENT_NOT_FOUND';
   end if;
 
+  -- ── Invite-only: unlimited, free applications ────────────────────────────
+  -- Deliberately BEFORE the capacity block and BEFORE the package loop:
+  --   * capacity gates approvals, not applications
+  --   * packages are hidden under this mode, so p_selected_packages is
+  --     DISCARDED rather than trusted — a hand-posted package id must not be
+  --     able to write a snapshot that getPackageSpotsTaken would then count
+  --   * amount_due 0 rather than NULL, so verify-payment cannot fall back to
+  --     events.price_paise and the receipt blocks render as free, not absent
+  -- Reading invite_only under the same lock makes it authoritative: a toggle
+  -- that flipped since the route read the event cannot produce a wrong row.
+  -- p_status is ignored here on purpose.
+  if v_invite_only then
+    begin
+      insert into public.event_registrations
+        (id, event_id, user_id, status, razorpay_order_id, custom_responses,
+         selected_packages, amount_due_paise)
+      values
+        (p_registration_id, p_event_id, p_user_id, 'APPLIED', null,
+         p_custom_responses, null, 0);
+    exception when unique_violation then
+      return 'ALREADY_REGISTERED';
+    end;
+
+    return 'APPLIED';
+  end if;
+
+  -- A positive allowlist, so APPLIED rows left over from a switched-off
+  -- invite-only window correctly hold no seat.
   if v_capacity is not null then
     select count(*) into v_reserved
     from public.event_registrations
@@ -395,12 +445,17 @@ begin
     end if;
   end if;
 
-  insert into public.event_registrations
-    (id, event_id, user_id, status, razorpay_order_id, custom_responses,
-     selected_packages, amount_due_paise)
-  values
-    (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id,
-     p_custom_responses, p_selected_packages, p_amount_due_paise);
+  begin
+    insert into public.event_registrations
+      (id, event_id, user_id, status, razorpay_order_id, custom_responses,
+       selected_packages, amount_due_paise)
+    values
+      (p_registration_id, p_event_id, p_user_id, p_status, p_razorpay_order_id,
+       p_custom_responses, p_selected_packages, p_amount_due_paise);
+  exception when unique_violation then
+    -- Concurrent double-submit from one runner. Previously surfaced as a 500.
+    return 'ALREADY_REGISTERED';
+  end;
 
   return 'INSERTED';
 end;
@@ -410,6 +465,137 @@ revoke all    on function public.register_for_event(text, text, text, text, text
 revoke all    on function public.register_for_event(text, text, text, text, text, text, text, int) from anon;
 revoke all    on function public.register_for_event(text, text, text, text, text, text, text, int) from authenticated;
 grant  execute on function public.register_for_event(text, text, text, text, text, text, text, int) to service_role;
+
+-- Serves the CONFIRMED count inside approve_registrations, the applied-count
+-- reads on /admin/events and /admin/registrations, and the applicant list.
+-- er_event_selected_pkgs_idx is also (event_id, status) but is PARTIAL on
+-- `selected_packages is not null`, so it cannot serve these.
+create index if not exists er_event_status_idx
+  on public.event_registrations (event_id, status);
+
+-- ─── Atomic, capacity-capped bulk approve (invite-only events) ────────────────
+-- Kept in step with supabase-migrations/2026-08-06-invite-only-events.sql.
+--
+-- The cap MUST be enforced under the event row lock, not in TypeScript: a
+-- "read the confirmed count, then update N rows" loop is exactly the CWE-362
+-- race the two functions around it already close. Two admins hitting
+-- "Approve all" at the same instant would otherwise both see the same
+-- remaining count and oversell the run.
+--
+-- Lock ordering vs confirm_registration (registration row first, then event
+-- row) is an inversion on paper. It cannot deadlock in practice because the two
+-- functions touch disjoint rows: this one only ever updates status='APPLIED'
+-- rows, confirm_registration only ever updates status='PENDING' rows, and a row
+-- has exactly one status. The `and er.status = 'APPLIED'` predicate is what
+-- makes that true — do not relax it.
+--
+-- Ordering is first-come-first-served by created_at, so the seat goes to
+-- whoever applied earliest regardless of how the client serialised its
+-- checkbox map.
+--
+-- Deliberately does NOT touch confirmation_email_sent_at — the app fires
+-- sendConfirmationEmailOnce per approved id, and that column's atomic claim is
+-- the single guard against a duplicate send.
+create or replace function public.approve_registrations(
+  p_event_id         text,
+  p_registration_ids text[],
+  p_decided_by       text
+)
+returns table (registration_id text, outcome text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_capacity  int;
+  v_status    text;
+  v_ends_at   timestamptz;
+  v_confirmed int;
+  v_remaining int;
+  v_blocked   text;
+begin
+  if p_registration_ids is null or array_length(p_registration_ids, 1) is null then
+    return;
+  end if;
+
+  select e.capacity, e.status, coalesce(e.end_date, e.event_date)
+    into v_capacity, v_status, v_ends_at
+  from public.events e
+  where e.id = p_event_id
+  for update;
+
+  if not found then
+    return query select unnest(p_registration_ids), 'EVENT_NOT_FOUND'::text;
+    return;
+  end if;
+
+  -- Approving after the run happened would fire a selection email for an event
+  -- that is over. The 24h grace matches the check-in window.
+  v_blocked := case
+    when v_status <> 'PUBLISHED' then 'EVENT_NOT_PUBLISHED'
+    when v_ends_at is not null and v_ends_at < now() - interval '24 hours' then 'EVENT_CONCLUDED'
+  end;
+
+  if v_blocked is not null then
+    return query select unnest(p_registration_ids), v_blocked;
+    return;
+  end if;
+
+  -- CONFIRMED (not "approved") is the right basis: an event that sold seats
+  -- before the toggle went on must have those seats counted against the budget.
+  select count(*) into v_confirmed
+  from public.event_registrations
+  where event_id = p_event_id and status = 'CONFIRMED';
+
+  -- capacity IS NULL → unlimited, the same convention register_for_event uses.
+  -- greatest(...,0) keeps an already-over-capacity event from going negative.
+  v_remaining := case when v_capacity is null then null
+                      else greatest(v_capacity - v_confirmed, 0) end;
+
+  return query
+  with wanted as (
+    select er.id, er.status, er.created_at
+    from public.event_registrations er
+    where er.event_id = p_event_id
+      and er.id = any (p_registration_ids)
+  ),
+  -- Ranked over the APPLIED subset only, so a stale CONFIRMED id in the input
+  -- does not silently consume one of the remaining seats.
+  ranked as (
+    select id, row_number() over (order by created_at, id) as rn
+    from wanted
+    where status = 'APPLIED'
+  ),
+  promoted as (
+    update public.event_registrations er
+    set status     = 'CONFIRMED',
+        decided_at = now(),
+        decided_by = p_decided_by,
+        updated_at = now()
+    from ranked r
+    where er.id     = r.id
+      and er.status = 'APPLIED'
+      and (v_remaining is null or r.rn <= v_remaining)
+    returning er.id
+  )
+  select q.id,
+         (case
+            when p.id is not null       then 'APPROVED'
+            when w.id is null           then 'NOT_FOUND'
+            when w.status = 'CONFIRMED' then 'ALREADY_CONFIRMED'
+            when w.status <> 'APPLIED'  then 'NOT_APPLIED'
+            else 'CAPACITY_FULL'
+          end)::text
+  from (select distinct unnest(p_registration_ids) as id) q
+  left join wanted   w on w.id = q.id
+  left join promoted p on p.id = q.id;
+end;
+$$;
+
+revoke all    on function public.approve_registrations(text, text[], text) from public;
+revoke all    on function public.approve_registrations(text, text[], text) from anon;
+revoke all    on function public.approve_registrations(text, text[], text) from authenticated;
+grant  execute on function public.approve_registrations(text, text[], text) to service_role;
 
 -- ─── Atomic payment confirmation ──────────────────────────────────────────────
 -- Applied manually via the Supabase SQL Editor. The single confirm path used by

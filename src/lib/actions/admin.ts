@@ -1,8 +1,10 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
+import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
@@ -188,6 +190,12 @@ async function validateCapacityReduction(
   return null
 }
 
+/**
+ * Gate every admin write. Returns the acting admin plus a display-name snapshot
+ * for the attribution columns (`events.created_by/updated_by`,
+ * `event_registrations.decided_by`) — a name rather than an id, so the trail
+ * survives hardDeleteUser() erasing the users row.
+ */
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -196,12 +204,19 @@ async function requireAdmin() {
   // Always read role fresh from DB — JWT claims may hold stale values.
   const { data: row } = await adminClient
     .from('users')
-    .select('role')
+    .select('role, full_name, username')
     .eq('id', user.id)
     .single()
 
   if (row?.role !== 'ADMIN') redirect('/')
-  return user
+
+  const actorName: string =
+    (row.full_name as string | null)?.trim() ||
+    (row.username as string | null) ||
+    user.email ||
+    'Admin'
+
+  return { user, actorName }
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────
@@ -211,13 +226,13 @@ async function requireAdmin() {
 // without a page reload — the old redirect-with-?slug_error round trip threw
 // away unsaved markdown and freshly uploaded banners.
 export async function createEventAction(_prev: EventActionResult, formData: FormData): Promise<EventActionResult> {
-  await requireAdmin()
+  const { actorName } = await requireAdmin()
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -253,7 +268,13 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
     is_test_event: isTestEvent,
+    invite_only: inviteOnly,
     ...rest,
+    // AFTER the spread, deliberately. Both actions spread parsed form data
+    // straight into the row, so attribution set before it could be overridden
+    // by a hand-posted field of the same name.
+    created_by: actorName,
+    updated_by: actorName,
   })
 
   revalidateEventCaches(slug)
@@ -270,16 +291,20 @@ function revalidateEventCaches(slug: string | null) {
     revalidatePath(`/events/${slug}`)
   }
   revalidatePath('/events')
+  // The homepage renders <UpNextSection/>. Its data is tag-cached but the page
+  // HTML is not, so without this a freshly toggled event keeps its old badge
+  // state up top until the homepage's own ISR window elapses.
+  revalidatePath('/')
 }
 
 export async function updateEventAction(id: string, _prev: EventActionResult, formData: FormData): Promise<EventActionResult> {
-  await requireAdmin()
+  const { actorName } = await requireAdmin()
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, capacity, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, capacity, ...rest } = parsed.data
 
   const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect)
 
@@ -311,8 +336,11 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
     is_test_event: isTestEvent,
+    invite_only: inviteOnly,
     updated_at: new Date().toISOString(),
     ...rest,
+    // After the spread — see the note in createEventAction.
+    updated_by: actorName,
   }).eq('id', id).select('slug').single()
 
   // Spots-left, the register route's capacity read and the packages the modal
@@ -353,6 +381,191 @@ export async function deleteEventAction(id: string): Promise<void> {
   await adminClient.from('events').delete().eq('id', id)
   revalidateEventCaches(event?.slug ?? null)
   redirect('/admin/events')
+}
+
+// ── Registrations (invite-only decisions) ────────────────────────────────────
+
+/**
+ * Most ids a single decision may carry.
+ *
+ * Not arbitrary: each approval fans out one Brevo send, and an unbounded batch
+ * risks the function timing out mid-fan-out — which leaves rows confirmed and
+ * un-emailed. The client paginates larger selections into successive calls.
+ */
+const MAX_DECISION_IDS = 50
+
+export type DecisionResult =
+  | {
+      ok: true
+      /** Ids this call actually moved. Only these are emailed. */
+      decided: string[]
+      /** Left alone because someone else got there first. */
+      alreadyDecided: string[]
+      /** APPLIED, but the event ran out of seats. Approve only. */
+      skippedCapacity: string[]
+      capacity: number | null
+      confirmedAfter: number
+    }
+  | { ok: false; error: string }
+
+type Preflight =
+  | { ok: false; error: string }
+  | { ok: true; actorName: string; ids: string[] }
+
+/** Shared guard: admin session, then a sane, deduped id list scoped to one event. */
+async function decisionPreflight(eventId: string, ids: string[]): Promise<Preflight> {
+  const { actorName } = await requireAdmin()
+
+  if (typeof eventId !== 'string' || !eventId.trim()) {
+    return { ok: false, error: 'Missing event.' }
+  }
+
+  const clean = [...new Set((Array.isArray(ids) ? ids : []).filter(
+    (id): id is string => typeof id === 'string' && id.trim().length > 0,
+  ))]
+
+  if (clean.length === 0) return { ok: false, error: 'Nothing selected.' }
+  if (clean.length > MAX_DECISION_IDS) {
+    return { ok: false, error: `Select at most ${MAX_DECISION_IDS} applications at a time.` }
+  }
+
+  return { ok: true, actorName, ids: clean }
+}
+
+/** Slug + live confirmed count, for the cache purge and the toast copy. */
+async function eventDecisionContext(eventId: string) {
+  const [{ data: event }, { count }] = await Promise.all([
+    adminClient.from('events').select('slug, capacity').eq('id', eventId).maybeSingle(),
+    adminClient
+      .from('event_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'CONFIRMED'),
+  ])
+
+  return {
+    slug: (event?.slug as string | null) ?? null,
+    capacity: (event?.capacity as number | null) ?? null,
+    confirmed: count ?? 0,
+  }
+}
+
+/**
+ * Approve invite-only applications in bulk and send each one the selection
+ * email.
+ *
+ * `eventId` is a required parameter rather than something derived from the ids:
+ * the capacity budget is per event, and a list spanning two events could not be
+ * capped correctly. The cap itself lives in the `approve_registrations` SQL
+ * function, under the event row lock — doing it here would reintroduce the
+ * read-then-write race the schema already closes for registration and payment.
+ */
+export async function approveRegistrationsAction(eventId: string, ids: string[]): Promise<DecisionResult> {
+  const pre = await decisionPreflight(eventId, ids)
+  if (!pre.ok) return pre
+
+  const { data, error } = await adminClient.rpc('approve_registrations', {
+    p_event_id: eventId,
+    p_registration_ids: pre.ids,
+    p_decided_by: pre.actorName,
+  })
+
+  if (error) {
+    console.error('[Admin] approve_registrations failed', error)
+    return { ok: false, error: 'Could not approve those applications. Please try again.' }
+  }
+
+  const rows = (data ?? []) as { registration_id: string; outcome: string }[]
+  const withOutcome = (outcome: string) =>
+    rows.filter(r => r.outcome === outcome).map(r => r.registration_id)
+
+  // These arrive uniformly for every id — the whole batch was refused.
+  const blocked = rows[0]?.outcome
+  if (blocked === 'EVENT_NOT_FOUND') return { ok: false, error: 'That event no longer exists.' }
+  if (blocked === 'EVENT_NOT_PUBLISHED') return { ok: false, error: 'Publish the event before approving applications.' }
+  if (blocked === 'EVENT_CONCLUDED') return { ok: false, error: 'This run has already happened — approving would email a ticket for a finished event.' }
+
+  const approved = withOutcome('APPROVED')
+  const context = await eventDecisionContext(eventId)
+
+  // Purged synchronously: an after() callback runs once the response is gone,
+  // so the admin's next read would still see the stale confirmed count.
+  revalidateTag(eventRegsTag(eventId), 'max')
+  if (context.slug) revalidatePath(`/events/${context.slug}`)
+  revalidatePath('/admin/registrations')
+  revalidatePath('/admin/events')
+
+  if (approved.length > 0) {
+    // Only ids THIS call promoted — never the already-confirmed ones. The claim
+    // inside sendConfirmationEmailOnce is the second layer. Chunked rather than
+    // one big Promise.all so a 50-row approve doesn't hammer Brevo at once.
+    after(async () => {
+      for (let i = 0; i < approved.length; i += 5) {
+        await Promise.allSettled(
+          approved.slice(i, i + 5).map(id => sendConfirmationEmailOnce(id, 'selected')),
+        )
+      }
+    })
+  }
+
+  return {
+    ok: true,
+    decided: approved,
+    alreadyDecided: [...withOutcome('ALREADY_CONFIRMED'), ...withOutcome('NOT_APPLIED'), ...withOutcome('NOT_FOUND')],
+    skippedCapacity: withOutcome('CAPACITY_FULL'),
+    capacity: context.capacity,
+    confirmedAfter: context.confirmed,
+  }
+}
+
+/**
+ * Reject invite-only applications in bulk. No email, by product decision — the
+ * "Not selected" state in My Runs is the whole notification.
+ *
+ * No SQL function needed: rejection touches no shared budget, so one
+ * conditional UPDATE is already atomic. `.eq('status','APPLIED')` is the whole
+ * story — it makes this a compare-and-swap, so a row another admin approved a
+ * moment earlier is left alone rather than clobbered.
+ *
+ * Deliberately cannot un-approve a CONFIRMED row: the ticket email has gone out
+ * and a wallet pass may already be on the runner's phone.
+ */
+export async function rejectRegistrationsAction(eventId: string, ids: string[]): Promise<DecisionResult> {
+  const pre = await decisionPreflight(eventId, ids)
+  if (!pre.ok) return pre
+
+  const now = new Date().toISOString()
+  const { data, error } = await adminClient
+    .from('event_registrations')
+    .update({ status: 'REJECTED', decided_at: now, decided_by: pre.actorName, updated_at: now })
+    .eq('event_id', eventId)
+    .in('id', pre.ids)
+    .eq('status', 'APPLIED')
+    .select('id')
+
+  if (error) {
+    console.error('[Admin] reject registrations failed', error)
+    return { ok: false, error: 'Could not reject those applications. Please try again.' }
+  }
+
+  const rejected = (data ?? []).map(r => r.id as string)
+  const rejectedSet = new Set(rejected)
+
+  // No eventRegsTag purge: rejecting changes no confirmed count and frees no
+  // package spot, so nothing the public event page caches has moved.
+  revalidatePath('/admin/registrations')
+  revalidatePath('/admin/events')
+
+  const context = await eventDecisionContext(eventId)
+
+  return {
+    ok: true,
+    decided: rejected,
+    alreadyDecided: pre.ids.filter(id => !rejectedSet.has(id)),
+    skippedCapacity: [],
+    capacity: context.capacity,
+    confirmedAfter: context.confirmed,
+  }
 }
 
 // ── Products ─────────────────────────────────────────────────────────────────

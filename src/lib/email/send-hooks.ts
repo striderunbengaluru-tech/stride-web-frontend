@@ -1,6 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { sendEmail } from './brevo'
-import { registrationConfirmedEmail, welcomeEmail } from './templates'
+import { registrationConfirmedEmail, selectedForEventEmail, welcomeEmail } from './templates'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 import type { SelectedPackage } from '@/types/event'
@@ -49,9 +49,23 @@ export async function sendWelcomeEmailOnce(userId: string): Promise<void> {
  * registration can be confirmed by both the verify-payment route and the
  * Razorpay webhook — the atomic claim on `confirmation_email_sent_at`
  * guarantees whichever runs second claims zero rows and no-ops.
+ *
+ * `variant: 'selected'` swaps in the invite-only wording ("You're selected
+ * for X") for an application an admin just approved. It shares the same claim
+ * column on purpose: a registration gets exactly one ticket email, whichever
+ * path confirmed it.
+ *
  * Never throws.
  */
-export async function sendConfirmationEmailOnce(registrationId: string): Promise<void> {
+export async function sendConfirmationEmailOnce(
+  registrationId: string,
+  variant: 'confirmed' | 'selected' = 'confirmed',
+): Promise<void> {
+  // Set once the claim succeeds, so the catch below knows whether it owns the
+  // stamp and may release it. Without this a Brevo outage would leave the row
+  // confirmed, stamped and silent — permanently unrecoverable.
+  let claimedStamp = false
+
   try {
     const { data: claimed, error } = await adminClient
       .from('event_registrations')
@@ -66,6 +80,7 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
       return
     }
     if (!claimed?.length) return
+    claimedStamp = true
 
     const { data: reg } = await adminClient
       .from('event_registrations')
@@ -110,7 +125,8 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
         })
       : null
 
-    const { subject, htmlContent } = registrationConfirmedEmail({
+    const buildEmail = variant === 'selected' ? selectedForEventEmail : registrationConfirmedEmail
+    const { subject, htmlContent } = buildEmail({
       fullName: user.full_name,
       eventName: event.name,
       eventDate: event.event_date,
@@ -127,5 +143,16 @@ export async function sendConfirmationEmailOnce(registrationId: string): Promise
     await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
   } catch (err) {
     console.error('[Email] Confirmation email failed', err)
+
+    // Release the claim so a later attempt can re-take it. Only safe when this
+    // call is the one that took it, and only for a row still holding OUR stamp
+    // — the `is not null` guard keeps a concurrent successful send's stamp.
+    if (claimedStamp) {
+      await adminClient
+        .from('event_registrations')
+        .update({ confirmation_email_sent_at: null })
+        .eq('id', registrationId)
+        .not('confirmation_email_sent_at', 'is', null)
+    }
   }
 }
