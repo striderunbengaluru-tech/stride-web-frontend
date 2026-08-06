@@ -1,6 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { RegistrationsClient } from '@/components/admin/registrations-client'
-import type { SelectedPackage } from '@/types/event'
+import type { SelectedPackage, AdditionalField, CustomResponses } from '@/types/event'
 import { eventRowPriceLabel, priceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { ageFromDob } from '@/lib/utils/age'
 
@@ -76,6 +76,8 @@ export type Attendee = {
   /** Packages bought, snapshotted at registration. Empty for non-package events. */
   packages: SelectedPackage[]
   amount_due_paise: number | null
+  /** Answers to the event's custom questions, keyed by AdditionalField id. */
+  custom_responses: CustomResponses
   // ── Profile columns, joined from `users` ──
   // Drives the tier badge, the contact line and the CSV export.
   avatar_url: string | null
@@ -97,6 +99,13 @@ export type EventWithAttendees = EventSummary & {
   attendees: Attendee[]
   /** Distinct package names across this event's attendees — drives the filter. */
   package_names: string[]
+  /**
+   * The event's custom questions, in the admin's authored order. Answers live
+   * per attendee; the questions live here so a runner who skipped an optional
+   * one still shows the question with a blank, and so the order is stable
+   * across attendees rather than following JSON key order.
+   */
+  custom_fields: AdditionalField[]
 }
 
 export default async function AdminRegistrationsPage() {
@@ -121,14 +130,14 @@ export default async function AdminRegistrationsPage() {
     // can't see. Two narrow columns on an admin-only page is the cheaper trade.
     adminClient
       .from('event_registrations')
-      .select('id, selected_packages, amount_due_paise'),
+      .select('id, selected_packages, amount_due_paise, custom_responses'),
     // Same reasoning as above: admin_event_summary is a hand-authored view whose
     // DDL isn't in this repo, so the two package columns come straight from the
     // table and are joined in JS. Without them the price badge read "Free" for
     // every package event, since packages leave price_paise at 0.
     adminClient
       .from('events')
-      .select('id, price_paise, packages, packages_enabled, invite_only'),
+      .select('id, price_paise, packages, packages_enabled, invite_only, additional_fields'),
     // Profile columns the hand-authored admin_registrations_flat view doesn't
     // carry. Same trade as the two reads above: join in JS rather than re-author
     // DDL this repo can't see.
@@ -139,17 +148,39 @@ export default async function AdminRegistrationsPage() {
 
   const rows = (flatRows ?? []) as FlatRow[]
 
-  type PackageRow = { id: string; selected_packages: string | null; amount_due_paise: number | null }
-  const packageByRegistration = new Map<string, { packages: SelectedPackage[]; amountDue: number | null }>()
+  type PackageRow = {
+    id: string
+    selected_packages: string | null
+    amount_due_paise: number | null
+    custom_responses: string | null
+  }
+  const packageByRegistration = new Map<string, {
+    packages: SelectedPackage[]
+    amountDue: number | null
+    customResponses: CustomResponses
+  }>()
   for (const row of (packageRows ?? []) as PackageRow[]) {
     let packages: SelectedPackage[] = []
     try { packages = JSON.parse(row.selected_packages ?? '[]') as SelectedPackage[] }
     catch { packages = [] }
-    packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise })
+
+    // Answers to the event's custom questions, keyed by field id. A malformed
+    // value reads as "unanswered" rather than taking down the whole page.
+    let customResponses: CustomResponses = {}
+    try {
+      const parsed = JSON.parse(row.custom_responses ?? '{}')
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        customResponses = parsed as CustomResponses
+      }
+    } catch { customResponses = {} }
+
+    packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise, customResponses })
   }
 
-  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null }
+  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null; additional_fields: string | null }
   const priceLabelByEvent = new Map<string, { label: string; isFree: boolean; inviteOnly: boolean }>()
+  /** The event's custom questions, in the order the admin authored them. */
+  const customFieldsByEvent = new Map<string, AdditionalField[]>()
   for (const row of (eventPricingRows ?? []) as PricingRow[]) {
     const label = eventRowPriceLabel(row.price_paise ?? 0, row.packages, row.packages_enabled)
     priceLabelByEvent.set(row.id, {
@@ -157,6 +188,13 @@ export default async function AdminRegistrationsPage() {
       isFree: label === FREE_LABEL,
       inviteOnly: row.invite_only === true,
     })
+
+    let fields: AdditionalField[] = []
+    try {
+      const parsed = JSON.parse(row.additional_fields ?? '[]')
+      if (Array.isArray(parsed)) fields = parsed as AdditionalField[]
+    } catch { fields = [] }
+    customFieldsByEvent.set(row.id, fields)
   }
 
   // Build runner summaries (unique users with aggregate stats)
@@ -221,6 +259,7 @@ export default async function AdminRegistrationsPage() {
       checked_in_at: row.checked_in_at,
       packages: bought?.packages ?? [],
       amount_due_paise: bought?.amountDue ?? null,
+      custom_responses: bought?.customResponses ?? {},
       avatar_url: profile?.avatar_url ?? null,
       contact_number: profile?.contact_number ?? null,
       emergency_contact_number: profile?.emergency_contact_number ?? null,
@@ -240,6 +279,7 @@ export default async function AdminRegistrationsPage() {
     // would mean re-writing SQL we can't see. Same trade as the reads above.
     return {
       ...e,
+      custom_fields: customFieldsByEvent.get(e.id) ?? [],
       applied_count: attendees.filter(a => a.status === 'APPLIED').length,
       rejected_count: attendees.filter(a => a.status === 'REJECTED').length,
       invite_only: pricing?.inviteOnly ?? false,

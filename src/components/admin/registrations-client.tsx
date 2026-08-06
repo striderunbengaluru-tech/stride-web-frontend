@@ -7,10 +7,11 @@ import { toast } from 'sonner'
 import {
   ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar,
   Download, Loader2, Phone, AlertCircle, MapPin, Cake, UserRound, Mail, CalendarPlus, Ticket,
-  Star, Check, X, Hourglass,
+  Star, Check, X, Hourglass, ClipboardList,
 } from 'lucide-react'
 import { approveRegistrationsAction, rejectRegistrationsAction } from '@/lib/actions/admin'
 import type { RunnerRow, EventWithAttendees, Attendee } from '@/app/admin/registrations/page'
+import type { AdditionalField, CustomResponses } from '@/types/event'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { TierBadge } from '@/components/ui/tier-badge'
 import { Avatar, Fact, GENDER_LABEL, telHref, mailtoHref } from '@/components/admin/user-facts'
@@ -44,6 +45,33 @@ const STATUS_PILL: Record<string, string> = {
 
 /** Only an application awaiting a decision can be approved or rejected. */
 const DECIDABLE_STATUS = 'APPLIED'
+
+/**
+ * One runner's answer to one custom question, as a display string.
+ *
+ * Blank, whitespace-only and missing all read as unanswered — a question the
+ * runner skipped and one they answered with a space are the same thing to an
+ * admin scanning the list.
+ */
+function answerFor(responses: CustomResponses, field: AdditionalField): string {
+  const raw = responses[field.id]
+  if (raw === undefined || raw === null) return CSV_EMPTY
+  const text = String(raw).trim()
+  return text.length > 0 ? text : CSV_EMPTY
+}
+
+/**
+ * Makes a `link` answer clickable, but only when it is a real http(s) URL.
+ * The register route validates these with `new URL()`, which accepts
+ * `javascript:` — so the scheme is re-checked here rather than trusted.
+ */
+function linkHref(raw: string | number | undefined): string | undefined {
+  if (typeof raw !== 'string') return undefined
+  try {
+    const url = new URL(raw.trim())
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined
+  } catch { return undefined }
+}
 
 function fmtDate(d: string | null) {
   return d ? formatDateNumericIST(d) : '—'
@@ -729,6 +757,31 @@ export function RegistrationsClient({ runners, events }: Props) {
                                           />
                                         )}
                                       </div>
+
+                                      {/* Answers to the event's custom questions.
+                                          Driven by the event's field list, not the
+                                          response object's keys: an optional question
+                                          the runner skipped still shows, and the order
+                                          matches the form they filled in rather than
+                                          JSON key order. */}
+                                      {event.custom_fields.length > 0 && (
+                                        <div className='mt-4 pt-3 border-t border-white/8'>
+                                          <p className='text-white/25 text-[10px] font-bold font-mono uppercase tracking-widest mb-2.5'>
+                                            Form responses
+                                          </p>
+                                          <div className='grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3'>
+                                            {event.custom_fields.map(field => (
+                                              <Fact
+                                                key={field.id}
+                                                icon={<ClipboardList size={12} />}
+                                                label={field.label}
+                                                value={answerFor(a.custom_responses, field)}
+                                                href={field.type === 'link' ? linkHref(a.custom_responses[field.id]) : undefined}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
