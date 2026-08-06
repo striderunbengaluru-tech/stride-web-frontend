@@ -47,10 +47,14 @@ export type EventSummary = {
   rejected_count: number
   /** Registering on this event is a free application an admin approves. */
   invite_only: boolean
+  /** First banner image, falling back to cover_url. Null when neither is set. */
+  banner_url: string | null
 }
 
 export type RunnerRow = {
   user_id: string
+  /** Joined from `users` — admin_registrations_flat doesn't carry it. */
+  avatar_url: string | null
   full_name: string | null
   email: string | null
   username: string | null
@@ -137,7 +141,7 @@ export default async function AdminRegistrationsPage() {
     // every package event, since packages leave price_paise at 0.
     adminClient
       .from('events')
-      .select('id, price_paise, packages, packages_enabled, invite_only, additional_fields'),
+      .select('id, price_paise, packages, packages_enabled, invite_only, additional_fields, banner_images, cover_url'),
     // Profile columns the hand-authored admin_registrations_flat view doesn't
     // carry. Same trade as the two reads above: join in JS rather than re-author
     // DDL this repo can't see.
@@ -177,16 +181,24 @@ export default async function AdminRegistrationsPage() {
     packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise, customResponses })
   }
 
-  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null; additional_fields: string | null }
-  const priceLabelByEvent = new Map<string, { label: string; isFree: boolean; inviteOnly: boolean }>()
+  type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null; additional_fields: string | null; banner_images: string | null; cover_url: string | null }
+  const priceLabelByEvent = new Map<string, { label: string; isFree: boolean; inviteOnly: boolean; bannerUrl: string | null }>()
   /** The event's custom questions, in the order the admin authored them. */
   const customFieldsByEvent = new Map<string, AdditionalField[]>()
   for (const row of (eventPricingRows ?? []) as PricingRow[]) {
     const label = eventRowPriceLabel(row.price_paise ?? 0, row.packages, row.packages_enabled)
+    // Same precedence the public cards use: first banner, then cover_url.
+    let bannerUrl: string | null = row.cover_url ?? null
+    try {
+      const banners = JSON.parse(row.banner_images ?? '[]') as string[]
+      if (banners[0]) bannerUrl = banners[0]
+    } catch { /* keep cover_url */ }
+
     priceLabelByEvent.set(row.id, {
       label,
       isFree: label === FREE_LABEL,
       inviteOnly: row.invite_only === true,
+      bannerUrl,
     })
 
     let fields: AdditionalField[] = []
@@ -203,6 +215,7 @@ export default async function AdminRegistrationsPage() {
     if (!runnerMap.has(row.user_id)) {
       runnerMap.set(row.user_id, {
         user_id: row.user_id,
+        avatar_url: null,
         full_name: row.full_name,
         email: row.email,
         username: row.username,
@@ -240,6 +253,12 @@ export default async function AdminRegistrationsPage() {
   }
   const profileByUser = new Map<string, ProfileRow>()
   for (const row of (profileRows ?? []) as ProfileRow[]) profileByUser.set(row.id, row)
+
+  // Second pass: the runner summaries are built from the view, which has no
+  // avatar. Filled here rather than reordering the reads above.
+  for (const runner of runnerMap.values()) {
+    runner.avatar_url = profileByUser.get(runner.user_id)?.avatar_url ?? null
+  }
 
   // Build attendees per event
   const attendeesMap = new Map<string, Attendee[]>()
@@ -283,6 +302,7 @@ export default async function AdminRegistrationsPage() {
       applied_count: attendees.filter(a => a.status === 'APPLIED').length,
       rejected_count: attendees.filter(a => a.status === 'REJECTED').length,
       invite_only: pricing?.inviteOnly ?? false,
+      banner_url: pricing?.bannerUrl ?? null,
       // admin_event_summary has no package columns, so the label is attached here
       // from the events table rather than derived from price_paise.
       price_label: pricing?.label ?? priceLabel(e.price_paise ?? 0),

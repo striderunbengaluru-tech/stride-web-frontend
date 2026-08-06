@@ -40,10 +40,16 @@ export function Avatar({
 }: {
   url: string | null
   name: string | null
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
 }) {
   const initial = (name ?? '?').charAt(0).toUpperCase()
-  const box = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+  // `lg` is for the two places an admin scans a list of people and recognises
+  // them by face — /admin/users and Registrations → All runners. sm/md are
+  // unchanged so the denser attendee rows keep their proportions.
+  const box =
+    size === 'sm' ? 'w-8 h-8 text-xs'
+    : size === 'lg' ? 'w-14 h-14 text-lg'
+    : 'w-10 h-10 text-sm'
 
   return (
     <div
