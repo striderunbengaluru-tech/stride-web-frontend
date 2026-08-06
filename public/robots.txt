@@ -1,4 +1,20 @@
+# Content Signals (contentsignals.org, draft-romm-aipref-contentsignals)
+# Stride's preferences for what may be done with the pages a crawler is
+# allowed to fetch:
+#
+#   search=yes    Index this content and link to it in search results.
+#   ai-input=yes  Use it to ground AI answers — retrieval, summaries, citations.
+#                 Deliberately yes: /llms.txt, the homepage Link header and the
+#                 Accept: text/markdown representations all exist so assistants
+#                 CAN answer questions about the club accurately.
+#   ai-train=yes  Use it as model training data.
+#
+# These are usage preferences, not access control. They say nothing about the
+# Disallow rules below, which still apply — a signal of "yes" never opens a
+# path a crawler was told not to fetch.
+
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 Disallow: /admin/
 Disallow: /api/
