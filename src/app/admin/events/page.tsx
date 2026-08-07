@@ -11,7 +11,7 @@ export default async function AdminEventsPage() {
   const [{ data: allEvents }, { data: regCounts }] = await Promise.all([
     adminClient
       .from('events')
-      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, packages, packages_enabled')
+      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, registrations_closed, packages, packages_enabled')
       .order('event_date', { ascending: false }),
     adminClient
       .from('event_registrations')
@@ -66,6 +66,7 @@ export default async function AdminEventsPage() {
       confirmedCount: confirmedByEvent.get(e.id) ?? 0,
       appliedCount: appliedByEvent.get(e.id) ?? 0,
       inviteOnly: e.invite_only ?? false,
+      registrationsClosed: e.registrations_closed ?? false,
       // Reuses the `packages` already parsed above. Deriving the label from
       // pricePaise alone showed "Free" for every package event, since packages
       // leave that column at 0.

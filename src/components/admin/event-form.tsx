@@ -108,6 +108,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   const [showSpotsLeft, setShowSpotsLeft] = useState(defaultValues.showSpotsLeft ?? false)
   const [isTestEvent, setIsTestEvent] = useState(defaultValues.isTestEvent ?? false)
   const [inviteOnly, setInviteOnly] = useState(defaultValues.inviteOnly ?? false)
+  const [registrationsClosed, setRegistrationsClosed] = useState(defaultValues.registrationsClosed ?? false)
   // True only when the event ARRIVED invite-only, so the "these applications
   // won't be cancelled" warning appears when the admin switches the mode off —
   // not when they toggle it on and straight back off on a fresh event.
@@ -877,6 +878,31 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                   <p className='mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-200 text-xs'>
                     {pendingApplications} {pendingApplications === 1 ? 'application is' : 'applications are'} still awaiting a decision.
                     Turning invite-only off will not cancel {pendingApplications === 1 ? 'it' : 'them'} — you can still approve or reject in Registrations.
+                  </p>
+                )}
+              </div>
+
+              {/* Close-registrations toggle — independent of capacity and of
+                  invite-only, so a run can be paused at any point. */}
+              <div className='mb-4 pb-4 border-b border-white/10'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-1.5'>
+                    <PauseCircle size={14} className='text-white/40' />
+                    <label className='text-white/70 text-sm font-medium'>Close registrations</label>
+                    <HelpHint text='Stops new sign-ups immediately, even if there are spots left. The event page reads “Event is full” and the button is disabled. Nobody already registered is affected — they keep their spot, their ticket and their wallet pass — and you can still approve invite-only applications that are already in. Switch it off to reopen.' />
+                  </div>
+                  <Switch
+                    checked={registrationsClosed}
+                    onCheckedChange={(v) => { setRegistrationsClosed(v); markDirty() }}
+                    label='Close registrations for this event'
+                  />
+                  <input type='hidden' name='registrationsClosed' value={registrationsClosed ? 'true' : 'false'} />
+                </div>
+
+                {registrationsClosed && (
+                  <p className='mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-200 text-xs'>
+                    {inviteOnly ? 'No new applications' : 'No new registrations'} will be accepted once you save.
+                    Existing {inviteOnly ? 'applicants and confirmed runners' : 'registrations'} are untouched.
                   </p>
                 )}
               </div>

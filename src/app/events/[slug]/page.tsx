@@ -96,7 +96,13 @@ export default async function EventDetailPage({ params }: Props) {
   // itself, quote a price, or advertise a spot count.
   const inviteOnly = event.invite_only === true
 
-  const isFull = !inviteOnly && !!event.capacity && (confirmedCount ?? 0) >= event.capacity
+  // An admin can close sign-ups without capacity being reached — a paused run
+  // reads exactly like a sold-out one, including for invite-only applications,
+  // which is the only way to stop the inflow while the decisions are made.
+  const registrationsClosed = event.registrations_closed === true
+
+  const isFull = registrationsClosed
+    || (!inviteOnly && !!event.capacity && (confirmedCount ?? 0) >= event.capacity)
   // Past events (start date has elapsed). Falls back to false for events without a date.
   const isPast = !!event.event_date && new Date(event.event_date).getTime() < Date.now()
 

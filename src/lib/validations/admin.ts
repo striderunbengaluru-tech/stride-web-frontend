@@ -93,6 +93,11 @@ export const eventSchema = z.object({
   // in superRefine still applies — the admin states the price the event will
   // charge the moment this is switched back off.
   inviteOnly: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Closes new sign-ups whether or not capacity is reached, and whether or not
+  // invite-only is on. Existing registrations and applications are untouched —
+  // there is no cross-field rule here because closing is always a valid state
+  // for any event.
+  registrationsClosed: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert, Star } from 'lucide-react'
+import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert, Star, PauseCircle } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
@@ -22,6 +22,8 @@ export type AdminEventRow = {
   /** Invite-only applications still awaiting a decision. */
   appliedCount: number
   inviteOnly: boolean
+  /** Admin has closed new sign-ups, whether or not capacity is reached. */
+  registrationsClosed: boolean
   /** Resolved server-side so a package event reads "From ₹X", not "Free". */
   priceLabel: string
   isFree: boolean
@@ -248,6 +250,15 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                         >
                           <Star size={10} className='fill-stride-yellow-accent' aria-hidden='true' />
                           INVITE ONLY
+                        </span>
+                      )}
+                      {event.registrationsClosed && !isPast && (
+                        <span
+                          title='Registrations are closed. The event page reads “Event is full” and no new sign-ups or applications are accepted. Existing ones are unaffected.'
+                          className='flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-500/15 text-red-300 shrink-0'
+                        >
+                          <PauseCircle size={10} aria-hidden='true' />
+                          CLOSED
                         </span>
                       )}
                       {event.appliedCount > 0 && (

@@ -144,6 +144,67 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
   )
 }
 
+/**
+ * The four numbers an admin working through an invite-only run needs side by
+ * side. Applications are unlimited but approvals are capped at capacity, so
+ * "how many applied" and "how many seats are left to give" are different
+ * questions — the header's confirmed/capacity bar answers neither on its own.
+ *
+ * Invite-only only: on an ordinary event applying and being confirmed are the
+ * same act, so three of these four tiles would repeat each other.
+ */
+function ApplicationStats({ event }: { event: EventWithAttendees }) {
+  const remaining = event.capacity != null
+    ? Math.max(0, event.capacity - event.confirmed_count)
+    : null
+
+  const tiles: { label: string; value: string | number; hint: string; tone: string }[] = [
+    {
+      label: 'Total registrations',
+      // Every row on the event, whatever its status — including applications
+      // that were turned down. The three tiles beside it are the breakdown.
+      value: event.total_registrations,
+      hint: `Every application received: ${event.confirmed_count} accepted, ${event.applied_count} awaiting review, ${event.rejected_count} rejected.`,
+      tone: 'text-white',
+    },
+    {
+      label: 'Max capacity',
+      value: event.capacity ?? 'Unlimited',
+      hint: event.capacity == null
+        ? 'No capacity set — approvals are not capped.'
+        : `${remaining} spot${remaining === 1 ? '' : 's'} left to give out.`,
+      tone: 'text-white',
+    },
+    {
+      label: 'Accepted',
+      value: event.confirmed_count,
+      hint: 'Approved applications. These runners are confirmed and have their ticket.',
+      tone: 'text-green-400',
+    },
+    {
+      label: 'To review',
+      value: event.applied_count,
+      hint: 'Applications still awaiting your decision.',
+      tone: event.applied_count > 0 ? 'text-amber-300' : 'text-white/40',
+    },
+  ]
+
+  return (
+    <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 px-4 py-3 border-b border-white/8 bg-white/2'>
+      {tiles.map(tile => (
+        <div
+          key={tile.label}
+          title={tile.hint}
+          className='bg-white/5 border border-white/10 rounded-xl px-3 py-2.5'
+        >
+          <p className='text-white/40 text-[11px] leading-tight'>{tile.label}</p>
+          <p className={`text-xl font-bold tabular-nums font-mono mt-0.5 ${tile.tone}`}>{tile.value}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function RegistrationsClient({ runners, events }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('events')
@@ -561,6 +622,8 @@ export function RegistrationsClient({ runners, events }: Props) {
                     {/* Expanded attendee list */}
                     {isExpanded && (
                       <div className='border-t border-white/8'>
+
+                        {event.invite_only && <ApplicationStats event={event} />}
 
                         {/* Export toolbar */}
                         <div className='flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-white/2'>
