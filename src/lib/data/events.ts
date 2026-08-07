@@ -34,8 +34,8 @@ const EVENT_DETAIL_COLUMNS =
   'id, name, slug, subtitle, details, status, event_date, end_date, location, location_url, ' +
   'post_run_location, post_run_location_url, strava_route_url, capacity, price_paise, ' +
   'cover_url, banner_images, additional_fields, terms_and_conditions, distance_km, ' +
-  'difficulty, show_spots_left, is_test_event, invite_only, packages, packages_enabled, ' +
-  'packages_multi_select'
+  'difficulty, show_spots_left, is_test_event, invite_only, registrations_closed, ' +
+  'packages, packages_enabled, packages_multi_select'
 
 export type EventDetailRow = {
   id: string
@@ -67,6 +67,12 @@ export type EventDetailRow = {
    * duration but stay on the row. The event remains publicly listed.
    */
   invite_only: boolean | null
+  /**
+   * Admin switch that closes new sign-ups regardless of capacity. Existing
+   * registrations and applications are untouched — the page simply reads as
+   * full. Enforced authoritatively inside register_for_event.
+   */
+  registrations_closed: boolean | null
   /** JSON array of EventPackage. When packages_enabled, these set the price. */
   packages: string | null
   packages_enabled: boolean | null

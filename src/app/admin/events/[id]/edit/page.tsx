@@ -53,6 +53,7 @@ export default async function EditEventPage({ params }: Props) {
           showSpotsLeft: event.show_spots_left ?? false,
           isTestEvent: event.is_test_event ?? false,
           inviteOnly: event.invite_only ?? false,
+          registrationsClosed: event.registrations_closed ?? false,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
           termsText: event.terms_and_conditions ?? undefined,

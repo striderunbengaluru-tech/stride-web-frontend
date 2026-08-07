@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, invite_only, packages, packages_enabled, packages_multi_select')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, invite_only, registrations_closed, packages, packages_enabled, packages_multi_select')
     .eq('id', eventId)
     .single()
 
@@ -60,6 +60,15 @@ export async function POST(request: Request) {
   // below and the matching guard inside register_for_event, which reads the
   // flag under the event-row lock and is the authoritative one.
   const inviteOnly = event.invite_only === true
+
+  // An admin has closed sign-ups. Checked before everything else — a closed
+  // event accepts no ticket and no application — and repeated inside
+  // register_for_event under the event-row lock, which is the authoritative
+  // one. The message is deliberately identical to the capacity path: to a
+  // runner a paused run and a sold-out run are the same thing.
+  if (event.registrations_closed === true) {
+    return NextResponse.json({ error: 'Event is full' }, { status: 409 })
+  }
 
   // If the event has terms, acceptance is mandatory — defense in depth (UI also gates this).
   if (event.terms_and_conditions && event.terms_and_conditions.trim().length > 0 && acceptedTerms !== true) {
@@ -250,6 +259,10 @@ export async function POST(request: Request) {
   }
   const alreadyRegisteredResponse = () =>
     NextResponse.json({ error: 'You already have a registration for this event.' }, { status: 409 })
+  // The admin closed the event between our read above and the RPC's locked
+  // read. Nothing was inserted, so there is no hold to release.
+  const registrationsClosedResponse = () =>
+    NextResponse.json({ error: 'Event is full' }, { status: 409 })
 
   // ── Invite-only: record a free application and stop ────────────────────────
   // No Razorpay, no confirmation email. The runner hears nothing until an admin
@@ -268,6 +281,7 @@ export async function POST(request: Request) {
       console.error('[Register] Application failed', rpcError)
       return NextResponse.json({ error: 'Could not submit your application. Please try again.' }, { status: 500 })
     }
+    if (outcome === 'REGISTRATIONS_CLOSED') return registrationsClosedResponse()
     if (outcome === 'ALREADY_REGISTERED') return alreadyRegisteredResponse()
     if (outcome !== 'APPLIED') {
       console.error('[Register] Unexpected application outcome', outcome)
@@ -298,6 +312,7 @@ export async function POST(request: Request) {
     if (outcome === 'CAPACITY_FULL') {
       return NextResponse.json({ error: 'Event is full' }, { status: 409 })
     }
+    if (outcome === 'REGISTRATIONS_CLOSED') return registrationsClosedResponse()
     if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
       return packageFullResponse(outcome)
     }
@@ -340,6 +355,7 @@ export async function POST(request: Request) {
   if (outcome === 'CAPACITY_FULL') {
     return NextResponse.json({ error: 'Event is full' }, { status: 409 })
   }
+  if (outcome === 'REGISTRATIONS_CLOSED') return registrationsClosedResponse()
   if (typeof outcome === 'string' && outcome.startsWith(PACKAGE_FULL_PREFIX)) {
     return packageFullResponse(outcome)
   }
