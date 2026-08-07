@@ -18,6 +18,28 @@ const GOOGLE_WALLET_BADGE =
 
 type Platform = 'apple' | 'google'
 
+/** Used only if the response somehow arrives without a filename. */
+const FALLBACK_PASS_FILENAME = 'stride-run-wallet.pkpass'
+
+/**
+ * Reads the download name the route chose out of `Content-Disposition`.
+ *
+ * `a.download` overrides the header, so without this the browser would ignore
+ * the server's name entirely — which is exactly how every pass ended up called
+ * `stride-run.pkpass`. Parsing it back keeps the naming rule in one place,
+ * next to the event data.
+ *
+ * Path separators are stripped even though our own route only ever emits
+ * `[a-z0-9-]`: this value becomes a filename on the member's disk, and a
+ * download name is not somewhere to extend trust.
+ */
+function filenameFromDisposition(header: string | null): string {
+  if (!header) return FALLBACK_PASS_FILENAME
+  const match = /filename="?([^";]+)"?/i.exec(header)
+  const name = match?.[1]?.trim().replace(/[/\\]/g, '')
+  return name && name.length > 0 ? name : FALLBACK_PASS_FILENAME
+}
+
 export function WalletPassButtons({ registrationId }: { registrationId: string }) {
   const router = useRouter()
   const [loading, setLoading] = useState<Platform | null>(null)
@@ -47,7 +69,7 @@ export function WalletPassButtons({ registrationId }: { registrationId: string }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'stride-run.pkpass'
+      a.download = filenameFromDisposition(res.headers.get('content-disposition'))
       document.body.appendChild(a)
       a.click()
       a.remove()
