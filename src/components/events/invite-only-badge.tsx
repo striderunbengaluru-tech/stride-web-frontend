@@ -7,9 +7,16 @@ import { Star } from 'lucide-react'
  * decision, so it has to read as scarcity from across a card grid rather than
  * as a neutral status chip. Hence the glow and the shimmer sweep.
  *
- * Both live in globals.css: `.glow-yellow` (shared with the nav indicator) and
- * `.invite-shimmer`, which carries its own `prefers-reduced-motion` kill
- * switch. The pill is `relative overflow-hidden` so the sheen clips to it.
+ * SOLID yellow with black text, not a translucent yellow-on-yellow chip. On the
+ * events hub the badge sits over a poster, and a 15%-opacity fill let whatever
+ * was behind it show through — the badge disappeared into the artwork. A solid
+ * fill is legible over any image, and black on yellow is the pre-validated
+ * ~14:1 pair (see CLAUDE.md), the same one every CTA uses.
+ *
+ * Both effects live in globals.css: `.glow-yellow` (shared with the nav
+ * indicator) and `.invite-shimmer`, which carries its own
+ * `prefers-reduced-motion` kill switch. The pill is `relative overflow-hidden`
+ * so the sheen clips to it.
  */
 
 type Size = 'sm' | 'md'
@@ -29,9 +36,9 @@ export function InviteOnlyBadge({ size = 'sm', className = '' }: Props) {
 
   return (
     <span
-      className={`relative overflow-hidden invite-shimmer glow-yellow inline-flex items-center font-mono font-bold uppercase text-stride-yellow-accent bg-stride-yellow-accent/15 border border-stride-yellow-accent/50 rounded-md whitespace-nowrap ${pill} ${className}`}
+      className={`relative overflow-hidden invite-shimmer glow-yellow inline-flex items-center font-mono font-bold uppercase text-copy-black bg-stride-yellow-accent rounded-md whitespace-nowrap ${pill} ${className}`}
     >
-      <Star size={icon} className='shrink-0 fill-stride-yellow-accent' strokeWidth={2.5} aria-hidden='true' />
+      <Star size={icon} className='shrink-0 fill-current' strokeWidth={2.5} aria-hidden='true' />
       Invite only
     </span>
   )
