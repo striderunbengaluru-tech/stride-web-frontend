@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { coordsFromMapsUrl } from '@/lib/maps-coords'
+import { slugify } from '@/lib/utils/slug'
 import {
   MAX_PASSES_PER_REGISTRATION,
   getWalletPassCount,
@@ -52,6 +53,24 @@ function fmtEventOn(iso: string | null): string | null {
     timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true,
   }).format(d)
   return `${date}, ${time.toUpperCase()}`
+}
+
+/**
+ * Download name for the .pkpass: the run's name in kebab-case with a `-wallet`
+ * suffix, e.g. "HYFIT Games Bootcamp" → `hyfit-games-bootcamp-wallet.pkpass`.
+ *
+ * Every pass used to arrive as `stride-run.pkpass`, so a member with two saved
+ * runs got `stride-run (1).pkpass` and no way to tell which was which.
+ *
+ * Two guards: a name that slugifies to nothing (a title written entirely in
+ * emoji or a non-Latin script) would otherwise yield `-wallet.pkpass`, and the
+ * length cap keeps an unusually long event name from producing a filename some
+ * filesystems reject. The cap trims a trailing hyphen so a mid-word cut can't
+ * read as `long-name--wallet`.
+ */
+function passFilename(eventName: string): string {
+  const slug = slugify(eventName).slice(0, 60).replace(/-+$/, '')
+  return `${slug || 'stride-run'}-wallet.pkpass`
 }
 
 export async function GET(request: Request) {
@@ -204,7 +223,10 @@ export async function GET(request: Request) {
     status: 200,
     headers: {
       'Content-Type': 'application/vnd.apple.pkpass',
-      'Content-Disposition': 'attachment; filename="stride-run.pkpass"',
+      // The browser fetches this as a blob and names the download itself, so
+      // the client reads this header back rather than hardcoding a second copy
+      // of the naming rule.
+      'Content-Disposition': `attachment; filename="${passFilename(event.name)}"`,
       'Cache-Control': 'no-store',
     },
   })
