@@ -216,6 +216,12 @@ export function RegistrationsClient({ runners, events }: Props) {
   const [exportingEventId, setExportingEventId] = useState<string | null>(null)
   /** '' = no package filter. Only applies to the By event tab. */
   const [packageFilter, setPackageFilter] = useState('')
+  /**
+   * Free-text filter over the ONE expanded event's attendees. Scoped to that
+   * event and cleared with it, the same way the approval selection is — a query
+   * carried over to the next event would silently hide half of its list.
+   */
+  const [attendeeSearch, setAttendeeSearch] = useState('')
 
   // ── Bulk approve / reject ──────────────────────────────────────────────────
   // Selection is scoped to the ONE expanded event and cleared whenever that
@@ -227,6 +233,17 @@ export function RegistrationsClient({ runners, events }: Props) {
   function openEvent(eventId: string | null) {
     setExpandedEventId(eventId)
     setExpandedAttendeeId(null)
+    setSelectedIds(new Set())
+    setAttendeeSearch('')
+  }
+
+  /**
+   * Narrowing the list drops the selection. `decide()` acts on whatever is
+   * selected, so leaving a filtered-out applicant checked would approve someone
+   * the admin can no longer see.
+   */
+  function changeAttendeeSearch(value: string) {
+    setAttendeeSearch(value)
     setSelectedIds(new Set())
   }
 
@@ -297,8 +314,13 @@ export function RegistrationsClient({ runners, events }: Props) {
     }
   }
 
-  async function exportAttendees(event: EventWithAttendees) {
-    if (event.attendees.length === 0) {
+  /**
+   * Exports exactly the rows on screen, so an attendee search narrows the CSV
+   * the same way it narrows the list. The toolbar says how many of how many are
+   * showing, so a filtered download is never mistaken for the full roster.
+   */
+  async function exportAttendees(event: EventWithAttendees, attendees: Attendee[]) {
+    if (attendees.length === 0) {
       toast.error('Nothing to export — this event has no registrations yet.')
       return
     }
@@ -309,11 +331,11 @@ export function RegistrationsClient({ runners, events }: Props) {
       // into building rows and encoding a Blob for a few hundred attendees.
       await new Promise(resolve => setTimeout(resolve, 0))
 
-      const csv = toCsv(CSV_HEADERS, event.attendees.map(attendeeCsvRow))
+      const csv = toCsv(CSV_HEADERS, attendees.map(attendeeCsvRow))
       const filename = `Participants - ${safeFilenamePart(event.name)} - as of ${csvTimestamp()}.csv`
       downloadCsv(filename, csv)
 
-      toast.success(`Downloaded ${event.attendees.length} participant${event.attendees.length === 1 ? '' : 's'}`, {
+      toast.success(`Downloaded ${attendees.length} participant${attendees.length === 1 ? '' : 's'}`, {
         description: filename,
       })
     } catch {
@@ -494,10 +516,24 @@ export function RegistrationsClient({ runners, events }: Props) {
                 const isExpanded = expandedEventId === event.id
                 const isPast = event.event_date ? new Date(event.event_date) < new Date() : false
 
+                // One rule for the whole expanded panel: the attendee search
+                // narrows what is listed, what "select all" covers, and what the
+                // CSV contains. Anything else lets an admin act on rows they
+                // can't see.
+                const attendeeQuery = isExpanded ? attendeeSearch.trim().toLowerCase() : ''
+                const visibleAttendees = attendeeQuery
+                  ? event.attendees.filter(a =>
+                      a.full_name?.toLowerCase().includes(attendeeQuery) ||
+                      a.email?.toLowerCase().includes(attendeeQuery) ||
+                      a.username?.toLowerCase().includes(attendeeQuery) ||
+                      a.runner_tag?.toLowerCase().includes(attendeeQuery)
+                    )
+                  : event.attendees
+
                 // Applications this admin can act on. Confirmed, cancelled and
                 // already-rejected rows are deliberately not selectable —
                 // un-approving would strand a sent ticket and a wallet pass.
-                const decidableIds = event.attendees
+                const decidableIds = visibleAttendees
                   .filter(a => a.status === DECIDABLE_STATUS)
                   .map(a => a.registration_id)
                 const selectedHere = decidableIds.filter(id => selectedIds.has(id)).length
@@ -625,15 +661,38 @@ export function RegistrationsClient({ runners, events }: Props) {
 
                         {event.invite_only && <ApplicationStats event={event} />}
 
+                        {/* Attendee search — finding one runner in a few hundred
+                            rows was otherwise a scroll. */}
+                        {event.attendees.length > 0 && (
+                          <div className='px-4 pt-3'>
+                            <label htmlFor={`attendee-search-${event.id}`} className='sr-only'>
+                              Search participants of {event.name}
+                            </label>
+                            <div className='relative'>
+                              <Search size={15} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
+                              <input
+                                id={`attendee-search-${event.id}`}
+                                type='text'
+                                placeholder='Search name, tag, email…'
+                                value={attendeeSearch}
+                                onChange={e => changeAttendeeSearch(e.target.value)}
+                                className='w-full bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         {/* Export toolbar */}
                         <div className='flex items-center gap-3 px-4 py-3 border-b border-white/8 bg-white/2'>
                           <p className='text-white/35 text-xs'>
-                            {event.attendees.length} participant{event.attendees.length === 1 ? '' : 's'}
+                            {attendeeQuery
+                              ? `Showing ${visibleAttendees.length} of ${event.attendees.length} participants`
+                              : `${event.attendees.length} participant${event.attendees.length === 1 ? '' : 's'}`}
                           </p>
                           <button
                             type='button'
-                            onClick={() => exportAttendees(event)}
-                            disabled={exportingEventId === event.id || event.attendees.length === 0}
+                            onClick={() => exportAttendees(event, visibleAttendees)}
+                            disabled={exportingEventId === event.id || visibleAttendees.length === 0}
                             className='ml-auto inline-flex items-center gap-2 min-h-11 px-3.5 rounded-md bg-stride-yellow-accent text-copy-black text-xs font-semibold hover:bg-stride-yellow-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                           >
                             {exportingEventId === event.id ? (
@@ -692,11 +751,15 @@ export function RegistrationsClient({ runners, events }: Props) {
                           </div>
                         )}
 
-                        {event.attendees.length === 0 ? (
-                          <p className='text-white/30 text-sm px-4 py-5 text-center'>No registrations for this event.</p>
+                        {visibleAttendees.length === 0 ? (
+                          <p className='text-white/30 text-sm px-4 py-5 text-center'>
+                            {attendeeQuery
+                              ? 'No participants match your search.'
+                              : 'No registrations for this event.'}
+                          </p>
                         ) : (
                           <div className='divide-y divide-white/4'>
-                            {event.attendees.map(a => {
+                            {visibleAttendees.map(a => {
                               const tier = getMilestone(a.runs_completed)
                               const isOpen = expandedAttendeeId === a.registration_id
                               const contactHref = telHref(a.contact_number)

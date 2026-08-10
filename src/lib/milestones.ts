@@ -154,3 +154,21 @@ export function getMilestone(runs: number): MilestoneTier {
   }
   return MILESTONE_TIERS[0]!
 }
+
+/**
+ * The tier a runner is heading for, or null once they're a Stride Legend and
+ * there's nothing above them.
+ */
+export function getNextMilestone(runs: number): MilestoneTier | null {
+  const index = MILESTONE_TIERS.indexOf(getMilestone(runs))
+  return MILESTONE_TIERS[index + 1] ?? null
+}
+
+/**
+ * Runs still needed to reach the next tier; null for the top tier. Clamped at
+ * zero so a hand-edited run count above a threshold can't read as negative.
+ */
+export function runsToNextMilestone(runs: number): number | null {
+  const { nextAt } = getMilestone(runs)
+  return nextAt === null ? null : Math.max(0, nextAt - runs)
+}

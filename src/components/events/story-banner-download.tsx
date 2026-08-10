@@ -2,10 +2,9 @@
 // Used by the confirmation page's Share button (see share-confirmation.tsx).
 //
 // Layout, top to bottom: purple background, Stride wordmark, "I AM ATTENDING"
-// eyebrow, event name, date + location, a dashed zone for the sharer to drop
-// Instagram's own link sticker on, then the event poster filling the full width
-// between the side margins. No handle or URL — the link sticker replaces them,
-// and no runner tag, which stays on the page itself.
+// eyebrow, event name, date + location, then the event poster filling the full
+// width between the side margins. No handle or URL, and no runner tag, which
+// stays on the page itself.
 
 const CANVAS_W = 1080
 const CANVAS_H = 1920
@@ -14,12 +13,10 @@ const BRAND_PURPLE_DARK = '#2a1240'
 const BRAND_YELLOW = '#E1D03F'
 const PADDING = 80
 
-// Dashed placeholder the sharer covers with Instagram's link sticker. Sized to
-// its own label rather than the full content width, so it reads as a chip-shaped
-// hint instead of a big empty box.
-const STICKER_H = 64
-const STICKER_PAD_X = 28
-const STICKER_LABEL = 'ADD LINK STICKER'
+// Breathing room between the date/location block and the poster. Deliberately
+// large: it's the gap a sharer drops Instagram's own link sticker into, and it
+// keeps the poster's size and position unchanged from earlier versions.
+const POSTER_LEAD_GAP = 90
 
 // Leaves the poster clear of Instagram's own bottom chrome.
 const BOTTOM_MARGIN = 70
@@ -181,39 +178,14 @@ export async function buildStoryCanvas(opts: {
     cursorY += 52
   }
 
-  // ── Link-sticker zone — dashed placeholder the sharer drops Instagram's own
-  //    link sticker onto. Kept low-contrast so it reads as a guide, not content,
-  //    if someone posts without covering it. ──
-  const STICKER_Y = cursorY + 26
-
-  // Measure with the exact font + tracking the label is drawn with, so the box
-  // hugs the text at any font fallback.
-  ctx.save()
-  ctx.font = `500 26px ${FONT_MONO}`
-  ctx.letterSpacing = '2px'
-  const stickerW = Math.round(ctx.measureText(STICKER_LABEL).width) + STICKER_PAD_X * 2
-
-  ctx.setLineDash([14, 11])
-  ctx.strokeStyle = 'rgba(255,255,255,0.34)'
-  ctx.lineWidth = 3
-  drawRoundedRect(ctx, PADDING, STICKER_Y, stickerW, STICKER_H, 18)
-  ctx.stroke()
-  ctx.setLineDash([])
-
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = 'rgba(255,255,255,0.42)'
-  ctx.fillText(STICKER_LABEL, PADDING + stickerW / 2, STICKER_Y + STICKER_H / 2)
-  ctx.restore()
-
-  cursorY = STICKER_Y + STICKER_H
+  cursorY += POSTER_LEAD_GAP
 
   // ── Event poster ──
   // The frame is sized from the poster's own aspect ratio rather than being a
   // fixed box the poster is fitted into. That means nothing is ever cropped and
   // there are no letterbox bars inside the frame either — the border hugs the
   // artwork. It grows upward from a fixed bottom edge, as large as the space
-  // left under the sticker zone allows, and stays horizontally centred.
+  // left under the date/location block allows, and stays horizontally centred.
   const poster = opts.eventBannerUrl ? await loadImage(opts.eventBannerUrl) : null
 
   const MAX_FRAME_W = CANVAS_W - PADDING * 2
