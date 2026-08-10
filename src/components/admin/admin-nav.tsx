@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   Users,
   ScanLine,
+  GraduationCap,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
 
@@ -18,6 +19,7 @@ const navLinks = [
   { href: '/admin/registrations', label: 'Registrations',  icon: ClipboardList },
   { href: '/admin/products',      label: 'Products',       icon: ShoppingBag },
   { href: '/admin/users',         label: 'Users',          icon: Users },
+  { href: '/admin/graduation',    label: 'Graduation',     icon: GraduationCap },
   { href: '/admin/check-in',      label: 'Check-in',       icon: ScanLine },
 ]
 
