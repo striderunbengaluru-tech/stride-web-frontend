@@ -110,8 +110,18 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react'],
   },
   images: {
-    // Serve AVIF where supported (20-40% smaller than WebP), WebP fallback
-    formats: ['image/avif', 'image/webp'],
+    // WebP only, deliberately.
+    //
+    // Every image this site serves has already been through `sharp` at quality
+    // 85 on upload (see the /api/profile/avatar, /api/profile/cover and
+    // /api/admin/upload-event-cover handlers), so it reaches the optimizer
+    // already compressed. Asking for AVIF as well bought a marginal size win on
+    // an already-compressed source in exchange for a second transformation of
+    // every image at every breakpoint — and transformations are metered.
+    // Image conversions were on course to breach the plan allowance from this
+    // alone. Format negotiation means the second format is billed whenever the
+    // visitor mix spans browsers that accept AVIF and browsers that do not.
+    formats: ['image/webp'],
     // Optimized copies are immutable per source URL — cache for 31 days
     minimumCacheTTL: 2678400,
     dangerouslyAllowSVG: true,
