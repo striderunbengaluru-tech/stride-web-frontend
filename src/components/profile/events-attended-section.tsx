@@ -66,6 +66,7 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
               <Link
                 key={event.id}
                 href={`/events/${event.slug}`}
+                prefetch={false}
                 className='group flex items-center gap-3 py-2.5 first:pt-0 last:pb-0'
               >
                 <div className='relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5'>
@@ -101,6 +102,7 @@ export function EventsAttendedSection({ events, totalCount, asList, isOwnProfile
               <Link
                 key={event.id}
                 href={`/events/${event.slug}`}
+                prefetch={false}
                 className='group rounded-xl overflow-hidden border border-white/10 hover:border-stride-yellow-accent/40 transition-all bg-white/5 block'
               >
                 <div className='relative aspect-3/4 bg-white/5'>

@@ -138,9 +138,13 @@ function PodiumColumn({ user, rank }: { user: LeaderboardUser; rank: 1 | 2 | 3 }
 
   return (
     <div className='flex w-full max-w-36 flex-col items-center justify-end sm:max-w-44'>
+      {/* prefetch off on the profile links below: /profile/[username] is still
+          rendered per request, so prefetching would cost a server render for
+          every athlete listed, on links most visitors never click. */}
       {isPublic ? (
         <Link
           href={`/profile/${user.username}`}
+          prefetch={false}
           className='transition-transform hover:scale-105'
         >
           {card}
@@ -346,6 +350,7 @@ export default function LeaderboardClient({
                 <Link
                   key={user.username}
                   href={`/profile/${user.username}`}
+                  prefetch={false}
                   className={`${rowClass} transition-colors hover:bg-white/5`}
                 >
                   {rowContent}
