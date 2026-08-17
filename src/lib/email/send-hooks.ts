@@ -84,7 +84,7 @@ export async function sendConfirmationEmailOnce(
 
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, amount_paid_paise, razorpay_payment_id, selected_packages, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, banner_images)')
+      .select('id, amount_paid_paise, razorpay_payment_id, selected_packages, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, strava_route_url, banner_images)')
       .eq('id', registrationId)
       .single()
 
@@ -96,6 +96,8 @@ export async function sendConfirmationEmailOnce(
       end_date: string | null
       location: string | null
       location_url: string | null
+      /** Run route — Strava, Komoot or any other link the admin pasted. */
+      strava_route_url: string | null
       banner_images: string | null
     } | null
     if (!user?.email || !event) return
@@ -132,6 +134,7 @@ export async function sendConfirmationEmailOnce(
       eventDate: event.event_date,
       location: event.location,
       locationUrl: event.location_url,
+      routeUrl: event.strava_route_url,
       bannerUrl,
       runnerTag: user.runner_tag,
       calendarUrl,
