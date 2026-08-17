@@ -1,9 +1,13 @@
 import { ProductForm } from '@/components/admin/product-form'
 import { createProductAction } from '@/lib/actions/admin'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'New Product — Admin' }
 
-export default function NewProductPage() {
+export default async function NewProductPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   return (
     <div className='max-w-2xl'>
       <h1 className='text-3xl font-bold text-white mb-8'>New Product</h1>

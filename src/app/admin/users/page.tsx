@@ -1,9 +1,13 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { UsersClient, type UserRow } from '@/components/admin/users-client'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Users — Admin' }
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const [{ data: users }, { data: registrations }] = await Promise.all([
     adminClient
       .from('users')

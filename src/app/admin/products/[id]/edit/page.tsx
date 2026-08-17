@@ -2,12 +2,16 @@ import { notFound } from 'next/navigation'
 import { adminClient } from '@/lib/supabase/admin'
 import { ProductForm } from '@/components/admin/product-form'
 import { updateProductAction } from '@/lib/actions/admin'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 type Props = { params: Promise<{ id: string }> }
 
 export const metadata = { title: 'Edit Product — Admin' }
 
-export default async function EditProductPage({ params }: Props) {
+export default async function EditProductPage({ params }: Props){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const { id } = await params
 
   const { data: product } = await adminClient

@@ -1,9 +1,13 @@
 import { EventForm } from '@/components/admin/event-form'
 import { createEventAction } from '@/lib/actions/admin'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'New Event — Admin' }
 
-export default function NewEventPage() {
+export default async function NewEventPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   return (
     <div>
       <h1 className='text-3xl font-bold text-white mb-6'>New Event</h1>

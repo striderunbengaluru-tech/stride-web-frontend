@@ -3,6 +3,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { DashboardCharts } from '@/components/admin/dashboard-charts'
 import { CalendarRange, ClipboardCheck, Users, Package, LayoutDashboard, ArrowUpRight } from 'lucide-react'
 import { formatDayMonthIST } from '@/lib/utils/ist'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Admin — Stride Run Club' }
 
@@ -39,7 +40,10 @@ function ageBucket(dob: string): '18-24' | '25-34' | '35-44' | '45+' | null {
 const AGE_BUCKETS: ('18-24' | '25-34' | '35-44' | '45+')[] = ['18-24', '25-34', '35-44', '45+']
 const GENDER_KEYS = ['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_TO_SAY'] as const
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const eightWeeksAgo = new Date()
   eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56)
 

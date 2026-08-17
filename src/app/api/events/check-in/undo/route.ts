@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { isPortalRole } from '@/types/auth'
 
 // Reverses a check-in made by mistake (wrong runner tapped, duplicate tag, a
 // runner who never actually turned up). Mirrors the check-in route exactly:
-// admin-only, same 24h window, and it gives back the run it credited.
+// ADMIN or LEAD, same 24h window, and it gives back the run it credited.
+// A lead who can check someone in has to be able to undo it — the mistake is
+// made at the same moment, by the same person, on the same screen.
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,7 +19,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .single()
 
-  if (adminUser?.role !== 'ADMIN') {
+  if (!isPortalRole(adminUser?.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

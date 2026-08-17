@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { hardDeleteUser } from '@/lib/account/hard-delete'
+import { isPortalRole } from '@/types/auth'
 
 // DPDP data-retention limit: accounts with no activity for 3 consecutive
 // years are erased automatically. Activity = any of: signing in, updating the
 // profile (users.updated_at also bumps on check-ins via runs_completed), or
-// registering for an event. ADMIN accounts are never auto-deleted.
+// registering for an event. Portal staff — ADMIN and LEAD — are never
+// auto-deleted: a lead may sign in only on run days and still be current staff.
 //
 // Triggered by Vercel Cron (vercel.json) on the 1st of every month, 03:00 IST.
 // Vercel attaches `Authorization: Bearer <CRON_SECRET>` automatically — the
@@ -61,10 +63,10 @@ export async function GET(request: Request) {
     if (users.length < LIST_USERS_PER_PAGE) break
   }
 
-  // ── 2. Drop anyone with recent app activity, and never touch admins.
-  let skippedAdmins = 0
+  // ── 2. Drop anyone with recent app activity, and never touch portal staff.
+  let skippedStaff = 0
   const active = new Set<string>()
-  const admins = new Set<string>()
+  const staff = new Set<string>()
 
   for (const ids of chunk(candidateIds, IN_CHUNK_SIZE)) {
     const [{ data: userRows, error: usersError }, { data: recentRegs, error: regsError }] = await Promise.all([
@@ -76,15 +78,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to evaluate activity' }, { status: 500 })
     }
     for (const row of userRows ?? []) {
-      if (row.role === 'ADMIN') admins.add(row.id)
+      // Leads are staff too. They sign in for a run and may not touch the site
+      // again for months, which is exactly the pattern this job deletes.
+      if (isPortalRole(row.role)) staff.add(row.id)
       if (row.updated_at && row.updated_at >= cutoff) active.add(row.id)
     }
     for (const reg of recentRegs ?? []) active.add(reg.user_id)
   }
 
-  skippedAdmins = candidateIds.filter(id => admins.has(id)).length
+  skippedStaff = candidateIds.filter(id => staff.has(id)).length
   const toDelete = candidateIds
-    .filter(id => !admins.has(id) && !active.has(id))
+    .filter(id => !staff.has(id) && !active.has(id))
     .slice(0, MAX_DELETES_PER_RUN)
 
   // ── 3. Erase sequentially — bounded load, per-user logs.
@@ -100,7 +104,7 @@ export async function GET(request: Request) {
     cutoff,
     scanned,
     candidates: candidateIds.length,
-    skippedAdmins,
+    skippedStaff,
     deleted: deleted.length,
     deletedIds: deleted,
     errors,

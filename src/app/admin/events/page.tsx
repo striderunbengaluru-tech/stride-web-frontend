@@ -4,10 +4,14 @@ import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events
 import { validatePackageSpots } from '@/lib/events/package-spots'
 import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import type { EventPackage } from '@/types/event'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Events — Admin' }
 
-export default async function AdminEventsPage() {
+export default async function AdminEventsPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const [{ data: allEvents }, { data: regCounts }] = await Promise.all([
     adminClient
       .from('events')

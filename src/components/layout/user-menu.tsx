@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints,
-  CalendarDays, Handshake, Trophy,
+  CalendarDays, Handshake, Trophy, ScanLine,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
 
 // Site navigation. The desktop navbar carries no links of its own, so on
 // desktop this menu is where signed-in members reach the main pages — mirroring
@@ -22,11 +23,15 @@ type Props = {
   username: string
   firstName: string
   avatarUrl: string | null
-  isAdmin: boolean
+  role: Role
   email: string | null
 }
 
-export default function UserMenu({ username, firstName, avatarUrl, isAdmin, email }: Props) {
+export default function UserMenu({ username, firstName, avatarUrl, role, email }: Props) {
+  // Display only — every route behind these links enforces its own access.
+  const isLead = role === ROLES.LEAD
+  const isStaff = isPortalRole(role)
+
   const [open, setOpen] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -121,10 +126,10 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                 <p className='text-copy-white text-sm font-semibold truncate'>{firstName}</p>
                 <p className='text-copy-white/40 text-xs truncate'>{email ?? `@${username}`}</p>
               </div>
-              {isAdmin && (
+              {isStaff && (
                 <span
-                  title='You are a verified admin'
-                  aria-label='You are a verified admin'
+                  title={isLead ? 'You are a verified run lead' : 'You are a verified admin'}
+                  aria-label={isLead ? 'You are a verified run lead' : 'You are a verified admin'}
                   className='shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md bg-stride-yellow-accent/15 border border-stride-yellow-accent/30 text-stride-yellow-accent'
                 >
                   <ShieldCheck size={13} />
@@ -154,19 +159,24 @@ export default function UserMenu({ username, firstName, avatarUrl, isAdmin, emai
                 My Runs
               </Link>
 
-              {isAdmin && (
+              {/* Staff shortcut. A lead's portal is the check-in screen and
+                  nothing else, so send them straight there rather than to a
+                  dashboard that would only redirect them back. */}
+              {isStaff && (
                 <Link
-                  href='/admin'
+                  href={isLead ? LEAD_HOME : '/admin'}
                   role='menuitem'
                   onClick={() => setOpen(false)}
                   className='flex items-center justify-between gap-3 mx-1.5 px-3 py-2.5 rounded-lg text-stride-yellow-accent hover:bg-stride-yellow-accent/10 transition-colors text-sm font-medium'
                 >
                   <span className='flex items-center gap-3'>
-                    <LayoutDashboard size={15} className='shrink-0' aria-hidden='true' />
-                    Admin dashboard
+                    {isLead
+                      ? <ScanLine size={15} className='shrink-0' aria-hidden='true' />
+                      : <LayoutDashboard size={15} className='shrink-0' aria-hidden='true' />}
+                    {isLead ? 'Event check-in' : 'Admin dashboard'}
                   </span>
                   <span className='text-[9px] font-bold font-mono uppercase tracking-widest bg-stride-yellow-accent/15 border border-stride-yellow-accent/30 rounded px-1.5 py-0.5'>
-                    Admin
+                    {isLead ? 'Lead' : 'Admin'}
                   </span>
                 </Link>
               )}

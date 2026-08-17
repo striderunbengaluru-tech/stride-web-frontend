@@ -22,6 +22,7 @@ import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import { EventsAttendedSection } from '@/components/profile/events-attended-section'
 import { ChevronRight, ScanLine } from 'lucide-react'
 import { formatMonthYearIST } from '@/lib/utils/ist'
+import { isPortalRole } from '@/types/auth'
 
 type Props = { params: Promise<{ username: string }> }
 
@@ -158,16 +159,19 @@ export default async function ProfilePage({ params }: Props) {
   // its owner and club admins — everyone else gets a 404, direct URL included,
   // indistinguishable from a profile that doesn't exist.
   if (!profile.profile_public && !isOwnProfile) {
-    let viewerIsAdmin = false
+    // ADMIN or LEAD. A lead runs check-in against this roster and has to be
+    // able to confirm they are looking at the right athlete, which a private
+    // profile would otherwise refuse them.
+    let viewerIsStaff = false
     if (user) {
       const { data: viewer } = await adminClient
         .from('users')
         .select('role')
         .eq('id', user.id)
         .single()
-      viewerIsAdmin = viewer?.role === 'ADMIN'
+      viewerIsStaff = isPortalRole(viewer?.role)
     }
-    if (!viewerIsAdmin) notFound()
+    if (!viewerIsStaff) notFound()
   }
 
   const publicAvatarUrl = profile.avatar_url

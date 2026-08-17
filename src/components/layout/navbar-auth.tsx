@@ -29,7 +29,7 @@ export function NavbarAuth() {
         username={navProfile.username}
         firstName={navProfile.firstName}
         avatarUrl={navProfile.avatarUrl}
-        isAdmin={navProfile.isAdmin}
+        role={navProfile.role}
         email={navProfile.email}
       />
     )

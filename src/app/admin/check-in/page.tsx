@@ -1,6 +1,5 @@
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
-import { adminClient } from '@/lib/supabase/admin'
+import { getCheckInActor } from '@/lib/auth/admin-access'
 import { checkInByRegistrationId, type CheckInResult } from '@/lib/check-in'
 import { RunnerTagCheckIn } from '@/components/admin/runner-tag-check-in'
 import { formatTimeIST, formatDayMonthIST } from '@/lib/utils/ist'
@@ -14,16 +13,11 @@ type Props = { searchParams: Promise<{ reg?: string }> }
 // route, but a page-load mutation is an admin entry point of its own, so the
 // role is re-verified here independently (fresh DB read, never JWT claims).
 async function scanCheckIn(registrationId: string): Promise<CheckInResult | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: viewer } = await adminClient
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (viewer?.role !== 'ADMIN') return null
+  // ADMIN or LEAD, read fresh from the database. Returns null rather than
+  // redirecting so an unauthorised scan simply does not check anyone in — the
+  // page still renders, it just performs no mutation.
+  const actor = await getCheckInActor()
+  if (!actor) return null
 
   return checkInByRegistrationId(registrationId)
 }

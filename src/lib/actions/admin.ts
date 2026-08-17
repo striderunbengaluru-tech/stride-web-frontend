@@ -637,9 +637,11 @@ export async function deleteProductAction(id: string): Promise<void> {
 export async function updateUserRoleAction(userId: string, role: string): Promise<{ error: string } | void> {
   await requireAdmin()
 
-  if (!['GUEST', 'MEMBER', 'ADMIN'].includes(role)) return
+  if (!['GUEST', 'MEMBER', 'LEAD', 'ADMIN'].includes(role)) return
 
-  // The club must always keep at least one administrator.
+  // The club must always keep at least one administrator. LEAD does not satisfy
+  // this — a lead cannot reach the users page to promote anyone, so demoting
+  // the last admin to lead would lock the club out of its own portal.
   if (role !== 'ADMIN' && await isLastAdmin(userId)) {
     return { error: 'This is the only admin account. Promote another member to admin before removing this one.' }
   }

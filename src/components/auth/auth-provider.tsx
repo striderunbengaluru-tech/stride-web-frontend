@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches } from '@/lib/auth/session-cache'
+import type { Role } from '@/types/auth'
 
 // supabase-js and sonner are BOTH loaded lazily and deliberately absent from
 // the static import graph. This provider lives in the root layout, so anything
@@ -19,6 +20,8 @@ export type NavProfile = {
   firstName: string
   avatarUrl: string | null
   isAdmin: boolean
+  /** Full role, so the menu can route a LEAD to check-in rather than /admin. */
+  role: Role
   email: string | null
 }
 
@@ -96,6 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             firstName: profile.full_name?.split(' ')[0] ?? profile.username ?? 'You',
             avatarUrl: profile.avatar_url ?? null,
             isAdmin: profile.role === 'ADMIN',
+            // Carried separately from isAdmin: a lead is not a lesser admin, so
+            // nothing that gates on isAdmin should start matching them. This
+            // only decides which portal link their menu offers.
+            role: (profile.role as NavProfile['role']) ?? 'GUEST',
             email,
           }
           try {
