@@ -106,6 +106,8 @@ type SharedProps = {
    * rather than another round trip from the browser.
    */
   packageSpotsTaken: Record<string, number>
+  /** Opens one tier at a time — see resolveTierAvailability in @/types/event. */
+  packagesProgressive: boolean
   razorpayKeyId?: string
   /** Registering is a free application Stride approves. */
   inviteOnly: boolean
@@ -179,6 +181,7 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
         packagesEnabled={props.packagesEnabled}
         packagesMultiSelect={props.packagesMultiSelect}
         packageSpotsTaken={props.packageSpotsTaken}
+        packagesProgressive={props.packagesProgressive}
         razorpayKeyId={props.razorpayKeyId}
         inviteOnly={props.inviteOnly}
       />
@@ -209,6 +212,7 @@ export function RegistrationCtaMobile(props: SharedProps) {
       packagesEnabled={props.packagesEnabled}
       packagesMultiSelect={props.packagesMultiSelect}
       packageSpotsTaken={props.packageSpotsTaken}
+        packagesProgressive={props.packagesProgressive}
       razorpayKeyId={props.razorpayKeyId}
       inviteOnly={props.inviteOnly}
     />

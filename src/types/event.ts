@@ -123,9 +123,20 @@ export function resolveTierAvailability(
     }))
   }
 
-  // The tier the automatic rule currently points at. -1 once everything has
-  // sold out, which correctly leaves nothing on `auto` selectable.
-  const activeIndex = packages.findIndex(pkg => !isSoldOut(pkg))
+  // The tier the automatic rule currently points at: the earliest that is
+  // neither sold out nor held shut by an admin.
+  //
+  // Force-closed tiers are skipped, not merely refused. Otherwise closing the
+  // active tier would close registration altogether — the tiers behind it are
+  // all on `auto`, and `auto` would still be pointing at the tier the admin
+  // just shut. Closing Early Bird should hand over to Premium, which is what an
+  // admin doing it plainly means.
+  //
+  // -1 once every tier is sold out or closed, which correctly leaves nothing
+  // on `auto` selectable.
+  const activeIndex = packages.findIndex(
+    pkg => !isSoldOut(pkg) && (pkg.gate ?? TIER_GATES.AUTO) !== TIER_GATES.CLOSED
+  )
 
   return packages.map((pkg, index) => {
     const soldOut = isSoldOut(pkg)

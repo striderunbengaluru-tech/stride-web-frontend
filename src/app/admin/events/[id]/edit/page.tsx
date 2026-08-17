@@ -66,6 +66,7 @@ export default async function EditEventPage({ params }: Props){
           packages: event.packages ?? '[]',
           packagesEnabled: event.packages_enabled ?? false,
           packagesMultiSelect: event.packages_multi_select ?? false,
+          packagesProgressive: event.packages_progressive ?? false,
           distanceKm: event.distance_km ?? undefined,
           difficulty: event.difficulty ?? undefined,
         }}
