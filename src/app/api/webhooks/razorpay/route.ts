@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
       if (outcome === 'CONFIRMED') {
         // Keep the cached confirmed-count (spots-left) exact after webhook confirms
-        revalidateTag(eventRegsTag(reg.event_id), 'max')
+        revalidateTag(eventRegsTag(reg.event_id), { expire: 0 })
         // ...and drop the rendered event page with it. The tag alone refreshes
         // the counts in the data cache; the page is ISR now, so without this a
         // visitor could be shown a spots-left figure from before the payment
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     // A cancelled hold releases its spot, so the page has to be dropped for the
     // same reason a confirmation does — the figure on it just changed.
     if (cancelled) {
-      revalidateTag(eventRegsTag(cancelled.event_id), 'max')
+      revalidateTag(eventRegsTag(cancelled.event_id), { expire: 0 })
       const cancelledSlug = (cancelled.events as unknown as { slug: string | null } | null)?.slug
       if (cancelledSlug) revalidatePath(`/events/${cancelledSlug}`)
     }

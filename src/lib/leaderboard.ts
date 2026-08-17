@@ -38,7 +38,7 @@ const LEADERBOARD_REVALIDATE = 10_800
  * render pass.
  */
 export function revalidateLeaderboard(): void {
-  revalidateTag(LEADERBOARD_TAG, 'max')
+  revalidateTag(LEADERBOARD_TAG, { expire: 0 })
   revalidatePath(LEADERBOARD_PATH)
 }
 

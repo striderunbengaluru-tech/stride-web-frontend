@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { after } from 'next/server'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { createClient } from '@/lib/supabase/server'
@@ -285,10 +285,21 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
 // Purge every cache layer that serves event data: the tag-cached reads in
 // src/lib/data/events.ts and the ISR'd /events listing page.
 function revalidateEventCaches(slug: string | null) {
-  // 'max' = expire immediately (Next 16 requires an explicit cache profile)
-  revalidateTag(EVENTS_TAG, 'max')
+  // updateTag, not revalidateTag(tag, 'max'). They are not the same thing and
+  // the difference is visible to admins: 'max' is a stale-while-revalidate
+  // profile, so the tagged read keeps serving its old value and refreshes in
+  // the background. revalidatePath below would then re-render the page against
+  // that stale value and cache the result, and the edit only surfaced when the
+  // page's own ISR window elapsed -- measured at 20-30 seconds on a preview
+  // deploy. updateTag expires the entry outright, so the very next render reads
+  // through to the database.
+  //
+  // These are Server Actions, which is the only context updateTag allows. The
+  // registration route handlers cannot use it and pass an explicit
+  // { expire: 0 } profile instead.
+  updateTag(EVENTS_TAG)
   if (slug) {
-    revalidateTag(eventTag(slug), 'max')
+    updateTag(eventTag(slug))
     revalidatePath(`/events/${slug}`)
   }
   revalidatePath('/events')
@@ -349,7 +360,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   // offers all come from cached event reads — purge them so a capacity increase
   // is visible to runners immediately rather than up to 60s later.
   revalidateEventCaches(updated?.slug ?? null)
-  revalidateTag(eventRegsTag(id), 'max')
+  updateTag(eventRegsTag(id))
   redirect('/admin/events')
 }
 
@@ -492,7 +503,7 @@ export async function approveRegistrationsAction(eventId: string, ids: string[])
 
   // Purged synchronously: an after() callback runs once the response is gone,
   // so the admin's next read would still see the stale confirmed count.
-  revalidateTag(eventRegsTag(eventId), 'max')
+  updateTag(eventRegsTag(eventId))
   if (context.slug) revalidatePath(`/events/${context.slug}`)
   revalidatePath('/admin/registrations')
   revalidatePath('/admin/events')
