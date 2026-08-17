@@ -342,7 +342,12 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
 
   const whereValue = location
     ? locationUrl
-      ? `<a href="${locationUrl}" target="_blank" style="color:${YELLOW};text-decoration:underline;">${escapeHtml(location)}</a> <span class="t-muted" style="font-family:${BODY_FONT};font-size:12px;color:${MUTED};">(opens in Google Maps)</span>`
+      // href escaped like the route link below it. Admin-authored and
+      // URL-validated, so this is defence in depth rather than a live hole —
+      // but a quote in the value would otherwise close the attribute early.
+      // The other hrefs in this file are either constants or built from
+      // SITE_URL, so they are not the same class of input.
+      ? `<a href="${escapeHtml(locationUrl)}" target="_blank" style="color:${YELLOW};text-decoration:underline;">${escapeHtml(location)}</a> <span class="t-muted" style="font-family:${BODY_FONT};font-size:12px;color:${MUTED};">(opens in Google Maps)</span>`
       : escapeHtml(location)
     : null
   const whereRow = whereValue
