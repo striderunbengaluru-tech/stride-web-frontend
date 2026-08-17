@@ -48,6 +48,9 @@ export const eventPackageSchema = z.object({
   // existed. The sum-equals-capacity rule (validatePackageSpots, applied to the
   // whole list below) is what actually forces the admin to fill these in.
   spotsTotal:  z.number().int().min(1).max(100_000).optional(),
+  // Progressive pricing only. Absent = 'auto' = follow the sell-out rule, which
+  // is what every tier authored before this feature should do.
+  gate:        z.enum(['auto', 'open', 'closed']).optional(),
 })
 
 export const eventPackagesArraySchema = z.array(eventPackageSchema)
@@ -108,6 +111,9 @@ export const eventSchema = z.object({
   // priceRupees is ignored. Multi-select lets them combine several.
   packagesEnabled: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   packagesMultiSelect: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Opens one tier at a time, earliest-not-sold-out first, unless an admin has
+  // pinned a tier open or closed. See resolveTierAvailability in @/types/event.
+  packagesProgressive: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
 })
   // Cross-field rules. The form checks all of these before it posts; these are
   // the server-side backstop, so a hand-rolled POST can't create an event the UI

@@ -3,12 +3,16 @@ import { adminClient } from '@/lib/supabase/admin'
 import { EventForm } from '@/components/admin/event-form'
 import { updateEventAction } from '@/lib/actions/admin'
 import { utcIsoToIstLocal } from '@/lib/utils/ist'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 type Props = { params: Promise<{ id: string }> }
 
 export const metadata = { title: 'Edit Event — Admin' }
 
-export default async function EditEventPage({ params }: Props) {
+export default async function EditEventPage({ params }: Props){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const { id } = await params
 
   // Applications still awaiting a decision, so the form can warn before an
@@ -62,6 +66,7 @@ export default async function EditEventPage({ params }: Props) {
           packages: event.packages ?? '[]',
           packagesEnabled: event.packages_enabled ?? false,
           packagesMultiSelect: event.packages_multi_select ?? false,
+          packagesProgressive: event.packages_progressive ?? false,
           distanceKm: event.distance_km ?? undefined,
           difficulty: event.difficulty ?? undefined,
         }}

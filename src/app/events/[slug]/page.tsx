@@ -443,6 +443,7 @@ export default async function EventDetailPage({ params }: Props) {
                     packagesEnabled={packagesEnabled}
                     packagesMultiSelect={event.packages_multi_select ?? false}
                     packageSpotsTaken={packageSpotsTaken}
+                    packagesProgressive={event.packages_progressive === true}
                     inviteOnly={inviteOnly}
                     razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                     priceLabel={priceLabel}
@@ -497,6 +498,7 @@ export default async function EventDetailPage({ params }: Props) {
                 packagesEnabled={packagesEnabled}
                 packagesMultiSelect={event.packages_multi_select ?? false}
                 packageSpotsTaken={packageSpotsTaken}
+                    packagesProgressive={event.packages_progressive === true}
                 inviteOnly={inviteOnly}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />

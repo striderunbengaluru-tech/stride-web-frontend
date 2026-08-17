@@ -3,6 +3,7 @@ import { RegistrationsClient } from '@/components/admin/registrations-client'
 import type { SelectedPackage, AdditionalField, CustomResponses } from '@/types/event'
 import { eventRowPriceLabel, priceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { ageFromDob } from '@/lib/utils/age'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Registrations — Admin' }
 
@@ -112,7 +113,10 @@ export type EventWithAttendees = EventSummary & {
   custom_fields: AdditionalField[]
 }
 
-export default async function AdminRegistrationsPage() {
+export default async function AdminRegistrationsPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const [
     { data: flatRows },
     { data: eventSummaries },
