@@ -1,69 +1,28 @@
 /**
  * Content negotiation for `Accept: text/markdown`.
  *
- * Agents that ask for markdown get markdown; browsers keep getting HTML. Shared
- * by the middleware (which decides whether to rewrite) and the /md route
- * handler (which renders), so the two can never disagree about what is
- * negotiable.
- */
-
-export const MARKDOWN_MEDIA_TYPE = 'text/markdown'
-
-/** Where the middleware rewrites a negotiated request. Not linked anywhere. */
-export const MARKDOWN_ROUTE_PREFIX = '/md'
-
-type MediaRange = { type: string; q: number }
-
-/**
- * Parses an Accept header into media ranges with their q-values.
+ * Agents that ask for markdown get markdown; browsers keep getting HTML.
  *
- * Malformed parameters are ignored rather than throwing — a header is
- * attacker-controlled input and a bad q must not take down the request.
- */
-function parseAccept(header: string): MediaRange[] {
-  return header
-    .split(',')
-    .map(part => {
-      const [rawType, ...params] = part.split(';')
-      const type = rawType.trim().toLowerCase()
-      if (!type) return null
-
-      let q = 1
-      for (const param of params) {
-        const [key, value] = param.split('=')
-        if (key?.trim().toLowerCase() !== 'q') continue
-        const parsed = Number.parseFloat(value ?? '')
-        if (Number.isFinite(parsed)) q = Math.min(Math.max(parsed, 0), 1)
-      }
-
-      return { type, q }
-    })
-    .filter((r): r is MediaRange => r !== null)
-}
-
-/**
- * True only when the client has *explicitly* asked for markdown and wants it at
- * least as much as HTML.
+ * The *routing* half of this lives in `rewrites()` in next.config.ts, which
+ * matches the Accept header at the edge and rewrites to `/md/<path>` without
+ * invoking a function. It used to live in middleware, and forcing the
+ * middleware matcher to cover every public page for it was the single largest
+ * consumer of the project's compute budget.
  *
- * The explicit part is the whole point. Every browser sends
- * `text/html,application/xhtml+xml,application/xml;q=0.9,*​/*;q=0.8` — a
- * wildcard that technically matches text/markdown. Honouring `*​/*` here would
- * serve raw markdown to every human visitor. So wildcards are ignored entirely
- * for the markdown side, and a tie goes to markdown only because a client that
- * bothered to name it meant it.
+ * What remains here is the authority on *what* is negotiable, used by the
+ * `/md/[[...slug]]` handler itself. Keeping the check in the handler is what
+ * makes the routing-layer list safe to be a convenience rather than a
+ * security boundary: the route is publicly reachable either way, so it must
+ * decide for itself what it is willing to render.
+ *
+ * One behavioural note on the move. The old middleware parsed Accept q-values
+ * and served markdown only when it was preferred at least as strongly as HTML.
+ * The routing layer matches the literal string `text/markdown` instead, so a
+ * client that names markdown at a *lower* q than HTML now receives markdown.
+ * Browsers are unaffected — they never name markdown at all, only `*​/*` — so
+ * this only changes the answer for agents that explicitly asked for it and
+ * then ranked it last.
  */
-export function prefersMarkdown(acceptHeader: string | null): boolean {
-  if (!acceptHeader) return false
-
-  const ranges = parseAccept(acceptHeader)
-  const markdown = ranges.find(r => r.type === MARKDOWN_MEDIA_TYPE)
-  if (!markdown || markdown.q === 0) return false
-
-  // Compared against html's exact q only. `*/*` is deliberately not consulted:
-  // it says "anything is fine", which is not a preference for HTML.
-  const html = ranges.find(r => r.type === 'text/html')
-  return markdown.q >= (html?.q ?? 0)
-}
 
 /**
  * Paths with a markdown representation worth serving.
@@ -76,6 +35,9 @@ export function prefersMarkdown(acceptHeader: string | null): boolean {
  * Everything here is public. Nothing under /admin, /api, /profile, /my-runs or
  * an event confirmation is negotiable — those are authenticated or per-user,
  * and a second representation is a second surface to get authorization wrong on.
+ *
+ * Kept in lockstep with MARKDOWN_NEGOTIABLE_PATHS in next.config.ts. This
+ * function is the stricter of the two and the one that actually gates output.
  */
 export function isNegotiablePath(pathname: string): boolean {
   const path = pathname !== '/' && pathname.endsWith('/')

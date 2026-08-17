@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
   // Idempotent: already confirmed is fine
   if (registration.status === 'CONFIRMED') {
-    revalidateTag(eventRegsTag(registration.event_id), 'max')
+    revalidateTag(eventRegsTag(registration.event_id), { expire: 0 })
     if (eventSlug) revalidatePath(`/events/${eventSlug}`)
     return NextResponse.json({ success: true })
   }
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
   // Bust the event page's cache so back-navigation reflects the new CONFIRMED
   // state, and purge the cached confirmed-count so spots-left is exact.
-  revalidateTag(eventRegsTag(registration.event_id), 'max')
+  revalidateTag(eventRegsTag(registration.event_id), { expire: 0 })
   if (eventSlug) revalidatePath(`/events/${eventSlug}`)
 
   // Atomic claim inside prevents a double-send if the Razorpay webhook

@@ -1,31 +1,36 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import {
-  MARKDOWN_ROUTE_PREFIX,
-  isNegotiablePath,
-  prefersMarkdown,
-} from '@/lib/markdown-negotiation'
 
 const PROTECTED_PREFIXES = ['/admin']
 const AUTH_PATHS = ['/become-a-member', '/login', '/register']
 
+/**
+ * Runs on `/admin/*` and the three auth paths ONLY — see `config.matcher`.
+ *
+ * It used to run on every non-asset request, which meant `getClaims()` (an
+ * asymmetric JWT verification, so real CPU) executed for anonymous traffic,
+ * search-engine crawls, and every one of Next's background `.segment` prefetch
+ * requests. On a static home page that is pure waste: the answer is always
+ * "not signed in", and nothing downstream reads it. It was the single largest
+ * consumer of the project's compute budget.
+ *
+ * Public pages no longer touch middleware at all, so they cost no invocation
+ * and no CPU. Two consequences worth knowing:
+ *
+ *  - Supabase's server-side cookie refresh no longer happens on public
+ *    navigations. That is safe here because the session is driven from the
+ *    browser (`components/auth/auth-provider.tsx` + supabase-js auto-refresh),
+ *    and every server component that needs auth builds its own client via
+ *    `lib/supabase/server.ts`, which refreshes through the same cookie
+ *    callbacks. Admin routes still pass through here on every request.
+ *
+ *  - `Accept: text/markdown` negotiation moved to `rewrites()` in
+ *    next.config.ts, where it is handled by the routing layer without invoking
+ *    a function at all. `/md/[[...slug]]` re-checks the path allowlist itself,
+ *    so nothing was loosened by the move.
+ */
 export async function middleware(request: NextRequest) {
-  const { pathname: requestPath } = request.nextUrl
-  const negotiable = isNegotiablePath(requestPath)
-
-  // ── Accept: text/markdown ──────────────────────────────────────────────────
-  // Handled before the Supabase client is built, so an agent fetch doesn't pay
-  // for a session refresh it has no cookies for. Safe to skip: every negotiable
-  // path is public, and the rewrite target re-checks the allowlist itself.
-  if (negotiable && prefersMarkdown(request.headers.get('accept'))) {
-    const url = request.nextUrl.clone()
-    url.pathname = `${MARKDOWN_ROUTE_PREFIX}${requestPath === '/' ? '' : requestPath}`
-    const rewritten = NextResponse.rewrite(url)
-    rewritten.headers.set('Vary', 'Accept')
-    return rewritten
-  }
-
-  // Supabase SSR requires refreshing the session on every request.
+  // Supabase SSR requires refreshing the session on every request it sees.
   // We must update the response cookies so the session stays alive.
   let supabaseResponse = NextResponse.next({ request })
 
@@ -76,16 +81,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Vary must ride on BOTH representations, not just the markdown one: a shared
-  // cache that stored this HTML without it would keep answering the agent's
-  // `Accept: text/markdown` request with HTML.
-  if (negotiable) supabaseResponse.headers.set('Vary', 'Accept')
-
   return supabaseResponse
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)',
-  ],
+  // Deliberately explicit rather than a negated catch-all. Every path listed
+  // here needs a session read; every path NOT listed must never pay for one.
+  // Adding a route that needs auth means adding it here on purpose.
+  matcher: ['/admin/:path*', '/become-a-member', '/login', '/register'],
 }

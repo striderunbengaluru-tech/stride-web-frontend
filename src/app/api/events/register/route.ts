@@ -252,8 +252,14 @@ export async function POST(request: Request) {
 
   // The toggle can flip between the cached event read above and the RPC's
   // locked read, so BOTH branches below have to tolerate an 'APPLIED' outcome.
+  // { expire: 0 }, not the 'max' profile this used to pass. 'max' is
+  // stale-while-revalidate: the tagged count keeps serving its old value and
+  // refreshes behind the request, so the revalidatePath below re-rendered the
+  // page against a spots-left figure from before this registration and cached
+  // that. updateTag() would be the direct equivalent but is Server-Action-only,
+  // and this is a route handler, so the profile carries the same intent.
   const appliedResponse = () => {
-    revalidateTag(eventRegsTag(eventId), 'max')
+    revalidateTag(eventRegsTag(eventId), { expire: 0 })
     revalidatePath(`/events/${event.slug}`)
     return NextResponse.json({ registrationId, slug: event.slug, applied: true })
   }
@@ -326,7 +332,7 @@ export async function POST(request: Request) {
     // Bust the event page's server cache so back-navigation shows
     // "You're registered ✓" instead of a stale Register CTA, and purge the
     // cached confirmed-count so spots-left is exact after every registration.
-    revalidateTag(eventRegsTag(eventId), 'max')
+    revalidateTag(eventRegsTag(eventId), { expire: 0 })
     revalidatePath(`/events/${event.slug}`)
     after(() => sendConfirmationEmailOnce(registrationId))
     return NextResponse.json({ registrationId, slug: event.slug })
