@@ -1,0 +1,106 @@
+[
+  {
+    "slug": "sidharth-yadav",
+    "name": "Sidharth Yadav",
+    "role": "Founder and Lead Strider",
+    "bio": "Move as one. Everything else is just pace.",
+    "instagramUrl": "https://www.instagram.com/the_sid_way/",
+    "stravaUrl": "https://www.strava.com/athletes/141030659",
+    "images": [
+      "sidharth-pose-1.webp",
+      "sidharth-pose-2.webp",
+      "sidharth-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "ichita-joshi",
+    "name": "Ichita Joshi",
+    "role": "Lead Strider",
+    "bio": "Show up on the days you don't feel like it. That's the whole secret.",
+    "instagramUrl": "https://www.instagram.com/the_dental_rockstar/",
+    "stravaUrl": "",
+    "images": [
+      "ichita-pose-1.webp",
+      "ichita-pose-2.webp",
+      "ichita-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "sanches-baby",
+    "name": "Sanches Baby",
+    "role": "Lead Strider",
+    "bio": "I came for the run and stayed for the people.",
+    "instagramUrl": "https://www.instagram.com/sanchessssgiggles/",
+    "stravaUrl": "https://www.strava.com/athletes/150532830",
+    "images": [
+      "sanches-pose-1.webp",
+      "sanches-pose-2.webp",
+      "sanches-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "naman-gupta",
+    "name": "Naman Gupta",
+    "role": "Lead Strider",
+    "bio": "Every finish line is just the start of the next one.",
+    "instagramUrl": "https://www.instagram.com/naman_.gupta._/",
+    "stravaUrl": "https://www.strava.com/athletes/329612751",
+    "images": [
+      "naman-pose-1.webp",
+      "naman-pose-2.webp",
+      "naman-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "kushagra-gupta",
+    "name": "Kushagra Gupta",
+    "role": "Tech Lead",
+    "bio": "Creator of the app you are on right now",
+    "instagramUrl": "https://www.instagram.com/kushagra.gupta.15/",
+    "stravaUrl": "https://www.strava.com/athletes/160848997",
+    "images": [
+      "kushagra-pose-1.webp",
+      "kushagra-pose-2.webp",
+      "kushagra-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "chethan-priyansh-singh",
+    "name": "Chethan Priyansh Singh",
+    "role": "Lead Strider",
+    "bio": "The road gives back exactly what you put in.",
+    "instagramUrl": "https://www.instagram.com/the.trybrid.tales/",
+    "stravaUrl": "https://www.strava.com/athletes/162265926",
+    "images": [
+      "chethan-pose-1.webp",
+      "chethan-pose-2.webp",
+      "chethan-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "vagisha-sinha",
+    "name": "Vagisha Sinha",
+    "role": "Lead Strider",
+    "bio": "Slow miles still count. Keep going.",
+    "instagramUrl": "https://www.instagram.com/vagisha._/",
+    "stravaUrl": "https://www.strava.com/athletes/190306963",
+    "images": [
+      "vagisha-pose-1.webp",
+      "vagisha-pose-2.webp",
+      "vagisha-pose-3.webp"
+    ]
+  },
+  {
+    "slug": "janvi-rajesh",
+    "name": "Janvi Rajesh",
+    "role": "Lead Strider",
+    "bio": "Find your pace, then find someone to share it with.",
+    "instagramUrl": "https://www.instagram.com/jawuee/",
+    "stravaUrl": "",
+    "images": [
+      "janvi-pose-1.webp",
+      "janvi-pose-2.webp",
+      "janvi-pose-3.webp"
+    ]
+  }
+]

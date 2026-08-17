@@ -1,45 +1,177 @@
-import { guardPreviewFeature } from '@/lib/feature-flags'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { LEAD_STRIDERS, striderImageUrls } from '@/content/lead-striders'
+import { ParallaxUnfurlingGallery } from '@/components/ui/parallax-unfurling-gallery'
+import { LeadStriderCard } from '@/components/team/lead-strider-card'
+
+const CANONICAL_PATH = '/team'
+const CANONICAL_URL = `${PRODUCTION_SITE_URL}${CANONICAL_PATH}`
+
+// Title carries no brand suffix — the root layout's template appends
+// " | Stride Run Club". openGraph/twitter are declared in full because a child
+// that omits them inherits the layout's objects wholesale, which makes every
+// shared link to this page preview as the homepage.
+export const metadata: Metadata = {
+  // No brand in this string — the template appends " | Stride Run Club". The
+  // openGraph/twitter titles below are NOT templated, so they carry it in full.
+  title: 'Lead Striders — Meet the Team',
+  description:
+    'Meet the eight Lead Striders who run Stride Run Club Bengaluru — the founders, pacers, run captains and organisers behind every group run, training block and race day.',
+  keywords: [
+    'Stride Run Club team',
+    'Lead Striders',
+    'Bengaluru run club founders',
+    'running community organisers Bengaluru',
+    'run captains Bengaluru',
+  ],
+  alternates: { canonical: CANONICAL_PATH },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'Stride Run Club',
+    url: CANONICAL_PATH,
+    title: 'Lead Striders — The Team Behind Stride Run Club',
+    description:
+      'The eight Lead Striders who set the pace, plan the routes and make race morning happen in Bengaluru.',
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        width: OG_IMAGE_WIDTH,
+        height: OG_IMAGE_HEIGHT,
+        alt: 'Stride Run Club — the Lead Striders',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Lead Striders — The Team Behind Stride Run Club',
+    description:
+      'The eight Lead Striders who set the pace, plan the routes and make race morning happen.',
+    images: [DEFAULT_OG_IMAGE],
+  },
+}
+
+// `Person` nodes carry the team as structured data; the `AboutPage` and the
+// `member` edge reference the `WebSite` / `Organization` nodes declared once in
+// the root layout by `@id` rather than redeclaring them, so crawlers resolve a
+// single organisation across the site.
+// Blank fields are omitted rather than emitted empty: an empty `jobTitle` is a
+// structured-data warning, and these are claims about real people.
+const personNodes = LEAD_STRIDERS.map((strider) => ({
+  '@type': 'Person',
+  '@id': `${CANONICAL_URL}#${strider.slug}`,
+  name: strider.name,
+  ...(strider.role ? { jobTitle: strider.role } : {}),
+  ...(strider.bio ? { description: strider.bio } : {}),
+  image: striderImageUrls(strider)[0],
+  url: `${CANONICAL_URL}#${strider.slug}`,
+  memberOf: { '@id': `${PRODUCTION_SITE_URL}/#organization` },
+  ...(strider.instagramUrl || strider.stravaUrl
+    ? { sameAs: [strider.instagramUrl, strider.stravaUrl].filter(Boolean) }
+    : {}),
+}))
+
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'AboutPage',
+      '@id': `${CANONICAL_URL}#webpage`,
+      url: CANONICAL_URL,
+      name: 'Lead Striders — The Team Behind Stride Run Club',
+      description:
+        'The eight Lead Striders who run Stride Run Club Bengaluru — founders, pacers, run captains and organisers.',
+      image: DEFAULT_OG_IMAGE,
+      inLanguage: 'en-IN',
+      isPartOf: { '@id': `${PRODUCTION_SITE_URL}/#website` },
+      about: { '@id': `${PRODUCTION_SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'SportsOrganization',
+      '@id': `${PRODUCTION_SITE_URL}/#organization`,
+      name: 'Stride Run Club',
+      url: PRODUCTION_SITE_URL,
+      member: personNodes.map((person) => ({ '@id': person['@id'] })),
+    },
+    ...personNodes,
+  ],
+}
+
+// Every pose of every strider becomes one tile on the spiral — 24 photos. These
+// are the same URLs the cards below request, so the hero adds no new source
+// images, only the narrower `sizes` variants it renders at.
+const GALLERY_IMAGES = LEAD_STRIDERS.flatMap(striderImageUrls)
 
 export default function TeamPage() {
-  guardPreviewFeature()
-
-  const team = [
-    { role: 'Founder & Head Pacer', bio: 'Sets the pace, leads the pack.' },
-    { role: 'Co-Founder', bio: 'Community builder and event organiser.' },
-    { role: 'Training Lead', bio: 'Plans every group run and training block.' },
-    { role: 'Social Media', bio: 'Captures every milestone on the road.' },
-    { role: 'Events Coordinator', bio: 'Makes race day happen seamlessly.' },
-    { role: 'Volunteer Lead', bio: 'Rallies the crew for every event.' },
-  ];
-
   return (
-    <main className='min-h-screen pt-24'>
-      <section className='container mx-auto px-6 py-16'>
-        <h1 className='text-5xl font-bold mb-3'>The Team</h1>
-        <p className='text-copy-white/60 text-lg mb-12'>
-          The people who make Stride run.
-        </p>
+    <main className='min-h-screen bg-stride-purple-primary'>
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+      />
 
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8'>
-          {team.map((member, i) => (
-            <div
-              key={i}
-              className='flex flex-col items-center text-center p-8 bg-copy-white/10 backdrop-blur-md rounded-xl border border-copy-white/15 hover:border-stride-yellow-accent/50 transition-colors'
+      {/* Opens the page with nothing above it, so the wall fills the first
+          viewport and the rotation starts on the first pixel of scroll. It also
+          owns the page's `h1`, revealed as its scroll completes — a second
+          heading above the cards read as a duplicate of it. */}
+      <ParallaxUnfurlingGallery
+        images={GALLERY_IMAGES}
+        label='Lead Striders photo gallery'
+        //   (non-breaking space) between "Lead" and "Striders": at 375px the
+        // heading must wrap, and it has to break after "your" instead of
+        // splitting that pair across two lines.
+        revealTitle={'Meet your Lead\u00A0Striders'}
+      />
+
+      <section className='px-4 pt-16 pb-28'>
+        <div className='mx-auto max-w-6xl'>
+
+          {/* An odd number of striders leaves the last card alone on the final
+              row of the 2-up mobile grid. It spans both columns and centres
+              itself at one column's width rather than hugging the left edge.
+              The 3-up desktop grid divides evenly, so the override lifts at
+              `lg`. Applied as real classes on the card — an
+              `[&>*:last-child]:max-lg:…` arbitrary variant on this container
+              compiled to no CSS at all. */}
+          <div className='grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3'>
+            {LEAD_STRIDERS.map((strider, i) => {
+              const isOrphan =
+                LEAD_STRIDERS.length % 2 === 1 && i === LEAD_STRIDERS.length - 1
+              return (
+                <LeadStriderCard
+                  key={strider.slug}
+                  strider={strider}
+                  cardIndex={i}
+                  priority={i < 2}
+                  className={
+                    isOrphan
+                      ? 'col-span-2 mx-auto w-[calc(50%_-_0.5rem)] sm:w-[calc(50%_-_0.75rem)] lg:col-span-1 lg:mx-0 lg:w-auto'
+                      : undefined
+                  }
+                />
+              )
+            })}
+          </div>
+
+          <div className='mt-14 rounded-xl border border-white/15 bg-white/10 p-6 text-center backdrop-blur-md sm:p-10'>
+            <h2 className='font-libre text-xl font-bold text-copy-white sm:text-2xl'>
+              Run with us
+            </h2>
+            <p className='mx-auto mt-3 max-w-xl font-figtree text-sm leading-relaxed text-white/70 sm:text-base'>
+              Every Lead Strider started out as someone who just turned up. Join
+              free, get your Stride Tag, and we will see you at the start line.
+            </p>
+            <Link
+              href='/become-a-member'
+              className='mt-6 inline-flex min-h-11 items-center justify-center rounded-md bg-stride-yellow-accent px-6 font-figtree font-semibold text-copy-black transition-opacity hover:opacity-90'
             >
-              <div className='w-24 h-24 rounded-full bg-copy-white/10 border border-copy-white/20 flex items-center justify-center mb-4'>
-                <span className='text-stride-yellow-accent text-2xl font-bold'>
-                  {String.fromCharCode(65 + i)}
-                </span>
-              </div>
-              <h2 className='font-bold text-lg text-copy-white'>Team Member</h2>
-              <p className='text-stride-yellow-accent text-sm font-semibold mt-1 mb-3 line-clamp-1'>
-                {member.role}
-              </p>
-              <p className='text-copy-white/60 text-sm leading-relaxed'>{member.bio}</p>
-            </div>
-          ))}
+              Become a member
+            </Link>
+          </div>
         </div>
       </section>
     </main>
-  );
+  )
 }

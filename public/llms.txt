@@ -14,6 +14,7 @@ Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub
 - [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride athletes ranked by official runs completed
 - [Shop](https://www.strideclub.in/shop/): Official Stride merchandise
 - [Partnerships](https://www.strideclub.in/partnerships/): Brand and community partners
+- [Lead Striders](https://www.strideclub.in/team/): The eight Lead Striders who run the club — their names, roles, one-line bios, and Instagram and Strava profiles
 - [Contact](https://www.strideclub.in/contact-us/): Get in touch with the Stride team
 
 ## Stride Originals
