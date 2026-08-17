@@ -9,10 +9,10 @@ import { adminClient } from '@/lib/supabase/admin'
 // `?since=<ISO>` returns only the rows checked in after that instant. The check-in
 // screen polls with it every few seconds so several admins working the same run
 // see each other's check-ins almost immediately without re-downloading the whole
-// list. A delta is complete for check-ins because `checked_in_at` only ever goes
-// null → set (the claim in lib/check-in.ts never clears it) — but it cannot
-// surface someone who REGISTERS mid-event, which is why the client also does a
-// periodic full resync.
+// list. A delta only ever carries check-ins: it cannot surface someone who
+// REGISTERS mid-event, nor an UNDONE check-in (the row's checked_in_at goes back
+// to NULL and so falls out of the predicate). Both are picked up by the client's
+// periodic full resync instead.
 
 // Never cached: a stale attendee list is the exact failure this endpoint exists
 // to prevent.
