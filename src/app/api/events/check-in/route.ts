@@ -117,6 +117,9 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
+    // The handle the undo route needs, so a mistaken check-in can be reversed
+    // straight from the success panel without another lookup.
+    registrationId: registration.id,
     checkedInAt: now,
     attendeeName: runner.full_name ?? 'Runner',
     eventName: eventWindow.name ?? '',

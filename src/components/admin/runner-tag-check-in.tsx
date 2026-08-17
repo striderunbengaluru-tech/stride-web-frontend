@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckCircle, XCircle, ChevronDown, RotateCcw, Users, Clock, Calendar,
-  Search, Hash, UserRound, CheckCircle2,
+  Search, Hash, UserRound, CheckCircle2, Undo2,
 } from 'lucide-react'
 import {
   formatMonthIST, formatDayIST, formatDateShortIST, formatTimeIST,
@@ -32,7 +32,8 @@ type Attendee = {
 type CheckInState =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'success'; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns: boolean }
+  | { status: 'success'; registrationId: string | null; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns: boolean }
+  | { status: 'undone'; attendeeName: string; eventName: string }
   | { status: 'error'; message: string }
 
 type Mode = 'tag' | 'search'
@@ -115,6 +116,10 @@ export function RunnerTagCheckIn() {
   const [searchQuery, setSearchQuery] = useState('')
   // Per-row check-in progress
   const [rowLoadingId, setRowLoadingId] = useState<string | null>(null)
+  // Undo is a two-tap action: the first tap arms this row, the second reverses
+  // the check-in. On a phone held one-handed at a start line, a single-tap undo
+  // sitting where "Checked in" used to be is far too easy to hit by accident.
+  const [undoArmedId, setUndoArmedId] = useState<string | null>(null)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -305,16 +310,27 @@ export function RunnerTagCheckIn() {
     }
   }, [selectedEventId, loadAttendees, refreshAttendees])
 
-  // Local filter for the search input
+  // Local filter for the search input.
+  //
+  // A full event list is a few hundred rows, each with an avatar, so re-filtering
+  // and re-rendering it on every keystroke is what makes the search feel a beat
+  // behind the typing. Deferring the query keeps the input itself instant: React
+  // paints the character immediately and rebuilds the list at lower priority.
+  const deferredQuery = useDeferredValue(searchQuery)
   const filteredAttendees = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     if (!q) return attendees
     return attendees.filter(a =>
       a.fullName?.toLowerCase().includes(q) ||
       a.email?.toLowerCase().includes(q) ||
       a.runnerTag?.toLowerCase().includes(q)
     )
-  }, [attendees, searchQuery])
+  }, [attendees, deferredQuery])
+
+  // True while the visible list still belongs to an older query — that gap is
+  // what gets the skeleton, so the admin sees "working on it" instead of stale
+  // names or a premature "no runners match".
+  const isFiltering = searchQuery !== deferredQuery
 
   async function performCheckIn(tag: string, options?: { quiet?: boolean }) {
     if (!selectedEventId || !tag || tag.length !== 4) return
@@ -339,9 +355,11 @@ export function RunnerTagCheckIn() {
         }
         return false
       }
-      const d = data as { attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns?: boolean }
+      const d = data as { registrationId?: string; attendeeName: string; eventName: string; runsCompleted: number; checkedInAt: string; countedTowardRuns?: boolean }
       setState({
         status: 'success',
+        // Absent on an older deploy — the panel then simply offers no undo.
+        registrationId: d.registrationId ?? null,
         attendeeName: d.attendeeName,
         eventName: d.eventName,
         runsCompleted: d.runsCompleted,
@@ -383,9 +401,51 @@ export function RunnerTagCheckIn() {
     setRowLoadingId(null)
   }
 
+  // Reverses a mistaken check-in: clears checked_in_at and hands the run back.
+  async function performUndo(registrationId: string, fallbackName?: string | null) {
+    setRowLoadingId(registrationId)
+    try {
+      const res = await fetch('/api/events/check-in/undo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registration_id: registrationId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        const message = (data as { error?: string }).error ?? 'Undo failed'
+        toast.error(message)
+        // Another admin already undid it (or re-checked them in) — take the
+        // server's version rather than leaving this device out of step.
+        if (res.status === 409) {
+          mutationSeqRef.current += 1
+          void loadAttendees(selectedEventId, { quiet: true })
+        }
+        return false
+      }
+      const d = data as { attendeeName: string; eventName: string }
+      setState({ status: 'undone', attendeeName: d.attendeeName ?? fallbackName ?? 'Runner', eventName: d.eventName ?? '' })
+      // Same optimistic-then-confirm order as a check-in: bump the sequence so an
+      // in-flight poll can't resurrect the row we just cleared.
+      mutationSeqRef.current += 1
+      setAttendees(prev => prev.map(a => a.registrationId === registrationId
+        ? { ...a, checkedInAt: null }
+        : a))
+      void loadAttendees(selectedEventId, { quiet: true })
+      toast.success(`Check-in reversed for ${d.attendeeName ?? fallbackName ?? 'runner'}`)
+      return true
+    } catch {
+      toast.error('Network error — please try again')
+      return false
+    } finally {
+      setRowLoadingId(null)
+      setUndoArmedId(null)
+    }
+  }
+
   function handleReset() {
     setState({ status: 'idle' })
     setRunnerTag('')
+    setUndoArmedId(null)
     if (mode === 'tag') setTimeout(() => inputRef.current?.focus(), 50)
     else setTimeout(() => searchInputRef.current?.focus(), 50)
   }
@@ -395,6 +455,7 @@ export function RunnerTagCheckIn() {
     setState({ status: 'idle' })
     setRunnerTag('')
     setSearchQuery('')
+    setUndoArmedId(null)
     setPickerOpen(false)
   }
 
@@ -403,6 +464,7 @@ export function RunnerTagCheckIn() {
     setState({ status: 'idle' })
     setRunnerTag('')
     setSearchQuery('')
+    setUndoArmedId(null)
     setTimeout(() => {
       if (next === 'tag') inputRef.current?.focus()
       else searchInputRef.current?.focus()
@@ -624,12 +686,8 @@ export function RunnerTagCheckIn() {
             <div className='rounded-xl border border-white/10 bg-white/3 px-4 py-8 text-center'>
               <p className='text-white/35 text-sm'>Select an event above to search runners.</p>
             </div>
-          ) : loadingAttendees ? (
-            <div className='space-y-2'>
-              {[0, 1, 2].map(i => (
-                <div key={i} className='h-14 bg-white/5 rounded-xl animate-pulse' />
-              ))}
-            </div>
+          ) : loadingAttendees || isFiltering ? (
+            <AttendeeSkeleton />
           ) : filteredAttendees.length === 0 ? (
             <div className='rounded-xl border border-white/10 bg-white/3 px-4 py-8 text-center'>
               <p className='text-white/35 text-sm'>
@@ -643,6 +701,7 @@ export function RunnerTagCheckIn() {
               {filteredAttendees.map(a => {
                 const isCheckedIn = !!a.checkedInAt
                 const isRowLoading = rowLoadingId === a.registrationId
+                const isUndoArmed = undoArmedId === a.registrationId
                 const initial = (a.fullName ?? '?').charAt(0).toUpperCase()
 
                 return (
@@ -680,12 +739,44 @@ export function RunnerTagCheckIn() {
                     {/* Action */}
                     <div className='shrink-0'>
                       {isCheckedIn ? (
-                        <div className='flex items-center gap-1 text-green-400 text-xs font-medium px-2.5 py-1.5 rounded-md bg-green-500/10'>
-                          <CheckCircle2 size={13} />
-                          <span className='hidden sm:inline'>Checked in</span>
-                          <span className='sm:hidden tabular-nums'>{a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
-                          <span className='hidden sm:inline tabular-nums opacity-70'>· {a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
-                        </div>
+                        isUndoArmed ? (
+                          // Second tap confirms. Kept in the same slot as the badge
+                          // so the row never reflows under the admin's thumb.
+                          <div className='flex items-center gap-1.5'>
+                            <button
+                              type='button'
+                              onClick={() => performUndo(a.registrationId, a.fullName)}
+                              disabled={isRowLoading}
+                              className='inline-flex items-center gap-1.5 bg-red-500/20 text-red-300 border border-red-500/40 font-semibold rounded-md px-3 py-2 text-xs hover:bg-red-500/30 active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-9'
+                            >
+                              {isRowLoading ? '…' : <><Undo2 size={13} /> Undo?</>}
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => setUndoArmedId(null)}
+                              disabled={isRowLoading}
+                              aria-label={`Keep ${a.fullName ?? 'runner'} checked in`}
+                              className='inline-flex items-center justify-center text-white/45 hover:text-white rounded-md px-2 py-2 text-xs transition-colors min-h-9 min-w-9'
+                            >
+                              <XCircle size={15} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type='button'
+                            onClick={() => setUndoArmedId(a.registrationId)}
+                            disabled={windowClosed}
+                            title={windowClosed ? 'Check-in window has closed for this event.' : 'Tap to undo this check-in'}
+                            aria-label={`Undo check-in for ${a.fullName ?? 'runner'}`}
+                            className='flex items-center gap-1 text-green-400 text-xs font-medium px-2.5 py-1.5 rounded-md bg-green-500/10 hover:bg-green-500/20 transition-colors min-h-9 disabled:hover:bg-green-500/10 disabled:cursor-not-allowed'
+                          >
+                            <CheckCircle2 size={13} />
+                            <span className='hidden sm:inline'>Checked in</span>
+                            <span className='sm:hidden tabular-nums'>{a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
+                            <span className='hidden sm:inline tabular-nums opacity-70'>· {a.checkedInAt ? fmtTime(a.checkedInAt) : ''}</span>
+                            {!windowClosed && <Undo2 size={12} className='opacity-50' />}
+                          </button>
+                        )
                       ) : (
                         <button
                           type='button'
@@ -744,9 +835,54 @@ export function RunnerTagCheckIn() {
                 </span>
               )}
             </div>
+            <div className='flex items-center gap-3'>
+              {/* Wrong runner? Reverse it here, while the mistake is still on screen. */}
+              {state.registrationId && (
+                undoArmedId === state.registrationId ? (
+                  <button
+                    onClick={() => performUndo(state.registrationId!, state.attendeeName)}
+                    disabled={rowLoadingId === state.registrationId}
+                    className='flex items-center gap-1.5 text-red-300 hover:text-red-200 text-xs font-semibold transition-colors disabled:opacity-40'
+                  >
+                    <Undo2 size={12} />
+                    {rowLoadingId === state.registrationId ? 'Undoing…' : 'Tap again to undo'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setUndoArmedId(state.registrationId)}
+                    className='flex items-center gap-1.5 text-white/40 hover:text-white text-xs transition-colors'
+                  >
+                    <Undo2 size={12} />
+                    Undo
+                  </button>
+                )
+              )}
+              <button
+                onClick={handleReset}
+                className='flex items-center gap-1.5 text-white/40 hover:text-white text-xs transition-colors'
+              >
+                <RotateCcw size={12} />
+                Next runner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Undone — the check-in was reversed and the run handed back */}
+      {state.status === 'undone' && (
+        <div className='bg-white/8 border border-white/20 rounded-2xl p-5 flex items-start gap-3'>
+          <div className='w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0'>
+            <Undo2 className='text-white/70' size={20} />
+          </div>
+          <div className='flex-1'>
+            <p className='text-white font-semibold'>Check-in reversed</p>
+            <p className='text-white/50 text-sm mt-0.5'>
+              {state.attendeeName} is no longer checked in{state.eventName ? ` for ${state.eventName}` : ''}.
+            </p>
             <button
               onClick={handleReset}
-              className='flex items-center gap-1.5 text-white/40 hover:text-white text-xs transition-colors'
+              className='mt-3 flex items-center gap-1.5 text-white/40 hover:text-white text-xs transition-colors'
             >
               <RotateCcw size={12} />
               Next runner
@@ -778,7 +914,39 @@ export function RunnerTagCheckIn() {
   )
 }
 
-// ── Subcomponent ────────────────────────────────────────────────────────────
+// ── Subcomponents ───────────────────────────────────────────────────────────
+
+// Placeholder rows for the attendee list — used both while the list loads and
+// while a search is still resolving. Mirrors the real row's geometry (avatar,
+// two lines of text, action button) so nothing shifts when the names land.
+// Uneven widths so the placeholder reads as a list of different names rather
+// than a stack of identical bars.
+const SKELETON_ROWS = [
+  { name: 'w-3/5', email: 'w-2/5' },
+  { name: 'w-2/5', email: 'w-1/3' },
+  { name: 'w-1/2', email: 'w-1/4' },
+]
+
+function AttendeeSkeleton() {
+  return (
+    <div className='flex flex-col gap-2' aria-hidden='true'>
+      {SKELETON_ROWS.map((row, i) => (
+        <div
+          key={i}
+          className='flex items-center gap-3 rounded-xl border border-white/10 bg-white/4 px-3 py-2.5 animate-pulse'
+        >
+          <div className='shrink-0 w-10 h-10 rounded-full bg-white/8' />
+          <div className='flex-1 min-w-0 space-y-1.5'>
+            <div className={`h-3 rounded bg-white/8 ${row.name}`} />
+            <div className={`h-2.5 rounded bg-white/6 ${row.email}`} />
+          </div>
+          <div className='shrink-0 h-9 w-20 rounded-md bg-white/8' />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 
 function EventRow({
   event, status, compact,
