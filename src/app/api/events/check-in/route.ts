@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { isPortalRole } from '@/types/auth'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -13,7 +14,9 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .single()
 
-  if (adminUser?.role !== 'ADMIN') {
+  // ADMIN or LEAD. Check-in is the one admin surface run staff share, and this
+  // route is its own entry point — the portal layout does not protect it.
+  if (!isPortalRole(adminUser?.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

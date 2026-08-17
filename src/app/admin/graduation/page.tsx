@@ -2,6 +2,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { GraduationClient } from '@/components/admin/graduation-client'
 import type { EventGraduations, GraduationRunner } from '@/components/admin/graduation-client'
 import { getMilestone } from '@/lib/milestones'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Graduation — Admin' }
 
@@ -27,7 +28,10 @@ type UserRow = {
  * adds exactly one run per confirmed check-in, and skips test events entirely,
  * which is what makes the projection below predictable.
  */
-export default async function AdminGraduationPage() {
+export default async function AdminGraduationPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   // Upcoming runs first: the registration read is scoped to them, so an old
   // event's few thousand rows never leave the database.
   const nowIso = new Date().toISOString()

@@ -7,7 +7,15 @@
 // this tab kept rendering from its cache.
 
 export const AUTHED_KEY = '_stride_authed'
-export const NAV_PROFILE_KEY = '_stride_nav_profile'
+
+/**
+ * Bumped to _v2 when the cached profile gained `role`. A v1 entry has no role,
+ * which would have left a newly promoted lead without their portal link for the
+ * life of the tab. The clear below still matches on the shared prefix, so both
+ * generations get swept.
+ */
+export const NAV_PROFILE_KEY = '_stride_nav_profile_v2'
+const NAV_PROFILE_PREFIX = '_stride_nav_profile'
 
 /** Removes the sign-in marker and every cached nav profile. */
 export function clearAuthCaches(): void {
@@ -15,7 +23,7 @@ export function clearAuthCaches(): void {
     sessionStorage.removeItem(AUTHED_KEY)
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const key = sessionStorage.key(i)
-      if (key?.startsWith(NAV_PROFILE_KEY)) sessionStorage.removeItem(key)
+      if (key?.startsWith(NAV_PROFILE_PREFIX)) sessionStorage.removeItem(key)
     }
   } catch {
     // sessionStorage unavailable (private mode, disabled storage) — nothing to clear

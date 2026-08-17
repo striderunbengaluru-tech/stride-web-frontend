@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { deleteProductAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
+import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Products — Admin' }
 
@@ -11,7 +12,10 @@ const STATUS_STYLES: Record<string, string> = {
   ARCHIVED: 'bg-white/5 text-white/30',
 }
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage(){
+  // ADMIN only. A LEAD reaching this route is redirected to check-in.
+  await requireFullAdmin()
+
   const { data: allProducts } = await adminClient
     .from('products')
     .select('id, name, slug, price_paise, stock, status')

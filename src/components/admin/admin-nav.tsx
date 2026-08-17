@@ -12,6 +12,7 @@ import {
   GraduationCap,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
+import { ROLES, type Role } from '@/types/auth'
 
 const navLinks = [
   { href: '/admin',               label: 'Dashboard',      icon: LayoutDashboard, exact: true },
@@ -23,8 +24,19 @@ const navLinks = [
   { href: '/admin/check-in',      label: 'Check-in',       icon: ScanLine },
 ]
 
-export function AdminNav() {
+/** The only route a LEAD may reach. Kept in step with lib/auth/admin-access. */
+const LEAD_LINKS = ['/admin/check-in']
+
+export function AdminNav({ role }: { role: Role }) {
   const pathname = usePathname()
+
+  const isLead = role === ROLES.LEAD
+  // Presentation only — hiding a link is a courtesy, not a control. Every route
+  // behind these tabs calls requireFullAdmin() for itself, so a lead who types
+  // the URL still lands back on check-in.
+  const links = isLead
+    ? navLinks.filter(link => LEAD_LINKS.includes(link.href))
+    : navLinks
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href
@@ -40,9 +52,9 @@ export function AdminNav() {
         <div className='max-w-6xl mx-auto px-4 sm:px-6'>
           <div className='flex items-center gap-1 h-12 overflow-x-auto scrollbar-hide'>
 
-            {/* Admin badge */}
+            {/* Role badge — names the access the viewer actually has */}
             <span className='text-xs font-bold text-stride-yellow-accent bg-stride-yellow-accent/10 border border-stride-yellow-accent/25 px-2.5 py-1 rounded-md tracking-widest font-mono uppercase shrink-0 mr-2'>
-              Admin
+              {isLead ? 'Lead' : 'Admin'}
             </span>
 
             {/* Separator */}
@@ -52,7 +64,7 @@ export function AdminNav() {
                 so it needs aria-current, not a spinner). Inactive items use
                 NavLoadingLink so a tap immediately shows a spinner + yellow
                 label while the destination segment loads — no dead-tap feel. */}
-            {navLinks.map(({ href, label, icon: Icon, exact }) => {
+            {links.map(({ href, label, icon: Icon, exact }) => {
               const active = isActive(href, exact)
               const className = `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
                 active

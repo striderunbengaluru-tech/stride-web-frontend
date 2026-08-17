@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, ShieldOff, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow, X } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
@@ -34,7 +34,7 @@ export type UserRow = {
   runs: Run[]
 }
 
-type RoleFilter = 'ALL' | 'ADMIN' | 'GUEST'
+type RoleFilter = 'ALL' | 'ADMIN' | 'LEAD' | 'GUEST'
 
 type SortKey = 'joined' | 'runs' | 'tier'
 type SortDir = 'asc' | 'desc'
@@ -54,8 +54,22 @@ function tierIndexOf(runs: number): number {
 
 const ROLE_STYLES: Record<string, string> = {
   ADMIN: 'bg-stride-yellow-accent/20 text-stride-yellow-accent',
+  LEAD: 'bg-stride-yellow-accent/12 text-stride-yellow-accent/85',
   GUEST: 'bg-white/10 text-white/50',
 }
+
+/**
+ * The roles an admin may assign, described by what they actually grant.
+ *
+ * LEAD is worded to head off the obvious misreading: it is not a junior admin.
+ * It opens the check-in screen and nothing else, and an admin choosing it
+ * should be able to see that without having to try it.
+ */
+const ROLE_OPTIONS = [
+  { value: 'GUEST', label: 'Guest', blurb: 'Standard member. No access to the admin portal.' },
+  { value: 'LEAD',  label: 'Lead',  blurb: 'Run staff. Event check-in only — cannot see events, registrations, users or club data.' },
+  { value: 'ADMIN', label: 'Admin', blurb: 'Full access to the admin portal and everything in it.' },
+] as const
 
 function fmtDate(d: string | null) {
   return d ? formatDateNumericIST(d) : '—'
@@ -73,6 +87,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // Pending role-change target — opens the confirmation modal
   const [roleTarget, setRoleTarget] = useState<UserRow | null>(null)
+  const [pendingRole, setPendingRole] = useState<string>('GUEST')
   const [roleError, setRoleError] = useState<string | null>(null)
   const [rolePending, startRoleTransition] = useTransition()
   const [mounted, setMounted] = useState(false)
@@ -80,12 +95,14 @@ export function UsersClient({ users }: { users: UserRow[] }) {
 
   function openRoleModal(user: UserRow) {
     setRoleError(null)
+    setPendingRole(user.role)
     setRoleTarget(user)
   }
 
   const roleCounts = useMemo(() => ({
     ALL:   users.length,
     ADMIN: users.filter(u => u.role === 'ADMIN').length,
+    LEAD:  users.filter(u => u.role === 'LEAD').length,
     GUEST: users.filter(u => u.role === 'GUEST').length,
   }), [users])
 
@@ -144,27 +161,49 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     return sorted
   }, [users, search, roleFilter, tierFilter, sortKey, sortDir])
 
-  // ── Role-change confirmation modal ──
-  const makingAdmin = roleTarget?.role !== 'ADMIN'
-  const nextRole = makingAdmin ? 'ADMIN' : 'GUEST'
+  // ── Role picker ──
+  // Three roles means a choice, not a toggle. The blurb under each option is
+  // the point of the design: an admin granting LEAD needs to see that it buys
+  // check-in and nothing else before they grant it.
+  const roleUnchanged = pendingRole === roleTarget?.role
   const modal = roleTarget && mounted ? createPortal(
     <div className='fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4' onClick={() => setRoleTarget(null)}>
-      <div className='bg-stride-purple-primary border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl' onClick={e => e.stopPropagation()}>
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${makingAdmin ? 'bg-stride-yellow-accent/15' : 'bg-white/8'}`}>
-          {makingAdmin
-            ? <ShieldCheck size={20} className='text-stride-yellow-accent' />
-            : <ShieldOff size={20} className='text-white/60' />}
+      <div className='bg-stride-purple-primary border border-white/15 rounded-2xl p-6 w-full max-w-md shadow-2xl' onClick={e => e.stopPropagation()}>
+        <div className='w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-stride-yellow-accent/15'>
+          <ShieldCheck size={20} className='text-stride-yellow-accent' />
         </div>
-        <h2 className='text-white font-bold text-lg mb-1'>
-          {makingAdmin ? 'Make this user an admin?' : 'Remove admin access?'}
-        </h2>
-        <p className='text-white/60 text-sm mb-1'>
+        <h2 className='text-white font-bold text-lg mb-1'>Change role</h2>
+        <p className='text-white/60 text-sm mb-5'>
           <span className='text-white font-medium'>{roleTarget.full_name ?? roleTarget.email ?? roleTarget.username ?? 'This user'}</span>
-          {makingAdmin
-            ? ' will gain full access to the admin panel — events, registrations, users, and all data.'
-            : ' will lose access to the admin panel.'}
+          {' '}is currently <span className='text-white font-medium'>{roleTarget.role}</span>.
         </p>
-        <p className='text-white/40 text-xs mb-6'>You can change this back at any time.</p>
+
+        <div role='radiogroup' aria-label='Role' className='flex flex-col gap-2 mb-5'>
+          {ROLE_OPTIONS.map(opt => {
+            const selected = pendingRole === opt.value
+            return (
+              <button
+                key={opt.value}
+                type='button'
+                role='radio'
+                aria-checked={selected}
+                disabled={rolePending}
+                onClick={() => setPendingRole(opt.value)}
+                className={`text-left rounded-xl border px-4 py-3 transition-colors disabled:opacity-60 ${
+                  selected
+                    ? 'border-stride-yellow-accent/60 bg-stride-yellow-accent/10'
+                    : 'border-white/12 bg-white/4 hover:border-white/25'
+                }`}
+              >
+                <span className={`block text-sm font-semibold ${selected ? 'text-stride-yellow-accent' : 'text-white'}`}>
+                  {opt.label}
+                </span>
+                <span className='block text-white/50 text-xs mt-0.5 leading-relaxed'>{opt.blurb}</span>
+              </button>
+            )
+          })}
+        </div>
+
         {roleError && (
           <div className='bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5 text-red-400 text-xs mb-4'>
             {roleError}
@@ -180,22 +219,19 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           </button>
           <button
             type='button'
-            disabled={rolePending}
+            disabled={rolePending || roleUnchanged}
             onClick={() => {
               const target = roleTarget
+              const next = pendingRole
               startRoleTransition(async () => {
-                const result = await updateUserRoleAction(target.id, nextRole)
+                const result = await updateUserRoleAction(target.id, next)
                 if (result?.error) setRoleError(result.error)
                 else setRoleTarget(null)
               })
             }}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-60 ${
-              makingAdmin
-                ? 'bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90'
-                : 'bg-white/10 text-white hover:bg-white/15'
-            }`}
+            className='flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90'
           >
-            {rolePending ? 'Updating…' : makingAdmin ? 'Yes, make admin' : 'Yes, remove'}
+            {rolePending ? 'Updating…' : roleUnchanged ? 'No change' : `Make ${pendingRole.toLowerCase()}`}
           </button>
         </div>
       </div>
@@ -220,7 +256,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           />
         </div>
         <div className='flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 shrink-0'>
-          {(['ALL', 'ADMIN', 'GUEST'] as RoleFilter[]).map(r => (
+          {(['ALL', 'ADMIN', 'LEAD', 'GUEST'] as RoleFilter[]).map(r => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -437,7 +473,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   onClick={e => { e.stopPropagation(); openRoleModal(u) }}
                   className='hidden sm:block shrink-0 text-xs text-white/35 hover:text-stride-yellow-accent transition-colors whitespace-nowrap'
                 >
-                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                  Change role
                 </button>
 
                 {/* Expand button — always available so admins can drill into any user */}
@@ -460,7 +496,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   onClick={() => openRoleModal(u)}
                   className='ml-auto text-xs text-white/35 hover:text-stride-yellow-accent transition-colors'
                 >
-                  {u.role === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                  Change role
                 </button>
               </div>
 
