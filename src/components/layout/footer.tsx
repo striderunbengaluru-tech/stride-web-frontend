@@ -5,14 +5,14 @@ import { NavLoadingLink } from './nav-loading-link'
 import { FooterAccountColumn } from './footer-account-column'
 
 // Every public page worth discovering. Deliberately absent: `/shop` (hidden by
-// request), `/team` (still 404s on production — see GATED_ROUTE_PREFIXES), and
-// `/originals` (no index route, only `/originals/[slug]`).
+// request) and `/originals` (no index route, only `/originals/[slug]`).
 const EXPLORE_LINKS = [
-  { title: 'Events',       href: '/events' },
-  { title: 'Milestones',   href: '/milestones' },
-  { title: 'Leaderboard',  href: '/leaderboard' },
-  { title: 'Blog',         href: '/blog' },
-  { title: 'Partnerships', href: '/partnerships' },
+  { title: 'Events',        href: '/events' },
+  { title: 'Milestones',    href: '/milestones' },
+  { title: 'Leaderboard',   href: '/leaderboard' },
+  { title: 'Blog',          href: '/blog' },
+  { title: 'Lead Striders', href: '/team' },
+  { title: 'Partnerships',  href: '/partnerships' },
 ]
 
 const LEGAL_LINKS = [

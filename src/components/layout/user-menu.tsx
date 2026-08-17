@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints,
-  CalendarDays, Handshake, Trophy, ScanLine,
+  CalendarDays, Handshake, Trophy, ScanLine, Users,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
@@ -13,8 +13,12 @@ import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
 // Site navigation. The desktop navbar carries no links of its own, so on
 // desktop this menu is where signed-in members reach the main pages — mirroring
 // the mobile bottom nav.
+// `/team` is labelled "Team" here, deliberately shorter than the "Lead Striders"
+// wording used in the footer and on the page itself — a dropdown row reads
+// better as a single word.
 const SITE_LINKS = [
   { label: 'Events',       href: '/events',       icon: CalendarDays },
+  { label: 'Team',         href: '/team',         icon: Users },
   { label: 'Partnerships', href: '/partnerships', icon: Handshake },
   { label: 'Leaderboard',  href: '/leaderboard',  icon: Trophy },
 ] as const
