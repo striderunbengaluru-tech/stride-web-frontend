@@ -380,8 +380,12 @@ export default async function EventDetailPage({ params }: Props) {
                     </div>
                     <div className='flex-1 min-w-0'>
                       <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest mb-0.5'>Route</p>
+                      {/* Provider-neutral on purpose. The admin field takes any
+                          route link — its own placeholder offers Strava or
+                          Komoot — so naming one is wrong as often as it is
+                          right. Matches the confirmation email's wording. */}
                       <p className='text-white font-semibold text-sm group-hover/row:text-stride-yellow-accent transition-colors'>
-                        View the run route on Strava
+                        View the run route
                       </p>
                     </div>
                     <ExternalLink size={14} className='text-white/30 shrink-0 group-hover/row:text-stride-yellow-accent transition-colors' />
