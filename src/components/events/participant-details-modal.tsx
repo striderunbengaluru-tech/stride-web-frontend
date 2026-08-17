@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic'
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
 import { X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { isChoiceFieldType, sumPackageAmountPaise, hasSpotBudget, type AdditionalField, type EventPackage } from '@/types/event'
+import { isChoiceFieldType, sumPackageAmountPaise, hasSpotBudget, resolveTierAvailability, type AdditionalField, type EventPackage } from '@/types/event'
 import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
 import { reportFormError } from '@/lib/utils/form-errors'
@@ -112,9 +112,15 @@ function defaultPackageSelection(
   enabled: boolean,
   multiSelect: boolean,
   taken: Record<string, number>,
+  progressive: boolean,
 ): string[] {
   if (!enabled || multiSelect) return []
-  const first = packages.find(pkg => spotsLeftFor(pkg, taken) !== 0)
+  // The first tier the runner may actually pick. Under progressive pricing that
+  // is the one tier currently open, not simply the first with spots left.
+  const open = new Set(
+    resolveTierAvailability(packages, taken, progressive).filter(t => t.selectable).map(t => t.id)
+  )
+  const first = packages.find(pkg => open.has(pkg.id))
   return first ? [first.id] : []
 }
 
@@ -136,6 +142,8 @@ type Props = {
   packages?: EventPackage[]
   packagesEnabled?: boolean
   packagesMultiSelect?: boolean
+  /** Opens one tier at a time — see resolveTierAvailability. */
+  packagesProgressive?: boolean
   /**
    * Spots already taken per package id. Drives the "N left" hint and disables
    * sold-out tiers. Advisory only — register_for_event re-checks every budget
@@ -152,7 +160,7 @@ type Props = {
   inviteOnly?: boolean
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packagesProgressive = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -170,7 +178,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   // the server would immediately reject. Multi-select starts empty — pre-ticking
   // something they'd be charged for isn't a default we get to make for them.
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(
-    () => defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken)
+    () => defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken, packagesProgressive)
   )
   const [accepted, setAccepted] = useState(false)
   // Terms scroll state. `atEnd` is transient and drives the fade at the bottom
@@ -241,6 +249,17 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   // server recomputes it from the event's own package rows and never trusts
   // anything the client sends about money.
   const hasPackages = !inviteOnly && packagesEnabled && packages.length > 0
+
+  // Which tiers may be picked right now, keyed by id. Computed with the very
+  // same function the register route enforces with, so the modal can never
+  // offer something the server would turn away.
+  const tierState = useMemo(() => {
+    const byId = new Map<string, { selectable: boolean; soldOut: boolean }>()
+    for (const tier of resolveTierAvailability(packages, packageSpotsTaken, packagesProgressive)) {
+      byId.set(tier.id, { selectable: tier.selectable, soldOut: tier.soldOut })
+    }
+    return byId
+  }, [packages, packageSpotsTaken, packagesProgressive])
   const selectedPackages = hasPackages
     ? packages.filter(pkg => selectedPackageIds.includes(pkg.id))
     : []
@@ -279,7 +298,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
       // Back to the default selection, not to whatever they last picked — a
       // reopened modal should read the same as a fresh one.
       setSelectedPackageIds(
-        defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken)
+        defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken, packagesProgressive)
       )
     }
     // packages is a fresh array identity on every server render of the parent, so
@@ -328,11 +347,17 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
     }
     // A tier can sell out while the modal is open. The server re-checks under a
     // lock either way; catching it here saves a round trip and names the tier.
-    const soldOut = packages.find(pkg =>
-      selectedPackageIds.includes(pkg.id) && spotsLeftFor(pkg, packageSpotsTaken) === 0
+    const unavailable = packages.find(pkg =>
+      selectedPackageIds.includes(pkg.id) && !(tierState.get(pkg.id)?.selectable ?? true)
     )
-    if (soldOut) {
-      return fail(`"${soldOut.name}" is sold out — please pick another package.`, 'packages')
+    if (unavailable) {
+      const isSoldOut = tierState.get(unavailable.id)?.soldOut ?? false
+      return fail(
+        isSoldOut
+          ? `"${unavailable.name}" is sold out — please pick another package.`
+          : `"${unavailable.name}" isn't open right now — please pick another package.`,
+        'packages',
+      )
     }
 
     if (hasTerms && !accepted) return fail('Please accept the terms & conditions to continue', 'acceptedTerms')
@@ -622,13 +647,19 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   {packages.map(pkg => {
                     const checked = selectedPackageIds.includes(pkg.id)
                     const left = spotsLeftFor(pkg, packageSpotsTaken)
-                    const soldOut = left === 0
+                    const state = tierState.get(pkg.id)
+                    const soldOut = state?.soldOut ?? left === 0
+                    // Closed by progressive pricing reads exactly like sold out:
+                    // greyed, unpickable, price still shown. Deliberately no
+                    // explanation — a runner does not need the club's pricing
+                    // mechanics narrated at them.
+                    const disabled = !(state?.selectable ?? true)
                     return (
                       <label
                         key={pkg.id}
-                        aria-disabled={soldOut}
+                        aria-disabled={disabled}
                         className={`flex items-start gap-2.5 min-h-11 px-3.5 py-3 rounded-lg border transition-colors ${
-                          soldOut
+                          disabled
                             ? 'border-white/10 bg-white/3 cursor-not-allowed'
                             : 'border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10'
                         }`}
@@ -638,11 +669,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                           name={packagesMultiSelect ? `package-${pkg.id}` : 'event-package'}
                           value={pkg.id}
                           checked={checked}
-                          disabled={soldOut}
+                          disabled={disabled}
                           onChange={() => togglePackage(pkg.id)}
                           className='accent-stride-yellow-accent w-4 h-4 shrink-0 mt-0.5 disabled:opacity-40'
                         />
-                        <span className={`min-w-0 flex-1 ${soldOut ? 'opacity-45' : ''}`}>
+                        <span className={`min-w-0 flex-1 ${disabled ? 'opacity-45' : ''}`}>
                           <span className='flex items-baseline justify-between gap-3'>
                             <span className='text-white/90 text-sm font-medium'>{pkg.name}</span>
                             <span className='text-white text-sm font-semibold font-mono shrink-0'>

@@ -1,6 +1,6 @@
 import { NextResponse, after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { eventRegsTag } from '@/lib/data/events'
+import { eventRegsTag, getPackageSpotsTaken } from '@/lib/data/events'
 import { nanoid } from 'nanoid'
 import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
@@ -9,7 +9,7 @@ import { registerEventSchema } from '@/lib/validations/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { CLEARABLE_REGISTRATION_STATUSES } from '@/lib/events/invite-only'
 import {
-  isChoiceFieldType, sumPackageAmountPaise,
+  isChoiceFieldType, sumPackageAmountPaise, selectableTierIds,
   type AdditionalField, type EventPackage, type SelectedPackage,
 } from '@/types/event'
 
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, invite_only, registrations_closed, packages, packages_enabled, packages_multi_select')
+    .select('id, name, slug, status, price_paise, capacity, additional_fields, event_date, terms_and_conditions, invite_only, registrations_closed, packages, packages_enabled, packages_multi_select, packages_progressive')
     .eq('id', eventId)
     .single()
 
@@ -160,11 +160,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only one package can be selected for this event' }, { status: 400 })
     }
 
+    // Which tiers the event is offering at this moment. Under progressive
+    // pricing only one is open at a time, and an admin may have pinned others
+    // shut — neither of which the client can be trusted to respect. The modal
+    // greys the button out; this is the boundary that actually refuses it.
+    //
+    // Capacity is still settled by register_for_event under its row lock. This
+    // check only decides whether the tier was on offer, so a stale count here
+    // can at worst let a request through to be refused there as PACKAGE_FULL.
+    const spotsTaken = await getPackageSpotsTaken(eventId)
+    const openTierIds = selectableTierIds(defined, spotsTaken, event.packages_progressive === true)
+
     const chosen: SelectedPackage[] = []
     for (const id of ids) {
       const match = defined.find(pkg => pkg.id === id)
       if (!match) {
         return NextResponse.json({ error: 'That package is no longer available' }, { status: 400 })
+      }
+      if (!openTierIds.has(match.id)) {
+        return NextResponse.json(
+          { error: `${match.name} isn't open for registration right now.` },
+          { status: 409 },
+        )
       }
       chosen.push({ id: match.id, name: match.name, amountPaise: match.amountPaise })
     }

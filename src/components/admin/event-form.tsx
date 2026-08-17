@@ -13,13 +13,12 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
-  Boxes, ListChecks, Scale, Star,
+  Boxes, ListChecks, Scale, Star, TrendingUp,
 } from 'lucide-react'
 import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
   isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
-  type AdditionalField, type AdditionalFieldType, type EventPackage,
-} from '@/types/event'
+  type AdditionalField, type AdditionalFieldType, type EventPackage, TIER_GATES } from '@/types/event'
 import { validatePackageSpots, splitSpotsEvenly } from '@/lib/events/package-spots'
 import { reportFormError, type FieldError } from '@/lib/utils/form-errors'
 import { Spinner } from '@/components/ui/spinner'
@@ -261,6 +260,9 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   })
   const [packagesEnabled, setPackagesEnabled] = useState(defaultValues.packagesEnabled ?? false)
   const [packagesMultiSelect, setPackagesMultiSelect] = useState(defaultValues.packagesMultiSelect ?? false)
+  // Opens one tier at a time instead of all of them. See resolveTierAvailability
+  // in @/types/event — this form only decides the flag and each tier's gate.
+  const [packagesProgressive, setPackagesProgressive] = useState(defaultValues.packagesProgressive ?? false)
   const [pkgDragSrc, setPkgDragSrc] = useState<number | null>(null)
   const [pkgDragOver, setPkgDragOver] = useState<number | null>(null)
 
@@ -949,6 +951,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
 
                 {/* Always posted so the value survives a save with packages off. */}
                 <input type='hidden' name='packagesMultiSelect' value={packagesMultiSelect ? 'true' : 'false'} />
+                <input type='hidden' name='packagesProgressive' value={packagesProgressive ? 'true' : 'false'} />
 
                 {packagesEnabled && (
                   <div data-field='packages' tabIndex={-1} className='mt-4 space-y-3'>
@@ -964,6 +967,25 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                         label='Let runners select more than one package'
                       />
                     </div>
+
+                    <div className='flex items-center justify-between gap-3'>
+                      <div className='flex items-center gap-1.5'>
+                        <TrendingUp size={14} className='text-white/40' />
+                        <label className='text-white/70 text-sm font-medium'>Progressive tier pricing</label>
+                        <HelpHint text='When enabled, the other pricing tiers will be seen but will be disabled. Only one tier is open at a time — the first in this list that has not sold out. When it fills, the next opens automatically. You can override any tier below.' />
+                      </div>
+                      <Switch
+                        checked={packagesProgressive}
+                        onCheckedChange={(v) => { setPackagesProgressive(v); markDirty() }}
+                        label='Open one pricing tier at a time'
+                      />
+                    </div>
+
+                    {packagesProgressive && (
+                      <p className='text-white/40 text-xs'>
+                        Order matters — tiers open top to bottom. Drag to reorder.
+                      </p>
+                    )}
 
                     {packages.length === 0 && (
                       <p className='text-white/40 text-xs'>No packages yet. Add at least one.</p>
@@ -1049,6 +1071,47 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
 
                         {pkg.amountPaise === 0 && (
                           <p className='text-white/40 text-xs'>Free package — picking only this skips payment entirely.</p>
+                        )}
+
+                        {/* Availability, progressive mode only. Auto follows the
+                            sell-out order; the other two pin the tier and win
+                            over it. Sold-out still beats a pinned-open tier —
+                            capacity is settled in the database either way. */}
+                        {packagesProgressive && (
+                          <div className='flex flex-wrap items-center gap-2 pt-1'>
+                            <span className='text-white/40 text-xs shrink-0'>Availability</span>
+                            <div className='flex gap-0.5 bg-white/5 border border-white/10 rounded-lg p-0.5'>
+                              {([
+                                { value: TIER_GATES.AUTO,   label: 'Auto' },
+                                { value: TIER_GATES.OPEN,   label: 'Open' },
+                                { value: TIER_GATES.CLOSED, label: 'Closed' },
+                              ] as const).map(option => {
+                                const active = (pkg.gate ?? TIER_GATES.AUTO) === option.value
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type='button'
+                                    aria-pressed={active}
+                                    onClick={() => updatePackage(i, { gate: option.value })}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors min-h-8 ${
+                                      active
+                                        ? 'bg-stride-yellow-accent text-copy-black'
+                                        : 'text-white/50 hover:text-white'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            <span className='text-white/30 text-xs'>
+                              {(pkg.gate ?? TIER_GATES.AUTO) === TIER_GATES.AUTO
+                                ? (i === 0 ? 'Opens first' : 'Opens when the tier above sells out')
+                                : pkg.gate === TIER_GATES.OPEN
+                                  ? 'Forced open by you'
+                                  : 'Forced closed by you'}
+                            </span>
+                          </div>
                         )}
                       </div>
                     ))}
