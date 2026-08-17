@@ -51,12 +51,19 @@ function sanitisePackages(raw: string | undefined): string {
 // Enabling packages with nothing authored would leave the event unregisterable:
 // the register route requires a selection, and there'd be nothing to select. So
 // the flag can only be true when at least one package survived validation.
-function packageColumns(rawPackages: string | undefined, enabled: boolean, multiSelect: boolean) {
+function packageColumns(
+  rawPackages: string | undefined,
+  enabled: boolean,
+  multiSelect: boolean,
+  progressive: boolean,
+) {
   const packages = sanitisePackages(rawPackages)
   return {
     packages,
     packages_enabled: enabled && packages !== '[]',
     packages_multi_select: multiSelect,
+    // Meaningless without tiers to advance through, so it cannot outlive them.
+    packages_progressive: progressive && enabled && packages !== '[]',
   }
 }
 
@@ -232,7 +239,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -263,7 +270,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
     terms_and_conditions: termsText || null,
     banner_images: bannerImages ?? '[]',
     additional_fields: sanitiseAdditionalFields(additionalFields),
-    ...packageColumns(packages, packagesEnabled, packagesMultiSelect),
+    ...packageColumns(packages, packagesEnabled, packagesMultiSelect, packagesProgressive),
     distance_km: distanceKm ?? null,
     difficulty: difficulty?.trim() || null,
     show_spots_left: showSpotsLeft,
@@ -316,9 +323,9 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, capacity, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, capacity, ...rest } = parsed.data
 
-  const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect)
+  const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect, packagesProgressive)
 
   const reduction = await validateCapacityReduction(
     id,

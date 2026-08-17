@@ -55,11 +55,108 @@ export type EventPackage = {
    * but the admin form blocks the next save until real numbers are entered.
    */
   spotsTotal?: number
+  /**
+   * Who decides whether this tier is open, under progressive pricing.
+   * Ignored entirely when the event is not progressive.
+   */
+  gate?: TierGate
 }
+
+/**
+ * Under progressive pricing each tier is either following the sell-out rule or
+ * pinned by an admin. Absent means `auto` — every tier authored before this
+ * existed follows the rule, which is the behaviour an admin would expect.
+ */
+export const TIER_GATES = {
+  AUTO: 'auto',
+  OPEN: 'open',
+  CLOSED: 'closed',
+} as const
+
+export type TierGate = (typeof TIER_GATES)[keyof typeof TIER_GATES]
 
 /** Is this package's spot budget set, i.e. should registration enforce it? */
 export function hasSpotBudget(pkg: Pick<EventPackage, 'spotsTotal'>): boolean {
   return typeof pkg.spotsTotal === 'number' && pkg.spotsTotal > 0
+}
+
+export type TierAvailability = {
+  id: string
+  selectable: boolean
+  soldOut: boolean
+  /** Which rule settled it. Surfaced in the admin form, never to a runner. */
+  decidedBy: 'not-progressive' | 'auto' | 'admin-open' | 'admin-closed'
+}
+
+/**
+ * Which tiers a runner may actually pick.
+ *
+ * The single source of truth for that question — the admin form, the
+ * registration modal and the register route all read it, so what an admin sees,
+ * what a runner is offered, and what the server will accept cannot drift apart.
+ * The route is the one that matters: the modal only disables a button, and a
+ * hand-posted form must be refused on the server.
+ *
+ * Progressive pricing opens exactly one tier at a time: the earliest, in the
+ * order the admin authored them, that has not sold out. When it sells out the
+ * next takes over — that is the whole of the automatic rule. An admin can pin
+ * any tier open or closed, and that decision wins.
+ *
+ * A pinned-open tier still cannot be picked once its spots are gone. Capacity
+ * is not a preference, and `register_for_event` would refuse it anyway; letting
+ * the modal offer it would only produce a failed registration.
+ */
+export function resolveTierAvailability(
+  packages: readonly EventPackage[],
+  spotsTaken: Readonly<Record<string, number>>,
+  progressive: boolean,
+): TierAvailability[] {
+  const isSoldOut = (pkg: EventPackage) =>
+    hasSpotBudget(pkg) && (spotsTaken[pkg.id] ?? 0) >= (pkg.spotsTotal ?? 0)
+
+  if (!progressive) {
+    return packages.map(pkg => ({
+      id: pkg.id,
+      selectable: !isSoldOut(pkg),
+      soldOut: isSoldOut(pkg),
+      decidedBy: 'not-progressive' as const,
+    }))
+  }
+
+  // The tier the automatic rule currently points at. -1 once everything has
+  // sold out, which correctly leaves nothing on `auto` selectable.
+  const activeIndex = packages.findIndex(pkg => !isSoldOut(pkg))
+
+  return packages.map((pkg, index) => {
+    const soldOut = isSoldOut(pkg)
+    const gate = pkg.gate ?? TIER_GATES.AUTO
+
+    if (gate === TIER_GATES.CLOSED) {
+      return { id: pkg.id, selectable: false, soldOut, decidedBy: 'admin-closed' as const }
+    }
+    if (gate === TIER_GATES.OPEN) {
+      return { id: pkg.id, selectable: !soldOut, soldOut, decidedBy: 'admin-open' as const }
+    }
+    return {
+      id: pkg.id,
+      selectable: index === activeIndex,
+      soldOut,
+      decidedBy: 'auto' as const,
+    }
+  })
+}
+
+/** Convenience for callers that only need the ids a runner may choose. */
+export function selectableTierIds(
+  packages: readonly EventPackage[],
+  spotsTaken: Readonly<Record<string, number>>,
+  progressive: boolean,
+): Set<string> {
+  return new Set(
+    resolveTierAvailability(packages, spotsTaken, progressive)
+      .filter(t => t.selectable)
+      .map(t => t.id)
+  )
 }
 
 /**
