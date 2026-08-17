@@ -104,8 +104,12 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
       transition={{ duration: 0.2, ease: 'easeOut' }}
       className='h-full'
     >
+      {/* prefetch off: a grid of these fires one background request per card
+          that scrolls into view, for pages most visitors never open. The
+          destination is ISR now, so a real click is already fast from cache. */}
       <Link
         href={`/events/${slug}`}
+        prefetch={false}
         className='group flex flex-col h-full rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300'
       >
         {/* Image — the frame takes the poster's own ratio once measured, so

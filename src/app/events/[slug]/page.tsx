@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
-import { getEventBySlug, getConfirmedCount } from '@/lib/data/events'
+import { getEventBySlug, getConfirmedCount, getPackageSpotsTaken, getPublishedEvents } from '@/lib/data/events'
 import {
   RegistrationCtaDesktop,
   RegistrationCtaMobile,
@@ -27,6 +27,37 @@ import { BackToTop } from '@/components/ui/back-to-top'
 
 type Props = {
   params: Promise<{ slug: string }>
+}
+
+// ISR, matching the events index. Nothing on this page differs between
+// viewers any more — the Register panel became a client island — so it is
+// rendered once and reused, rather than rebuilt for every visitor, crawler and
+// link preview. Admin event actions purge it on demand via revalidateTag, so
+// the 60s window only ever applies between writes.
+//
+// One consequence: `isPast` and the spots-left figures are evaluated at render
+// time, so they can lag by up to a revalidation window. Neither is
+// authoritative — `register_for_event` enforces capacity and closure in the
+// database, and the CTA is only ever an invitation to try.
+export const revalidate = 60
+
+/**
+ * Prerender every published event at build time.
+ *
+ * `revalidate` alone is not enough on a dynamic segment: without any params to
+ * prerender, Next has no route entry to cache against and every request is
+ * rendered on demand and thrown away — verified against a production build,
+ * where the route answered `Cache-Control: private, no-store` on every hit.
+ * Declaring the params is what registers the ISR family, exactly as
+ * /blog/[slug] and /originals/[slug] already do.
+ *
+ * `dynamicParams` stays at its default of true, so an event published after
+ * the last deploy still resolves — rendered once on first request, then cached
+ * like the rest.
+ */
+export async function generateStaticParams() {
+  const events = await getPublishedEvents()
+  return events.map((event) => ({ slug: event.slug }))
 }
 
 // At this many remaining spots (or fewer) the spots-left note turns into a
@@ -139,6 +170,11 @@ export default async function EventDetailPage({ params }: Props) {
   // Packages stay on the row so they come back when invite-only is switched
   // off, but an applicant must never see a priced tier.
   const packagesEnabled = !inviteOnly && (event.packages_enabled ?? false) && packages.length > 0
+
+  // Same for every viewer, so it is resolved here rather than from the browser:
+  // a cached read tagged with the event's registration tag, which every
+  // registration purges. Skipped entirely when the event has no priced tiers.
+  const packageSpotsTaken = packagesEnabled ? await getPackageSpotsTaken(event.id) : {}
 
   const hasBanners = bannerImages.length > 0
   const dateLong  = fmtDateLong(event.event_date)
@@ -406,6 +442,7 @@ export default async function EventDetailPage({ params }: Props) {
                     packages={packages}
                     packagesEnabled={packagesEnabled}
                     packagesMultiSelect={event.packages_multi_select ?? false}
+                    packageSpotsTaken={packageSpotsTaken}
                     inviteOnly={inviteOnly}
                     razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                     priceLabel={priceLabel}
@@ -459,6 +496,7 @@ export default async function EventDetailPage({ params }: Props) {
                 packages={packages}
                 packagesEnabled={packagesEnabled}
                 packagesMultiSelect={event.packages_multi_select ?? false}
+                packageSpotsTaken={packageSpotsTaken}
                 inviteOnly={inviteOnly}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />
