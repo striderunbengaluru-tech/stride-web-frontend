@@ -296,6 +296,8 @@ type TicketEmailParams = {
   eventDate: string | null
   location: string | null
   locationUrl: string | null
+  /** The event's run route, when one is set. Strava, Komoot or anything else. */
+  routeUrl: string | null
   bannerUrl: string | null
   runnerTag: string | null
   calendarUrl: string | null
@@ -313,7 +315,7 @@ export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
 export function registrationConfirmedEmail(params: TicketEmailParams & {
   variant?: TicketVariant
 }): EmailContent {
-  const { fullName, eventName, eventDate, location, locationUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
+  const { fullName, eventName, eventDate, location, locationUrl, routeUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
   const isSelection = variant === 'selected'
 
   const ticketLabel = (text: string) =>
@@ -348,6 +350,19 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
         <td style="padding:20px 28px 0;">
           ${ticketLabel('Where')}
           <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:${TEXT};">${whereValue}</p>
+        </td>
+      </tr>`
+    : ''
+
+  // The run route, when the event has one. Sits under Where because that is
+  // what it answers — the runner has the place, this is the shape of the run.
+  // Wording stays provider-neutral: the admin field takes Strava, Komoot or any
+  // other link, so naming Strava here would be wrong as often as it was right.
+  const routeRow = routeUrl
+    ? `<tr>
+        <td style="padding:20px 28px 0;">
+          ${ticketLabel('Route')}
+          <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.5;color:${TEXT};"><a href="${escapeHtml(routeUrl)}" target="_blank" style="color:${YELLOW};text-decoration:underline;">View the run route</a></p>
         </td>
       </tr>`
     : ''
@@ -435,6 +450,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
                 </tr>
                 ${whenRow}
                 ${whereRow}
+                ${routeRow}
                 ${packagesRow}
                 ${paymentRow}
                 <tr>
