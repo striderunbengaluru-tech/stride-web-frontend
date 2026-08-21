@@ -239,7 +239,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -277,6 +277,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
     is_test_event: isTestEvent,
     invite_only: inviteOnly,
     registrations_closed: registrationsClosed,
+    confirmation_email_enabled: confirmationEmailEnabled,
     ...rest,
     // AFTER the spread, deliberately. Both actions spread parsed form data
     // straight into the row, so attribution set before it could be overridden
@@ -323,7 +324,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, capacity, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, capacity, ...rest } = parsed.data
 
   const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect, packagesProgressive)
 
@@ -357,6 +358,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
     is_test_event: isTestEvent,
     invite_only: inviteOnly,
     registrations_closed: registrationsClosed,
+    confirmation_email_enabled: confirmationEmailEnabled,
     updated_at: new Date().toISOString(),
     ...rest,
     // After the spread — see the note in createEventAction.
