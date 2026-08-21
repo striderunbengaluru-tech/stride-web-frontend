@@ -101,6 +101,10 @@ export const eventSchema = z.object({
   // there is no cross-field rule here because closing is always a valid state
   // for any event.
   registrationsClosed: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Opt-in switch for the booking-confirmation email. Off by default because
+  // Brevo's free tier allows 300 transactional sends a day and a large open run
+  // would burn through it — an admin turns it on per event, deliberately.
+  confirmationEmailEnabled: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),

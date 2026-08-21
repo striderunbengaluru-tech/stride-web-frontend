@@ -55,6 +55,11 @@ export async function sendWelcomeEmailOnce(userId: string): Promise<void> {
  * column on purpose: a registration gets exactly one ticket email, whichever
  * path confirmed it.
  *
+ * No-ops unless the event has `confirmation_email_enabled` — the per-event
+ * opt-in that keeps a big open run from spending Brevo's 300-a-day allowance.
+ * The check runs BEFORE the claim, so nothing is stamped while the switch is
+ * off and turning it on later leaves the registration still sendable.
+ *
  * Never throws.
  */
 export async function sendConfirmationEmailOnce(
@@ -67,24 +72,12 @@ export async function sendConfirmationEmailOnce(
   let claimedStamp = false
 
   try {
-    const { data: claimed, error } = await adminClient
-      .from('event_registrations')
-      .update({ confirmation_email_sent_at: new Date().toISOString() })
-      .eq('id', registrationId)
-      .eq('status', 'CONFIRMED')
-      .is('confirmation_email_sent_at', null)
-      .select('id')
-
-    if (error) {
-      console.error('[Email] Confirmation claim failed', error)
-      return
-    }
-    if (!claimed?.length) return
-    claimedStamp = true
-
+    // Read before claiming: the opt-in switch must be able to short-circuit
+    // without leaving a stamp behind, or an event switched on after its first
+    // registrations would never be able to email them.
     const { data: reg } = await adminClient
       .from('event_registrations')
-      .select('id, amount_paid_paise, razorpay_payment_id, selected_packages, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, strava_route_url, banner_images)')
+      .select('id, amount_paid_paise, razorpay_payment_id, selected_packages, users(email, full_name, runner_tag), events(name, slug, event_date, end_date, location, location_url, strava_route_url, banner_images, confirmation_email_enabled)')
       .eq('id', registrationId)
       .single()
 
@@ -99,8 +92,26 @@ export async function sendConfirmationEmailOnce(
       /** Run route — Strava, Komoot or any other link the admin pasted. */
       strava_route_url: string | null
       banner_images: string | null
+      /** Per-event opt-in. Null on a row created before the column existed. */
+      confirmation_email_enabled: boolean | null
     } | null
     if (!user?.email || !event) return
+    if (event.confirmation_email_enabled !== true) return
+
+    const { data: claimed, error } = await adminClient
+      .from('event_registrations')
+      .update({ confirmation_email_sent_at: new Date().toISOString() })
+      .eq('id', registrationId)
+      .eq('status', 'CONFIRMED')
+      .is('confirmation_email_sent_at', null)
+      .select('id')
+
+    if (error) {
+      console.error('[Email] Confirmation claim failed', error)
+      return
+    }
+    if (!claimed?.length) return
+    claimedStamp = true
 
     let bannerUrl: string | null = null
     try { bannerUrl = (JSON.parse(event.banner_images ?? '[]') as string[])[0] ?? null } catch { /* keep null */ }

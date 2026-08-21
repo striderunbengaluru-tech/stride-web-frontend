@@ -13,7 +13,7 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
-  Boxes, ListChecks, Scale, Star, TrendingUp,
+  Boxes, ListChecks, Scale, Star, TrendingUp, Mail,
 } from 'lucide-react'
 import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
@@ -108,6 +108,8 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   const [isTestEvent, setIsTestEvent] = useState(defaultValues.isTestEvent ?? false)
   const [inviteOnly, setInviteOnly] = useState(defaultValues.inviteOnly ?? false)
   const [registrationsClosed, setRegistrationsClosed] = useState(defaultValues.registrationsClosed ?? false)
+  // Off by default, deliberately — see the switch's help text.
+  const [confirmationEmailEnabled, setConfirmationEmailEnabled] = useState(defaultValues.confirmationEmailEnabled ?? false)
   // True only when the event ARRIVED invite-only, so the "these applications
   // won't be cancelled" warning appears when the admin switches the mode off —
   // not when they toggle it on and straight back off on a fresh event.
@@ -907,6 +909,31 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                     Existing {inviteOnly ? 'applicants and confirmed runners' : 'registrations'} are untouched.
                   </p>
                 )}
+              </div>
+
+              {/* Confirmation-email toggle. Off by default: Brevo's free tier
+                  allows 300 transactional sends a day, so emailing every runner
+                  is an explicit per-event decision rather than the default. */}
+              <div className='mb-4 pb-4 border-b border-white/10'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-1.5'>
+                    <Mail size={14} className='text-white/40' />
+                    <label className='text-white/70 text-sm font-medium'>Send confirmation email</label>
+                    <HelpHint text='Emails each runner their ticket when their spot is confirmed — for invite-only events, when you approve their application. Off by default: we can only send 300 emails a day across the whole club, so turn it on only for runs where the ticket email matters. Runners always get their confirmation page and wallet pass either way.' />
+                  </div>
+                  <Switch
+                    checked={confirmationEmailEnabled}
+                    onCheckedChange={(v) => { setConfirmationEmailEnabled(v); markDirty() }}
+                    label='Send the confirmation email for this event'
+                  />
+                  <input type='hidden' name='confirmationEmailEnabled' value={confirmationEmailEnabled ? 'true' : 'false'} />
+                </div>
+
+                <p className='text-white/40 text-xs mt-2'>
+                  {confirmationEmailEnabled
+                    ? 'Each confirmed runner is emailed their ticket once. Counts against the 300-a-day sending limit.'
+                    : 'No confirmation emails will be sent for this event. Runners still get their confirmation page and wallet pass.'}
+                </p>
               </div>
 
               {/* Spots-left toggle */}

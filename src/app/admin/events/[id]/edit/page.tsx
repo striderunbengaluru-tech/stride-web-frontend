@@ -58,6 +58,7 @@ export default async function EditEventPage({ params }: Props){
           isTestEvent: event.is_test_event ?? false,
           inviteOnly: event.invite_only ?? false,
           registrationsClosed: event.registrations_closed ?? false,
+          confirmationEmailEnabled: event.confirmation_email_enabled ?? false,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
           termsText: event.terms_and_conditions ?? undefined,
