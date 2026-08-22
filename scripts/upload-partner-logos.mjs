@@ -1,5 +1,9 @@
 // Uploads the WebP logos produced by convert-partner-logos.mjs to Supabase Storage.
 // Run with: node --env-file=.env.local scripts/upload-partner-logos.mjs
+//
+// Name one or more logos to push just those instead of the whole folder — worth
+// doing for a single replacement, since a full run re-uploads all 50-odd files:
+//   node --env-file=.env.local scripts/upload-partner-logos.mjs chakra-athletica-logo
 import { readdir, readFile } from 'node:fs/promises';
 
 const URL_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,7 +17,15 @@ if (!URL_BASE || !KEY) {
   process.exit(1);
 }
 
-const files = (await readdir(SRC)).filter((f) => f.endsWith('.webp')).sort();
+const only = process.argv.slice(2).map((a) => (a.endsWith('.webp') ? a : `${a}.webp`));
+const all = (await readdir(SRC)).filter((f) => f.endsWith('.webp')).sort();
+const files = only.length ? all.filter((f) => only.includes(f)) : all;
+
+const missing = only.filter((f) => !all.includes(f));
+if (missing.length) {
+  console.error(`Not in scripts/webp: ${missing.join(', ')}`);
+  process.exit(1);
+}
 let ok = 0;
 const failed = [];
 

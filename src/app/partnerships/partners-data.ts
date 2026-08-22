@@ -79,6 +79,12 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
       { id: 'shiro', name: 'Shiro', logoUrl: `${SUPABASE_LOGOS}/shiro-logo.webp` },
       { id: 'hocco', name: 'Hocco Ice Cream', logoUrl: `${SUPABASE_LOGOS}/hocco-logo.webp` },
       { id: 'saladdays', name: 'Salad Days', logoUrl: `${SUPABASE_LOGOS}/salad-days-logo.webp` },
+      {
+        id: 'onlywhatsneeded',
+        name: "Only What's Needed",
+        logoUrl: `${SUPABASE_LOGOS}/only-whats-needed-logo.webp`,
+      },
+      { id: 'alienkind', name: 'Alienkind', logoUrl: `${SUPABASE_LOGOS}/alienkind-logo.webp` },
     ],
   },
   {
@@ -125,11 +131,24 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
       { id: 'myop', name: 'Make Your Own Perfume', logoUrl: `${SUPABASE_LOGOS}/myop-logo.webp` },
       { id: 'niantic', name: 'Niantic', logoUrl: `${SUPABASE_LOGOS}/niantic-logo.webp` },
       { id: 'hyfit', name: 'Hyfit', logoUrl: `${SUPABASE_LOGOS}/hyfit-logo.webp` },
-      { id: 'chakra', name: 'Chakra Athletica', logoUrl: `${SUPABASE_LOGOS}/chakra-logo.webp` },
+      { id: 'chakra', name: 'Chakra Athletica', logoUrl: `${SUPABASE_LOGOS}/chakra-athletica-logo.webp` },
       {
         id: 'wellnessco',
         name: 'The Wellness Co',
         logoUrl: `${SUPABASE_LOGOS}/the-wellness-co-logo.webp`,
+      },
+      { id: 'kyro', name: 'KYRO', logoUrl: `${SUPABASE_LOGOS}/kyro-logo-on-dark.webp` },
+      {
+        id: 'stancehealth',
+        name: 'Stance Health',
+        logoUrl: `${SUPABASE_LOGOS}/stance-health-logo-on-dark.webp`,
+      },
+      { id: 'ultrahuman', name: 'Ultrahuman', logoUrl: `${SUPABASE_LOGOS}/ultrahuman-logo.webp` },
+      { id: 'lenskart', name: 'Lenskart', logoUrl: `${SUPABASE_LOGOS}/lenskart-logo.webp` },
+      {
+        id: 'amahahealth',
+        name: 'Amaha Health',
+        logoUrl: `${SUPABASE_LOGOS}/amaha-health-logo.webp`,
       },
     ],
   },
