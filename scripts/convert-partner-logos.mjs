@@ -12,7 +12,7 @@ lifenjam-logo dizzy-duck-logo red-bull-logo third-wave-coffee-logo social-logo m
 paper-n-pie-logo flax-cafe-logo suzyq-logo amadora-logo beanlore-logo dave-n-busters-logo the-filter-coffee-logo shiro-logo
 hocco-logo salad-days-logo fast-n-up-logo myprotein-logo muscleblaze-logo gnc-logo superyou-logo trunativ-logo milld-logo
 zepto-logo ponds-logo narayana-clinic-logo tribit-logo fourth-frontier-logo hyrox-logo bumble-logo neutrogena-logo
-supertails-logo myop-logo niantic-logo hyfit-logo chakra-logo the-wellness-co-logo`
+supertails-logo myop-logo niantic-logo hyfit-logo the-wellness-co-logo`
   .split(/\s+/)
   .filter(Boolean);
 

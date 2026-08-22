@@ -1,33 +1,58 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { UsersClient, type UserRow } from '@/components/admin/users-client'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const metadata = { title: 'Users — Admin' }
+
+// Shapes of the two selects below. Declared here rather than inferred so the
+// paged reads stay type-checked against the column lists.
+type UserRecord = Omit<UserRow, 'confirmed_count' | 'last_active_at' | 'runs'>
+
+type RegistrationRecord = {
+  user_id: string
+  status: string
+  checked_in_at: string | null
+  created_at: string | null
+  events: { name: string; event_date: string | null } | null
+}
 
 export default async function AdminUsersPage(){
   // ADMIN only. A LEAD reaching this route is redirected to check-in.
   await requireFullAdmin()
 
-  const [{ data: users }, { data: registrations }] = await Promise.all([
-    adminClient
-      .from('users')
-      .select('id, full_name, email, username, role, created_at, avatar_url, runner_tag, runs_completed, gender, date_of_birth, contact_number, emergency_contact_number, location, bio')
-      .order('created_at', { ascending: false }),
+  // Both tables are read in full: the role counts and per-user aggregates below
+  // are only correct over every row, and an unpaged select stops at 1000.
+  const [users, registrations] = await Promise.all([
+    fetchAllRows<UserRecord>('users', (from, to) =>
+      adminClient
+        .from('users')
+        .select('id, full_name, email, username, role, created_at, avatar_url, runner_tag, runs_completed, gender, date_of_birth, contact_number, emergency_contact_number, location, bio')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
     // All registrations the user has — for confirmed count + run history
-    adminClient
-      .from('event_registrations')
-      .select('user_id, status, checked_in_at, created_at, events(name, event_date)')
-      .order('created_at', { ascending: false }),
+    fetchAllRows<RegistrationRecord>('registrations', async (from, to) => {
+      const { data, error } = await adminClient
+        .from('event_registrations')
+        .select('user_id, status, checked_in_at, created_at, events(name, event_date)')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+      // supabase-js types every embed as an array. `events` is a to-one relation,
+      // so at runtime it is a single object (or null) — narrowed here.
+      return { data: data as unknown as RegistrationRecord[] | null, error }
+    }),
   ])
 
   // Group history + counts by user_id
   type RunEntry = { eventName: string; eventDate: string | null; checkedInAt: string }
   const runsByUser = new Map<string, RunEntry[]>()
   const confirmedByUser = new Map<string, number>()
-  let mostRecentByUser = new Map<string, string | null>()
-  mostRecentByUser = new Map<string, string | null>()
+  const mostRecentByUser = new Map<string, string | null>()
 
-  for (const reg of registrations ?? []) {
+  for (const reg of registrations) {
     // Confirmed count
     if (reg.status === 'CONFIRMED') {
       confirmedByUser.set(reg.user_id, (confirmedByUser.get(reg.user_id) ?? 0) + 1)
@@ -39,7 +64,7 @@ export default async function AdminUsersPage(){
     }
     // Run history: check-ins only
     if (reg.checked_in_at) {
-      const eventData = reg.events as unknown as { name: string; event_date: string | null } | null
+      const eventData = reg.events
       if (eventData) {
         const entry: RunEntry = {
           eventName: eventData.name,
@@ -53,7 +78,7 @@ export default async function AdminUsersPage(){
     }
   }
 
-  const userRows: UserRow[] = (users ?? []).map(u => ({
+  const userRows: UserRow[] = users.map(u => ({
     id: u.id,
     full_name: u.full_name,
     email: u.email,
