@@ -24,8 +24,27 @@ const BORDER = '#E4E1E8' // card borders → #3A3A3A in dark (.card)
 
 // The dark-mode rule set, wrapped in markers so the artifact-preview build can
 // extract it and force either mode. Do not remove the /*RULES-*/ markers.
+// `.slay-a` is Slay's accent copy: deep pink on the light canvas, lime on the
+// dark one. Harmless to the Stride templates, which never carry the class.
 const DARK_OVERRIDES =
-  '/*RULES-START*/.t{color:#ffffff !important;}.t-muted{color:#CFC9D6 !important;}.card{border-color:#3A3A3A !important;}/*RULES-END*/'
+  '/*RULES-START*/.t{color:#ffffff !important;}.t-muted{color:#CFC9D6 !important;}.card{border-color:#3A3A3A !important;}.slay-a{color:#B6F33B !important;}/*RULES-END*/'
+
+// ── Slay Run Club ────────────────────────────────────────────────────────────
+// A second brand sharing this file (and Brevo's authenticated sender domain).
+// Its palette is pink + lime, and the same canvas-agnostic rules apply: the
+// email sets no background, so both colours have to survive a white canvas AND
+// a dark one.
+//
+// Both values are sampled from the logo artwork, not eyeballed.
+//
+// SLAY_PINK is the identity pink, used only as a FILL — at 3.98:1 on white it
+// is under AA for copy. SLAY_PINK_INK is the same hue darkened to 5.9:1 for
+// accent copy on a light canvas, and the `.slay-a` class swaps it for lime in
+// dark mode, where lime reads at 13.5:1 and the pink does not. Buttons are
+// lime-on-black at 15.9:1 — the logo's own pairing, inverted.
+const SLAY_PINK = '#E6358F'
+const SLAY_PINK_INK = '#BE1470' // accent copy, light canvas
+const SLAY_LIME = '#B6F33B'
 
 const BODY_FONT = "'Figtree', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 const HEADING_FONT = "'Libre Baskerville', Georgia, 'Times New Roman', serif"
@@ -60,6 +79,10 @@ const DUCKY_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
 const ICON_BASE =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/email-icons'
+// Square pink logo tile, PNG because Gmail strips inline SVG. Uploaded by
+// scripts/upload-slay-logo.mjs.
+const SLAY_LOGO_URL =
+  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/email-icons/slay-run-club-logo.png'
 
 const HOME_URL = 'https://www.strideclub.in'
 const INSTAGRAM_URL = 'https://www.instagram.com/stride_runclub_bengaluru/'
@@ -488,6 +511,285 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
 
   return {
     subject: isSelection ? `You're selected for ${eventName}` : `Ticket for ${eventName}`,
+    htmlContent: emailDocument(bodyContent),
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slay Run Club — reporting time
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Slay's own footer. Deliberately slimmer than Stride's — no mascot, no
+ * social row, no tagline — because this is a one-off operational mail rather
+ * than brand communication. The policy links stay: a bulk send needs a
+ * reachable owner and a privacy policy behind it.
+ */
+function slayFooter(): string {
+  const links = [
+    { title: 'Privacy Policy', href: `${HOME_URL}/privacy-policy` },
+    { title: 'Terms of Service', href: `${HOME_URL}/terms-of-service` },
+    { title: 'Contact Us', href: `${HOME_URL}/contact-us` },
+  ]
+    .map(
+      l =>
+        `<a href="${l.href}" target="_blank" class="t-muted" style="color:${MUTED};text-decoration:none;">${l.title}</a>`
+    )
+    .join(`<span class="t-muted" style="color:${DIM};">&nbsp;&nbsp;·&nbsp;&nbsp;</span>`)
+
+  return `
+    <tr>
+      <td style="padding:0 32px 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="card" style="border-top:1px solid ${BORDER};">
+          <tr>
+            <td style="padding:22px 0 0;text-align:center;font-family:${BODY_FONT};font-size:12px;line-height:1.8;">
+              ${links}
+            </td>
+          </tr>
+          <tr>
+            <td class="t-muted" style="padding:14px 0 0;text-align:center;font-family:${BODY_FONT};font-size:11px;color:${DIM};">
+              &copy; ${new Date().getFullYear()} Slay Run Club · Bengaluru<br>
+              You&#39;re receiving this because you registered for this run.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>`
+}
+
+/**
+ * DATE ONLY, in IST — deliberately no clock time. The reporting time is the
+ * mail's single answer to "when do I show up", so a second clock on the date
+ * row would only compete with it.
+ *
+ * Null on a missing or unparseable value.
+ */
+function safeRunDateIST(value: string | null | undefined): string | null {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(parsed)
+}
+
+/**
+ * A labelled row inside the details card. Mirrors the ticket email's shape so
+ * the two read as one system, but takes pre-built (already escaped) value HTML
+ * because the location row can carry a link.
+ */
+function slayDetailRow(label: string, valueHtml: string, first = false): string {
+  return `
+    <tr>
+      <td style="padding:${first ? '24px' : '20px'} 28px 0;">
+        <p class="t-muted" style="margin:0 0 5px;font-family:${MONO_FONT};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:${MUTED};">${label}</p>
+        <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.55;color:${TEXT};">${valueHtml}</p>
+      </td>
+    </tr>`
+}
+
+// Zero-width joiners and BOMs, which arrive invisibly in anything pasted out of
+// WhatsApp. Harmless to render but they defeat the bullet match below, so they
+// come off before the note is parsed.
+const INVISIBLES = /[\u200B-\u200D\u2060\uFEFF]/g
+
+/**
+ * Renders the instructions block. Blank lines separate paragraphs, and a
+ * paragraph whose every line starts with a dash or bullet becomes a real list
+ * — pasted checklists are the common case, and a run of `<br>`-joined dashes
+ * reads far worse than `<li>`s.
+ *
+ * `<ul>` needs explicit margin and padding: clients disagree sharply on the
+ * defaults, and Outlook drops the indent altogether without them.
+ */
+function slayNoteBody(note: string): string {
+  return note
+    .replace(INVISIBLES, '')
+    .split(/\n\s*\n/)
+    .map(block => block.trim())
+    .filter(Boolean)
+    .map((block, i) => {
+      const spacing = i === 0 ? '0' : '14px 0 0'
+      const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+      const isList = lines.length > 0 && lines.every(l => /^[-•*]\s+/.test(l))
+
+      if (isList) {
+        const items = lines
+          .map(l => l.replace(/^[-•*]\s+/, '').trim())
+          .map(
+            item =>
+              `<li style="margin:0 0 8px;padding:0;">${escapeHtml(item)}</li>`
+          )
+          .join('')
+        return `<ul class="t" style="margin:${spacing};padding:0 0 0 20px;font-family:${BODY_FONT};font-size:14px;line-height:1.6;color:${TEXT};">${items}</ul>`
+      }
+
+      return `<p class="t" style="margin:${spacing};font-family:${BODY_FONT};font-size:14px;line-height:1.7;color:${TEXT};">${escapeHtml(block).replace(/\n/g, '<br>')}</p>`
+    })
+    .join('')
+}
+
+export type SlayReportingEmailParams = {
+  fullName: string | null
+  /** Free text so the roster's own wording survives — "12:15 pm", "12:15 PM". */
+  reportingTime: string
+  /** Defaults to "Slay Run Club" when no run name is given. */
+  runName?: string | null
+  /** ISO timestamp. Rendered as an IST date, no clock; omitted when absent. */
+  runDate?: string | null
+  location: string
+  /** Google Maps (or any) link for the location. Plain text when absent. */
+  locationUrl?: string | null
+  /**
+   * The run's poster, at the top of the reporting-time card. Must be JPEG or
+   * PNG — Outlook on Windows cannot decode the WebP the events bucket stores,
+   * and would show a broken image in the hero.
+   * scripts/prepare-event-poster.mjs converts an event's first banner.
+   */
+  posterUrl?: string | null
+  whatsappUrl: string
+  /** Instructions. Blank lines split paragraphs; dashed lines become a list. */
+  note?: string | null
+  /** Heading above the instructions. Defaults to "A quick note". */
+  noteTitle?: string | null
+}
+
+/**
+ * Run-day details for Slay Run Club — one reporting time for the whole field.
+ *
+ * Sent in bulk from a roster, so every field is treated as untrusted free text
+ * and escaped, hrefs included, where an unescaped quote would close the
+ * attribute early.
+ *
+ * The reporting time is the whole reason the mail exists, so it takes the hero
+ * slot above the fold rather than a row in the details card.
+ */
+export function slayReportingTimeEmail(params: SlayReportingEmailParams): EmailContent {
+  const {
+    fullName, reportingTime, runName, runDate,
+    location, locationUrl, posterUrl, whatsappUrl, note, noteTitle,
+  } = params
+
+  const run = runName?.trim() || 'Slay Run Club'
+  const dateLine = safeRunDateIST(runDate)
+
+  // Bleeds to the card's edges, so its own top corners have to match the
+  // card's 14px radius minus the 1px border.
+  const posterRow = posterUrl?.trim()
+    ? `<tr>
+                  <td style="padding:0;">
+                    <img src="${escapeHtml(posterUrl.trim())}" alt="${escapeHtml(run)}" width="100%" style="display:block;width:100%;height:auto;border:0;border-radius:13px 13px 0 0;">
+                  </td>
+                </tr>`
+    : ''
+
+  const dateRow = dateLine
+    ? slayDetailRow('Date', escapeHtml(dateLine), true)
+    : ''
+
+  const locationValue = locationUrl?.trim()
+    ? `<a href="${escapeHtml(locationUrl.trim())}" target="_blank" class="slay-a" style="color:${SLAY_PINK_INK};text-decoration:underline;">${escapeHtml(location)}</a> <span class="t-muted" style="font-family:${BODY_FONT};font-size:12px;color:${MUTED};">(opens in Maps)</span>`
+    : escapeHtml(location)
+
+  const noteBody = note?.trim() ? slayNoteBody(note) : ''
+  const noteCard = noteBody
+    ? `
+          <tr>
+            <td style="padding:28px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="card" style="border:1px solid ${BORDER};border-radius:12px;">
+                <tr>
+                  <td style="padding:22px 26px;">
+                    <h3 class="t" style="margin:0 0 12px;font-family:${HEADING_FONT};font-size:17px;line-height:1.35;color:${TEXT};">${escapeHtml(noteTitle?.trim() || 'A quick note')}</h3>
+                    ${noteBody}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`
+    : ''
+
+  // Lime fill, black label — the logo's pairing inverted, and the only
+  // combination in this palette that clears AA at button text size. Unclassed
+  // on purpose so dark mode never repaints the on-lime text white.
+  const whatsappButton = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px auto 0;">
+      <tr>
+        <td style="background-color:${SLAY_LIME};border-radius:6px;text-align:center;">
+          <a href="${escapeHtml(whatsappUrl)}" target="_blank" style="display:block;padding:16px 24px;font-family:${BODY_FONT};font-size:15px;font-weight:bold;letter-spacing:0.3px;color:${BLACK};text-decoration:none;border-radius:6px;">Join the WhatsApp group</a>
+        </td>
+      </tr>
+    </table>`
+
+  const bodyContent = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:0 0 8px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+          <tr>
+            <td style="padding:48px 32px 0;text-align:center;">
+              <img src="${SLAY_LOGO_URL}" alt="Slay Run Club" width="176" style="display:inline-block;width:176px;max-width:62%;height:auto;border:0;border-radius:18px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:38px 32px 0;text-align:center;">
+              <h1 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:32px;line-height:1.25;letter-spacing:-0.5px;font-weight:normal;color:${TEXT};">You&#39;re <strong class="slay-a" style="font-weight:bold;color:${SLAY_PINK_INK};">all set.</strong></h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:26px 32px 0;">
+              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Hey ${firstName(fullName)}, here&#39;s everything you need for <strong style="font-weight:bold;">${escapeHtml(run)}</strong>. Everyone reports at the same time — the earlier you arrive, the earlier your wave.</p>
+            </td>
+          </tr>
+
+          <!-- Hero: the reporting time. The one thing everyone opens this for. -->
+          <tr>
+            <td style="padding:30px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="card" style="border:1px solid ${BORDER};border-radius:14px;">
+                ${posterRow}
+                <tr>
+                  <td style="padding:${posterRow ? '26px 28px 30px' : '30px 28px'};text-align:center;">
+                    <p class="t-muted" style="margin:0 0 6px;font-family:${MONO_FONT};font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:${MUTED};">Reporting time</p>
+                    <p class="t" style="margin:0;font-family:${HEADING_FONT};font-size:40px;line-height:1.15;letter-spacing:-1px;color:${TEXT};">${escapeHtml(reportingTime)} <span class="t-muted" style="font-family:${BODY_FONT};font-size:15px;letter-spacing:0;color:${MUTED};">IST</span></p>
+                    <p class="t-muted" style="margin:8px 0 0;font-family:${BODY_FONT};font-size:13px;color:${MUTED};">Same for everyone.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Details -->
+          <tr>
+            <td style="padding:16px 32px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="card" style="border:1px solid ${BORDER};border-radius:14px;">
+                ${dateRow}
+                ${slayDetailRow('Where', locationValue, !dateRow)}
+                <tr><td style="padding:0 28px 26px;"></td></tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;">
+              ${whatsappButton}
+              <p class="t-muted" style="margin:12px 0 0;text-align:center;font-family:${BODY_FONT};font-size:12px;line-height:1.6;color:${MUTED};">All race day updates go out on WhatsApp.</p>
+            </td>
+          </tr>
+
+          ${noteCard}
+
+          <tr><td style="padding:0 0 44px;"></td></tr>
+          ${slayFooter()}
+        </table>
+      </td>
+    </tr>
+  </table>`
+
+  return {
+    subject: `${run} — reporting time ${reportingTime}`,
     htmlContent: emailDocument(bodyContent),
   }
 }
