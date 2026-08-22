@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronUp, Search, ExternalLink, ShieldCheck, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, ExternalLink, ShieldCheck, Phone, AlertCircle, MapPin, Cake, UserRound, CalendarPlus, Activity, ArrowUpNarrowWide, ArrowDownWideNarrow, X } from 'lucide-react'
 import { updateUserRoleAction } from '@/lib/actions/admin'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
@@ -75,6 +75,29 @@ function fmtDate(d: string | null) {
   return d ? formatDateNumericIST(d) : '—'
 }
 
+// How many user cards render at once. Every card carries expandable facts and a
+// run history, so the whole club in one list is a heavy DOM — this keeps it flat.
+const PAGE_SIZE = 100
+
+/**
+ * The page numbers to show, elided around the current page so the control stays
+ * a fixed width no matter how many pages exist. 'gap' renders as an ellipsis.
+ */
+function pageWindow(current: number, total: number): (number | 'gap')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+
+  const out: (number | 'gap')[] = [1]
+  const from = Math.max(2, current - 1)
+  const to = Math.min(total - 1, current + 1)
+
+  if (from > 2) out.push('gap')
+  for (let pageNo = from; pageNo <= to; pageNo++) out.push(pageNo)
+  if (to < total - 1) out.push('gap')
+  out.push(total)
+
+  return out
+}
+
 export function UsersClient({ users }: { users: UserRow[] }) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL')
@@ -85,6 +108,9 @@ export function UsersClient({ users }: { users: UserRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('joined')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // 1-based. Every filter and sort control resets this, since page 5 of the old
+  // result set means nothing once the set changes.
+  const [page, setPage] = useState(1)
   // Pending role-change target — opens the confirmation modal
   const [roleTarget, setRoleTarget] = useState<UserRow | null>(null)
   const [pendingRole, setPendingRole] = useState<string>('GUEST')
@@ -160,6 +186,20 @@ export function UsersClient({ users }: { users: UserRow[] }) {
     })
     return sorted
   }, [users, search, roleFilter, tierFilter, sortKey, sortDir])
+
+  // Clamped rather than reset, so a filter that shrinks the list past the current
+  // page lands on the last real page instead of rendering nothing.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const sliceStart = (currentPage - 1) * PAGE_SIZE
+  const visible = filtered.slice(sliceStart, sliceStart + PAGE_SIZE)
+
+  function goToPage(next: number) {
+    setPage(Math.min(Math.max(next, 1), totalPages))
+    // The list is long enough that paging without this leaves the admin
+    // mid-list on the new page.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // ── Role picker ──
   // Three roles means a choice, not a toggle. The blurb under each option is
@@ -251,7 +291,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             type='text'
             placeholder='Search name, email, username, or tag…'
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
             className='w-full bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
           />
         </div>
@@ -259,7 +299,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           {(['ALL', 'ADMIN', 'LEAD', 'GUEST'] as RoleFilter[]).map(r => (
             <button
               key={r}
-              onClick={() => setRoleFilter(r)}
+              onClick={() => { setRoleFilter(r); setPage(1) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                 roleFilter === r
                   ? 'bg-stride-yellow-accent text-copy-black shadow-sm'
@@ -295,7 +335,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             {selectedTier && (
               <button
                 type='button'
-                onClick={() => { setTierFilter(''); setTierPickerOpen(false) }}
+                onClick={() => { setTierFilter(''); setTierPickerOpen(false); setPage(1) }}
                 aria-label='Clear milestone filter'
                 className='flex items-center justify-center min-w-8 h-8 rounded-lg text-white/50 hover:text-white hover:bg-white/8 transition-colors'
               >
@@ -314,7 +354,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                 type='button'
                 role='option'
                 aria-selected={!tierFilter}
-                onClick={() => { setTierFilter(''); setTierPickerOpen(false) }}
+                onClick={() => { setTierFilter(''); setTierPickerOpen(false); setPage(1) }}
                 className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-xs transition-colors border-b border-white/8 hover:bg-white/5 ${
                   !tierFilter ? 'bg-stride-yellow-accent/8 text-white' : 'text-white/70'
                 }`}
@@ -329,7 +369,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
                   type='button'
                   role='option'
                   aria-selected={tierFilter === tier.key}
-                  onClick={() => { setTierFilter(tier.key); setTierPickerOpen(false) }}
+                  onClick={() => { setTierFilter(tier.key); setTierPickerOpen(false); setPage(1) }}
                   className={`w-full text-left px-3 py-2.5 flex items-center gap-2.5 text-xs transition-colors border-b border-white/8 last:border-b-0 hover:bg-white/5 ${
                     tierFilter === tier.key ? 'bg-stride-yellow-accent/8 text-white' : 'text-white/70'
                   }`}
@@ -348,7 +388,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           {(['joined', 'runs', 'tier'] as SortKey[]).map(k => (
             <button
               key={k}
-              onClick={() => setSortKey(k)}
+              onClick={() => { setSortKey(k); setPage(1) }}
               aria-pressed={sortKey === k}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                 sortKey === k
@@ -360,7 +400,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
             </button>
           ))}
           <button
-            onClick={() => setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))}
+            onClick={() => { setSortDir(d => (d === 'asc' ? 'desc' : 'asc')); setPage(1) }}
             title={sortDir === 'asc' ? 'Ascending — click for descending' : 'Descending — click for ascending'}
             aria-label={`Sort direction: ${sortDir === 'asc' ? 'ascending' : 'descending'}`}
             className='flex items-center justify-center min-w-8 h-8 rounded-lg text-white/60 hover:text-white hover:bg-white/8 transition-colors'
@@ -383,7 +423,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           {selectedTier && (
             <button
               type='button'
-              onClick={() => setTierFilter('')}
+              onClick={() => { setTierFilter(''); setPage(1) }}
               className='mt-3 text-stride-yellow-accent text-xs font-semibold underline underline-offset-2 hover:no-underline min-h-11'
             >
               Clear the milestone filter
@@ -394,7 +434,7 @@ export function UsersClient({ users }: { users: UserRow[] }) {
 
       {/* User cards */}
       <div className='space-y-2'>
-        {filtered.map(u => {
+        {visible.map(u => {
           const isExpanded = expandedId === u.id
           const profileHref = u.username ? `/profile/${u.username}` : null
           const displayName = u.full_name ?? '—'
@@ -560,6 +600,67 @@ export function UsersClient({ users }: { users: UserRow[] }) {
           )
         })}
       </div>
+
+      {/* Pager — only earns its space once there is a second page */}
+      {totalPages > 1 && (
+        <nav aria-label='User list pages' className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5'>
+          <p className='text-white/40 text-xs tabular-nums text-center sm:text-left order-2 sm:order-1'>
+            Showing {(sliceStart + 1).toLocaleString('en-IN')}–{(sliceStart + visible.length).toLocaleString('en-IN')}
+            {' of '}{filtered.length.toLocaleString('en-IN')}
+          </p>
+
+          <div className='flex items-center justify-center gap-1 order-1 sm:order-2'>
+            <button
+              type='button'
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              aria-label='Previous page'
+              className='flex items-center justify-center min-w-11 min-h-11 rounded-md text-white/60 hover:text-white hover:bg-white/8 disabled:opacity-25 disabled:hover:bg-transparent transition-colors'
+            >
+              <ChevronLeft size={16} aria-hidden='true' />
+            </button>
+
+            {/* Numbered pages are desktop-only — at 375px they cannot all fit
+                at a 44px touch target, so mobile gets the counter below. */}
+            <div className='hidden sm:flex items-center gap-1'>
+              {pageWindow(currentPage, totalPages).map((item, i) =>
+                item === 'gap' ? (
+                  <span key={`gap-${i}`} className='px-1 text-white/25 text-xs' aria-hidden='true'>…</span>
+                ) : (
+                  <button
+                    key={item}
+                    type='button'
+                    onClick={() => goToPage(item)}
+                    aria-label={`Page ${item}`}
+                    aria-current={item === currentPage ? 'page' : undefined}
+                    className={`min-w-11 min-h-11 rounded-md text-xs font-medium tabular-nums transition-colors ${
+                      item === currentPage
+                        ? 'bg-stride-yellow-accent text-copy-black'
+                        : 'text-white/60 hover:text-white hover:bg-white/8'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+            </div>
+
+            <p className='sm:hidden px-2 text-white/60 text-xs font-medium tabular-nums' aria-live='polite'>
+              Page {currentPage} of {totalPages}
+            </p>
+
+            <button
+              type='button'
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              aria-label='Next page'
+              className='flex items-center justify-center min-w-11 min-h-11 rounded-md text-white/60 hover:text-white hover:bg-white/8 disabled:opacity-25 disabled:hover:bg-transparent transition-colors'
+            >
+              <ChevronRight size={16} aria-hidden='true' />
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   )
 }
