@@ -13,9 +13,9 @@ import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
 // Site navigation. The desktop navbar carries no links of its own, so on
 // desktop this menu is where signed-in members reach the main pages — mirroring
 // the mobile bottom nav.
-// `/team` is labelled "Team" here, deliberately shorter than the "Lead Striders"
-// wording used in the footer and on the page itself — a dropdown row reads
-// better as a single word.
+// `/team` is labelled "Team" here and in the footer, deliberately shorter than
+// the "Lead Striders" wording on the page itself — a nav row reads better as a
+// single word.
 const SITE_LINKS = [
   { label: 'Events',       href: '/events',       icon: CalendarDays },
   { label: 'Team',         href: '/team',         icon: Users },

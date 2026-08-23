@@ -10,6 +10,7 @@ import { TldrBlock } from '@/components/blog/tldr-block'
 import { MdRenderer } from '@/components/blog/md-renderer'
 import { formatIST } from '@/lib/utils/ist'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { markdownToPlainText } from '@/lib/utils/markdown-text'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -29,8 +30,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {}
 
   return {
-    title: `${post.title} | Stride Run Club`,
+    // Bare title: the root layout's `template: '%s | Stride Run Club'` appends
+    // the suffix, so spelling it out here produced it twice.
+    title: post.title,
     description: post.description,
+    // The markdown alternate points at this same URL on purpose: the twin is
+    // served by `Accept: text/markdown` negotiation (see next.config.ts
+    // `rewrites()`), not at a separate path. Without this link an agent has to
+    // guess that the header is worth sending.
+    alternates: {
+      canonical: `/blog/${post.slug}`,
+      types: { 'text/markdown': `/blog/${post.slug}` },
+    },
     openGraph: {
       title: post.title,
       description: post.description,
@@ -79,6 +90,10 @@ export default async function BlogPostPage({ params }: Props) {
     },
     url: postUrl,
     keywords: post.tags.join(', '),
+    // The full prose, so an LLM or crawler that only reads the HTML gets the
+    // whole post from one node instead of stitching it out of the rendered
+    // markdown. The `Accept: text/markdown` twin remains the cheaper path.
+    articleBody: markdownToPlainText(post.content),
   }
 
   return (
@@ -171,9 +186,7 @@ export default async function BlogPostPage({ params }: Props) {
               </p>
             </div>
             <Link
-              href='https://www.instagram.com/stride_runclub_bengaluru/'
-              target='_blank'
-              rel='noopener noreferrer'
+              href='/events'
               className='inline-flex items-center gap-2 bg-stride-yellow-accent text-copy-black font-semibold text-sm px-6 py-3 rounded-md hover:bg-stride-yellow-accent/90 transition-colors font-figtree shrink-0'
             >
               See upcoming runs

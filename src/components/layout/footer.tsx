@@ -11,7 +11,7 @@ const EXPLORE_LINKS = [
   { title: 'Milestones',    href: '/milestones' },
   { title: 'Leaderboard',   href: '/leaderboard' },
   { title: 'Blog',          href: '/blog' },
-  { title: 'Lead Striders', href: '/team' },
+  { title: 'Team',          href: '/team' },
   { title: 'Partnerships',  href: '/partnerships' },
 ]
 
