@@ -66,11 +66,17 @@ export function PostCard({ post, featured = false }: Props) {
   }
 
   return (
+    // `h-full` is what keeps a row of cards the same height. The grid item is
+    // the <Reveal> wrapper, which stretches to the tallest card in its row —
+    // but this Link is only as tall as its own content, so a one-line title
+    // left a visibly shorter card sitting inside a full-height wrapper. Filling
+    // the wrapper lets the `flex-1` description below absorb the slack instead,
+    // which also lines the meta footers up across the row.
     <Link
       href={`/blog/${post.slug}`}
-      className='group flex flex-col rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-stride-yellow-accent/30 transition-all duration-300 hover:scale-[1.015]'
+      className='group flex h-full flex-col rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-stride-yellow-accent/30 transition-all duration-300 hover:scale-[1.015]'
     >
-      <div className='relative aspect-video overflow-hidden'>
+      <div className='relative aspect-video shrink-0 overflow-hidden'>
         <Image
           src={post.coverUrl}
           alt={post.title}
