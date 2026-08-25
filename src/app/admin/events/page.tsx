@@ -5,6 +5,7 @@ import { validatePackageSpots } from '@/lib/events/package-spots'
 import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import type { EventPackage } from '@/types/event'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const metadata = { title: 'Events — Admin' }
 
@@ -12,21 +13,27 @@ export default async function AdminEventsPage(){
   // ADMIN only. A LEAD reaching this route is redirected to check-in.
   await requireFullAdmin()
 
-  const [{ data: allEvents }, { data: regCounts }] = await Promise.all([
+  const [{ data: allEvents }, regCounts] = await Promise.all([
     adminClient
       .from('events')
       .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, registrations_closed, packages, packages_enabled')
       .order('event_date', { ascending: false }),
-    adminClient
-      .from('event_registrations')
-      .select('event_id, status'),
+    // Paged: these rows are counted per event, and a count is only right over
+    // the whole table. An unpaged select stops at db.max_rows (1000) silently.
+    fetchAllRows<{ event_id: string; status: string }>('registration counts', (from, to) =>
+      adminClient
+        .from('event_registrations')
+        .select('event_id, status')
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
   ])
 
   // Confirmed registrations per event, and — for invite-only events — how many
   // applications are still waiting on a decision.
   const confirmedByEvent = new Map<string, number>()
   const appliedByEvent = new Map<string, number>()
-  for (const reg of regCounts ?? []) {
+  for (const reg of regCounts) {
     if (reg.status === 'CONFIRMED') {
       confirmedByEvent.set(reg.event_id, (confirmedByEvent.get(reg.event_id) ?? 0) + 1)
     } else if (reg.status === 'APPLIED') {

@@ -3,6 +3,7 @@ import { GraduationClient } from '@/components/admin/graduation-client'
 import type { EventGraduations, GraduationRunner } from '@/components/admin/graduation-client'
 import { getMilestone } from '@/lib/milestones'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const metadata = { title: 'Graduation — Admin' }
 
@@ -48,11 +49,17 @@ export default async function AdminGraduationPage(){
   const upcomingEvents = eventRows ?? []
   const upcomingIds = upcomingEvents.map(e => e.id)
 
-  const [{ data: userRows }, { data: registrationRows }] = await Promise.all([
-    adminClient
-      .from('users')
-      .select('id, full_name, username, email, runner_tag, avatar_url, contact_number, runs_completed')
-      .order('runs_completed', { ascending: false }),
+  const [users, { data: registrationRows }] = await Promise.all([
+    // Paged: an unpaged select stops at db.max_rows (1000) with no error, which
+    // would drop the lowest-run members — exactly the ones about to graduate.
+    fetchAllRows<UserRow>('members', (from, to) =>
+      adminClient
+        .from('users')
+        .select('id, full_name, username, email, runner_tag, avatar_url, contact_number, runs_completed')
+        .order('runs_completed', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
     upcomingIds.length > 0
       ? adminClient
           .from('event_registrations')
@@ -62,7 +69,6 @@ export default async function AdminGraduationPage(){
       : Promise.resolve({ data: [] as { user_id: string; event_id: string; checked_in_at: string | null }[] }),
   ])
 
-  const users = (userRows ?? []) as UserRow[]
   const userById = new Map(users.map(u => [u.id, u]))
 
   const runners: GraduationRunner[] = users.map(u => ({
