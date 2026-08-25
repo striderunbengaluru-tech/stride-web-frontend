@@ -21,13 +21,18 @@ import {
 // gate, so only admins can act on it.
 
 const WALLETWALLET_ENDPOINT = 'https://api.walletwallet.dev/api/passes'
-const LOGO_URL =
-  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/stride-logo-small.png'
-// Ducky thumbnail — shown as a compact square image on the pass. Replaces the
-// old full-width strip banner, which was being visually cut off in the wallet.
-const THUMBNAIL_URL =
-  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
 const RELEVANT_TEXT = "You've almost reached! Show this pass to one of the Stride leads"
+
+// No brand logo, thumbnail or brand-purple `color` on the pass, deliberately.
+//
+// WalletWallet moved custom colours and custom logo/icon/thumbnail images to
+// its Pro plan. On the free plan those fields don't degrade — they make the API
+// reject the whole request with a 400 ("Custom color is a Pro-only feature",
+// then "Custom logo is a Pro-only feature"), so no pass is generated at all.
+// `colorPreset` is still free, so the pass keeps a dark theme.
+//
+// Don't re-add logoURL / iconURL / thumbnailURL / color without a Pro
+// subscription — it silently breaks every wallet button again.
 
 // Origin of the deployment actually serving this request, so pass links point
 // at the environment that generated them (staging → staging.strideclub.in,
@@ -155,10 +160,6 @@ export async function GET(request: Request) {
     logoText: 'Stride Run Club',
     organizationName: 'Stride Run Club',
     colorPreset: 'dark',
-    color: '#4B2862',
-    logoURL: LOGO_URL,
-    iconURL: LOGO_URL,
-    thumbnailURL: THUMBNAIL_URL,
     primaryFields: [{ label: "You're In!", value: event.name }],
     ...(eventOn ? { secondaryFields: [{ label: 'Event on', value: eventOn }] } : {}),
     ...(profile?.runner_tag
@@ -184,11 +185,24 @@ export async function GET(request: Request) {
   })
 
   if (!res.ok) {
-    console.error('[wallet-pass] walletwallet error', res.status, await res.text().catch(() => ''))
-    const code = res.status === 429 ? 'quota' : 'error'
+    const detail = await res.text().catch(() => '')
+    // A 4xx here means the request itself is unacceptable — a plan restriction
+    // or a bad payload — and will keep failing until someone changes the code
+    // or the subscription. Only 429 and 5xx are worth a retry. Logged loudly
+    // because nothing else surfaces this: the member-facing copy for a 4xx
+    // deliberately does not promise that trying again will help.
+    const isConfigFailure = res.status >= 400 && res.status < 500 && res.status !== 429
+    console.error(
+      `[wallet-pass] walletwallet ${isConfigFailure ? 'REJECTED THE REQUEST' : 'error'}`,
+      res.status,
+      detail
+    )
+    const code = res.status === 429 ? 'quota' : isConfigFailure ? 'unavailable' : 'error'
     if (wantsJson) {
       const message = code === 'quota'
         ? 'Wallet passes are temporarily unavailable. Please try again later.'
+        : code === 'unavailable'
+        ? 'Wallet passes aren’t available right now. Your spot is confirmed either way — show the QR on this page at the run.'
         : 'We couldn’t generate your pass just now. Please try again in a bit.'
       return NextResponse.json({ error: message, code }, { status: 502 })
     }

@@ -34,6 +34,8 @@ export async function WalletPassSection({ registrationId, isConcluded, walletFla
       ? `You’ve hit the download limit for this booking (${MAX_PASSES_PER_REGISTRATION} passes). Your saved pass still works.`
       : walletFlag === 'quota'
       ? 'Wallet passes are temporarily unavailable. Please try again later.'
+      : walletFlag === 'unavailable'
+      ? 'Wallet passes aren’t available right now. Your spot is confirmed either way — show the QR on this page at the run.'
       : walletFlag === 'error'
       ? 'We couldn’t generate your pass just now. Please try again in a bit.'
       : null

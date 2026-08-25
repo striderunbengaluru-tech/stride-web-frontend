@@ -50,8 +50,8 @@ export function WalletPassButtons({ registrationId }: { registrationId: string }
 
   function handleFailure(code?: string, message?: string) {
     toast.error(message ?? 'We couldn’t generate your pass just now. Please try again in a bit.')
-    // Limit/quota states also hide the buttons server-side — refresh to sync
-    if (code === 'limit' || code === 'quota') router.refresh()
+    // These states also change what the server renders — refresh to sync.
+    if (code === 'limit' || code === 'quota' || code === 'unavailable') router.refresh()
   }
 
   async function handleApple() {
