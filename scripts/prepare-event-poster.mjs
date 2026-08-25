@@ -15,8 +15,8 @@ import { createClient } from '@supabase/supabase-js'
 
 const SLUG = process.argv[2]
 const BUCKET = 'stride-assets'
-const WIDTH = 1120 // 2x the email's 560px content column
-const QUALITY = 82
+const WIDTH = 1056 // 2x the email's 528px poster column
+const QUALITY = 74
 
 if (!SLUG) {
   console.error('Usage: node --env-file=.env.local scripts/prepare-event-poster.mjs <event-slug>')
@@ -58,9 +58,15 @@ if (!res.ok) {
 }
 
 // `withoutEnlargement` so a small banner is not upscaled into mush.
+//
+// mozjpeg with 4:2:0 chroma, not the default encoder at 4:4:4. A promo mail goes
+// to the whole club, most of them on Indian mobile data, and full chroma was
+// costing ~260 KB per poster for no visible gain: these are photographic banners
+// with flat-colour display type, and the small caption strip stays crisp at 1:1
+// after the change. Checked on the MAP Fitness Rave poster, 484 KB -> 224 KB.
 const jpeg = await sharp(Buffer.from(await res.arrayBuffer()))
   .resize(WIDTH, null, { withoutEnlargement: true })
-  .jpeg({ quality: QUALITY, progressive: true, chromaSubsampling: '4:4:4' })
+  .jpeg({ quality: QUALITY, progressive: true, mozjpeg: true, chromaSubsampling: '4:2:0' })
   .toBuffer()
 
 const key = `images/web-assets/email-posters/${SLUG}.jpg`
