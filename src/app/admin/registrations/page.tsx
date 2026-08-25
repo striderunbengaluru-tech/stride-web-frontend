@@ -4,6 +4,7 @@ import type { SelectedPackage, AdditionalField, CustomResponses } from '@/types/
 import { eventRowPriceLabel, priceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { ageFromDob } from '@/lib/utils/age'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 
 export const metadata = { title: 'Registrations — Admin' }
 
@@ -113,21 +114,49 @@ export type EventWithAttendees = EventSummary & {
   custom_fields: AdditionalField[]
 }
 
+/** The two package/answer columns read straight from `event_registrations`. */
+type PackageRow = {
+  id: string
+  selected_packages: string | null
+  amount_due_paise: number | null
+  custom_responses: string | null
+}
+
+/** Profile columns the `admin_registrations_flat` view doesn't carry. */
+type ProfileRow = {
+  id: string
+  avatar_url: string | null
+  contact_number: string | null
+  emergency_contact_number: string | null
+  gender: string | null
+  date_of_birth: string | null
+  location: string | null
+}
+
 export default async function AdminRegistrationsPage(){
   // ADMIN only. A LEAD reaching this route is redirected to check-in.
   await requireFullAdmin()
 
+  // Every read that covers a whole table is paged. PostgREST stops an unpaged
+  // select at db.max_rows (1000 here) with no error and no signal, so the joins
+  // below silently dropped the profile and custom-answer rows past that mark and
+  // rendered them as blanks. Each paged query carries a unique tiebreaker so the
+  // windows can neither repeat nor skip a row.
   const [
-    { data: flatRows },
+    flatRows,
     { data: eventSummaries },
-    { data: packageRows },
+    packageRows,
     { data: eventPricingRows },
-    { data: profileRows },
+    profileRows,
   ] = await Promise.all([
-    adminClient
-      .from('admin_registrations_flat')
-      .select('*')
-      .order('registered_at', { ascending: false }),
+    fetchAllRows<FlatRow>('registrations', (from, to) =>
+      adminClient
+        .from('admin_registrations_flat')
+        .select('*')
+        .order('registered_at', { ascending: false })
+        .order('registration_id', { ascending: true })
+        .range(from, to)
+    ),
     adminClient
       .from('admin_event_summary')
       .select('*')
@@ -136,9 +165,13 @@ export default async function AdminRegistrationsPage(){
     // admin_registrations_flat: that view was created by hand and its definition
     // isn't in this repo, so widening it means dumping and re-authoring DDL we
     // can't see. Two narrow columns on an admin-only page is the cheaper trade.
-    adminClient
-      .from('event_registrations')
-      .select('id, selected_packages, amount_due_paise, custom_responses'),
+    fetchAllRows<PackageRow>('registration extras', (from, to) =>
+      adminClient
+        .from('event_registrations')
+        .select('id, selected_packages, amount_due_paise, custom_responses')
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
     // Same reasoning as above: admin_event_summary is a hand-authored view whose
     // DDL isn't in this repo, so the two package columns come straight from the
     // table and are joined in JS. Without them the price badge read "Free" for
@@ -149,25 +182,23 @@ export default async function AdminRegistrationsPage(){
     // Profile columns the hand-authored admin_registrations_flat view doesn't
     // carry. Same trade as the two reads above: join in JS rather than re-author
     // DDL this repo can't see.
-    adminClient
-      .from('users')
-      .select('id, avatar_url, contact_number, emergency_contact_number, gender, date_of_birth, location'),
+    fetchAllRows<ProfileRow>('member profiles', (from, to) =>
+      adminClient
+        .from('users')
+        .select('id, avatar_url, contact_number, emergency_contact_number, gender, date_of_birth, location')
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
   ])
 
-  const rows = (flatRows ?? []) as FlatRow[]
+  const rows = flatRows
 
-  type PackageRow = {
-    id: string
-    selected_packages: string | null
-    amount_due_paise: number | null
-    custom_responses: string | null
-  }
   const packageByRegistration = new Map<string, {
     packages: SelectedPackage[]
     amountDue: number | null
     customResponses: CustomResponses
   }>()
-  for (const row of (packageRows ?? []) as PackageRow[]) {
+  for (const row of packageRows) {
     let packages: SelectedPackage[] = []
     try { packages = JSON.parse(row.selected_packages ?? '[]') as SelectedPackage[] }
     catch { packages = [] }
@@ -246,17 +277,8 @@ export default async function AdminRegistrationsPage(){
     (a, b) => b.confirmed_count - a.confirmed_count
   )
 
-  type ProfileRow = {
-    id: string
-    avatar_url: string | null
-    contact_number: string | null
-    emergency_contact_number: string | null
-    gender: string | null
-    date_of_birth: string | null
-    location: string | null
-  }
   const profileByUser = new Map<string, ProfileRow>()
-  for (const row of (profileRows ?? []) as ProfileRow[]) profileByUser.set(row.id, row)
+  for (const row of profileRows) profileByUser.set(row.id, row)
 
   // Second pass: the runner summaries are built from the view, which has no
   // avatar. Filled here rather than reordering the reads above.
