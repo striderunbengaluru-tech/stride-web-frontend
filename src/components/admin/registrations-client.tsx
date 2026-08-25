@@ -47,17 +47,22 @@ const STATUS_PILL: Record<string, string> = {
 const DECIDABLE_STATUS = 'APPLIED'
 
 /**
- * One runner's answer to one custom question, as a display string.
+ * One runner's answer to one custom question, or null when unanswered.
  *
  * Blank, whitespace-only and missing all read as unanswered — a question the
  * runner skipped and one they answered with a space are the same thing to an
  * admin scanning the list.
  */
-function answerFor(responses: CustomResponses, field: AdditionalField): string {
+function rawAnswer(responses: CustomResponses, field: AdditionalField): string | null {
   const raw = responses[field.id]
-  if (raw === undefined || raw === null) return CSV_EMPTY
+  if (raw === undefined || raw === null) return null
   const text = String(raw).trim()
-  return text.length > 0 ? text : CSV_EMPTY
+  return text.length > 0 ? text : null
+}
+
+/** The same answer as a display string, for the expanded attendee card. */
+function answerFor(responses: CustomResponses, field: AdditionalField): string {
+  return rawAnswer(responses, field) ?? CSV_EMPTY
 }
 
 /**
@@ -81,8 +86,8 @@ function fmtTime(d: string | null) {
   return d ? formatTimeIST(d) : null
 }
 
-/** Columns in the participants export, in order. */
-const CSV_HEADERS = [
+/** The columns every participants export carries, in order. */
+const CSV_BASE_HEADERS = [
   'Name of athlete',
   'Age',
   'Gender',
@@ -104,10 +109,31 @@ const CSV_HEADERS = [
 ] as const
 
 /**
+ * Export columns for one event: the fixed set above, then one column per custom
+ * question in the order the admin authored them.
+ *
+ * The questions have to come from the event rather than from any one attendee's
+ * answers: a runner who skipped an optional question has no key for it, so
+ * deriving columns from responses would drop a question whose first few
+ * respondents all left it blank, and would order columns by JSON key rather
+ * than by the form. An unlabelled question still gets a named column so the
+ * sheet never carries a header-less column of answers.
+ */
+function csvHeadersFor(fields: AdditionalField[]): string[] {
+  return [
+    ...CSV_BASE_HEADERS,
+    ...fields.map((f, i) => f.label.trim() || `Question ${i + 1}`),
+  ]
+}
+
+/**
  * One CSV row per attendee. Every blank lands as NULL via `toCsv`, so an admin
  * reading the sheet can tell "not provided" apart from "we lost it".
+ *
+ * `fields` must be the same array `csvHeadersFor` was given, so the answers line
+ * up under their questions.
  */
-function attendeeCsvRow(a: Attendee): (string | number | null)[] {
+function attendeeCsvRow(a: Attendee, fields: AdditionalField[]): (string | number | null)[] {
   return [
     a.full_name,
     a.age,
@@ -127,6 +153,7 @@ function attendeeCsvRow(a: Attendee): (string | number | null)[] {
     a.packages.map(p => p.name).join(' + '),
     a.amount_due_paise != null ? priceOf(a.amount_due_paise) : null,
     a.location,
+    ...fields.map(f => rawAnswer(a.custom_responses, f)),
   ]
 }
 
@@ -331,7 +358,10 @@ export function RegistrationsClient({ runners, events }: Props) {
       // into building rows and encoding a Blob for a few hundred attendees.
       await new Promise(resolve => setTimeout(resolve, 0))
 
-      const csv = toCsv(CSV_HEADERS, attendees.map(attendeeCsvRow))
+      // The event's own questions, so a run with custom fields exports them and
+      // a run without them produces exactly the columns it always did.
+      const fields = event.custom_fields
+      const csv = toCsv(csvHeadersFor(fields), attendees.map(a => attendeeCsvRow(a, fields)))
       const filename = `Participants - ${safeFilenamePart(event.name)} - as of ${csvTimestamp()}.csv`
       downloadCsv(filename, csv)
 
