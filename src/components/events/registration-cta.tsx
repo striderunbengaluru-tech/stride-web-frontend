@@ -111,8 +111,6 @@ type SharedProps = {
   razorpayKeyId?: string
   /** Registering is a free application Stride approves. */
   inviteOnly: boolean
-  /** Whether this event accepts coupon codes at all. */
-  couponsEnabled: boolean
 }
 
 type DesktopExtras = {
@@ -186,7 +184,6 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
         packagesProgressive={props.packagesProgressive}
         razorpayKeyId={props.razorpayKeyId}
         inviteOnly={props.inviteOnly}
-        couponsEnabled={props.couponsEnabled}
       />
     </>
   )

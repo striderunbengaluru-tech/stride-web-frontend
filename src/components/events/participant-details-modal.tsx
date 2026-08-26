@@ -161,14 +161,9 @@ type Props = {
    * and the runner is told plainly that a spot isn't guaranteed.
    */
   inviteOnly?: boolean
-  /**
-   * Whether this event accepts coupon codes. The codes themselves are never sent
-   * here — the box posts what the runner types to the validate endpoint.
-   */
-  couponsEnabled?: boolean
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packagesProgressive = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false, couponsEnabled = false }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packagesProgressive = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -296,7 +291,18 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   // Razorpay script never loads and the button never offers to charge.
   const isPaid = !inviteOnly && totalPaise > 0
 
-  const canUseCoupon = couponsEnabled && !inviteOnly && subtotalPaise > 0
+  // Deliberately NOT gated on the event's `coupons_enabled` column.
+  //
+  // That flag lives on the event row, so it is baked into this page's cached
+  // render — and coupons are added AFTER an event is first saved, which meant
+  // the box stayed hidden for anyone holding a payload prefetched before the
+  // codes existed. Showing it whenever there is something to discount takes
+  // the decision off the cached path entirely.
+  //
+  // Nothing is loosened by this: findActiveCoupon still refuses every code on
+  // an event with coupons switched off, and reports it with the same message
+  // as a code that does not exist.
+  const canUseCoupon = !inviteOnly && subtotalPaise > 0
 
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
 
@@ -802,8 +808,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
 
             {/* ── Coupon ──────────────────────────────────────────────────────
                 Outside the packages block on purpose: a flat-price run can take
-                a coupon just as well as a tiered one. Hidden entirely when the
-                event does not accept them or there is nothing to discount. */}
+                a coupon just as well as a tiered one. Hidden only when there is
+                nothing to discount — see canUseCoupon. */}
             {canUseCoupon && (
               <div className='pt-5 mt-2 border-t border-white/10' data-field='couponCode'>
                 {appliedCoupon ? (
