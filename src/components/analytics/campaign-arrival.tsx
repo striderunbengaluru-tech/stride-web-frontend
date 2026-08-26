@@ -22,8 +22,27 @@ import { track } from '@vercel/analytics'
  * Mounted once in the root layout, so any tagged link to any page is counted.
  */
 
-/** Vercel's Pro tier allows two properties per custom event. */
-const EVENT_NAME = 'campaign-arrival'
+/**
+ * Campaign tag (`utm_campaign`) to the name shown in Vercel's Events panel.
+ *
+ * The name is looked up here rather than built from the URL. Event names are the
+ * top-level grouping in the dashboard and the panel lists every name ever sent,
+ * so deriving one from an attacker-controlled query string would let anyone
+ * permanently add rows to that list by sharing a crafted link. An unrecognised
+ * tag lands in a single bucket instead, with the raw slug kept as a property so
+ * it stays visible.
+ *
+ * Add a line here when a new campaign goes out. The key is the tag in the link;
+ * the value is what you want to read in the dashboard, which is not always the
+ * same thing — this event's slug still says "rave" while the mail calls it a
+ * festival.
+ */
+const CAMPAIGN_EVENT_NAMES: Record<string, string> = {
+  'map-fitness-rave': 'Email: MAP Fitness Festival',
+}
+
+/** Everything whose tag is not in the table above, kept to one row. */
+const UNMAPPED_EVENT_NAME = 'Campaign arrival (unmapped tag)'
 
 /**
  * `track()` is `window.va?.(...)` — if the analytics queue is not installed yet
@@ -74,14 +93,22 @@ export function CampaignArrival() {
     if (!campaign) return
 
     reported.current = true
+
+    // Pro allows two properties per event. A recognised campaign spends them on
+    // where the click came from; an unrecognised one spends one naming itself,
+    // since its tag is not in the event name.
+    const eventName = CAMPAIGN_EVENT_NAMES[campaign] ?? UNMAPPED_EVENT_NAME
     const slot = safeTag(params.get('utm_content')) ?? 'unspecified'
+    const properties = eventName === UNMAPPED_EVENT_NAME
+      ? { campaign, slot }
+      : { source: safeTag(params.get('utm_source')) ?? 'unspecified', slot }
 
     let attempts = 0
     let timer = 0
 
     const sendWhenReady = () => {
       if (typeof window.va === 'function') {
-        track(EVENT_NAME, { campaign, slot })
+        track(eventName, properties)
         return
       }
       if (attempts++ >= QUEUE_MAX_ATTEMPTS) return
