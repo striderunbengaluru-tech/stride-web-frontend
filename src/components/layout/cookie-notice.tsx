@@ -5,11 +5,21 @@ import Link from 'next/link'
 import { Cookie } from 'lucide-react'
 import { useRevealAfterFold } from '@/hooks/use-reveal-after-fold'
 
-// DPDP transparency notice: the site sets only strictly necessary cookies, so
-// no consent gating is required — this banner informs and links to the Cookie
-// Policy. Pressing OK stores the acknowledgement in a 1-year cookie (strictly
-// necessary category), so the banner shows only once per browser. Legacy
-// localStorage dismissals from the previous implementation are still honored.
+// DPDP transparency notice. This banner INFORMS — it has no accept/reject, so it
+// is not a consent gate.
+//
+// That was accurate while every cookie was strictly necessary. It no longer is:
+// Google Analytics (src/components/analytics/google-analytics.tsx) sets `_ga`
+// cookies on production, which are analytics, not essential. The copy below and
+// Section 5 of the privacy policy were updated to say so.
+//
+// So if a consent gate is ever built, this is the component to build it in, and
+// GoogleAnalytics is what it has to gate — do not add another cookie-setting
+// third party on the assumption that this banner covers it.
+//
+// Pressing OK stores the acknowledgement in a 1-year cookie (strictly necessary
+// category), so the banner shows only once per browser. Legacy localStorage
+// dismissals from the previous implementation are still honored.
 const DISMISS_COOKIE = 'stride_cookie_ack'
 const DISMISS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 const LEGACY_DISMISS_KEY = 'stride_cookie_notice_dismissed'
@@ -72,7 +82,8 @@ export function CookieNotice() {
       <div className='flex items-start gap-3'>
         <Cookie size={16} className='text-stride-yellow-accent shrink-0 mt-0.5' aria-hidden='true' />
         <p className='text-white/80 text-xs leading-relaxed'>
-          We only use essential cookies to keep you signed in. No tracking, no ads.{' '}
+          We use essential cookies to keep you signed in, and analytics cookies to
+          understand how the site is used. No ads.{' '}
           <Link
             href='/privacy-policy#cookie-policy'
             className='text-stride-yellow-accent hover:underline underline-offset-2'
