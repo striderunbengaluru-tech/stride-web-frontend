@@ -8,8 +8,9 @@ import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
-import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema, EVENT_FIELD_ORDER, type EventActionResult } from '@/lib/validations/admin'
-import { MAX_PACKAGES, hasSpotBudget, type EventPackage, type SelectedPackage } from '@/types/event'
+import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema, eventCouponSchema, EVENT_FIELD_ORDER, type EventActionResult } from '@/lib/validations/admin'
+import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, type EventPackage, type SelectedPackage } from '@/types/event'
+import { normaliseCouponCode } from '@/lib/events/coupons'
 import { slugify } from '@/lib/utils/slug'
 import { istLocalToUtcIso } from '@/lib/utils/ist'
 import { isLastAdmin } from '@/lib/account/hard-delete'
@@ -239,7 +240,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, ...rest } = parsed.data
   const id = nanoid()
   const slug = slugify(name)
 
@@ -278,6 +279,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
     invite_only: inviteOnly,
     registrations_closed: registrationsClosed,
     confirmation_email_enabled: confirmationEmailEnabled,
+    coupons_enabled: couponsEnabled,
     ...rest,
     // AFTER the spread, deliberately. Both actions spread parsed form data
     // straight into the row, so attribution set before it could be overridden
@@ -324,7 +326,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   const parsed = eventSchema.safeParse(raw)
   if (!parsed.success) return firstFormIssue(parsed.error.issues)
 
-  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, capacity, ...rest } = parsed.data
+  const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, capacity, ...rest } = parsed.data
 
   const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect, packagesProgressive)
 
@@ -359,6 +361,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
     invite_only: inviteOnly,
     registrations_closed: registrationsClosed,
     confirmation_email_enabled: confirmationEmailEnabled,
+    coupons_enabled: couponsEnabled,
     updated_at: new Date().toISOString(),
     ...rest,
     // After the spread — see the note in createEventAction.
@@ -661,4 +664,138 @@ export async function updateUserRoleAction(userId: string, role: string): Promis
   }).eq('id', userId)
 
   redirect('/admin/users')
+}
+
+// ── Event coupons ────────────────────────────────────────────────────────────
+// Coupons are rows in event_coupons, not a JSON column on the event, so each of
+// these acts on its own. That is what makes a revoke instant: the admin flips
+// one switch and the next registration attempt reads the new value, with no
+// event re-save and no chance of two admins overwriting each other's list.
+//
+// The table has RLS enabled with no policies, so these actions (via adminClient,
+// which bypasses RLS) are the only way to read or write it.
+
+export type CouponActionResult = { error: string } | void
+
+/** The slug is needed to purge the event page's caches after any coupon write. */
+async function eventSlugForCoupon(couponId: string): Promise<string | null> {
+  const { data } = await adminClient
+    .from('event_coupons')
+    .select('event_id')
+    .eq('id', couponId)
+    .maybeSingle()
+  if (!data?.event_id) return null
+
+  const { data: event } = await adminClient
+    .from('events')
+    .select('slug')
+    .eq('id', data.event_id)
+    .maybeSingle()
+  return event?.slug ?? null
+}
+
+export async function upsertEventCouponAction(
+  eventId: string,
+  input: { id?: string; code: string; percent: number },
+): Promise<CouponActionResult> {
+  await requireAdmin()
+
+  const parsed = eventCouponSchema.safeParse(input)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'That coupon is not valid.' }
+  }
+  const { id, code, percent } = parsed.data
+
+  const { data: event } = await adminClient
+    .from('events')
+    .select('slug')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (!event) return { error: 'That event no longer exists.' }
+
+  // Cap the list rather than let it grow unbounded — the admin editor renders
+  // every row, and a runaway list is unreviewable. Only checked when adding.
+  if (!id) {
+    const { count } = await adminClient
+      .from('event_coupons')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+    if ((count ?? 0) >= MAX_COUPONS) {
+      return { error: `An event can have at most ${MAX_COUPONS} coupons.` }
+    }
+  }
+
+  // Stored upper-cased so the list reads consistently and matches how the
+  // unique (event_id, upper(code)) index compares.
+  const row = {
+    event_id: eventId,
+    code: normaliseCouponCode(code),
+    percent,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = id
+    ? await adminClient.from('event_coupons').update(row).eq('id', id)
+    : await adminClient.from('event_coupons').insert({ ...row, id: nanoid(), active: true })
+
+  if (error) {
+    // 23505 is unique_violation — the event already has this code. Reported as a
+    // message the admin can act on rather than a generic failure.
+    if (error.code === '23505') {
+      return { error: `This event already has a coupon called ${normaliseCouponCode(code)}.` }
+    }
+    console.error('[Coupons] Save failed', error)
+    return { error: 'Could not save that coupon. Please try again.' }
+  }
+
+  revalidateEventCaches(event.slug)
+  revalidatePath(`/admin/events/${eventId}/edit`)
+}
+
+/**
+ * The revoke switch. Turning a coupon off stops it working on the very next
+ * attempt: both the validate endpoint and the register route re-read this row
+ * with no caching, so a member holding an applied coupon in an open modal is
+ * refused at submit rather than charged the discounted amount.
+ */
+export async function setCouponActiveAction(
+  couponId: string,
+  active: boolean,
+): Promise<CouponActionResult> {
+  await requireAdmin()
+
+  const slug = await eventSlugForCoupon(couponId)
+
+  const { error } = await adminClient
+    .from('event_coupons')
+    .update({ active, updated_at: new Date().toISOString() })
+    .eq('id', couponId)
+
+  if (error) {
+    console.error('[Coupons] Toggle failed', error)
+    return { error: `Could not ${active ? 'enable' : 'revoke'} that coupon. Please try again.` }
+  }
+
+  revalidateEventCaches(slug)
+  revalidatePath('/admin/events')
+}
+
+/**
+ * Removes a coupon outright. Registrations that already redeemed it keep their
+ * snapshot — coupon_code, coupon_percent and discount_paise live on the
+ * registration row, not here, so deleting a coupon never rewrites a receipt.
+ */
+export async function deleteEventCouponAction(couponId: string): Promise<CouponActionResult> {
+  await requireAdmin()
+
+  const slug = await eventSlugForCoupon(couponId)
+
+  const { error } = await adminClient.from('event_coupons').delete().eq('id', couponId)
+  if (error) {
+    console.error('[Coupons] Delete failed', error)
+    return { error: 'Could not delete that coupon. Please try again.' }
+  }
+
+  revalidateEventCaches(slug)
+  revalidatePath('/admin/events')
 }

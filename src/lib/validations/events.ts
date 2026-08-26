@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isPlausibleDob, MIN_REGISTRATION_AGE } from '@/lib/utils/age'
+import { MAX_COUPON_CODE_LENGTH } from '@/types/event'
 
 // 10 or 11 digits, digits only — no spaces, letters, or symbols.
 const phoneNumber = (label: string) =>
@@ -28,7 +29,21 @@ export const registerEventSchema = z.object({
   // route looks each id up on the event row and sums the admin's own prices.
   selectedPackageIds: z.array(z.string().min(1)).max(50).optional().default([]),
   customResponses: z.record(z.string(), z.union([z.string(), z.number()])).optional().default({}),
+  // The CODE ONLY, for exactly the same reason as the package ids above: the
+  // percentage and the discount are looked up server-side. A client that could
+  // send `percent` could send 100.
+  couponCode: z.string().trim().min(1).max(MAX_COUPON_CODE_LENGTH).optional(),
 }).and(participantDetailsSchema)
+
+/** Body of POST /api/events/coupon/validate. */
+export const validateCouponSchema = z.object({
+  eventId: z.string().min(1),
+  code: z.string().trim().min(1).max(MAX_COUPON_CODE_LENGTH),
+  // The subtotal is recomputed from these server-side. The client never gets to
+  // say what the discount applies to.
+  selectedPackageIds: z.array(z.string().min(1)).max(50).optional().default([]),
+})
 
 export type RegisterEventInput = z.infer<typeof registerEventSchema>
 export type ParticipantDetailsInput = z.infer<typeof participantDetailsSchema>
+export type ValidateCouponInput = z.infer<typeof validateCouponSchema>
