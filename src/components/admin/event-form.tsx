@@ -955,7 +955,13 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
               {/* Coupons. Hidden entirely on a free or invite-only event: there
                   would be nothing for a percentage to come off. The master
                   switch saves with this form; the codes below it are rows in
-                  event_coupons and each write takes effect on its own. */}
+                  event_coupons and each write takes effect on its own.
+
+                  The switch gates REDEMPTION, not the box: the event page offers
+                  the coupon field on every paid run regardless, because that
+                  page is cached and its visibility must not depend on a column
+                  edited after the first save. See canUseCoupon in
+                  participant-details-modal.tsx. */}
               {!inviteOnly && isPaidEvent && (
                 <div className='mb-4 pb-4 border-b border-white/10'>
                   <div className='flex items-center justify-between gap-3'>
@@ -975,7 +981,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                   <p className='text-white/40 text-xs mt-2 mb-3'>
                     {couponsEnabled
                       ? 'Runners can apply any live code below.'
-                      : 'The coupon box is hidden and every code below is inert until you switch this on.'}
+                      : 'Every code below is inert until you switch this on. The coupon box still shows on the event page — a code typed into it is simply refused.'}
                   </p>
 
                   <EventCouponsEditor

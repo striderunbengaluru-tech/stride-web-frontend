@@ -15,7 +15,6 @@ type Props = {
   viewerState: ViewerState
   /** Registering is a free application Stride approves. */
   inviteOnly?: boolean
-  couponsEnabled?: boolean
   /** The viewer's CONFIRMED or APPLIED registration id — links to their receipt. */
   registrationId?: string | null
   isPast: boolean
@@ -46,7 +45,6 @@ export function RegisterButton({
   isFull,
   viewerState,
   inviteOnly = false,
-  couponsEnabled = false,
   registrationId,
   isPast,
   isLoggedIn,
@@ -187,7 +185,6 @@ export function RegisterButton({
         packagesProgressive={packagesProgressive}
         razorpayKeyId={razorpayKeyId}
         inviteOnly={inviteOnly}
-        couponsEnabled={couponsEnabled}
       />
     </>
   )

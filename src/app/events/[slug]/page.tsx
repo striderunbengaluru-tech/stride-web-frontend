@@ -176,11 +176,6 @@ export default async function EventDetailPage({ params }: Props) {
   // registration purges. Skipped entirely when the event has no priced tiers.
   const packageSpotsTaken = packagesEnabled ? await getPackageSpotsTaken(event.id) : {}
 
-  // Coupons are meaningless on a free or invite-only run, so the box is not even
-  // offered there. No code ever reaches this page — the modal posts whatever the
-  // runner types to /api/events/coupon/validate and that decides.
-  const couponsEnabled = !inviteOnly && (event.coupons_enabled ?? false)
-
   const hasBanners = bannerImages.length > 0
   const dateLong  = fmtDateLong(event.event_date)
   const startTime = fmtTime(event.event_date)
@@ -454,7 +449,6 @@ export default async function EventDetailPage({ params }: Props) {
                     packageSpotsTaken={packageSpotsTaken}
                     packagesProgressive={event.packages_progressive === true}
                     inviteOnly={inviteOnly}
-                    couponsEnabled={couponsEnabled}
                     razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
                     priceLabel={priceLabel}
                     spotsLine={spotsLine}
@@ -510,7 +504,6 @@ export default async function EventDetailPage({ params }: Props) {
                 packageSpotsTaken={packageSpotsTaken}
                     packagesProgressive={event.packages_progressive === true}
                 inviteOnly={inviteOnly}
-                couponsEnabled={couponsEnabled}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />
             </Suspense>
