@@ -10,8 +10,11 @@ import dynamic from 'next/dynamic'
 // Lazy: react-markdown only loads when a modal with event T&C actually opens,
 // keeping it out of the event page's initial JS.
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false })
-import { X } from 'lucide-react'
+import { X, BadgePercent, Loader2 } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
+import { toast } from 'sonner'
+import { applyCoupon } from '@/lib/events/coupons'
+import { fireConfetti } from '@/components/ui/confetti-burst'
 import { isChoiceFieldType, sumPackageAmountPaise, hasSpotBudget, resolveTierAvailability, type AdditionalField, type EventPackage } from '@/types/event'
 import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
@@ -158,9 +161,14 @@ type Props = {
    * and the runner is told plainly that a spot isn't guaranteed.
    */
   inviteOnly?: boolean
+  /**
+   * Whether this event accepts coupon codes. The codes themselves are never sent
+   * here — the box posts what the runner types to the validate endpoint.
+   */
+  couponsEnabled?: boolean
 }
 
-export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packagesProgressive = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false }: Props) {
+export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pricePaise, initial, additionalFields = [], termsAndConditions, packages = [], packagesEnabled = false, packagesMultiSelect = false, packagesProgressive = false, packageSpotsTaken = {}, razorpayKeyId, inviteOnly = false, couponsEnabled = false }: Props) {
   const router = useRouter()
 
   const [fullName, setFullName] = useState(initial.fullName ?? '')
@@ -193,6 +201,14 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   const [agreedSafety, setAgreedSafety] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // ── Coupon ──
+  // `appliedCoupon` is what the validate endpoint confirmed. It is display state
+  // only: the code is re-resolved server-side at submit, so a coupon revoked
+  // while this modal sits open is refused there rather than honoured here.
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; percent: number } | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponChecking, setCouponChecking] = useState(false)
 
   // Live validation — a field validates on blur once it's dirty (the user
   // actually typed in it), and re-validates on every change while it has an
@@ -263,10 +279,24 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   const selectedPackages = hasPackages
     ? packages.filter(pkg => selectedPackageIds.includes(pkg.id))
     : []
-  const totalPaise = hasPackages ? sumPackageAmountPaise(selectedPackages) : pricePaise
+  const subtotalPaise = hasPackages ? sumPackageAmountPaise(selectedPackages) : pricePaise
+
+  // What the runner actually pays. A redeemed coupon comes off here, which is why
+  // a 100% code flips `isPaid` to false: the Razorpay script never loads and the
+  // button offers to confirm rather than to charge, matching what the register
+  // route will do when the total reaches zero.
+  //
+  // Display only. The register route re-resolves the code and recomputes this
+  // itself; nothing from here is trusted.
+  const totalPaise = appliedCoupon
+    ? applyCoupon(subtotalPaise, appliedCoupon.percent).payablePaise
+    : subtotalPaise
+
   // Applying is always free, whatever the event's stored price says — so the
   // Razorpay script never loads and the button never offers to charge.
   const isPaid = !inviteOnly && totalPaise > 0
+
+  const canUseCoupon = couponsEnabled && !inviteOnly && subtotalPaise > 0
 
   const hasTerms = !!termsAndConditions && termsAndConditions.trim().length > 0
 
@@ -295,6 +325,10 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
       setAgreedSafety(false)
       setFieldErrors({})
       setDirtyFields({})
+      setCouponInput('')
+      setAppliedCoupon(null)
+      setCouponError(null)
+      setCouponChecking(false)
       // Back to the default selection, not to whatever they last picked — a
       // reopened modal should read the same as a fresh one.
       setSelectedPackageIds(
@@ -321,6 +355,51 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   useEffect(() => { setMounted(true) }, [])
 
   if (!open || !mounted) return null
+
+  // ── Coupon ────────────────────────────────────────────────────────────────
+  // Nothing here decides anything. The endpoint confirms the code is live and
+  // returns what it would take off; the register route re-resolves it at submit
+  // and that is the number that reaches Razorpay. This exists so the runner can
+  // see the discount before committing.
+  async function handleApplyCoupon() {
+    const code = couponInput.trim()
+    if (!code || couponChecking) return
+
+    setCouponChecking(true)
+    setCouponError(null)
+    try {
+      const res = await fetch('/api/events/coupon/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, code, selectedPackageIds }),
+      })
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok || !data?.valid) {
+        setAppliedCoupon(null)
+        setCouponError(data?.error ?? 'This coupon is not valid.')
+        return
+      }
+
+      setAppliedCoupon({ code: data.code, percent: data.percent })
+      setCouponInput('')
+      // Deliberately not awaited: the burst is decoration, and the discount is
+      // already on screen by the time it draws.
+      void fireConfetti()
+      toast.success(`${data.code} applied \u2014 ${data.percent}% off`)
+    } catch {
+      setAppliedCoupon(null)
+      setCouponError('Could not check that coupon. Please try again.')
+    } finally {
+      setCouponChecking(false)
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null)
+    setCouponError(null)
+    setCouponInput('')
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -383,6 +462,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
           // amounts itself — sending prices from here would be a price the
           // client got to choose.
           selectedPackageIds,
+          // The code only, for the same reason. The register route resolves the
+          // percentage and re-checks the coupon is still live.
+          couponCode: appliedCoupon?.code,
         }),
       })
       const data = await res.json()
@@ -708,8 +790,108 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   <span className='text-white/60 text-sm'>
                     {selectedPackages.length > 1 ? `Total · ${selectedPackages.length} packages` : 'Total'}
                   </span>
-                  <span className='text-white font-bold text-lg font-mono'>{priceOf(totalPaise)}</span>
+                  <span className='flex items-baseline gap-2'>
+                    {appliedCoupon && (
+                      <span className='text-white/35 text-sm font-mono line-through'>{priceOf(subtotalPaise)}</span>
+                    )}
+                    <span className='text-white font-bold text-lg font-mono'>{priceOf(totalPaise)}</span>
+                  </span>
                 </div>
+              </div>
+            )}
+
+            {/* ── Coupon ──────────────────────────────────────────────────────
+                Outside the packages block on purpose: a flat-price run can take
+                a coupon just as well as a tiered one. Hidden entirely when the
+                event does not accept them or there is nothing to discount. */}
+            {canUseCoupon && (
+              <div className='pt-5 mt-2 border-t border-white/10' data-field='couponCode'>
+                {appliedCoupon ? (
+                  <div className='rounded-xl border border-stride-yellow-accent/35 bg-stride-yellow-accent/8 p-3.5'>
+                    <div className='flex items-center justify-between gap-3'>
+                      <div className='flex items-center gap-2 min-w-0'>
+                        <BadgePercent size={15} className='text-stride-yellow-accent shrink-0' aria-hidden='true' />
+                        <span className='font-mono text-sm font-bold text-white tracking-wide truncate'>
+                          {appliedCoupon.code}
+                        </span>
+                        <span className='text-stride-yellow-accent text-xs font-semibold shrink-0'>
+                          {appliedCoupon.percent}% off
+                        </span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={handleRemoveCoupon}
+                        disabled={loading}
+                        className='text-white/40 hover:text-white text-xs underline min-h-11 px-1 shrink-0 disabled:opacity-40'
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    {/* Stated in full rather than as one number, so nobody has to
+                        work out what came off. */}
+                    <dl className='mt-3 pt-3 border-t border-white/12 flex flex-col gap-1.5 text-sm'>
+                      <div className='flex items-center justify-between gap-3'>
+                        <dt className='text-white/50'>Before discount</dt>
+                        <dd className='text-white/70 font-mono'>{priceOf(subtotalPaise)}</dd>
+                      </div>
+                      <div className='flex items-center justify-between gap-3'>
+                        <dt className='text-white/50'>Discount</dt>
+                        <dd className='text-stride-yellow-accent font-mono'>
+                          -{priceOf(subtotalPaise - totalPaise)}
+                        </dd>
+                      </div>
+                      <div className='flex items-center justify-between gap-3 pt-1.5 border-t border-white/12'>
+                        <dt className='text-white font-semibold'>You pay</dt>
+                        <dd className='text-white font-bold font-mono text-base'>
+                          {totalPaise === 0 ? 'Free' : priceOf(totalPaise)}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    {totalPaise === 0 && (
+                      <p className='text-white/50 text-xs mt-2.5'>
+                        Nothing to pay — confirming will register you straight away.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <label htmlFor='couponCode' className={sectionHeading}>
+                      Have a coupon?
+                    </label>
+                    <div className='flex gap-2 mt-2'>
+                      <input
+                        id='couponCode'
+                        name='couponCode'
+                        type='text'
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value); setCouponError(null) }}
+                        // Enter inside the form would submit the registration, which
+                        // is not what pressing Enter on a coupon field should do.
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); void handleApplyCoupon() }
+                        }}
+                        placeholder='Enter code'
+                        autoComplete='off'
+                        autoCapitalize='characters'
+                        spellCheck={false}
+                        maxLength={40}
+                        disabled={loading}
+                        className={`${inputBase} font-mono uppercase`}
+                      />
+                      <button
+                        type='button'
+                        onClick={handleApplyCoupon}
+                        disabled={loading || couponChecking || !couponInput.trim()}
+                        className='min-h-11 shrink-0 rounded-md border border-white/20 bg-white/8 px-4 text-sm font-semibold text-white hover:bg-white/12 disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
+                      >
+                        {couponChecking ? <Loader2 size={15} className='animate-spin' /> : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && <FieldError msg={couponError} />}
+                  </>
+                )}
               </div>
             )}
 

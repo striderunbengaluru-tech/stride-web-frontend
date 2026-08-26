@@ -8,6 +8,8 @@ import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { CLEARABLE_REGISTRATION_STATUSES } from '@/lib/events/invite-only'
+import { findActiveCoupon } from '@/lib/events/coupon-lookup'
+import { applyCoupon } from '@/lib/events/coupons'
 import {
   isChoiceFieldType, sumPackageAmountPaise, selectableTierIds,
   type AdditionalField, type EventPackage, type SelectedPackage,
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses, selectedPackageIds } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses, selectedPackageIds, couponCode } = parsed.data
 
   // Persist participant details on the user row — idempotent (re-running with
   // the same values is a no-op). full_name overwrites any previous value so
@@ -191,6 +193,47 @@ export async function POST(request: Request) {
     packageNameById = new Map(defined.map(pkg => [pkg.id, pkg.name]))
   }
 
+  // ── Apply a coupon, if one was redeemed ────────────────────────────────────
+  // Deliberately here: everything downstream reads `chargeTotalPaise`, so this
+  // is the last point at which the amount can change and the only place it has
+  // to. The free-vs-paid branch below, `p_amount_due_paise` on the insert and
+  // `orders.create({ amount })` all take their value from it, which is why
+  // verify-payment and the webhook need no knowledge of coupons at all — they
+  // keep comparing the captured amount against amount_due_paise.
+  //
+  // A 100% coupon needs no special case: it drives the total to 0 and the
+  // existing free branch confirms immediately without touching Razorpay.
+  let appliedCouponCode: string | null = null
+  let appliedCouponPercent: number | null = null
+  let appliedDiscountPaise: number | null = null
+
+  // Skipped for invite-only (an application is free, so there is no total) and
+  // for an already-free total (a percentage of nothing is nothing). A code sent
+  // in either case is ignored rather than rejected: someone whose page was
+  // cached from before the event changed should not hit an error.
+  if (couponCode && !inviteOnly && chargeTotalPaise > 0) {
+    // Resolved from the database a SECOND time, on purpose. The member's
+    // successful preview a moment ago is not evidence the coupon is still live —
+    // an admin can revoke between the preview and this submit, and revocation is
+    // meant to bite immediately.
+    const coupon = await findActiveCoupon(eventId, couponCode)
+
+    if (!coupon) {
+      // Refused rather than silently charged full price. Someone who applied a
+      // 50% coupon consented to the discounted amount, not to the original.
+      return NextResponse.json(
+        { error: 'This coupon is not valid.', field: 'couponCode' },
+        { status: 409 },
+      )
+    }
+
+    const math = applyCoupon(chargeTotalPaise, coupon.percent)
+    chargeTotalPaise = math.payablePaise
+    appliedCouponCode = coupon.code
+    appliedCouponPercent = coupon.percent
+    appliedDiscountPaise = math.discountPaise
+  }
+
   const { data: existing } = await adminClient
     .from('event_registrations')
     .select('id, status')
@@ -327,6 +370,9 @@ export async function POST(request: Request) {
       p_custom_responses: customResponsesJson,
       p_selected_packages: selectedPackagesJson,
       p_amount_due_paise: chargeTotalPaise,
+      p_coupon_code: appliedCouponCode,
+      p_coupon_percent: appliedCouponPercent,
+      p_discount_paise: appliedDiscountPaise,
     })
     if (rpcError) {
       console.error('[Register] Registration failed', rpcError)
@@ -368,8 +414,15 @@ export async function POST(request: Request) {
     p_selected_packages: selectedPackagesJson,
     // Persisted so verify-payment and the webhook can compare the captured
     // amount against this registration's own total. It can't be re-derived from
-    // events.price_paise once packages are in play.
+    // events.price_paise once packages — or a coupon — are in play, which is
+    // exactly why those two callers keep working unchanged.
     p_amount_due_paise: chargeTotalPaise,
+    // Snapshot of what was redeemed, written in the same insert so a
+    // registration can never exist with a discounted amount and no record of
+    // why.
+    p_coupon_code: appliedCouponCode,
+    p_coupon_percent: appliedCouponPercent,
+    p_discount_paise: appliedDiscountPaise,
   })
   if (rpcError) {
     console.error('[Register] Registration failed', rpcError)

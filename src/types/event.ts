@@ -188,6 +188,44 @@ export function sumPackageAmountPaise(
   return packages.reduce((total, pkg) => total + pkg.amountPaise, 0)
 }
 
+/** Upper bound on coupons per event — keeps the admin list scannable. */
+export const MAX_COUPONS = 20
+
+/** Longest code an admin can author, and the cap the register route accepts. */
+export const MAX_COUPON_CODE_LENGTH = 40
+
+/**
+ * A percentage discount an admin can attach to a paid event, redeemed by code.
+ *
+ * A row of `public.event_coupons`, not a JSON blob on the event: `active` has to
+ * be flippable on its own so revoking is one row write rather than a whole-event
+ * form save that two admins could race.
+ *
+ * `percent` is a whole number 1–100 and applies to the WHOLE total — the sum of
+ * the selected packages, or `events.price_paise` for a standard-price event —
+ * never per package. 100 is valid and means free; see `applyCoupon`.
+ *
+ * Codes never reach a browser that hasn't already redeemed them: the table has
+ * RLS on with no policies, so only `adminClient` can read it.
+ */
+export type EventCoupon = {
+  id: string
+  code: string
+  percent: number
+  active: boolean
+}
+
+/**
+ * What a registration actually redeemed, snapshotted onto the registration row.
+ * Same reasoning as `SelectedPackage`: editing a coupon's percentage later must
+ * not rewrite what someone was already charged.
+ */
+export type AppliedCoupon = {
+  code: string
+  percent: number
+  discountPaise: number
+}
+
 /**
  * Sums the spot budgets. Single source of truth for "does the allocation add up
  * to capacity". Unset budgets count as 0, which is exactly what makes a legacy

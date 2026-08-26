@@ -35,7 +35,7 @@ const EVENT_DETAIL_COLUMNS =
   'post_run_location, post_run_location_url, strava_route_url, capacity, price_paise, ' +
   'cover_url, banner_images, additional_fields, terms_and_conditions, distance_km, ' +
   'difficulty, show_spots_left, is_test_event, invite_only, registrations_closed, ' +
-  'packages, packages_enabled, packages_multi_select, packages_progressive'
+  'packages, packages_enabled, packages_multi_select, packages_progressive, coupons_enabled'
 
 export type EventDetailRow = {
   id: string
@@ -79,6 +79,8 @@ export type EventDetailRow = {
   packages_multi_select: boolean | null
   /** Opens one tier at a time — see resolveTierAvailability in @/types/event. */
   packages_progressive: boolean | null
+  /** Master switch for coupon codes. The codes themselves are never read here. */
+  coupons_enabled: boolean | null
 }
 
 export type EventListRow = {

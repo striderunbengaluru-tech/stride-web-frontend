@@ -4,6 +4,7 @@ import { EventForm } from '@/components/admin/event-form'
 import { updateEventAction } from '@/lib/actions/admin'
 import { utcIsoToIstLocal } from '@/lib/utils/ist'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { listEventCoupons } from '@/lib/events/coupon-lookup'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -17,7 +18,7 @@ export default async function EditEventPage({ params }: Props){
 
   // Applications still awaiting a decision, so the form can warn before an
   // admin switches invite-only off and assumes they were cancelled.
-  const [{ data: event }, { count: pendingApplications }] = await Promise.all([
+  const [{ data: event }, { count: pendingApplications }, coupons] = await Promise.all([
     adminClient
       .from('events')
       .select('*')
@@ -28,6 +29,10 @@ export default async function EditEventPage({ params }: Props){
       .select('id', { count: 'exact', head: true })
       .eq('event_id', id)
       .eq('status', 'APPLIED'),
+    // Read here rather than in the form: the codes are secret, and this is a
+    // server component, so they only ever cross to the client for an admin who
+    // has already passed requireFullAdmin above.
+    listEventCoupons(id),
   ])
 
   if (!event) notFound()
@@ -41,6 +46,8 @@ export default async function EditEventPage({ params }: Props){
         action={action}
         submitLabel='Save Changes'
         pendingApplications={pendingApplications ?? 0}
+        eventId={id}
+        coupons={coupons}
         defaultValues={{
           name: event.name ?? undefined,
           subtitle: event.subtitle ?? undefined,
@@ -59,6 +66,7 @@ export default async function EditEventPage({ params }: Props){
           inviteOnly: event.invite_only ?? false,
           registrationsClosed: event.registrations_closed ?? false,
           confirmationEmailEnabled: event.confirmation_email_enabled ?? false,
+          couponsEnabled: event.coupons_enabled ?? false,
           status: (event.status as 'DRAFT' | 'PUBLISHED' | 'CANCELLED') ?? 'DRAFT',
           confirmationText: event.confirmation_text ?? undefined,
           termsText: event.terms_and_conditions ?? undefined,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_FIELD_OPTIONS, isChoiceFieldType, type AdditionalField, type EventPackage } from '@/types/event'
+import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField, type EventPackage } from '@/types/event'
 import { validatePackageSpots } from '@/lib/events/package-spots'
 
 // Object.fromEntries(formData) always includes every field's key, so an empty
@@ -105,6 +105,9 @@ export const eventSchema = z.object({
   // Brevo's free tier allows 300 transactional sends a day and a large open run
   // would burn through it — an admin turns it on per event, deliberately.
   confirmationEmailEnabled: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
+  // Master switch for coupon codes. The codes themselves are rows in
+  // event_coupons, managed separately — this only decides whether they work.
+  couponsEnabled: z.preprocess((v) => v === 'true' || v === 'on' || v === true, z.boolean()),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
   confirmationText: z.string().max(2000).optional(),
   termsText: z.string().max(5000).optional(),
@@ -195,6 +198,28 @@ export const EVENT_FIELD_ORDER = [
   'additionalFields',
   'bannerImages',
 ] as const
+
+// A percentage-off code on a paid event. Stored as a row in event_coupons, so
+// unlike packages this is validated per submission rather than as a whole array.
+//
+// The charset is narrow on purpose: a code has to be read off a poster or a
+// WhatsApp message and typed back correctly, so spaces and punctuation that
+// look different in different fonts are excluded rather than trimmed later.
+export const eventCouponSchema = z.object({
+  // Present when editing, absent when adding.
+  id: z.string().min(1).optional(),
+  code: z.string()
+    .trim()
+    .min(3, 'A coupon code needs at least 3 characters')
+    .max(MAX_COUPON_CODE_LENGTH, `Keep the code under ${MAX_COUPON_CODE_LENGTH} characters`)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Use letters, numbers, hyphens and underscores only'),
+  percent: z.coerce.number()
+    .int('Use a whole number')
+    .min(1, 'The discount must be at least 1%')
+    .max(100, 'The discount cannot exceed 100%'),
+})
+
+export type EventCouponFormData = z.infer<typeof eventCouponSchema>
 
 export const productSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),

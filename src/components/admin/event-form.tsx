@@ -13,16 +13,17 @@ import {
   Activity, Calendar, MapPin, Ticket, ImageIcon, AlertTriangle,
   CheckCircle2, PauseCircle, XCircle, Type, Gauge,
   Hash, IndianRupee, Users, Link2, Route, Clock, FileText, RotateCcw, FlaskConical,
-  Boxes, ListChecks, Scale, Star, TrendingUp, Mail,
+  Boxes, ListChecks, Scale, Star, TrendingUp, Mail, Tag,
 } from 'lucide-react'
 import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
   isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
-  type AdditionalField, type AdditionalFieldType, type EventPackage, TIER_GATES } from '@/types/event'
+  type AdditionalField, type AdditionalFieldType, type EventPackage, type EventCoupon, TIER_GATES } from '@/types/event'
 import { validatePackageSpots, splitSpotsEvenly } from '@/lib/events/package-spots'
 import { reportFormError, type FieldError } from '@/lib/utils/form-errors'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
+import { EventCouponsEditor } from '@/components/admin/event-coupons-editor'
 import { UploadProgress } from '@/components/ui/upload-progress'
 import { HelpHint } from '@/components/ui/help-hint'
 import { EventPreview } from '@/components/admin/event-preview'
@@ -63,9 +64,16 @@ type Props = {
    * cancel them, and the admin should know before they save.
    */
   pendingApplications?: number
+  /**
+   * Null while creating. Coupons are rows pointing at an event_id, so they can
+   * only be managed once the event exists.
+   */
+  eventId?: string | null
+  /** Existing coupons, managed by their own immediate actions rather than this form. */
+  coupons?: EventCoupon[]
 }
 
-export function EventForm({ action, defaultValues = {}, submitLabel, pendingApplications = 0 }: Props) {
+export function EventForm({ action, defaultValues = {}, submitLabel, pendingApplications = 0, eventId = null, coupons = [] }: Props) {
   const router = useRouter()
   const [actionResult, formAction] = useActionState(action, undefined)
 
@@ -110,6 +118,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   const [registrationsClosed, setRegistrationsClosed] = useState(defaultValues.registrationsClosed ?? false)
   // Off by default, deliberately — see the switch's help text.
   const [confirmationEmailEnabled, setConfirmationEmailEnabled] = useState(defaultValues.confirmationEmailEnabled ?? false)
+  const [couponsEnabled, setCouponsEnabled] = useState(defaultValues.couponsEnabled ?? false)
   // True only when the event ARRIVED invite-only, so the "these applications
   // won't be cancelled" warning appears when the admin switches the mode off —
   // not when they toggle it on and straight back off on a fresh event.
@@ -339,6 +348,13 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   // enforcement.
   const [formError, setFormError] = useState<FieldError | null>(null)
   const spotsProblem = validatePackageSpots(packages, capacityValue || null, packagesEnabled)
+
+  // Whether this event charges anything at all, which is what decides if the
+  // coupon block is worth showing. Under packages the flat price is ignored, so
+  // "paid" means at least one tier costs something.
+  const isPaidEvent = packagesEnabled
+    ? packages.some(pkg => pkg.amountPaise > 0)
+    : (Number(priceRupees) || 0) > 0
 
   function validateForm(): FieldError | null {
     if (!name.trim()) return { message: 'Event name is required', field: 'name' }
@@ -935,6 +951,43 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                     : 'No confirmation emails will be sent for this event. Runners still get their confirmation page and wallet pass.'}
                 </p>
               </div>
+
+              {/* Coupons. Hidden entirely on a free or invite-only event: there
+                  would be nothing for a percentage to come off. The master
+                  switch saves with this form; the codes below it are rows in
+                  event_coupons and each write takes effect on its own. */}
+              {!inviteOnly && isPaidEvent && (
+                <div className='mb-4 pb-4 border-b border-white/10'>
+                  <div className='flex items-center justify-between gap-3'>
+                    <div className='flex items-center gap-1.5'>
+                      <Tag size={14} className='text-white/40' />
+                      <label className='text-white/70 text-sm font-medium'>Coupon codes</label>
+                      <HelpHint text='Lets runners enter a code for a percentage off the total — the whole total, whether that is a flat price or the packages they picked. A 100% code makes the run free and skips payment entirely. Revoking a code stops it working on the very next attempt, even for someone who already has it applied on screen. Codes are never shown on the event page: a runner has to be told the code.' />
+                    </div>
+                    <Switch
+                      checked={couponsEnabled}
+                      onCheckedChange={(v) => { setCouponsEnabled(v); markDirty() }}
+                      label='Allow coupon codes on this event'
+                    />
+                    <input type='hidden' name='couponsEnabled' value={couponsEnabled ? 'true' : 'false'} />
+                  </div>
+
+                  <p className='text-white/40 text-xs mt-2 mb-3'>
+                    {couponsEnabled
+                      ? 'Runners can apply any live code below.'
+                      : 'The coupon box is hidden and every code below is inert until you switch this on.'}
+                  </p>
+
+                  <EventCouponsEditor
+                    eventId={eventId}
+                    coupons={coupons}
+                    pricePaise={Math.round((Number(priceRupees) || 0) * 100)}
+                    packages={packages}
+                    packagesEnabled={packagesEnabled}
+                    couponsEnabled={couponsEnabled}
+                  />
+                </div>
+              )}
 
               {/* Spots-left toggle */}
               <div className='flex items-center justify-between gap-3 mb-4'>

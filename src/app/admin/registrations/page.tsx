@@ -82,6 +82,14 @@ export type Attendee = {
   /** Packages bought, snapshotted at registration. Empty for non-package events. */
   packages: SelectedPackage[]
   amount_due_paise: number | null
+  /**
+   * The coupon this registration redeemed, snapshotted at the time. Null for the
+   * overwhelming majority. `amount_due_paise` above is already the DISCOUNTED
+   * figure, so the original total is amount_due_paise + discount_paise.
+   */
+  coupon_code: string | null
+  coupon_percent: number | null
+  discount_paise: number | null
   /** Answers to the event's custom questions, keyed by AdditionalField id. */
   custom_responses: CustomResponses
   // ── Profile columns, joined from `users` ──
@@ -120,6 +128,9 @@ type PackageRow = {
   selected_packages: string | null
   amount_due_paise: number | null
   custom_responses: string | null
+  coupon_code: string | null
+  coupon_percent: number | null
+  discount_paise: number | null
 }
 
 /** Profile columns the `admin_registrations_flat` view doesn't carry. */
@@ -168,7 +179,7 @@ export default async function AdminRegistrationsPage(){
     fetchAllRows<PackageRow>('registration extras', (from, to) =>
       adminClient
         .from('event_registrations')
-        .select('id, selected_packages, amount_due_paise, custom_responses')
+        .select('id, selected_packages, amount_due_paise, custom_responses, coupon_code, coupon_percent, discount_paise')
         .order('id', { ascending: true })
         .range(from, to)
     ),
@@ -197,6 +208,9 @@ export default async function AdminRegistrationsPage(){
     packages: SelectedPackage[]
     amountDue: number | null
     customResponses: CustomResponses
+    couponCode: string | null
+    couponPercent: number | null
+    discountPaise: number | null
   }>()
   for (const row of packageRows) {
     let packages: SelectedPackage[] = []
@@ -213,7 +227,14 @@ export default async function AdminRegistrationsPage(){
       }
     } catch { customResponses = {} }
 
-    packageByRegistration.set(row.id, { packages, amountDue: row.amount_due_paise, customResponses })
+    packageByRegistration.set(row.id, {
+      packages,
+      amountDue: row.amount_due_paise,
+      customResponses,
+      couponCode: row.coupon_code,
+      couponPercent: row.coupon_percent,
+      discountPaise: row.discount_paise,
+    })
   }
 
   type PricingRow = { id: string; price_paise: number | null; packages: string | null; packages_enabled: boolean | null; invite_only: boolean | null; additional_fields: string | null; banner_images: string | null; cover_url: string | null }
@@ -304,6 +325,9 @@ export default async function AdminRegistrationsPage(){
       checked_in_at: row.checked_in_at,
       packages: bought?.packages ?? [],
       amount_due_paise: bought?.amountDue ?? null,
+      coupon_code: bought?.couponCode ?? null,
+      coupon_percent: bought?.couponPercent ?? null,
+      discount_paise: bought?.discountPaise ?? null,
       custom_responses: bought?.customResponses ?? {},
       avatar_url: profile?.avatar_url ?? null,
       contact_number: profile?.contact_number ?? null,

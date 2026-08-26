@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   ChevronDown, ChevronUp, Search, CheckCircle, Clock, Pencil, ExternalLink, Users, Calendar,
   Download, Loader2, Phone, AlertCircle, MapPin, Cake, UserRound, Mail, CalendarPlus, Ticket,
-  Star, Check, X, Hourglass, ClipboardList,
+  Star, Check, X, Hourglass, ClipboardList, Tag,
 } from 'lucide-react'
 import { approveRegistrationsAction, rejectRegistrationsAction } from '@/lib/actions/admin'
 import type { RunnerRow, EventWithAttendees, Attendee } from '@/app/admin/registrations/page'
@@ -105,6 +105,9 @@ const CSV_BASE_HEADERS = [
   'Registered at',
   'Packages',
   'Amount due',
+  'Coupon code',
+  'Coupon %',
+  'Discount',
   'Location',
 ] as const
 
@@ -152,6 +155,11 @@ function attendeeCsvRow(a: Attendee, fields: AdditionalField[]): (string | numbe
     formatDateTimeIST(a.registered_at),
     a.packages.map(p => p.name).join(' + '),
     a.amount_due_paise != null ? priceOf(a.amount_due_paise) : null,
+    // null rather than a string when there is no coupon: `cell()` writes its own
+    // unquoted NULL, so a blank here matches every other blank in the sheet.
+    a.coupon_code,
+    a.coupon_percent,
+    a.discount_paise != null ? priceOf(a.discount_paise) : null,
     a.location,
     ...fields.map(f => rawAnswer(a.custom_responses, f)),
   ]
@@ -936,6 +944,20 @@ export function RegistrationsClient({ runners, events }: Props) {
                                             label='Packages'
                                             value={`${a.packages.map(p => p.name).join(' + ')}${
                                               a.amount_due_paise != null ? ` · ${priceOf(a.amount_due_paise)}` : ''
+                                            }`}
+                                          />
+                                        )}
+                                        {/* Only for the few who redeemed one. The
+                                            amount above is already discounted, so
+                                            this says what came off and why. */}
+                                        {a.coupon_code && (
+                                          <Fact
+                                            icon={<Tag size={12} />}
+                                            label='Coupon'
+                                            value={`${a.coupon_code}${
+                                              a.coupon_percent != null ? ` · ${a.coupon_percent}% off` : ''
+                                            }${
+                                              a.discount_paise != null ? ` · ${priceOf(a.discount_paise)} saved` : ''
                                             }`}
                                           />
                                         )}
