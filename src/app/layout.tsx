@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Libre_Baskerville, Figtree, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { CampaignArrival } from "@/components/analytics/campaign-arrival";
 import Navbar from "@/components/layout/navbar";
 import { NavbarGate } from "@/components/layout/navbar-gate";
 import Footer from "@/components/layout/footer";
@@ -142,6 +143,9 @@ export default function RootLayout({
           <CookieNotice />
         </AuthProvider>
         <Analytics />
+        {/* Turns ?utm_* tags into a custom event, because UTM filtering itself
+            is a Web Analytics Plus feature and this team is on plain Pro. */}
+        <CampaignArrival />
         <SpeedInsights />
       </body>
     </html>
