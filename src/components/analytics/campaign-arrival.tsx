@@ -26,6 +26,24 @@ import { track } from '@vercel/analytics'
 const EVENT_NAME = 'campaign-arrival'
 
 /**
+ * `track()` is `window.va?.(...)` — if the analytics queue is not installed yet
+ * the call is silently dropped, with no error and no retry.
+ *
+ * That is not hypothetical here. `<Analytics />` from `@vercel/analytics/next`
+ * renders its real component inside its own `<Suspense fallback={null}>` (it
+ * reads the route with `useSearchParams`), and `window.va` is only defined by
+ * the `inject()` call in that inner component's effect. This component is not
+ * inside a Suspense boundary, so its effect commits first — and every event
+ * fired at that moment goes nowhere.
+ *
+ * So wait for the queue instead of firing into a void. Bounded, because an ad
+ * blocker or a disabled Web Analytics project means it will never appear, and
+ * silently giving up is the right outcome there.
+ */
+const QUEUE_POLL_MS = 250
+const QUEUE_MAX_ATTEMPTS = 20 // ~5s
+
+/**
  * The query string is attacker-controlled: anyone can append
  * `?utm_campaign=<anything>` and, unbounded, mint a new dashboard row per
  * visit. Values are lowercased, stripped to the characters a real campaign tag
@@ -56,10 +74,22 @@ export function CampaignArrival() {
     if (!campaign) return
 
     reported.current = true
-    track(EVENT_NAME, {
-      campaign,
-      slot: safeTag(params.get('utm_content')) ?? 'unspecified',
-    })
+    const slot = safeTag(params.get('utm_content')) ?? 'unspecified'
+
+    let attempts = 0
+    let timer = 0
+
+    const sendWhenReady = () => {
+      if (typeof window.va === 'function') {
+        track(EVENT_NAME, { campaign, slot })
+        return
+      }
+      if (attempts++ >= QUEUE_MAX_ATTEMPTS) return
+      timer = window.setTimeout(sendWhenReady, QUEUE_POLL_MS)
+    }
+
+    sendWhenReady()
+    return () => window.clearTimeout(timer)
   }, [])
 
   return null
