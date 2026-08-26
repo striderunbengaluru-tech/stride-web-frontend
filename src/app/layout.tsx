@@ -3,6 +3,7 @@ import { Libre_Baskerville, Figtree, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CampaignArrival } from "@/components/analytics/campaign-arrival";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import Navbar from "@/components/layout/navbar";
 import { NavbarGate } from "@/components/layout/navbar-gate";
 import Footer from "@/components/layout/footer";
@@ -146,6 +147,10 @@ export default function RootLayout({
         {/* Turns ?utm_* tags into a custom event, because UTM filtering itself
             is a Web Analytics Plus feature and this team is on plain Pro. */}
         <CampaignArrival />
+        {/* Production only, and a no-op until NEXT_PUBLIC_GA_MEASUREMENT_ID is
+            set. Unlike the two above it, GA sets cookies — see the note in the
+            component and Section 5 of the privacy policy. */}
+        <GoogleAnalytics />
         <SpeedInsights />
       </body>
     </html>

@@ -1,6 +1,6 @@
 # Privacy Policy - Stride Run Club Bengaluru
 
-*Effective Date: 13/07/2026*
+*Effective Date: 26/08/2026*
 
 This Privacy Policy is published in accordance with the Digital Personal Data Protection Act, 2023 ("DPDP Act") and the Information Technology Act, 2000, and constitutes the notice required under Section 5 of the DPDP Act.
 
@@ -45,7 +45,7 @@ While using our Service, we may ask you to provide us with certain personally id
 
 3.2 Tracking Technologies and Cookies
 
-Our use of cookies and similar technologies is limited to what is strictly necessary to operate the Service. A complete description of every cookie we set, its purpose, and its lifetime is set out in Section 5 (Cookie Policy) of this Privacy Policy. We do not use advertising cookies, and we do not permit third parties to place tracking or advertising cookies through our Service.
+We use cookies that are strictly necessary to operate the Service, and analytics cookies that help us understand how the Service is used. A complete description of every cookie we set, its purpose, and its lifetime is set out in Section 5 (Cookie Policy) of this Privacy Policy. We do not use advertising cookies, and we do not permit third parties to place advertising cookies through our Service.
 
 ## 4. How We Use Your Information
 
@@ -65,17 +65,20 @@ Stride Run Club Bengaluru uses the collected data for various purposes:
 
 ## 5. Cookie Policy
 
-This Section describes every cookie and similar storage mechanism used by the Service. We use cookies solely to provide you with a functional, secure, and better user experience. **We use only strictly necessary cookies.** We do not use advertising, profiling, or cross-site tracking cookies of any kind, and no third party is permitted to place such cookies through our Service.
+This Section describes every cookie and similar storage mechanism used by the Service. We use cookies to provide you with a functional, secure, and better user experience, and to measure how the Service is used. **We use strictly necessary cookies and analytics cookies.** We do not use advertising or profiling cookies of any kind, and no third party is permitted to place advertising cookies through our Service.
 
 The cookies we set are:
 
 - **Authentication session cookies** (`sb-*`): first-party cookies set by our authentication provider (Supabase) to keep you securely signed in and to refresh your session. These are essential — without them, sign-in and every account feature of the Service would not function.
 - **Sign-in redirect cookie** (`stride_next`): a first-party cookie that remembers the page you were on when you began signing in with Google, so we can return you there afterwards. It expires automatically within ten (10) minutes and is deleted as soon as it is used.
 - **Security state cookie** (`strava_oauth_state`): a first-party cookie used solely to protect the optional Strava connection flow against cross-site request forgery (CSRF) attacks. It expires automatically within ten (10) minutes and is deleted as soon as it is used.
+- **Analytics cookies** (`_ga`, `_ga_*`): first-party cookies set by Google Analytics 4 to measure how the Service is used — which pages are visited, which links brought you here, and whether you are a returning visitor. They record aggregated usage, not the content of your account. They are **not** strictly necessary: refusing them affects nothing except our statistics. `_ga` expires after two (2) years and `_ga_*` after two (2) years, unless you clear them sooner. Google acts as our processor for this data; it is not used for advertising, and we have not enabled Google Signals or ad personalisation.
 
 In addition to cookies, the Service uses your browser's session storage (which is erased when you close the tab) for minor interface conveniences, such as preventing a sign-in confirmation message from appearing twice. We also use Vercel Analytics and Vercel Speed Insights, which are cookieless services that collect aggregated, anonymised page-performance and usage statistics; they do not set cookies, do not build user profiles, and do not track you across other websites.
 
-Because every cookie we set is strictly necessary for the operation and security of the Service, they are deployed on the legal basis of providing the Service you have requested. You may instruct your browser to refuse cookies; however, if you do so, you will not be able to sign in or use account features of the Service. Should we ever introduce cookies that are not strictly necessary, we will seek your prior consent in accordance with the DPDP Act before setting them.
+The cookies that are strictly necessary for the operation and security of the Service are deployed on the legal basis of providing the Service you have requested. The analytics cookies described above are not strictly necessary, and are set to help us understand and improve how the Service is used.
+
+You may instruct your browser to refuse or delete cookies at any time. If you refuse the strictly necessary cookies you will not be able to sign in or use account features of the Service; if you refuse or clear the analytics cookies, every part of the Service continues to work normally. You may also opt out of Google Analytics on any site using Google's browser add-on at https://tools.google.com/dlpage/gaoptout. We will not introduce advertising or profiling cookies, and if we ever intend to, we will seek your prior consent in accordance with the DPDP Act before setting them.
 
 ## 6. Retention of Your Personal Data
 
