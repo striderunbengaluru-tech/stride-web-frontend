@@ -4,7 +4,7 @@ import { buildProductServer } from '@/lib/mcp/product-server'
 import { serveMcp, unauthorized } from '@/lib/mcp/serve'
 import { isSandbox } from '@/lib/mcp/data'
 import { getRequestOrigin } from '@/lib/site-url'
-import { checkRateLimit, tooManyRequests, READ_LIMIT } from '@/lib/rate-limit'
+import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * `/.well-known/mcp` — both the discovery document and a working endpoint.
@@ -38,7 +38,7 @@ export async function POST(request: Request): Promise<Response> {
   if (request.headers.get('authorization')) return unauthorized(origin)
 
   const sandbox = isSandbox(new URL(request.url))
-  return serveMcp(request, () => buildProductServer(origin, sandbox))
+  return serveMcp(request, () => buildProductServer(origin, sandbox), rateLimitHeaders(limit))
 }
 
 export const DELETE = POST

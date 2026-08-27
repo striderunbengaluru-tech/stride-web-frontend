@@ -309,6 +309,52 @@ curl -s https://www.strideclub.in/events/map-fitness-rave.md`}</Block>
         </ul>
       </section>
 
+      {/* Conventions */}
+      <section className='px-6 py-10 max-w-4xl mx-auto'>
+        <h2 className='text-3xl md:text-4xl font-bold font-libre text-copy-white mb-3'>
+          Conventions
+        </h2>
+        <p className='text-copy-white/60 mb-6 leading-relaxed'>
+          The three things worth knowing before you write a client.
+        </p>
+        <dl className='space-y-6 text-copy-white/60 leading-relaxed'>
+          <div>
+            <dt className='text-copy-white font-semibold mb-1'>Errors are RFC 9457 problem details</dt>
+            <dd>
+              Served as <Code>application/problem+json</Code> with a stable{' '}
+              <Code>code</Code> to branch on, a <Code>detail</Code> for your log
+              and a <Code>hint</Code> for what to do. Branch on{' '}
+              <Code>code</Code>, never on the prose. Every unmatched path under{' '}
+              <Code>/ask</Code>, <Code>/mcp</Code>, <Code>/feeds</Code>,{' '}
+              <Code>/api</Code> and <Code>/.well-known</Code> answers this way, so
+              a wrong path never hands you an HTML page.
+            </dd>
+          </div>
+          <div>
+            <dt className='text-copy-white font-semibold mb-1'>Pagination is cursor-based</dt>
+            <dd>
+              Read <Code>_meta.next_cursor</Code> and pass it back as{' '}
+              <Code>cursor</Code>. <Code>null</Code> means the last page, and{' '}
+              <Code>_meta.total</Code> is the same on every page so you can use it
+              to decide when to stop. Cursors are opaque: pass them back verbatim
+              and never construct one, or you get a{' '}
+              <Code>400 invalid_request</Code>.
+            </dd>
+          </div>
+          <div>
+            <dt className='text-copy-white font-semibold mb-1'>POST accepts an Idempotency-Key</dt>
+            <dd>
+              Send one on <Code>/ask</Code> and a retry with the same key and body
+              replays the first response rather than re-running the query, so a
+              dropped connection costs nothing and no extra rate-limit budget.
+              Replays carry <Code>Idempotent-Replayed: true</Code>. Stored for ten
+              minutes, per instance — a retry that lands elsewhere re-runs, which
+              is safe here because nothing is written.
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       {/* Limits */}
       <section className='px-6 py-10 max-w-4xl mx-auto'>
         <h2 className='text-3xl md:text-4xl font-bold font-libre text-copy-white mb-3'>
@@ -319,7 +365,8 @@ curl -s https://www.strideclub.in/events/map-fitness-rave.md`}</Block>
           <Code>/ask</Code> allows <strong className='text-copy-white'>{ASK_LIMIT.limit}</strong>, because each
           call scans the whole corpus. Successful <Code>/ask</Code> responses
           carry <Code>RateLimit-Remaining</Code> so you can pace yourself, and a{' '}
-          <Code>429</Code> carries <Code>Retry-After</Code>.
+          <Code>429</Code> carries <Code>Retry-After</Code>. The MCP endpoints and
+          the discovery documents send them too.
         </p>
         <p className='text-copy-white/50 text-sm leading-relaxed'>
           Worth knowing: this counts per serverless instance rather than

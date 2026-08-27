@@ -3,7 +3,7 @@ import { isSandbox } from '@/lib/mcp/data'
 import { buildProductServer } from '@/lib/mcp/product-server'
 import { serveMcp, unauthorized } from '@/lib/mcp/serve'
 import { serverCard } from '@/lib/mcp/discovery'
-import { checkRateLimit, tooManyRequests, READ_LIMIT } from '@/lib/rate-limit'
+import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Stride's product MCP server — read-only access to public event, pricing,
@@ -41,7 +41,7 @@ async function handle(request: Request): Promise<Response> {
   if (request.headers.get('authorization')) return unauthorized(origin)
 
   const sandbox = isSandbox(new URL(request.url))
-  return serveMcp(request, () => buildProductServer(origin, sandbox))
+  return serveMcp(request, () => buildProductServer(origin, sandbox), rateLimitHeaders(limit))
 }
 
 /**

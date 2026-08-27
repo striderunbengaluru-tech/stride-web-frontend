@@ -80,6 +80,12 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
           <p className='text-white/50 text-sm mb-4'>
             Sign in with your Strava account to display your personal bests and recent workouts.
           </p>
+          {/* A real document navigation, not a client-side route change: this
+              endpoint 302s to Strava's OAuth consent screen, and <Link> would
+              try to fetch it as an RSC payload and break the handshake. The rule
+              started firing when a catch-all JSON 404 route was added under
+              src/app/api/, which makes Next treat /api/* as page routes. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href='/api/strava/connect'
             className='inline-flex items-center gap-2 px-4 py-2.5 bg-[#FC4C02] text-white text-sm font-semibold rounded-md hover:bg-[#e04400] transition-colors min-h-11'
@@ -106,6 +112,8 @@ export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActiviti
         </div>
         {isOwnProfile && (
           <div className='flex items-center gap-3'>
+            {/* Same OAuth navigation as above — see the note there. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href='/api/strava/connect'
               className='flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors'

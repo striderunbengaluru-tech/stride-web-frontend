@@ -4,7 +4,7 @@ import { getRequestOrigin } from '@/lib/site-url'
 import { searchDocs, answerFaq, listDocPages, getPageMarkdown } from '@/lib/mcp/docs'
 import { DOCS_SERVER, MCP_SERVER_VERSION } from '@/lib/mcp/registry'
 import { serveMcp, unauthorized, jsonResult, notFoundResult } from '@/lib/mcp/serve'
-import { checkRateLimit, tooManyRequests, READ_LIMIT } from '@/lib/rate-limit'
+import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Stride's documentation MCP server — the "learn" surface next to `/mcp`'s "do".
@@ -143,7 +143,7 @@ async function handle(request: Request): Promise<Response> {
   if (!limit.ok) return tooManyRequests(limit, `${origin}/auth.md`)
 
   if (request.headers.get('authorization')) return unauthorized(origin)
-  return serveMcp(request, () => buildServer(origin))
+  return serveMcp(request, () => buildServer(origin), rateLimitHeaders(limit))
 }
 
 /**

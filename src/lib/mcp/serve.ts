@@ -3,21 +3,6 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { PROTECTED_RESOURCE_METADATA_PATH } from './discovery'
 
 /**
- * Turns an `McpServer` into a Next.js route handler response.
- *
- * Stateless on purpose (`sessionIdGenerator: undefined`). The SDK's documented
- * production pattern keeps a `Map` of transports keyed by session id, which
- * needs the same process to answer every request in a session — and Vercel
- * serverless gives no such guarantee: the next request can land on a cold
- * instance with an empty Map, and every follow-up would 404 with "Session not
- * found". Stateless costs nothing here because none of Stride's tools carry
- * state between calls.
- *
- * A fresh server and transport per request is deliberate for the same reason:
- * module-scope instances would be shared across concurrent invocations on a
- * warm instance, and two agents' streams would interleave on one transport.
- */
-/**
  * Widens a client's `Accept` header so the transport will answer it.
  *
  * The Streamable HTTP transport rejects any request that does not accept BOTH
@@ -50,9 +35,113 @@ function widenAccept(request: Request): Request {
   return new Request(request, { headers })
 }
 
+/** Copies a response, adding headers, without touching the body stream. */
+function withHeaders(response: Response, extra: Record<string, string>): Response {
+  if (Object.keys(extra).length === 0) return response
+  const headers = new Headers(response.headers)
+  for (const [key, value] of Object.entries(extra)) headers.set(key, value)
+  return new Response(response.body, { status: response.status, headers })
+}
+
+/**
+ * A protocol error the SDK folded into a tool result, e.g.
+ * `MCP error -32602: Tool foo not found`.
+ */
+const FOLDED_PROTOCOL_ERROR = /^MCP error (-?\d+):\s*([\s\S]*)$/
+
+type JsonRpcish = {
+  jsonrpc?: string
+  id?: unknown
+  result?: { isError?: boolean; content?: { type?: string; text?: string }[] }
+}
+
+/**
+ * Lifts protocol errors back out of tool results and into JSON-RPC `error`.
+ *
+ * The SDK deliberately converts a failed dispatch — unknown tool, arguments that
+ * fail their schema — into `{ result: { isError: true, content: [{ text: "MCP
+ * error -32602: ..." }] } }`. That is a reasonable default when the consumer is
+ * an LLM reading prose, and it is the wrong answer for a program: the JSON-RPC
+ * `code` is stringified into English, so a caller has to regex the message to
+ * learn that it passed a bad argument rather than that Stride had no data.
+ *
+ * So a result whose text matches the SDK's own protocol-error format is rewritten
+ * into a real `error` object with the numeric `code` restored and the message
+ * separated from it.
+ *
+ * Domain errors are left exactly as they are. "No published Stride event with
+ * slug X" is a valid answer to a valid call, not a protocol failure, and
+ * promoting it to a JSON-RPC error would tell a caller its request was malformed
+ * when it was fine.
+ */
+async function surfaceProtocolErrors(response: Response): Promise<Response> {
+  const type = response.headers.get('content-type') ?? ''
+  if (!type.includes('application/json')) return response
+
+  const text = await response.clone().text()
+
+  let payload: JsonRpcish | JsonRpcish[]
+  try {
+    payload = JSON.parse(text)
+  } catch {
+    return response
+  }
+
+  const convert = (message: JsonRpcish): JsonRpcish | Record<string, unknown> => {
+    const result = message.result
+    if (!result?.isError) return message
+
+    const body = result.content?.find(part => part.type === 'text')?.text ?? ''
+    const match = FOLDED_PROTOCOL_ERROR.exec(body.trim())
+    if (!match) return message
+
+    return {
+      jsonrpc: '2.0',
+      id: message.id ?? null,
+      error: {
+        code: Number(match[1]),
+        message: match[2].trim(),
+        data: {
+          hint: 'Call tools/list for the available tools and their input schemas.',
+        },
+      },
+    }
+  }
+
+  const converted = Array.isArray(payload) ? payload.map(convert) : convert(payload)
+  if (JSON.stringify(converted) === text) return response
+
+  // Headers are carried over so the rate-limit and CORS headers set upstream
+  // survive the rewrite.
+  return new Response(JSON.stringify(converted), {
+    status: response.status,
+    headers: response.headers,
+  })
+}
+
+/**
+ * Turns an `McpServer` into a Next.js route handler response.
+ *
+ * Stateless on purpose (`sessionIdGenerator: undefined`). The SDK's documented
+ * production pattern keeps a `Map` of transports keyed by session id, which
+ * needs the same process to answer every request in a session — and Vercel
+ * serverless gives no such guarantee: the next request can land on a cold
+ * instance with an empty Map, and every follow-up would 404 with "Session not
+ * found". Stateless costs nothing here because none of Stride's tools carry
+ * state between calls.
+ *
+ * A fresh server and transport per request is deliberate for the same reason:
+ * module-scope instances would be shared across concurrent invocations on a
+ * warm instance, and two agents' streams would interleave on one transport.
+ */
 export async function serveMcp(
   incoming: Request,
   build: () => McpServer,
+  /**
+   * Headers to merge onto the response — the RateLimit-* set, so an agent can
+   * pace itself against the MCP endpoints rather than only against /ask.
+   */
+  extraHeaders: Record<string, string> = {},
 ): Promise<Response> {
   const request = widenAccept(incoming)
   const server = build()
@@ -67,7 +156,8 @@ export async function serveMcp(
   await server.connect(transport)
 
   try {
-    return await transport.handleRequest(request)
+    const answered = await surfaceProtocolErrors(await transport.handleRequest(request))
+    return withHeaders(answered, extraHeaders)
   } finally {
     // Releases the per-request transport. Without this each invocation leaks a
     // keep-alive timer on a warm instance.

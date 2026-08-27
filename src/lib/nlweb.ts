@@ -24,11 +24,45 @@ export type NlwebResponse = {
     response_type: 'items'
     version: string
     query: string
-    /** How many items were found before the limit was applied. */
+    /** How many items matched in total, across every page. */
     total: number
+    /** How many are in this page. */
+    returned: number
+    /**
+     * Opaque cursor for the next page, or null at the end.
+     *
+     * This exists because the endpoint used to be quietly lossy: it computed
+     * `total`, sliced to `limit`, and offered no way to reach the rest. A caller
+     * could see `total: 12` next to eight results and had no move to make.
+     */
+    next_cursor: string | null
     sandbox: boolean
   }
   results: unknown[]
+}
+
+/**
+ * Encodes a page position as an opaque cursor.
+ *
+ * Opaque on purpose. It happens to be a base64url offset today, and callers must
+ * not decode it or synthesise one — that is what lets the pagination strategy
+ * change later without breaking anyone. `decodeCursor` rejects anything it did
+ * not produce rather than coercing it, so a hand-made cursor fails loudly.
+ */
+export function encodeCursor(offset: number): string {
+  return Buffer.from(`o:${offset}`, 'utf8').toString('base64url')
+}
+
+export function decodeCursor(cursor: string): number | null {
+  try {
+    const decoded = Buffer.from(cursor, 'base64url').toString('utf8')
+    const match = /^o:(\d+)$/.exec(decoded)
+    if (!match) return null
+    const offset = Number(match[1])
+    return Number.isSafeInteger(offset) && offset >= 0 ? offset : null
+  } catch {
+    return null
+  }
 }
 
 /** Terms that mean "show me events" rather than "tell me about Stride". */
@@ -124,6 +158,16 @@ const DEFAULT_LIMIT = 10
 const MAX_LIMIT = 25
 
 /**
+ * How many candidates are gathered before paging.
+ *
+ * The full result set is built once per request and then sliced, so `total` is
+ * the same number on every page. Sizing the fetch by the requested page instead
+ * made `total` grow as the caller paged — 3, then 5, then 7 — which is worse
+ * than no total at all: a client using it to decide when to stop never would.
+ */
+const CANDIDATE_CEILING = 50
+
+/**
  * Answers a query as schema.org items.
  *
  * Events lead when the question sounds like it is about events, because that is
@@ -135,16 +179,18 @@ const MAX_LIMIT = 25
 export async function answerQuery(
   query: string,
   origin: string,
-  opts: { limit?: number; sandbox?: boolean } = {},
+  opts: { limit?: number; sandbox?: boolean; offset?: number } = {},
 ): Promise<NlwebResponse> {
   const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT)
+  const offset = Math.max(opts.offset ?? 0, 0)
   const sandbox = opts.sandbox ?? false
   const results: unknown[] = []
 
   if (wantsEvents(query)) {
     const distance = requestedDistanceKm(query)
+    // The whole candidate set, not just this page — see CANDIDATE_CEILING.
     const { events } = await listEvents(
-      { when: 'upcoming', limit: Math.min(limit, 10), maxDistanceKm: distance },
+      { when: 'upcoming', limit: CANDIDATE_CEILING, maxDistanceKm: distance },
       sandbox,
     )
 
@@ -156,10 +202,14 @@ export async function answerQuery(
     }
   }
 
-  const docs = searchDocs(query, { limit })
+  // Likewise the whole ranked set, so `total` does not depend on which page
+  // was asked for.
+  const docs = searchDocs(query, { limit: CANDIDATE_CEILING })
   for (const doc of docs) results.push(docToSchemaOrg(doc, origin))
 
   const total = results.length
+  const page = results.slice(offset, offset + limit)
+  const consumed = offset + page.length
 
   return {
     _meta: {
@@ -167,8 +217,10 @@ export async function answerQuery(
       version: NLWEB_VERSION,
       query,
       total,
+      returned: page.length,
+      next_cursor: consumed < total ? encodeCursor(consumed) : null,
       sandbox,
     },
-    results: results.slice(0, limit),
+    results: page,
   }
 }

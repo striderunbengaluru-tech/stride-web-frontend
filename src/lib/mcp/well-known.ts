@@ -1,4 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
+import { READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Shared response shape for the `.well-known` documents.
@@ -23,6 +24,10 @@ export function wellKnownJson(
       // These documents are meant to be read cross-origin by agent tooling
       // running in a browser. They contain nothing but public URLs.
       'Access-Control-Allow-Origin': '*',
+      // Advertised on the discovery documents as well as on the endpoints, so a
+      // client that reads the card first knows the ceiling before it starts.
+      'RateLimit-Limit': String(READ_LIMIT.limit),
+      'RateLimit-Policy': `${READ_LIMIT.limit};w=${Math.round(READ_LIMIT.windowMs / 1000)}`,
     },
   })
 }
