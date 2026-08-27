@@ -11,6 +11,7 @@ import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { CookieNotice } from "@/components/layout/cookie-notice";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { JsonLd } from "@/components/seo/json-ld";
+import { SiteWebMcpTools } from "@/components/webmcp/site-tools";
 import { graph, organizationNode, websiteNode, founderNode } from "@/lib/json-ld";
 import "./globals.css";
 
@@ -103,6 +104,10 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
+          {/* WebMCP site tools. Renders nothing; registered from the layout so
+              they work on every page and so document.modelContext lands in the
+              shared bundle rather than a lazily-loaded feature chunk. */}
+          <SiteWebMcpTools />
           {/* Navbar always renders — internal pieces hide themselves on /admin */}
           <Navbar />
           <div className='pb-20 md:pb-0'>

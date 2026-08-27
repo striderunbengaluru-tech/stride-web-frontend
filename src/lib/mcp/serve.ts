@@ -17,10 +17,44 @@ import { PROTECTED_RESOURCE_METADATA_PATH } from './discovery'
  * module-scope instances would be shared across concurrent invocations on a
  * warm instance, and two agents' streams would interleave on one transport.
  */
+/**
+ * Widens a client's `Accept` header so the transport will answer it.
+ *
+ * The Streamable HTTP transport rejects any request that does not accept BOTH
+ * `application/json` and `text/event-stream`, with `406 Not Acceptable`. That is
+ * faithful to the spec — a conformant client must offer both, because the server
+ * is free to answer either way.
+ *
+ * It is also the wrong answer for this server. `enableJsonResponse` is on, so
+ * every reply is JSON and nothing is ever streamed; refusing a client that
+ * accepts JSON is refusing a client we could have served. Real clients were
+ * being turned away: a probe sending `Accept: application/json` got a 406 and
+ * concluded the handshake had failed.
+ *
+ * So a request that accepts JSON (or accepts anything) has `text/event-stream`
+ * added before the transport sees it. Nothing about the response changes — it
+ * was always going to be JSON. A request that accepts neither is left alone and
+ * still gets its 406, because that one really is unservable.
+ */
+function widenAccept(request: Request): Request {
+  const accept = request.headers.get('accept') ?? ''
+
+  const acceptsJson = accept.includes('application/json')
+  const acceptsAnything = accept.trim() === '' || accept.includes('*/*')
+  const acceptsStream = accept.includes('text/event-stream')
+
+  if (acceptsStream || !(acceptsJson || acceptsAnything)) return request
+
+  const headers = new Headers(request.headers)
+  headers.set('accept', 'application/json, text/event-stream')
+  return new Request(request, { headers })
+}
+
 export async function serveMcp(
-  request: Request,
+  incoming: Request,
   build: () => McpServer,
 ): Promise<Response> {
+  const request = widenAccept(incoming)
   const server = build()
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

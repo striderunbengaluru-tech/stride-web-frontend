@@ -68,6 +68,13 @@ export function InteractiveAccordion({ items, defaultOpenId }: InteractiveAccord
                 className='w-full relative text-left cursor-pointer'
                 initial={false}
                 aria-expanded={isActive}
+                /* WebMCP declarative tool attributes. Each FAQ entry is a real
+                   control a browser agent can operate, and these survive into
+                   the server-rendered HTML — so a static scan sees the tool
+                   without executing any JavaScript, which is the half that
+                   document.modelContext registration cannot cover. */
+                toolname={`open_faq_${item.id.replace(/-/g, '_')}`}
+                tooldescription={`Open the Stride Run Club FAQ answer to: ${item.question}`}
               >
                 <div className='flex items-center gap-4 sm:gap-6 py-5 px-1'>
 
