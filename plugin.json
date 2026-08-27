@@ -1,0 +1,36 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "stride-run-club",
+  "version": "1.0.0",
+  "description": "Find Stride Run Club running events in Bengaluru, check what they cost, and understand how the club's free membership and milestone tiers work. Read-only.",
+  "homepage": "https://www.strideclub.in",
+  "repository": "https://github.com/striderunbengaluru-tech/stride-web-frontend",
+  "license": "See https://www.strideclub.in/terms-of-service",
+  "author": {
+    "name": "Stride Run Club",
+    "url": "https://www.strideclub.in",
+    "email": "striderunclubbengaluru@gmail.com"
+  },
+  "keywords": ["running", "run club", "events", "bengaluru", "bangalore", "india", "fitness", "community"],
+  "skills": [
+    "./skills/find-stride-events/SKILL.md",
+    "./skills/stride-milestones/SKILL.md",
+    "./skills/stride-club-info/SKILL.md"
+  ],
+  "mcpServers": {
+    "stride-run-club": {
+      "type": "http",
+      "url": "https://www.strideclub.in/mcp",
+      "description": "Live Stride Run Club event, pricing, leaderboard and milestone data. Read-only, no credential required."
+    },
+    "stride-run-club-docs": {
+      "type": "http",
+      "url": "https://www.strideclub.in/mcp/docs",
+      "description": "Search and fetch Stride Run Club documentation — blog posts, FAQ, pricing rules, and every public page as markdown."
+    }
+  },
+  "authentication": {
+    "required": false,
+    "documentation": "https://www.strideclub.in/auth.md"
+  }
+}
