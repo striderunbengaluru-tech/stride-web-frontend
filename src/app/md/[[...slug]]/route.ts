@@ -1,6 +1,7 @@
 import { estimateTokens, frontmatter, isNegotiablePath } from '@/lib/markdown-negotiation'
 import { renderMarkdownPath } from '@/lib/markdown/render'
 import { getRequestOrigin } from '@/lib/site-url'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * The markdown half of Stride's markdown representation.
@@ -48,6 +49,9 @@ export async function GET(
   const { slug } = await ctx.params
   const pathname = '/' + (slug ?? []).join('/')
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
+
   const abs = (path: string) => `${origin}${path}`
 
   // Checked here rather than trusted from the rewrite: this route is publicly
@@ -64,6 +68,7 @@ export async function GET(
         'Content-Type': 'text/markdown; charset=utf-8',
         'Vary': 'Accept, User-Agent',
         'Cache-Control': 'public, max-age=0, s-maxage=60',
+        ...rate.headers,
       },
     })
   }
@@ -87,6 +92,7 @@ export async function GET(
       'Link': `<${canonical}>; rel="canonical"`,
       'X-Markdown-Tokens': String(estimateTokens(body)),
       'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=300',
+      ...rate.headers,
     },
   })
 }

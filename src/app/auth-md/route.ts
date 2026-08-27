@@ -1,4 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 import { frontmatter } from '@/lib/markdown-negotiation'
 import { PROTECTED_RESOURCE_METADATA_PATH } from '@/lib/mcp/discovery'
 import { ALL_SERVERS } from '@/lib/mcp/registry'
@@ -26,6 +27,9 @@ export const dynamic = 'force-dynamic'
 
 export function GET(request: Request): Response {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
+
   const prm = `${origin}${PROTECTED_RESOURCE_METADATA_PATH}`
 
   const body = `# Authenticating with Stride Run Club
@@ -174,6 +178,7 @@ If you are building something that needs a capability Stride does not expose, em
       'Link': `<${origin}/auth.md>; rel="canonical"`,
       'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
       'Access-Control-Allow-Origin': '*',
+      ...rate.headers,
     },
   })
 }

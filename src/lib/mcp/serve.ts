@@ -174,7 +174,10 @@ export async function serveMcp(
  * A bare 401 would leave it guessing; a silent 200 would leave it believing a
  * credential it invented was accepted.
  */
-export function unauthorized(origin: string): Response {
+export function unauthorized(
+  origin: string,
+  headers: Record<string, string> = {},
+): Response {
   return Response.json(
     {
       jsonrpc: '2.0',
@@ -190,6 +193,7 @@ export function unauthorized(origin: string): Response {
       headers: {
         'WWW-Authenticate': `Bearer resource_metadata="${origin}${PROTECTED_RESOURCE_METADATA_PATH}"`,
         'Content-Type': 'application/json',
+        ...headers,
       },
     },
   )

@@ -62,6 +62,8 @@ export type RateLimitResult = {
   /** Unix seconds when the current window ends. */
   resetAt: number
   retryAfterSeconds: number
+  /** Window length in seconds, for the `RateLimit-Policy` header. */
+  windowSeconds: number
 }
 
 export function checkRateLimit(request: Request, config: RateLimitConfig): RateLimitResult {
@@ -97,6 +99,7 @@ export function checkRateLimit(request: Request, config: RateLimitConfig): RateL
     remaining,
     resetAt: Math.ceil(bucket.resetAt / 1000),
     retryAfterSeconds,
+    windowSeconds: Math.round(config.windowMs / 1000),
   }
 }
 
@@ -106,7 +109,33 @@ export function rateLimitHeaders(result: RateLimitResult): Record<string, string
     'RateLimit-Limit': String(result.limit),
     'RateLimit-Remaining': String(result.remaining),
     'RateLimit-Reset': String(result.resetAt),
+    // The policy, so a client knows the window and not just the count left.
+    'RateLimit-Policy': `${result.limit};w=${result.windowSeconds}`,
   }
+}
+
+/**
+ * Check the limit and get the headers in one call.
+ *
+ * Every public endpoint uses this, including the ones that only ever return
+ * documents. That is the point: the headers used to ride only on `/ask`'s
+ * successful JSON, so `GET /ask` with no query, `/openapi.json`, the feeds, the
+ * JSON 404s, the 400s and the 401 all answered with no budget information at
+ * all. An agent learning its remaining quota from the success path but not the
+ * failure path has it exactly backwards — the failure is when it most needs to
+ * know whether to back off.
+ *
+ * Returns a ready 429 when the limit is exceeded, otherwise the headers to merge
+ * into whatever the route was going to send.
+ */
+export function guardRate(
+  request: Request,
+  config: RateLimitConfig,
+  docsUrl: string,
+): { limited: Response; headers?: never } | { limited?: never; headers: Record<string, string> } {
+  const result = checkRateLimit(request, config)
+  if (!result.ok) return { limited: tooManyRequests(result, docsUrl) }
+  return { headers: rateLimitHeaders(result) }
 }
 
 /** The 429 itself, shaped so both a person and a program can read it. */

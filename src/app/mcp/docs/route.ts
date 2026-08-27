@@ -142,7 +142,7 @@ async function handle(request: Request): Promise<Response> {
   const limit = checkRateLimit(request, READ_LIMIT)
   if (!limit.ok) return tooManyRequests(limit, `${origin}/auth.md`)
 
-  if (request.headers.get('authorization')) return unauthorized(origin)
+  if (request.headers.get('authorization')) return unauthorized(origin, rateLimitHeaders(limit))
   return serveMcp(request, () => buildServer(origin), rateLimitHeaders(limit))
 }
 

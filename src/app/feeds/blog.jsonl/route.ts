@@ -1,4 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { organizationId } from '@/lib/json-ld'
 import { markdownToPlainText } from '@/lib/utils/markdown-text'
@@ -16,6 +17,8 @@ export const dynamic = 'force-static'
 
 export function GET(request: Request): Response {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
 
   const lines = [...BLOG_POSTS]
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
@@ -53,6 +56,7 @@ export function GET(request: Request): Response {
       'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
       'Access-Control-Allow-Origin': '*',
       'X-Feed-Records': String(lines.length),
+      ...rate.headers,
     },
   })
 }

@@ -85,6 +85,7 @@ export function notFoundProblem(
   origin: string,
   pathname: string,
   available: string[],
+  headers: Record<string, string> = {},
 ): Response {
   return problem({
     status: 404,
@@ -102,6 +103,7 @@ export function notFoundProblem(
       catalog: `${origin}/.well-known/api-catalog`,
       openapi: `${origin}/openapi.json`,
     },
+    headers,
   })
 }
 

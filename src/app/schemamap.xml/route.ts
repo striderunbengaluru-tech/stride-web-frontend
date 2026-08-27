@@ -1,4 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * The NLWeb Schema Map — where Stride's structured data feeds live.
@@ -37,6 +38,8 @@ const FEEDS: Feed[] = [
 
 export function GET(request: Request): Response {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
 
   const entries = FEEDS.map(feed => `  <schema>
     <loc>${origin}${feed.path}</loc>
@@ -56,6 +59,7 @@ ${entries}
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
       'Access-Control-Allow-Origin': '*',
+      ...rate.headers,
     },
   })
 }
