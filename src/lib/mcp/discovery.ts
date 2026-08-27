@@ -273,9 +273,53 @@ export function protectedResourceMetadata(origin: string) {
 // RFC 9727 API catalog — /.well-known/api-catalog
 // ---------------------------------------------------------------------------
 
+/**
+ * RFC 9727 API catalog.
+ *
+ * The RFC allows two shapes, and this document uses both, in the order a reader
+ * needs them.
+ *
+ * The FIRST member is anchored at the catalog itself and carries `item` links —
+ * the relation the RFC defines as "identifies a target resource that represents
+ * an API that is a member of the catalog". That is the index: one place that
+ * lists what APIs exist, without a consumer having to infer the set from the
+ * anchors of everything below. It was missing, and a catalog whose membership
+ * has to be reverse-engineered from later members is a catalog that only a
+ * lenient parser can read.
+ *
+ * The members AFTER it are the per-API descriptions from the RFC's main example,
+ * anchored at each API with `service-desc` and `service-doc` attached.
+ */
 export function apiCatalog(origin: string) {
+  const catalogUrl = `${origin}/.well-known/api-catalog`
+
   return {
     linkset: [
+      {
+        anchor: catalogUrl,
+        item: [
+          {
+            href: `${origin}/ask`,
+            type: 'application/json',
+            title: 'Stride Run Club NLWeb query endpoint',
+          },
+          {
+            href: `${origin}${PRODUCT_SERVER.path}`,
+            type: 'application/json',
+            title: PRODUCT_SERVER.title,
+          },
+          {
+            href: `${origin}${DOCS_SERVER.path}`,
+            type: 'application/json',
+            title: DOCS_SERVER.title,
+          },
+        ],
+        'service-doc': [
+          { href: `${origin}/developers`, type: 'text/html', title: 'Stride Run Club API & Developer Docs' },
+          { href: `${origin}/llms.txt`, type: 'text/plain', title: 'Stride Run Club site manual' },
+        ],
+        author: [{ href: `${origin}/contact-us`, title: 'Stride Run Club' }],
+      },
       {
         anchor: `${origin}/ask`,
         'service-desc': [
