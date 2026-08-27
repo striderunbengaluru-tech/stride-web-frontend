@@ -45,6 +45,7 @@ const NEGOTIABLE_EXACT = new Set([
   '/become-a-member',
   '/blog',
   '/contact-us',
+  '/developers',
   '/events',
   '/leaderboard',
   '/milestones',

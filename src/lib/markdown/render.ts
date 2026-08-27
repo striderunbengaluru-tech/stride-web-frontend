@@ -9,6 +9,8 @@ import { ORIGINALS, ORIGINALS_LIST } from '@/content/originals'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import { MILESTONE_TIERS } from '@/lib/milestones'
 import { WHY_US, ALL_PARTNERS, PARTNER_CATEGORIES } from '@/app/partnerships/partners-data'
+import { ALL_SERVERS, MCP_SERVER_VERSION } from '@/lib/mcp/registry'
+import { READ_LIMIT, ASK_LIMIT } from '@/lib/rate-limit'
 import FAQ from '@/content/faq.json'
 import type { EventPackage } from '@/types/event'
 
@@ -85,6 +87,7 @@ export const PAGE_INDEX: { path: string; label: string; blurb: string }[] = [
   { path: '/blog', label: 'Blog', blurb: 'run recaps and community stories' },
   { path: '/originals', label: 'Stride Originals', blurb: "Stride's own formats — Lake Hop, Stride Like a Woman, Creator Program, Bakery Hop" },
   { path: '/team', label: 'Lead Striders', blurb: 'the people who organise the club' },
+  { path: '/developers', label: 'Developer docs', blurb: 'the Stride Run Club API — MCP servers, /ask, markdown twins; read-only and anonymous' },
   { path: '/partnerships', label: 'Partnerships', blurb: 'brand collaborations and the partnership programme' },
   { path: '/shop', label: 'Shop', blurb: 'official Stride merchandise' },
   { path: '/become-a-member', label: 'Become a Member', blurb: 'free sign-up — creates a profile and a Stride Tag' },
@@ -125,6 +128,7 @@ function homeMarkdown(abs: Abs): MarkdownDoc {
       '',
       '## For agents',
       '',
+      `- Developer docs (the Stride Run Club API): [${abs('/developers')}](${abs('/developers')})`,
       `- Structured index: [${abs('/llms.txt')}](${abs('/llms.txt')})`,
       `- Any page in markdown: append \`.md\` to its path, or send \`Accept: text/markdown\``,
       `- Live event data over MCP: \`${abs('/mcp')}\` (read-only, no credential needed)`,
@@ -678,6 +682,105 @@ async function pricingMarkdown(abs: Abs): Promise<MarkdownDoc> {
 }
 
 // ---------------------------------------------------------------------------
+// Developers
+// ---------------------------------------------------------------------------
+
+function developersMarkdown(abs: Abs): MarkdownDoc {
+  const serverSection = (server: (typeof ALL_SERVERS)[number]) => tidy([
+    `### ${server.title}`,
+    '',
+    `\`${abs(server.path)}\``,
+    '',
+    server.description,
+    '',
+    '| Tool | Arguments | UI |',
+    '| --- | --- | --- |',
+    ...server.tools.map(tool =>
+      `| \`${tool.name}\` | ${tool.inputSummary} | ${tool.uiResourceUri ? 'MCP Apps' : '—'} |`
+    ),
+  ])
+
+  return {
+    title: 'Stride Run Club API & Developer Docs',
+    description:
+      'Developer documentation for Stride Run Club: two read-only MCP servers, an NLWeb /ask endpoint, a markdown representation of every public page, and structured feeds. No credential required, no write API, no SDK needed.',
+    body: tidy([
+      '# Stride Run Club API & Developer Docs',
+      '',
+      "> Read Stride's events, prices, leaderboard and milestone tiers programmatically. Everything is read-only, anonymous, and covers the same data the website already shows anyone.",
+      '',
+      '## Three things to know first',
+      '',
+      '- **No API key.** Nothing to register for. Stride issues and accepts no credentials — sending an `Authorization` header returns 401 with an RFC 9728 pointer.',
+      '- **No write API.** Registration, payment and check-in are performed by the person in their own browser and are not delegable to an agent.',
+      '- **No SDK.** Plain HTTP and JSON. Use `fetch`, or any MCP client. There is no npm or PyPI package, and none is needed.',
+      '',
+      '## Start here',
+      '',
+      '```bash',
+      '# What runs are coming up?',
+      `curl -s ${abs('/events.md')}`,
+      '',
+      '# Ask in plain language, get schema.org items back',
+      `curl -s -X POST ${abs('/ask')} \\`,
+      "  -H 'content-type: application/json' \\",
+      '  -d \'{"query":"free beginner runs in Bengaluru"}\'',
+      '',
+      '# Or connect an MCP client',
+      `npx @modelcontextprotocol/inspector ${abs('/mcp')}`,
+      '```',
+      '',
+      '## MCP servers',
+      '',
+      `Two streamable-HTTP servers, version ${MCP_SERVER_VERSION}. One for doing, one for learning. Both stateless, so no session handling is needed. Add \`?sandbox=1\` to either to work against synthetic fixtures instead of live data.`,
+      '',
+      ALL_SERVERS.map(serverSection).join('\n'),
+      '',
+      '## Natural-language endpoint',
+      '',
+      `\`POST ${abs('/ask')}\` implements Microsoft's NLWeb protocol by retrieval rather than generation — it returns the matching schema.org items, not a paraphrase, so there is no model in the path. Send \`Accept: text/event-stream\` for SSE (\`start\`, \`result\`, \`complete\`).`,
+      '',
+      'Returns `SportsEvent`, `BlogPosting`, `Question`, `EventSeries`, `Person` and `WebPage`. Max query length 500 characters, max 25 results.',
+      '',
+      '## Every page as markdown',
+      '',
+      'Append `.md` to any public path, or send `Accept: text/markdown`. Known AI-bot user agents receive markdown without asking. Each response opens with a `---` frontmatter block carrying title, description, canonical and last-updated.',
+      '',
+      'Athlete profiles are deliberately excluded — they are per-person and members can make them private. A path with no markdown twin returns a real 404 with a markdown recovery body.',
+      '',
+      '## Structured feeds',
+      '',
+      `- [${abs('/feeds/events.jsonl')}](${abs('/feeds/events.jsonl')}) — schema.org \`SportsEvent\`, one per line`,
+      `- [${abs('/feeds/blog.jsonl')}](${abs('/feeds/blog.jsonl')}) — schema.org \`BlogPosting\`, full article body included`,
+      `- [${abs('/schemamap.xml')}](${abs('/schemamap.xml')}) — NLWeb feed index, declared from robots.txt`,
+      '',
+      '## Rate limits',
+      '',
+      `MCP endpoints allow **${READ_LIMIT.limit} requests a minute** per client; \`/ask\` allows **${ASK_LIMIT.limit}**, because each call scans the whole corpus. Successful \`/ask\` responses carry \`RateLimit-Remaining\`; a \`429\` carries \`Retry-After\`.`,
+      '',
+      'Counted per serverless instance rather than globally — the platform gives no shared memory between invocations, so a caller spread across cold starts sees a higher effective ceiling. It is a guard against a runaway loop, not a defence against a distributed one.',
+      '',
+      '## Reference',
+      '',
+      `- [OpenAPI 3.1 description](${abs('/openapi.json')})`,
+      `- [Authentication guide](${abs('/auth.md')}) — short version: there is none, and why`,
+      `- [Site manual for agents](${abs('/llms.txt')})`,
+      `- [MCP server card](${abs('/.well-known/mcp/server-card.json')})`,
+      `- [A2A agent card](${abs('/.well-known/agent-card.json')})`,
+      `- [API catalog, RFC 9727](${abs('/.well-known/api-catalog')})`,
+      `- [Agent skills index](${abs('/.well-known/agent-skills/index.json')})`,
+      `- [Structured agent view](${abs('/?mode=agent')})`,
+      '',
+      '## Source',
+      '',
+      `This site is open source, including \`AGENTS.md\` and three agent skills: ${REPO_URL}`,
+      '',
+      `If you need a capability Stride does not expose, open an issue or email ${CONTACT_EMAIL} — nothing is hidden, so the list above is the whole surface.`,
+    ]),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Originals
 // ---------------------------------------------------------------------------
 
@@ -778,6 +881,7 @@ export async function renderMarkdownPath(
     case '/':                 return homeMarkdown(abs)
     case '/about':            return aboutMarkdown(abs)
     case '/pricing':          return pricingMarkdown(abs)
+    case '/developers':       return developersMarkdown(abs)
     case '/events':           return eventsIndexMarkdown(abs)
     case '/blog':             return blogIndexMarkdown(abs)
     case '/milestones':       return milestonesMarkdown(abs)

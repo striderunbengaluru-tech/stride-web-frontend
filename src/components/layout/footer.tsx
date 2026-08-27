@@ -16,6 +16,7 @@ const EXPLORE_LINKS = [
   { title: 'Originals',     href: '/originals' },
   { title: 'Team',          href: '/team' },
   { title: 'Partnerships',  href: '/partnerships' },
+  { title: 'Developers',    href: '/developers' },
 ]
 
 const LEGAL_LINKS = [

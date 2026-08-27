@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { getRequestOrigin } from '@/lib/site-url'
 import { answerQuery, NLWEB_VERSION } from '@/lib/nlweb'
 import { isSandbox } from '@/lib/mcp/data'
+import { checkRateLimit, tooManyRequests, rateLimitHeaders, ASK_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Microsoft's NLWeb `/ask` endpoint.
@@ -110,6 +111,10 @@ function streamResponse(
 export async function POST(request: Request): Promise<Response> {
   const url = new URL(request.url)
 
+  // Tighter than the MCP endpoints: every /ask call scans the whole corpus.
+  const rate = checkRateLimit(request, ASK_LIMIT)
+  if (!rate.ok) return tooManyRequests(rate, `${getRequestOrigin(request)}/auth.md`)
+
   let raw: unknown
   try {
     raw = await request.json()
@@ -130,11 +135,15 @@ export async function POST(request: Request): Promise<Response> {
 
   return wantsStream(request, url, prefer?.streaming ?? streaming)
     ? streamResponse(answer)
-    : Response.json(answer, { headers: JSON_HEADERS })
+    : Response.json(answer, { headers: { ...JSON_HEADERS, ...rateLimitHeaders(rate) } })
 }
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
+
+  const rate = checkRateLimit(request, ASK_LIMIT)
+  if (!rate.ok) return tooManyRequests(rate, `${getRequestOrigin(request)}/auth.md`)
+
   const query = url.searchParams.get('query') ?? url.searchParams.get('q')
 
   if (!query || query.trim().length === 0) {
@@ -174,7 +183,7 @@ export async function GET(request: Request): Promise<Response> {
 
   return wantsStream(request, url)
     ? streamResponse(answer)
-    : Response.json(answer, { headers: JSON_HEADERS })
+    : Response.json(answer, { headers: { ...JSON_HEADERS, ...rateLimitHeaders(rate) } })
 }
 
 export function OPTIONS(): Response {

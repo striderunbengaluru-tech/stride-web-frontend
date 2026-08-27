@@ -124,7 +124,20 @@ Read-only is a property of the whole surface, not a phase of it. There is no end
 | \`400\` | Malformed request — bad JSON, or a query over 500 characters | Fix the request. \`/ask\` returns a \`usage\` field. |
 | \`401\` | You sent an \`Authorization\` header. Stride cannot accept one. | Retry with no \`Authorization\` header. |
 | \`404\` | No such page, or a path with no markdown twin | The body is markdown pointing at the sitemap. |
-| \`429\` | Rate limited | Back off and retry. Limits are per IP. |
+| \`429\` | Rate limited | Back off for the \`Retry-After\` seconds in the response. |
+
+### Rate limits, described accurately
+
+\`/mcp\` and \`/mcp/docs\` allow **120 requests a minute per client**; \`/ask\` allows
+**60**, because each call scans the whole corpus. Successful JSON responses from
+\`/ask\` carry \`RateLimit-Limit\`, \`RateLimit-Remaining\` and \`RateLimit-Reset\` so
+you can pace yourself rather than discover the ceiling.
+
+One caveat worth stating plainly: this counts per serverless **instance**, not
+globally, because the platform gives no shared memory between invocations. A
+caller spread across cold starts sees a higher effective ceiling than those
+numbers imply. It is a guard against a runaway loop, not a defence against a
+distributed one — do not treat the absence of a 429 as permission to hammer it.
 
 A \`401\` from \`/mcp\` carries the RFC 9728 pointer:
 

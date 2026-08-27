@@ -163,10 +163,24 @@ export function agentSkillsIndex(origin: string) {
 // ARD catalog — /.well-known/ard.json and the /.well-known/ai-catalog.json alias
 // ---------------------------------------------------------------------------
 
+/**
+ * The ARD spec version this catalog is written against.
+ *
+ * Not required by the spec: ARD v0.91 requires only `entries`, and its schema
+ * marks every other top-level member "transport-defined and ignored by ARD"
+ * with `additionalProperties: true`. Validators in the wild check for it
+ * regardless — the predecessor `ai-catalog.json` format carried one — and
+ * declaring which version of a moving spec a document conforms to is useful on
+ * its own merits. Harmless to a conformant reader, informative to everything
+ * else.
+ */
+const ARD_SPEC_VERSION = '0.91'
+
 export function ardCatalog(origin: string) {
   const host = new URL(origin).host
 
   return {
+    specVersion: ARD_SPEC_VERSION,
     entries: [
       ...ALL_SERVERS.map(server => ({
         identifier: `urn:air:${host}:server:${server.name}`,

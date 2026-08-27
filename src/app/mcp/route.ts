@@ -14,6 +14,7 @@ import { EVENT_CARD_URI, EVENT_CARD_HTML, LEADERBOARD_URI, LEADERBOARD_HTML } fr
 import { MCP_SERVER_VERSION, PRODUCT_SERVER } from '@/lib/mcp/registry'
 import { serveMcp, unauthorized, jsonResult, notFoundResult } from '@/lib/mcp/serve'
 import { serverCard } from '@/lib/mcp/discovery'
+import { checkRateLimit, tooManyRequests, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Stride's product MCP server — read-only access to public event, pricing,
@@ -234,6 +235,11 @@ function buildServer(origin: string, sandbox: boolean): McpServer {
 
 async function handle(request: Request): Promise<Response> {
   const origin = getRequestOrigin(request)
+
+  // Best-effort, per-instance — see @/lib/rate-limit for why that is the honest
+  // description. Checked before anything reads the database.
+  const limit = checkRateLimit(request, READ_LIMIT)
+  if (!limit.ok) return tooManyRequests(limit, `${origin}/auth.md`)
 
   // Nothing here accepts a credential, so a request carrying one has been
   // misconfigured. Say so, with the RFC 9728 pointer that explains why.

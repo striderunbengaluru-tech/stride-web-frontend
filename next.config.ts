@@ -62,6 +62,7 @@ const MARKDOWN_PAGES = [
   '/become-a-member',
   '/blog',
   '/contact-us',
+  '/developers',
   '/events',
   '/leaderboard',
   '/milestones',
