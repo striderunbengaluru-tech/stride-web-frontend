@@ -1,7 +1,7 @@
 import { getRequestOrigin } from '@/lib/site-url'
 import { isSandbox } from '@/lib/mcp/data'
 import { buildProductServer } from '@/lib/mcp/product-server'
-import { serveMcp, unauthorized } from '@/lib/mcp/serve'
+import { serveMcp, unauthorized, sseNotSupported } from '@/lib/mcp/serve'
 import { serverCard } from '@/lib/mcp/discovery'
 import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
 
@@ -72,7 +72,10 @@ function card(request: Request): Response {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return isMcpClient(request) ? handle(request) : card(request)
+  // A GET asking for a stream is asking for something this server does not
+  // offer; say so rather than opening a stream that stays silent.
+  if (isMcpClient(request)) return sseNotSupported(getRequestOrigin(request))
+  return card(request)
 }
 
 export const POST = handle

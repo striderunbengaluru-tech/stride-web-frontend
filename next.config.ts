@@ -21,6 +21,7 @@ import type { NextConfig } from "next";
  *                    declares the same two files by the standard mechanism
  *   api-catalog      RFC 9727
  *   service-desc     RFC 8631 — the OpenAPI description of /ask
+ *   service-doc      RFC 8631 — /developers, the human-readable API docs
  *   alternate        RFC 8288, with type=text/markdown for the markdown twin
  *
  * `api-catalog` and `service-desc` used to be deliberately absent, on the
@@ -37,6 +38,7 @@ const HOMEPAGE_LINK_HEADER = [
   '</sitemap.txt>; rel="sitemap"; type="text/plain"',
   '</.well-known/api-catalog>; rel="api-catalog"',
   '</openapi.json>; rel="service-desc"; type="application/json"',
+  '</developers>; rel="service-doc"; type="text/html"',
   '</privacy-policy>; rel="privacy-policy"',
   '</terms-of-service>; rel="terms-of-service"',
 ].join(', ')
