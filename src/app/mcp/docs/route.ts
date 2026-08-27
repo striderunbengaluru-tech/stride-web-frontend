@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { getRequestOrigin } from '@/lib/site-url'
 import { searchDocs, answerFaq, listDocPages, getPageMarkdown } from '@/lib/mcp/docs'
 import { DOCS_SERVER, MCP_SERVER_VERSION } from '@/lib/mcp/registry'
-import { serveMcp, unauthorized, jsonResult, notFoundResult } from '@/lib/mcp/serve'
+import { serveMcp, unauthorized, sseNotSupported, jsonResult, notFoundResult } from '@/lib/mcp/serve'
 import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
@@ -186,9 +186,11 @@ function card(request: Request): Response {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  return (request.headers.get('accept') ?? '').includes('text/event-stream')
-    ? handle(request)
-    : card(request)
+  // See sseNotSupported: a silent 200 stream reads as a broken server.
+  if ((request.headers.get('accept') ?? '').includes('text/event-stream')) {
+    return sseNotSupported(getRequestOrigin(request))
+  }
+  return card(request)
 }
 
 export const POST = handle

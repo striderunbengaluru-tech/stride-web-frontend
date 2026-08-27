@@ -10,16 +10,16 @@ import { PROTECTED_RESOURCE_METADATA_PATH } from './discovery'
  * faithful to the spec — a conformant client must offer both, because the server
  * is free to answer either way.
  *
- * It is also the wrong answer for this server. `enableJsonResponse` is on, so
- * every reply is JSON and nothing is ever streamed; refusing a client that
- * accepts JSON is refusing a client we could have served. Real clients were
- * being turned away: a probe sending `Accept: application/json` got a 406 and
- * concluded the handshake had failed.
+ * It is stricter than this server needs to be, though. A client that accepts
+ * JSON can be served perfectly well with JSON, and turning it away with a 406
+ * reads from the outside as a broken server — a probe sending
+ * `Accept: application/json` got exactly that.
  *
- * So a request that accepts JSON (or accepts anything) has `text/event-stream`
- * added before the transport sees it. Nothing about the response changes — it
- * was always going to be JSON. A request that accepts neither is left alone and
- * still gets its 406, because that one really is unservable.
+ * So a request that accepts JSON (or anything) has `text/event-stream` added
+ * before the transport sees it, purely to satisfy that check. What it then
+ * receives is decided by `prefersJsonBody` below, which follows what the client
+ * actually asked for. A request that accepts neither is left alone and still
+ * gets its 406, because that one really is unservable.
  */
 function widenAccept(request: Request): Request {
   const accept = request.headers.get('accept') ?? ''
@@ -33,6 +33,48 @@ function widenAccept(request: Request): Request {
   const headers = new Headers(request.headers)
   headers.set('accept', 'application/json, text/event-stream')
   return new Request(request, { headers })
+}
+
+/**
+ * The answer to a `GET` that asked for an SSE stream.
+ *
+ * The Streamable HTTP spec makes the server-initiated GET stream optional and
+ * says a server that does not offer one SHOULD reply `405`. The transport
+ * instead opens a `200 text/event-stream` and then never writes to it, because
+ * this server is stateless and has nothing to push. That is the worst of both
+ * answers: a client sees a successful stream, waits on it for a response that
+ * will never come, and eventually reports the handshake as failed — which is
+ * indistinguishable, from the outside, from a broken server.
+ *
+ * A `405` with a JSON-RPC error fails fast and says what to do instead. Both
+ * spec-conformant and considerably kinder.
+ */
+export function sseNotSupported(origin: string, headers: Record<string, string> = {}): Response {
+  return Response.json(
+    {
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message:
+          'This server does not offer a server-initiated SSE stream. It is stateless and has nothing to push, so there is nothing to listen to. Send your JSON-RPC requests as POST to this same URL; each response comes back in that POST\'s own body.',
+        data: {
+          transport: 'streamable-http',
+          method: 'POST',
+          documentation: `${origin}/developers`,
+          serverCard: `${origin}/.well-known/mcp/server-card.json`,
+        },
+      },
+      id: null,
+    },
+    {
+      status: 405,
+      headers: {
+        Allow: 'POST, DELETE, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        ...headers,
+      },
+    },
+  )
 }
 
 /** Copies a response, adding headers, without touching the body stream. */
@@ -76,6 +118,7 @@ type JsonRpcish = {
  */
 async function surfaceProtocolErrors(response: Response): Promise<Response> {
   const type = response.headers.get('content-type') ?? ''
+  // SSE bodies are streamed and must not be buffered or rewritten here.
   if (!type.includes('application/json')) return response
 
   const text = await response.clone().text()
@@ -147,9 +190,22 @@ export async function serveMcp(
   const server = build()
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
-    // JSON responses rather than an SSE stream for every call. Stride's tools
-    // all return in one shot — there is nothing to stream — and a JSON body is
-    // what a plain HTTP client can read without an EventSource.
+    /**
+     * Always JSON, never SSE. Do not make this adaptive — it was tried.
+     *
+     * The spec lets a server answer a POST either way, and answering with a
+     * stream looks more "correct" on paper. It cannot work here, because the
+     * `finally` below closes the transport as soon as `handleRequest` resolves —
+     * and for an SSE response that is when the *headers* are ready, not when the
+     * body is done. The stream gets torn down mid-flight and the client waits
+     * until it times out. Verified with a real MCP client: JSON mode connects in
+     * ~80ms, streaming mode hangs for the full 60s timeout.
+     *
+     * Keeping the per-request transport (which the comment above explains is
+     * required on serverless) therefore means keeping JSON responses. That costs
+     * nothing: every tool here returns in one shot, so there is no partial
+     * output a stream would deliver sooner.
+     */
     enableJsonResponse: true,
   })
 

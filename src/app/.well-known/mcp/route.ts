@@ -1,7 +1,7 @@
 import { serverCard } from '@/lib/mcp/discovery'
 import { wellKnownJson } from '@/lib/mcp/well-known'
 import { buildProductServer } from '@/lib/mcp/product-server'
-import { serveMcp, unauthorized } from '@/lib/mcp/serve'
+import { serveMcp, unauthorized, sseNotSupported } from '@/lib/mcp/serve'
 import { isSandbox } from '@/lib/mcp/data'
 import { getRequestOrigin } from '@/lib/site-url'
 import { checkRateLimit, tooManyRequests, rateLimitHeaders, READ_LIMIT } from '@/lib/rate-limit'
@@ -26,6 +26,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export function GET(request: Request): Response {
+  if ((request.headers.get('accept') ?? '').includes('text/event-stream')) {
+    return sseNotSupported(getRequestOrigin(request))
+  }
   return wellKnownJson(request, serverCard)
 }
 

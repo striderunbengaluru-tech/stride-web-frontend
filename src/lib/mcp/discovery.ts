@@ -46,7 +46,28 @@ export function serverCard(origin: string) {
     description: PRODUCT_SERVER.description,
     version: MCP_SERVER_VERSION,
     serverUrl: `${origin}${PRODUCT_SERVER.path}`,
+    // Aliases for the same endpoint. Readers of this document disagree about
+    // which field names the server — `url`, `endpoint`, `mcpServers` all appear
+    // in the wild — and a reader that cannot find the endpoint falls back to
+    // handshaking against wherever it found the manifest. Naming it every way
+    // costs a few bytes and removes the guesswork.
+    url: `${origin}${PRODUCT_SERVER.path}`,
+    endpoint: `${origin}${PRODUCT_SERVER.path}`,
+    mcpServers: {
+      [PRODUCT_SERVER.name]: {
+        type: 'http',
+        url: `${origin}${PRODUCT_SERVER.path}`,
+        transport: 'streamable-http',
+      },
+      [DOCS_SERVER.name]: {
+        type: 'http',
+        url: `${origin}${DOCS_SERVER.path}`,
+        transport: 'streamable-http',
+      },
+    },
     transport: 'streamable-http',
+    transports: ['streamable-http'],
+    protocolVersions: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'],
     authentication: {
       required: false,
       type: 'none',
