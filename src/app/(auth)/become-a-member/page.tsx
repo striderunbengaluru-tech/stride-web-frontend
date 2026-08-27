@@ -1,8 +1,12 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { GoogleSignInButton } from '@/utils/auth'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Become a Member | Stride Run Club',
+  description:
+    'Free sign-up for Stride Run Club. Creates an athlete profile and a Stride Tag that tracks every run you attend.',
+  alternates: { canonical: '/become-a-member', types: { 'text/markdown': '/become-a-member.md' } },
 }
 
 const features = [

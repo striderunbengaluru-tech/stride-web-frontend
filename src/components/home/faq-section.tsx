@@ -1,11 +1,15 @@
 import { InteractiveAccordion, type AccordionItem } from '@/components/ui/interactive-accordion';
 import faqData from '@/content/faq.json';
+import { FaqTools } from '@/components/webmcp/page-tools';
 
 const FAQ_ITEMS: AccordionItem[] = faqData;
 
 export default function FaqSection() {
   return (
     <section className='max-w-6xl mx-auto px-6 pt-6 pb-12 md:pt-10 md:pb-20'>
+      {/* WebMCP: answer joining questions from the same entries this accordion
+          renders, so a browser agent quotes the club rather than paraphrasing it. */}
+      <FaqTools entries={FAQ_ITEMS} />
       <div>
 
         {/* Section heading */}

@@ -16,6 +16,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL,                         lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
     { url: `${SITE_URL}/events`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${SITE_URL}/about`,              lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/pricing`,            lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${SITE_URL}/blog`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${SITE_URL}/milestones`,         lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/leaderboard`,        lastModified: now, changeFrequency: 'daily',   priority: 0.7 },

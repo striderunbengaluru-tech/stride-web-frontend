@@ -5,6 +5,10 @@ import { eventRowPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { EventsClient } from '@/components/events/events-client'
 import { UpNextCarousel } from '@/components/events/up-next-carousel'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
+import { JsonLd } from '@/components/seo/json-ld'
+import { graph, eventListNode, breadcrumbNode } from '@/lib/json-ld'
+import { listEvents as listPublicEvents } from '@/lib/mcp/data'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
 // The title omits the brand: the root layout's title template appends
 // " | Stride Run Club", and repeating it here produced
@@ -19,7 +23,7 @@ export const metadata: Metadata = {
   description:
     'Every Stride run, race and meetup in Bengaluru. Two to three community runs a week, all fitness levels welcome — find your next start line and register.',
   keywords: ['Stride Run Club events', 'group runs Bengaluru', 'running events Bengaluru', 'run club calendar', '5K Bengaluru', '10K Bengaluru'],
-  alternates: { canonical: '/events' },
+  alternates: { canonical: '/events', types: { 'text/markdown': '/events.md' } },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -91,8 +95,20 @@ async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow
 export default async function EventsPage() {
   const { events, upNext } = await fetchEventsData()
 
+  // An ItemList of the upcoming events, so a consumer reading this page learns
+  // there are N events and where each one is — rather than only that a page
+  // called "Events" exists. Per-event detail lives on each event page's own
+  // SportsEvent node and in /feeds/events.jsonl.
+  const { events: publicEvents } = await listPublicEvents({ when: 'upcoming', limit: 50 }, false)
+  const listJsonLd = graph([
+    eventListNode(PRODUCTION_SITE_URL, publicEvents),
+    breadcrumbNode(PRODUCTION_SITE_URL, [{ name: 'Events', path: '/events' }]),
+  ])
+
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden'>
+
+      <JsonLd data={listJsonLd} />
 
       <TrackBackdrop />
 

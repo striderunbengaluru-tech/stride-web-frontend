@@ -39,18 +39,82 @@
  * Kept in lockstep with MARKDOWN_NEGOTIABLE_PATHS in next.config.ts. This
  * function is the stricter of the two and the one that actually gates output.
  */
+const NEGOTIABLE_EXACT = new Set([
+  '/',
+  '/about',
+  '/become-a-member',
+  '/blog',
+  '/contact-us',
+  '/events',
+  '/leaderboard',
+  '/milestones',
+  '/originals',
+  '/partnerships',
+  '/pricing',
+  '/privacy-policy',
+  '/shop',
+  '/team',
+  '/terms-of-service',
+])
+
+/**
+ * Single-segment children with a markdown twin.
+ *
+ * One level deep only, and anchored — `/events/<slug>` is negotiable but
+ * `/events/<slug>/confirmation/<id>` must never be, and an unanchored pattern
+ * would have matched both.
+ */
+const NEGOTIABLE_CHILD = [
+  /^\/blog\/[^/]+$/,
+  /^\/events\/[^/]+$/,
+  /^\/originals\/[^/]+$/,
+]
+
 export function isNegotiablePath(pathname: string): boolean {
   const path = pathname !== '/' && pathname.endsWith('/')
     ? pathname.slice(0, -1)
     : pathname
 
-  if (path === '/' || path === '/blog' || path === '/events') return true
-  if (path === '/privacy-policy' || path === '/terms-of-service') return true
+  if (NEGOTIABLE_EXACT.has(path)) return true
+  return NEGOTIABLE_CHILD.some(pattern => pattern.test(path))
+}
 
-  // One level deep only — /events/<slug>, never /events/<slug>/confirmation/<id>.
-  const blog = /^\/blog\/[^/]+$/.test(path)
-  const event = /^\/events\/[^/]+$/.test(path)
-  return blog || event
+/**
+ * The `---` block agents read as document metadata instead of scraping for it.
+ *
+ * Applied to every markdown response including the two legal documents, whose
+ * source `.md` files carry no frontmatter of their own — so this is prepended
+ * in one place rather than added to fifteen renderers.
+ *
+ * `last-updated` is a date, not a timestamp: several of these documents are
+ * built from live database reads, and a per-second value would suggest the
+ * content changed when only the clock did.
+ */
+export function frontmatter(fields: {
+  title: string
+  description: string
+  canonical: string
+  lastUpdated?: Date
+}): string {
+  const date = (fields.lastUpdated ?? new Date()).toISOString().slice(0, 10)
+  return [
+    '---',
+    `title: ${yaml(fields.title)}`,
+    `description: ${yaml(fields.description)}`,
+    `canonical: ${fields.canonical}`,
+    `last-updated: ${date}`,
+    '---',
+    '',
+  ].join('\n')
+}
+
+/**
+ * Quotes a scalar for YAML. Double quotes with the two characters that can
+ * break out of them escaped — enough for titles and descriptions, which is all
+ * this is used for.
+ */
+function yaml(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 /**

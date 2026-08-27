@@ -11,6 +11,8 @@ import { MdRenderer } from '@/components/blog/md-renderer'
 import { formatIST } from '@/lib/utils/ist'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 import { markdownToPlainText } from '@/lib/utils/markdown-text'
+import { JsonLd } from '@/components/seo/json-ld'
+import { organizationId } from '@/lib/json-ld'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -40,7 +42,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // guess that the header is worth sending.
     alternates: {
       canonical: `/blog/${post.slug}`,
-      types: { 'text/markdown': `/blog/${post.slug}` },
+      // Points at the `.md` URL rather than the bare path: an advertised
+      // alternate has to actually serve markdown when fetched plainly, and only
+      // the suffix form does that without an Accept header.
+      types: { 'text/markdown': `/blog/${post.slug}.md` },
     },
     openGraph: {
       title: post.title,
@@ -80,14 +85,8 @@ export default async function BlogPostPage({ params }: Props) {
       name: post.author.name,
       ...(post.author.avatarUrl ? { image: post.author.avatarUrl } : {}),
     },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Stride Run Club',
-      logo: {
-        '@type': 'ImageObject',
-        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
-      },
-    },
+    // The shared Organization node, by reference.
+    publisher: { '@id': organizationId(PRODUCTION_SITE_URL) },
     url: postUrl,
     keywords: post.tags.join(', '),
     // The full prose, so an LLM or crawler that only reads the HTML gets the
@@ -100,10 +99,7 @@ export default async function BlogPostPage({ params }: Props) {
     <>
       <ReadingProgress />
 
-      <script
-        type='application/ld+json'
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
 
       <main className='min-h-screen bg-stride-purple-primary pt-20 md:pt-24 pb-24'>
         <div className='mx-auto max-w-6xl px-4 md:px-8'>

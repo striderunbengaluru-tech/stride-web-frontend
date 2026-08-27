@@ -3,6 +3,9 @@ import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { PostCard } from '@/components/blog/post-card'
 import { Reveal } from '@/components/ui/reveal'
+import { JsonLd } from '@/components/seo/json-ld'
+import { organizationId } from '@/lib/json-ld'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
 
@@ -12,14 +15,10 @@ const blogJsonLd = {
   name: 'Stride Run Club Blog',
   description: 'Stories, run reports, and community moments from Stride Run Club Bengaluru.',
   url: `${SITE_URL}/blog`,
-  publisher: {
-    '@type': 'Organization',
-    name: 'Stride Run Club',
-    logo: {
-      '@type': 'ImageObject',
-      url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
-    },
-  },
+  // References the one Organization node the root layout declares rather than
+  // restating a partial copy — a second node at a different shape, describing
+  // the same publisher, is how the two drift.
+  publisher: { '@id': organizationId(PRODUCTION_SITE_URL) },
   blogPost: BLOG_POSTS.map((p) => ({
     '@type': 'BlogPosting',
     headline: p.title,
@@ -41,7 +40,7 @@ export const metadata: Metadata = {
   description:
     'Stories, run reports and community moments from Stride Run Club Bengaluru. Real miles, real people, written by the crew who showed up.',
   keywords: ['Stride Run Club blog', 'running stories Bengaluru', 'run reports', 'running community blog India'],
-  alternates: { canonical: '/blog' },
+  alternates: { canonical: '/blog', types: { 'text/markdown': '/blog.md' } },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -64,10 +63,7 @@ export default function BlogPage() {
 
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-24 pb-24'>
-      <script
-        type='application/ld+json'
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }}
-      />
+      <JsonLd data={blogJsonLd} />
       <div className='mx-auto max-w-6xl px-4 md:px-8'>
 
         {/* ── Header ── */}

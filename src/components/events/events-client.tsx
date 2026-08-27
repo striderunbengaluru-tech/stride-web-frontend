@@ -2,8 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EventCard } from './event-card'
+import { useWebMcpTools } from '@/hooks/use-web-mcp-tools'
+import { toolJson, toolError } from '@/lib/webmcp'
 
 const DUCKY_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-2.png'
@@ -46,6 +49,7 @@ const cardItem = {
 export function EventsClient({ events }: { events: Event[] }) {
   const [filter, setFilter] = useState<Filter>('upcoming')
   const now = useMemo(() => new Date(), [])
+  const router = useRouter()
 
   const filtered = useMemo(() => {
     // Undated events count as upcoming, and sort after the scheduled ones —
@@ -70,6 +74,91 @@ export function EventsClient({ events }: { events: Event[] }) {
     all:      events.length,
   }), [events, now])
 
+  // WebMCP: the two things a browser agent standing on this page should be able
+  // to do. Both drive the UI a person drives — `search_events` moves the same
+  // filter state the tabs move, so the page visibly changes and the human can
+  // see what the agent did. Neither reads the session or writes anything.
+  useWebMcpTools([
+    {
+      name: 'search_events',
+      description:
+        'Search and filter the Stride Run Club events listed on this page. Matches the query against event names, subtitles and venues, and switches the visible filter tab. Returns the matching events with their dates, venues, prices and URLs.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Text to match against name, subtitle or venue. Omit to list everything in the chosen filter.' },
+          when: { type: 'string', enum: ['upcoming', 'past', 'all'], description: 'Which events to show. Defaults to upcoming.' },
+          freeOnly: { type: 'boolean', description: 'Only free events.' },
+        },
+      },
+      execute: (args) => {
+        const when = (args.when as Filter) ?? 'upcoming'
+        if (['upcoming', 'past', 'all'].includes(when)) setFilter(when)
+
+        const query = typeof args.query === 'string' ? args.query.trim().toLowerCase() : ''
+        const time = (e: Event) => (e.event_date ? new Date(e.event_date).getTime() : Number.POSITIVE_INFINITY)
+        const nowMs = Date.now()
+
+        const scoped = events.filter(e => {
+          if (when === 'upcoming' && time(e) < nowMs) return false
+          if (when === 'past' && time(e) >= nowMs) return false
+          if (args.freeOnly === true && !e.isFree) return false
+          if (!query) return true
+          return [e.name, e.subtitle ?? '', e.location ?? '']
+            .join(' ')
+            .toLowerCase()
+            .includes(query)
+        })
+
+        return toolJson({
+          filter: when,
+          query: query || null,
+          matched: scoped.length,
+          events: scoped.map(e => ({
+            name: e.name,
+            slug: e.slug,
+            subtitle: e.subtitle,
+            date: e.event_date,
+            venue: e.location,
+            price: e.priceLabel,
+            inviteOnly: e.invite_only === true,
+            url: `/events/${e.slug}`,
+          })),
+        })
+      },
+    },
+    {
+      name: 'open_event',
+      description:
+        'Navigate this browser to a Stride event page. Accepts the event slug from search_events, or the event name. Read-only navigation — it opens the page, it does not register anyone.',
+      inputSchema: {
+        type: 'object',
+        required: ['event'],
+        properties: {
+          event: { type: 'string', description: 'The event slug, or its name.' },
+        },
+      },
+      execute: (args) => {
+        const needle = String(args.event ?? '').trim().toLowerCase()
+        if (!needle) return toolError('Provide an event slug or name.')
+
+        const match =
+          events.find(e => e.slug.toLowerCase() === needle) ??
+          events.find(e => e.name.toLowerCase() === needle) ??
+          events.find(e => e.name.toLowerCase().includes(needle))
+
+        if (!match) {
+          return toolError(
+            `No event on this page matches "${args.event}". Call search_events with when: "all" to see every event.`,
+          )
+        }
+
+        router.push(`/events/${match.slug}`)
+        return toolJson({ navigatedTo: `/events/${match.slug}`, name: match.name })
+      },
+    },
+  ])
+
   return (
     <div>
       {/* Filter tabs */}
@@ -78,6 +167,12 @@ export function EventsClient({ events }: { events: Event[] }) {
           <button
             key={key}
             onClick={() => setFilter(key)}
+            /* WebMCP tool attributes. They survive server rendering, so a
+               static scanner and a browser agent both see that this control
+               exists without executing anything — which is the half of WebMCP
+               that document.modelContext registration cannot provide. */
+            toolname={`filter_events_${key}`}
+            tooldescription={`Show ${label.toLowerCase()} Stride Run Club events (${counts[key]} available)`}
             className={`relative px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               filter === key
                 ? 'bg-stride-yellow-accent text-copy-black shadow-lg'

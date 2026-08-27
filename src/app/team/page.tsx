@@ -2,6 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { JsonLd } from '@/components/seo/json-ld'
+import {
+  graph,
+  organizationId,
+  websiteId,
+  breadcrumbNode,
+} from '@/lib/json-ld'
 import { LEAD_STRIDERS, striderImageUrls } from '@/content/lead-striders'
 import { ParallaxUnfurlingGallery } from '@/components/ui/parallax-unfurling-gallery'
 import { LeadStriderCard } from '@/components/team/lead-strider-card'
@@ -26,7 +33,7 @@ export const metadata: Metadata = {
     'running community organisers Bengaluru',
     'run captains Bengaluru',
   ],
-  alternates: { canonical: CANONICAL_PATH },
+  alternates: { canonical: CANONICAL_PATH, types: { 'text/markdown': '/team.md' } },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -73,31 +80,30 @@ const personNodes = LEAD_STRIDERS.map((strider) => ({
     : {}),
 }))
 
-const schemaOrg = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'AboutPage',
-      '@id': `${CANONICAL_URL}#webpage`,
-      url: CANONICAL_URL,
-      name: 'Lead Striders — The Team Behind Stride Run Club',
-      description:
-        'The eight Lead Striders who run Stride Run Club Bengaluru — founders, pacers, run captains and organisers.',
-      image: DEFAULT_OG_IMAGE,
-      inLanguage: 'en-IN',
-      isPartOf: { '@id': `${PRODUCTION_SITE_URL}/#website` },
-      about: { '@id': `${PRODUCTION_SITE_URL}/#organization` },
-    },
-    {
-      '@type': 'SportsOrganization',
-      '@id': `${PRODUCTION_SITE_URL}/#organization`,
-      name: 'Stride Run Club',
-      url: PRODUCTION_SITE_URL,
-      member: personNodes.map((person) => ({ '@id': person['@id'] })),
-    },
-    ...personNodes,
-  ],
-}
+// The organization node is the shared one, not a local re-declaration. This
+// page used to emit its own stub at the same `@id` — name, url and members only
+// — so two nodes claimed to be the same entity and one of them was missing the
+// address, contact points and sameAs. `organizationNode` already lists these
+// Person `@id`s in `member`, using the identical `/team#slug` form.
+const schemaOrg = graph([
+  {
+    '@type': 'AboutPage',
+    '@id': `${CANONICAL_URL}#webpage`,
+    url: CANONICAL_URL,
+    name: 'Lead Striders — The Team Behind Stride Run Club',
+    description:
+      `The ${LEAD_STRIDERS.length} Lead Striders who run Stride Run Club Bengaluru — founders, pacers, run captains and organisers.`,
+    image: DEFAULT_OG_IMAGE,
+    inLanguage: 'en-IN',
+    isPartOf: { '@id': websiteId(PRODUCTION_SITE_URL) },
+    about: { '@id': organizationId(PRODUCTION_SITE_URL) },
+    breadcrumb: { '@id': `${CANONICAL_URL}#breadcrumb` },
+  },
+  // The Organization node itself comes from the root layout, which already
+  // lists these Person `@id`s in its `member` array. Only the people are new here.
+  breadcrumbNode(PRODUCTION_SITE_URL, [{ name: 'Lead Striders', path: CANONICAL_PATH }]),
+  ...personNodes,
+])
 
 // Every pose of every strider becomes one tile on the spiral — 24 photos. These
 // are the same URLs the cards below request, so the hero adds no new source
@@ -107,10 +113,7 @@ const GALLERY_IMAGES = LEAD_STRIDERS.flatMap(striderImageUrls)
 export default function TeamPage() {
   return (
     <main className='min-h-screen bg-stride-purple-primary'>
-      <script
-        type='application/ld+json'
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
-      />
+      <JsonLd data={schemaOrg} />
 
       {/* Opens the page with nothing above it, so the wall fills the first
           viewport and the rotation starts on the first pixel of scroll. It also

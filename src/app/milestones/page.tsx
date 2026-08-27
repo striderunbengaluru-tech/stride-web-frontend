@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { ArrowLeft } from 'lucide-react'
 import { MilestoneJourney, MilestoneJourneySkeleton } from '@/components/milestones/milestone-journey'
+import { MilestoneTools } from '@/components/webmcp/page-tools'
+import { getMilestoneTiers } from '@/lib/mcp/data'
 
 // Title carries no brand suffix — the root layout's template appends
 // " | Stride Run Club". openGraph/twitter are declared in full because a child
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
   description:
     'Show up, climb the tiers. Check in at Stride runs to progress from Duckling to Stride Legend and unlock rewards for the club’s most committed members.',
   keywords: ['Stride Run Club milestones', 'running rewards Bengaluru', 'run club membership tiers', 'running badges', 'Stride Legend'],
-  alternates: { canonical: '/milestones' },
+  alternates: { canonical: '/milestones', types: { 'text/markdown': '/milestones.md' } },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -36,6 +38,9 @@ export const metadata: Metadata = {
 export default function MilestonesPage() {
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-28 pb-24 px-4'>
+      {/* WebMCP: the tier table as a tool, from the same MILESTONE_TIERS the
+          page renders — so a browser agent and the reader see one answer. */}
+      <MilestoneTools tiers={getMilestoneTiers()} />
       <div className='max-w-4xl mx-auto'>
 
         <Link

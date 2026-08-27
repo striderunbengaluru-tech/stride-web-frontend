@@ -4,6 +4,7 @@ import { ContactContent } from '@/components/contact/contact-content'
 export const metadata: Metadata = {
   title: 'Contact Us — Stride Run Club',
   description: 'Get in touch with Stride Run Club Bengaluru.',
+  alternates: { canonical: '/contact-us', types: { 'text/markdown': '/contact-us.md' } },
 }
 
 export default function ContactUsPage() {

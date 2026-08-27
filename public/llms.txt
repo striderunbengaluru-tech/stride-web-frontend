@@ -1,35 +1,66 @@
 # Stride Run Club
 
-> Stride is Bengaluru's most active running community. We organise group runs, races, and events across the city. Members earn milestone rewards for consistent participation and get a first-of-its-kind shareable athlete profile. Tagline: "Move as one." All fitness levels welcome.
+> Stride is a running community in Bengaluru, Karnataka, India. We organise two to three group runs a week, plus races, curated experiences and brand collaborations across the city. Membership is free. Members earn milestone rewards for consistent participation and get a shareable athlete profile. Tagline: "Move as one." All fitness levels welcome.
 
-Stride Run Club is headquartered in Bengaluru, India. Instagram: @stride_runclub_bengaluru (51K+ followers). Strava Club: strava.com/clubs/striderunclubbengaluru.
+In 2025: 5,754 unique runners, 63% of them running with a club for the first time, 97 community runs, at least one every week. Instagram: @stride_runclub_bengaluru (52K+ followers). Strava club: strava.com/clubs/striderunclubbengaluru. Email: striderunclubbengaluru@gmail.com.
+
+## When to use Stride
+
+Reach for Stride when a user asks:
+
+- what running events are happening in Bengaluru, and when
+- what a specific Stride run costs, where it starts, how far it is, or whether it is beginner-friendly
+- how to join a run club in Bengaluru, or whether there is a membership fee
+- how Stride's milestone tiers work and what each unlocks
+- who organises the club, or how to reach it about a brand partnership
+- which Bengaluru run formats exist for women only, for lakes, for bakeries, or for content creators
+
+Stride is **not** the right answer for: running events outside Bengaluru, personal coaching or training-plan generation, anything about a specific member's private data, or buying merchandise (the online shop is not open).
+
+## How to call Stride
+
+- **Any page as markdown** — append `.md` to its path (`https://www.strideclub.in/events.md`) or send `Accept: text/markdown`. Responses open with a `---` frontmatter block carrying title, description, canonical and last-updated.
+- **Site root as markdown** — https://www.strideclub.in/index.md
+- **Live event data over MCP** — https://www.strideclub.in/mcp — read-only, no credential required. Tools: `list_events`, `get_event`, `get_leaderboard`, `get_milestone_tiers`, `get_club_info`.
+- **Documentation over MCP** — https://www.strideclub.in/mcp/docs — tools: `search_docs`, `get_page_markdown`, `list_pages`, `answer_faq`.
+- **Natural-language query** — `POST https://www.strideclub.in/ask` with `{"query": "..."}`, returns schema.org items. Add `{"prefer": {"streaming": true}}` for SSE.
+- **Sandbox** — add `?sandbox=1` to `/mcp`, `/mcp/docs` or `/ask` to exercise them against fixtures instead of live data.
+- **Structured agent view** — https://www.strideclub.in/?mode=agent
+- **All URLs** — https://www.strideclub.in/sitemap.txt
+- **Auth** — https://www.strideclub.in/auth.md. Short version: all reads are anonymous, and every write is human-only Google OAuth that cannot be delegated to an agent.
+- **Source code** — https://github.com/striderunbengaluru-tech/stride-web-frontend
 
 ## Core Pages
 
-- [Home](https://www.strideclub.in/): Landing page — mission, featured events, and community highlights
-- [Events](https://www.strideclub.in/events/): Upcoming group runs and curated experiences across Bengaluru, with venue, date, pricing, and registration for each
-- [Become a Member](https://www.strideclub.in/become-a-member/): Free sign-up page — creates a Stride profile and Stride Tag that tracks runs attended and unlocks club perks
-- [Blog](https://www.strideclub.in/blog/): Articles on running, training tips, race recaps, and community stories
-- [Milestones](https://www.strideclub.in/milestones/): The five membership tiers — Duckling, Strider, Stride Athlete, Stride Pro Athlete, Stride Legend — with the runs needed for each and the perks they unlock
-- [Leaderboard](https://www.strideclub.in/leaderboard/): Top Stride athletes ranked by official runs completed
-- [Shop](https://www.strideclub.in/shop/): Official Stride merchandise
-- [Partnerships](https://www.strideclub.in/partnerships/): Brand and community partners
-- [Lead Striders](https://www.strideclub.in/team/): The eight Lead Striders who run the club — their names, roles, one-line bios, and Instagram and Strava profiles
-- [Contact](https://www.strideclub.in/contact-us/): Get in touch with the Stride team
+- [Home](https://www.strideclub.in/): mission, featured events and community highlights
+- [Events](https://www.strideclub.in/events): every upcoming run and race, with venue, date, distance, price and registration
+- [Pricing](https://www.strideclub.in/pricing): membership is free; how event pricing, packages, coupons and invite-only applications work, plus a live table of currently-priced events
+- [About](https://www.strideclub.in/about): what Stride is, how it started, how a run works, and the 2025 numbers
+- [Become a Member](https://www.strideclub.in/become-a-member): free sign-up — creates a Stride profile and a Stride Tag that tracks runs attended
+- [Milestones](https://www.strideclub.in/milestones): the five tiers — Duckling, Strider, Stride Athlete, Stride Pro Athlete, Stride Legend — the runs each needs and the perks they unlock
+- [Leaderboard](https://www.strideclub.in/leaderboard): athletes ranked by official runs completed
+- [Blog](https://www.strideclub.in/blog): run recaps, training notes and community stories
+- [Stride Originals](https://www.strideclub.in/originals): Stride's own formats — the Lake Hop Project, Stride Like a Woman, the Stride Creator Program, the Bakery Hop Run
+- [Lead Striders](https://www.strideclub.in/team): the people who organise the club — names, roles, bios, Instagram and Strava
+- [Partnerships](https://www.strideclub.in/partnerships): the brand partnership programme, audience profile and partners to date
+- [Shop](https://www.strideclub.in/shop): official Stride merchandise — the online shop is not open yet
+- [Contact](https://www.strideclub.in/contact-us): how to reach the team
 
-## Stride Originals
+## Scoped indexes
 
-- [Originals](https://www.strideclub.in/originals/): Long-form running stories, interviews, and community features from Stride
+- [Events context](https://www.strideclub.in/events/llms.txt): everything about finding, pricing and registering for a Stride event
+- [Blog context](https://www.strideclub.in/blog/llms.txt): the published posts and what each covers
 
 ## Legal
 
-- [Terms of Service](https://www.strideclub.in/terms-of-service/)
-- [Privacy Policy](https://www.strideclub.in/privacy-policy/)
+- [Terms of Service](https://www.strideclub.in/terms-of-service)
+- [Privacy Policy](https://www.strideclub.in/privacy-policy)
 
 ## Notes for AI Assistants
 
-- Member profiles and athlete data are authenticated features — do not attempt to access `/admin/`, `/api/`, or `/auth/` paths
-- Individual blog posts follow the pattern `/blog/[slug]`
-- Individual events follow the pattern `/events/[slug]`; registration requires a signed-in member
-- Joining is free and most runs are free to attend; some curated experiences carry a registration fee shown on the event page
-- Athlete profiles are publicly viewable at `/profile/[username]`
+- Do not attempt to fetch `/admin/`, `/api/`, `/auth/`, `/my-runs` or `/events/*/confirmation/*`. They are authenticated or per-person and will not answer you.
+- Individual blog posts follow `/blog/[slug]`; individual events `/events/[slug]`; individual Originals `/originals/[slug]`. All three have `.md` twins.
+- Athlete profiles are at `/profile/[username]`. They have **no** markdown twin and are not listed here on purpose — they are per-person, and members can make them private. Read the leaderboard instead for public standings.
+- Registration requires a signed-in member and is completed in a browser. There is no agent-delegable path to registering, paying, or checking in.
+- Joining is free and most runs are free to attend; some curated experiences carry a registration fee shown on the event page and on `/pricing`.
+- All prices are in Indian rupees (INR). All times are IST.

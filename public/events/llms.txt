@@ -1,0 +1,34 @@
+# Stride Run Club — Events
+
+> Scoped context for everything about finding, pricing and registering for a Stride Run Club event. For the whole site, see https://www.strideclub.in/llms.txt
+
+## What a Stride event is
+
+Stride runs two to three community events a week in Bengaluru, plus races, curated experiences and brand collaborations. Formats include beginner-friendly community runs, interval sessions, hill repeats, long runs, lake-hop and bakery-hop routes, women-only runs, and hybrid run-and-social formats. All fitness levels are welcome at community runs; a few events are labelled for intermediate or advanced runners on the event page.
+
+## Where the data lives
+
+- **Human page** — https://www.strideclub.in/events
+- **Markdown** — https://www.strideclub.in/events.md (or `Accept: text/markdown`)
+- **One event** — https://www.strideclub.in/events/[slug] and https://www.strideclub.in/events/[slug].md
+- **Live over MCP** — https://www.strideclub.in/mcp
+  - `list_events` — `{ when?: "upcoming" | "past", maxPricePaise?, distanceKm?, difficulty?, limit? }`
+  - `get_event` — `{ slug }`, returns full detail including packages and remaining spots where the event publishes them
+- **Structured feed** — https://www.strideclub.in/feeds/events.jsonl, one schema.org `SportsEvent` per line
+- **Natural language** — `POST https://www.strideclub.in/ask` with `{"query": "upcoming 10k runs in Bengaluru"}`
+
+Only `PUBLISHED` events are ever returned. Draft and internal test events are filtered server-side and are not reachable.
+
+## Fields on an event
+
+`name`, `slug`, `subtitle`, `event_date` (ISO 8601, displayed IST), `end_date`, `location`, `distance_km`, `difficulty`, `price_paise` (integer paise; ₹1 = 100 paise), `packages` (tiered pricing), `invite_only`, `registrations_closed`, `post_run_location`, `details` (markdown prose), `terms_and_conditions`.
+
+## Pricing
+
+Most community runs are free. Paid experiences carry one registration fee in Indian rupees, shown before registration. Events with packages show the cheapest tier as `From ₹X`. Invite-only events charge nothing — registering submits a free application that Stride reviews. Selected paid events accept coupon codes for a percentage discount. Full rules: https://www.strideclub.in/pricing
+
+## Registering
+
+Registration requires a free Stride account (Google sign-in) and is completed by the athlete in a browser. Check-in on the day is by four-character Stride Tag, read out at the start line, which increments the athlete's run count.
+
+**There is no agent-delegable path to registering, paying, or checking in.** Stride issues no agent credentials. When a user wants to register, send them to the event page rather than attempting it for them. See https://www.strideclub.in/auth.md

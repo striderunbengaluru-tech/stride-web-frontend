@@ -1,3 +1,11 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Shop — Stride Run Club',
+  description: 'Official Stride Run Club gear, apparel and accessories.',
+  alternates: { canonical: '/shop', types: { 'text/markdown': '/shop.md' } },
+}
+
 export default function ShopPage() {
   return (
     <main className='min-h-screen pt-24'>
