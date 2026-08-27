@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, Calendar } from 'lucide-react'
+import { NotFoundMarker } from '@/components/layout/not-found-marker'
 
 const DUCKY_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/ducky-3.webp'
@@ -13,6 +14,12 @@ export const metadata = {
 export default function NotFound() {
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden flex items-center justify-center px-6 py-24'>
+
+      {/* Renders nothing. Stops AuthProvider from calling router.refresh() on a
+          route whose RSC payload answers 404 — which the App Router can only
+          escape with a full reload, and that reload used to start the cycle
+          again. See @/lib/auth/refresh-guard. */}
+      <NotFoundMarker />
 
       {/* Ambient orbs — same drift system as the rest of the site */}
       <div className='pointer-events-none absolute inset-0 overflow-hidden'>

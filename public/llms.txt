@@ -35,6 +35,7 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 
 - [Home](https://www.strideclub.in/): mission, featured events and community highlights
 - [Events](https://www.strideclub.in/events): every upcoming run and race, with venue, date, distance, price and registration
+- [About](https://www.strideclub.in/about): what Stride is, who founded it, how a run works, who organises the runs, and the 2025 numbers
 - [Pricing](https://www.strideclub.in/pricing): membership is free; how event pricing, packages, coupons and invite-only applications work, plus a live table of currently-priced events
 - [Become a Member](https://www.strideclub.in/become-a-member): free sign-up — creates a Stride profile and a Stride Tag that tracks runs attended
 - [Milestones](https://www.strideclub.in/milestones): the five tiers — Duckling, Strider, Stride Athlete, Stride Pro Athlete, Stride Legend — the runs each needs and the perks they unlock

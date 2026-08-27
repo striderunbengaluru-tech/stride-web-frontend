@@ -256,6 +256,7 @@ export function getClubInfo(): PublicClubInfo {
       website: '/',
       events: '/events',
       pricing: '/pricing',
+      about: '/about',
       milestones: '/milestones',
       leaderboard: '/leaderboard',
       team: '/team',

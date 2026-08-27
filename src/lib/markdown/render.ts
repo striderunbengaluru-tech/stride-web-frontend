@@ -80,6 +80,7 @@ function readContentFile(name: string): string | null {
 export const PAGE_INDEX: { path: string; label: string; blurb: string }[] = [
   { path: '/events', label: 'Events', blurb: 'every upcoming run and race, with dates, venues, prices and registration' },
   { path: '/pricing', label: 'Pricing', blurb: 'what membership and events cost — membership is free' },
+  { path: '/about', label: 'About', blurb: 'what Stride is, who founded it, how a run works and who organises them' },
   { path: '/milestones', label: 'Milestones', blurb: 'the five tiers, the runs each needs and the perks they unlock' },
   { path: '/leaderboard', label: 'Leaderboard', blurb: 'athletes ranked by community runs attended' },
   { path: '/blog', label: 'Blog', blurb: 'run recaps and community stories' },
@@ -549,6 +550,68 @@ function becomeMemberMarkdown(abs: Abs): MarkdownDoc {
 }
 
 // ---------------------------------------------------------------------------
+// About
+// ---------------------------------------------------------------------------
+
+function aboutMarkdown(abs: Abs): MarkdownDoc {
+  const first = MILESTONE_TIERS[0]
+  const last = MILESTONE_TIERS[MILESTONE_TIERS.length - 1]
+
+  return {
+    title: 'About Stride Run Club',
+    description:
+      "Stride Run Club is Bengaluru's running community. 5,754 runners in 2025 across 97 community runs, and 63% of them were first-timers. Who founded it, how a run works, and who organises them.",
+    body: tidy([
+      '# About Stride Run Club',
+      '',
+      '> A running community in Bengaluru, Karnataka, India. Tagline: "Move as one." All fitness levels welcome.',
+      '',
+      '## What Stride is',
+      '',
+      'Stride Run Club began as three people meeting to run. It now puts on two to three runs a week, every week: beginner-friendly 5Ks, hill repeats, interval sessions, long runs, and curated one-offs. At peak, more than 300 people have turned up for a single Stride run.',
+      '',
+      '## By the numbers (2025)',
+      '',
+      '- **5,754** unique runners ran with Stride',
+      '- **63%** of them were running with a club for the first time',
+      '- **97** community runs held, at least one every week of the year',
+      '- **300+** runners at a single event, at peak',
+      '- **52,000+** followers on Instagram',
+      '',
+      '## What "Move as one" means',
+      '',
+      'Nobody gets dropped. Stride is deliberately not a race team. Most people who run with us have never run with a club before, and every run is built around that. You can walk it, jog it or chase a personal best, and all three finish in the same place.',
+      '',
+      'The run is also only half of it. A Stride event is a run and a social mixer, with guided warm-ups from certified trainers, icebreakers, and coffee or breakfast afterwards.',
+      '',
+      '## How a Stride run works',
+      '',
+      `1. **Find a run.** Every run, race and meetup is listed at [${abs('/events')}](${abs('/events')}) with date, start point, distance and price.`,
+      `2. **Register.** Most community runs are free; paid experiences show their fee up front. See [${abs('/pricing')}](${abs('/pricing')}).`,
+      '3. **Check in on the day.** Every member has a four-character Stride Tag. Read it out at the start line and the run is counted.',
+      `4. **Move up a tier.** Runs attended drive ${MILESTONE_TIERS.length} milestone tiers, ${first.label} through ${last.label}. None of them can be bought. See [${abs('/milestones')}](${abs('/milestones')}).`,
+      '',
+      '## Who runs the club',
+      '',
+      'Sidharth Yadav founded Stride Run Club. What started as his weekend run is now organised by a team of more than ten leads, the people who plot the routes and set the pace.',
+      '',
+      `${LEAD_STRIDERS.length} of them are profiled with names, roles and social profiles: [${abs('/team')}](${abs('/team')}).`,
+      '',
+      '## Where',
+      '',
+      'Bengaluru, Karnataka, India. Every Stride run happens in the city.',
+      '',
+      '## Contact and elsewhere',
+      '',
+      `- Email: ${CONTACT_EMAIL}`,
+      `- Instagram: ${INSTAGRAM_URL}`,
+      `- Strava: ${STRAVA_URL}`,
+      `- Source code (this site is open source): ${REPO_URL}`,
+    ]),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Pricing
 // ---------------------------------------------------------------------------
 
@@ -756,6 +819,7 @@ export async function renderMarkdownPath(
   switch (pathname) {
     case '/':                 return homeMarkdown(abs)
     case '/pricing':          return pricingMarkdown(abs)
+    case '/about':            return aboutMarkdown(abs)
     case '/developers':       return developersMarkdown(abs)
     case '/events':           return eventsIndexMarkdown(abs)
     case '/blog':             return blogIndexMarkdown(abs)

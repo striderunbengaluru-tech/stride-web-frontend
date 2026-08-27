@@ -11,6 +11,7 @@ import {
   organizationId,
   faqPageNode,
   breadcrumbNode,
+  membershipServiceNode,
 } from '@/lib/json-ld';
 import { FAQ_ENTRIES } from '@/lib/markdown/render';
 
@@ -86,6 +87,10 @@ export const metadata: Metadata = {
 // references below resolve against the layout's copies.
 const schemaOrg = graph([
   faqPageNode(SITE_ORIGIN, FAQ_ENTRIES),
+  // The membership Service, with its free Offer. Already on /pricing; also here
+  // because the homepage is the page entity checks actually read, and "how much
+  // does Stride cost" is the question this answers without any prose.
+  membershipServiceNode(SITE_ORIGIN),
   breadcrumbNode(SITE_ORIGIN, []),
   {
     '@type': 'WebPage',

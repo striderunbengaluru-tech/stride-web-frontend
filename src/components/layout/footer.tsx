@@ -4,12 +4,13 @@ import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
 import { NavLoadingLink } from './nav-loading-link'
 import { FooterAccountColumn } from './footer-account-column'
 
-// Every public page worth discovering. `/about` and `/originals` were removed
-// deliberately and will return when they are ready; nothing here should link to
-// a route that does not resolve.
+// Every public page worth discovering. `/originals` was removed deliberately and
+// will return when it is ready; nothing here should link to a route that does
+// not resolve.
 const EXPLORE_LINKS = [
   { title: 'Events',        href: '/events' },
   { title: 'Pricing',       href: '/pricing' },
+  { title: 'About',         href: '/about' },
   { title: 'Milestones',    href: '/milestones' },
   { title: 'Leaderboard',   href: '/leaderboard' },
   { title: 'Blog',          href: '/blog' },
