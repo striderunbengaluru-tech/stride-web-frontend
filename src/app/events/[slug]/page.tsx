@@ -24,6 +24,11 @@ import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 import { BackToTop } from '@/components/ui/back-to-top'
+import { JsonLd } from '@/components/seo/json-ld'
+import { graph, sportsEventNode, breadcrumbNode } from '@/lib/json-ld'
+import { getEvent as getPublicEvent } from '@/lib/mcp/data'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { EventTools } from '@/components/webmcp/page-tools'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -84,7 +89,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    alternates: { canonical: canonicalUrl },
+    alternates: {
+      canonical: canonicalUrl,
+      types: { 'text/markdown': `/events/${slug}.md` },
+    },
     openGraph: {
       type: 'website',
       url: canonicalUrl,
@@ -189,8 +197,32 @@ export default async function EventDetailPage({ params }: Props) {
   // which kills the view() timeline of every <Reveal> below it — the reveals
   // still render (their base style is opacity:1) but stop animating. clip clips
   // the same way without establishing a scrollport. See globals.css.
+  // Structured data. Built from the same projection the MCP tools and the /ask
+  // endpoint return, so a `SportsEvent` in search results, in an agent's tool
+  // response and in the JSONL feed describe one event identically — including
+  // one `Offer` per package rather than a single "from" price, which is what
+  // makes a price comparison correct rather than merely plausible.
+  //
+  // The production origin, not the request's: `@id` is a canonical entity
+  // identifier and must not vary by deployment.
+  const publicEvent = await getPublicEvent(slug, false)
+  const eventJsonLd = publicEvent
+    ? graph([
+        sportsEventNode(PRODUCTION_SITE_URL, publicEvent),
+        breadcrumbNode(PRODUCTION_SITE_URL, [
+          { name: 'Events', path: '/events' },
+          { name: event.name, path: `/events/${slug}` },
+        ]),
+      ])
+    : null
+
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-clip pb-32 sm:pb-20'>
+
+      {eventJsonLd && <JsonLd data={eventJsonLd} />}
+
+      {/* WebMCP: read this event, and open (never submit) its registration form */}
+      {publicEvent && <EventTools event={publicEvent} />}
 
       {/* Refresh on back/forward bfcache restore — so post-registration the page
           can't show a stale "Register" CTA after the user hits browser back. */}

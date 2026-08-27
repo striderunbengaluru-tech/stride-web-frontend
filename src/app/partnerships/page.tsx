@@ -7,6 +7,13 @@ import AnimatedStatsBar from '@/components/partnerships/animated-stats-bar'
 import AnimatedWhyUs from '@/components/partnerships/animated-why-us'
 import PartnerWithUsButton from '@/components/partnerships/partner-with-us-button'
 import { Reveal } from '@/components/ui/reveal'
+import { JsonLd } from '@/components/seo/json-ld'
+import {
+  graph,
+  organizationId,
+  websiteId,
+  breadcrumbNode,
+} from '@/lib/json-ld'
 import {
   PARTNER_CATEGORIES,
   ALL_PARTNERS,
@@ -47,77 +54,64 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: CANONICAL_URL,
+    types: { 'text/markdown': '/partnerships.md' },
   },
   other: {
     'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
   },
 }
 
-const schemaOrg = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebPage',
-      '@id': `${CANONICAL_URL}#webpage`,
+// The Organization and WebSite nodes come from @/lib/json-ld. This page used to
+// declare its own copies at the same `@id`s, and they disagreed with the rest of
+// the site: `sameAs` listed only Instagram, and there was no `contactPoint` or
+// `address` at all. What stays local is the one thing genuinely specific to this
+// page — the partnership programme as a `Service` — attached to the shared
+// organisation by `@id` rather than nested inside a second copy of it.
+const schemaOrg = graph([
+  {
+    '@type': 'WebPage',
+    '@id': `${CANONICAL_URL}#webpage`,
+    url: CANONICAL_URL,
+    name: "Partner With India's Fittest Running Community | Stride Run Club",
+    description:
+      "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Brand partnerships with Bengaluru's most engaged fitness community.",
+    image: OG_IMAGE,
+    inLanguage: 'en-IN',
+    isPartOf: { '@id': websiteId(SITE_ORIGIN) },
+    about: { '@id': organizationId(SITE_ORIGIN) },
+    breadcrumb: { '@id': `${SITE_ORIGIN}/partnerships#breadcrumb` },
+  },
+  // Identity nodes come from the root layout; only the Service is page-specific.
+  breadcrumbNode(SITE_ORIGIN, [{ name: 'Partnerships', path: '/partnerships' }]),
+  {
+    '@type': 'Service',
+    '@id': `${CANONICAL_URL}#partnership-program`,
+    name: 'Brand Partnership Program',
+    serviceType: 'Brand partnership and sponsorship',
+    description:
+      "Authentic brand partnerships with Bengaluru's most engaged running community. Offerings include event title sponsorships, UGC content collaborations, product sampling, WhatsApp community activations, and co-branded race kits.",
+    provider: { '@id': organizationId(SITE_ORIGIN) },
+    url: CANONICAL_URL,
+    areaServed: { '@type': 'City', name: 'Bengaluru' },
+    audience: {
+      '@type': 'Audience',
+      audienceType: 'Urban fitness enthusiasts, aged 22–35, equal gender ratio',
+      geographicArea: { '@type': 'City', name: 'Bengaluru' },
+    },
+    // No price: partnership terms are negotiated per brand, and inventing a
+    // number here would be worse than the absence.
+    offers: {
+      '@type': 'Offer',
+      name: 'Brand partnership enquiry',
+      availability: 'https://schema.org/InStock',
       url: CANONICAL_URL,
-      name: "Partner With India's Fittest Running Community | Stride Run Club",
-      description:
-        "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Brand partnerships with Bengaluru's most engaged fitness community.",
-      image: OG_IMAGE,
-      inLanguage: 'en-IN',
-      isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
-      about: { '@id': `${SITE_ORIGIN}/#organization` },
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE_ORIGIN}/#website`,
-      url: SITE_ORIGIN,
-      name: 'Stride Run Club',
-      publisher: { '@id': `${SITE_ORIGIN}/#organization` },
-    },
-    {
-      '@type': 'SportsOrganization',
-      '@id': `${SITE_ORIGIN}/#organization`,
-      name: 'Stride Run Club Bengaluru',
-      alternateName: 'Stride Run Club',
-      url: SITE_ORIGIN,
-      logo: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
-      description:
-        "India's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
-      location: {
-        '@type': 'Place',
-        name: 'Bengaluru, Karnataka, India',
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: 'Bengaluru',
-          addressRegion: 'Karnataka',
-          addressCountry: 'IN',
-        },
-      },
-      sameAs: ['https://www.instagram.com/stride_runclub_bengaluru/'],
-      numberOfEmployees: {
-        '@type': 'QuantitativeValue',
-        value: 6894,
-        unitText: 'community members',
-      },
-      offers: {
-        '@type': 'Service',
-        name: 'Brand Partnership Program',
-        description:
-          "Authentic brand partnerships with Bengaluru's most engaged running community. Offerings include event title sponsorships, UGC content collaborations, product sampling, WhatsApp community activations, and co-branded race kits.",
-        provider: { '@id': `${SITE_ORIGIN}/#organization` },
-        areaServed: {
-          '@type': 'City',
-          name: 'Bengaluru',
-        },
-        audience: {
-          '@type': 'Audience',
-          audienceType: 'Urban fitness enthusiasts, aged 22–35, equal gender ratio',
-        },
+      priceSpecification: {
+        '@type': 'PriceSpecification',
+        description: 'Quoted per partnership. Contact the team to discuss scope.',
       },
     },
-  ],
-}
+  },
+])
 
 const SUPABASE_LOGOS = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos'
 
@@ -139,10 +133,7 @@ export default function PartnershipsPage() {
   // that side effect. See globals.css.
   return (
     <main className='min-h-screen bg-stride-purple-primary pt-16 md:pt-24 pb-24 overflow-x-clip'>
-      <script
-        type='application/ld+json'
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
-      />
+      <JsonLd data={schemaOrg} />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <PartnershipsHero />

@@ -1,0 +1,27 @@
+# Stride Run Club — Blog
+
+> Scoped context for the Stride Run Club blog. For the whole site, see https://www.strideclub.in/llms.txt
+
+## What the blog covers
+
+Run recaps, community stories, event write-ups and notes on the formats Stride experiments with in Bengaluru. Posts are written by members of the Stride team and are not sponsored content unless the post says so.
+
+## Where the data lives
+
+- **Human index** — https://www.strideclub.in/blog
+- **Markdown index** — https://www.strideclub.in/blog.md
+- **One post** — https://www.strideclub.in/blog/[slug] and https://www.strideclub.in/blog/[slug].md
+
+The `.md` twin of a post carries the full prose, not an excerpt: title, publish date, reading time, author with role, tags, a TL;DR list, and the complete body. Prefer it over the HTML page — same content, none of the layout.
+
+- **Search over MCP** — https://www.strideclub.in/mcp/docs, tool `search_docs`
+- **Structured feed** — https://www.strideclub.in/feeds/blog.jsonl, one schema.org `BlogPosting` per line
+- **All post URLs** — https://www.strideclub.in/sitemap.txt
+
+## Fields on a post
+
+`title`, `slug`, `description`, `publishedAt` (ISO date), `author` (`name`, `role`), `tags`, `tldr` (array of one-line takeaways), `readingTimeMin`, `content` (markdown).
+
+## Citing a post
+
+Cite the `.md` URL — it is stable, resolves without content negotiation, and carries a `Link: rel="canonical"` header pointing back at the human page.

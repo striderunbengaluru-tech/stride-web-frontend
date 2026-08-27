@@ -20,6 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${original.title} — Stride Run Club`,
     description: original.description,
+    alternates: {
+      canonical: `/originals/${slug}`,
+      types: { 'text/markdown': `/originals/${slug}.md` },
+    },
   }
 }
 

@@ -4,17 +4,20 @@
 #
 #   search=yes    Index this content and link to it in search results.
 #   ai-input=yes  Use it to ground AI answers — retrieval, summaries, citations.
-#                 Deliberately yes: /llms.txt, the homepage Link header and the
-#                 Accept: text/markdown representations all exist so assistants
-#                 CAN answer questions about the club accurately.
-#   ai-train=yes  Use it as model training data.
+#                 Deliberately yes: /llms.txt, the markdown twin of every page,
+#                 the MCP servers and /ask all exist so assistants CAN answer
+#                 questions about the club accurately.
+#   ai-train=no   Do not use it as model training data. Grounding an answer
+#                 about Stride cites Stride; baking this year's event prices
+#                 into a model's weights does not, and cannot be corrected when
+#                 they change.
 #
 # These are usage preferences, not access control. They say nothing about the
 # Disallow rules below, which still apply — a signal of "yes" never opens a
 # path a crawler was told not to fetch.
 
 User-agent: *
-Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
 Disallow: /admin/
 Disallow: /api/
@@ -24,6 +27,66 @@ Disallow: /my-runs
 Disallow: /login/
 Disallow: /register/
 
-# Sitemap
+# ---------------------------------------------------------------------------
+# Answer-engine and agent crawlers — explicitly welcome.
+#
+# These are the crawlers that fetch a page in order to answer a question with a
+# citation back to it. They get the same access as everyone else, spelled out
+# rather than inherited, because several of them read only their own group.
+#
+# Each also receives the markdown representation of a page rather than the HTML
+# (see AI_BOT_USER_AGENTS in next.config.ts) — same content, no layout chrome.
+# ---------------------------------------------------------------------------
+
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: MistralAI-User
+User-agent: DeepSeekBot
+User-agent: ora-agent
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Allow: /
+Allow: /mcp
+Allow: /ask
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /events/*/confirmation/
+Disallow: /my-runs
+Disallow: /login/
+Disallow: /register/
+
+# ---------------------------------------------------------------------------
+# Training-only crawlers — disallowed.
+#
+# These collect corpora rather than answer questions: no citation, no reader at
+# the other end, and no way to correct a price once it is in the weights. Same
+# position the ai-train=no signal above states; this is the enforceable half.
+#
+# Google-Extended and Applebot-Extended are deliberately in the ALLOW group
+# instead. They gate grounding in Gemini and Apple Intelligence as well as
+# training, and a Stride answer with a citation is worth more than the training
+# opt-out is worth avoiding. Flip them down here if that trade stops being true.
+# ---------------------------------------------------------------------------
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ByteSpider
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+# Sitemaps
 Sitemap: https://www.strideclub.in/sitemap.xml
 Sitemap: https://www.strideclub.in/sitemap.txt
+
+# NLWeb Schema Feeds — structured data feeds, as JSONL
+Schemamap: https://www.strideclub.in/schemamap.xml

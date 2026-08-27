@@ -10,6 +10,8 @@ import Footer from "@/components/layout/footer";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { CookieNotice } from "@/components/layout/cookie-notice";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { JsonLd } from "@/components/seo/json-ld";
+import { graph, organizationNode, websiteNode } from "@/lib/json-ld";
 import "./globals.css";
 
 const libreBaskerville = Libre_Baskerville({
@@ -71,47 +73,20 @@ export const metadata: Metadata = {
   },
 }
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE_URL}/#website`,
-      url: SITE_URL,
-      name: 'Stride Run Club',
-      description: "Bengaluru's most engaged running community. Move as one.",
-      inLanguage: 'en-IN',
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: {
-          '@type': 'EntryPoint',
-          urlTemplate: `${SITE_URL}/events?q={search_term_string}`,
-        },
-        'query-input': 'required name=search_term_string',
-      },
-    },
-    {
-      '@type': 'Organization',
-      '@id': `${SITE_URL}/#organization`,
-      name: 'Stride Run Club',
-      url: SITE_URL,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/assets/images/stride-logo-color-transparent.png`,
-        width: 280,
-        height: 92,
-      },
-      foundingLocation: {
-        '@type': 'Place',
-        name: 'Bengaluru, India',
-      },
-      sameAs: [
-        'https://www.instagram.com/stride_runclub_bengaluru/',
-        'https://www.strava.com/clubs/striderunclubbengaluru',
-      ],
-    },
-  ],
-}
+/**
+ * The site-wide identity graph.
+ *
+ * Built from @/lib/json-ld rather than inline, so `#organization` and `#website`
+ * mean the same thing on every page that references them by `@id` — this used
+ * to be one of six hand-written copies, and two of them already disagreed about
+ * `sameAs`.
+ *
+ * Hardcoded to the production origin on purpose. This is a static layout with
+ * no request access, and a canonical entity identifier must not vary by
+ * deployment: a preview emitting `@id: preview-url/#organization` would be
+ * claiming a second, different organisation.
+ */
+const jsonLd = graph([websiteNode(SITE_URL), organizationNode(SITE_URL)])
 
 export default function RootLayout({
   children,
@@ -121,10 +96,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <JsonLd data={jsonLd} />
       </head>
       <body
         className={`${libreBaskerville.variable} ${figtree.variable} ${geistMono.variable} font-body antialiased`}

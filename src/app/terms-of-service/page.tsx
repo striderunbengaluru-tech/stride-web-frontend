@@ -7,6 +7,7 @@ import type { Components } from 'react-markdown'
 export const metadata: Metadata = {
   title: 'Terms of Service — Stride Run Club',
   description: 'Terms and conditions for using the Stride Run Club Bengaluru platform.',
+  alternates: { canonical: '/terms-of-service', types: { 'text/markdown': '/terms-of-service.md' } },
 }
 
 const components: Components = {

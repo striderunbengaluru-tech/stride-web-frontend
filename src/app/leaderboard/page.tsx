@@ -2,6 +2,11 @@ import type { Metadata } from 'next'
 import LeaderboardClient from './leaderboard-client'
 import { getLeaderboardTop, type LeaderboardRow } from '@/lib/leaderboard'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
+import { JsonLd } from '@/components/seo/json-ld'
+import { graph, breadcrumbNode } from '@/lib/json-ld'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+import { LeaderboardTools } from '@/components/webmcp/page-tools'
+import { getMilestone } from '@/lib/milestones'
 
 // Previously an untyped object with a title only: no description for search
 // results, and no openGraph, so it inherited the layout's and every share
@@ -11,7 +16,7 @@ export const metadata: Metadata = {
   description:
     'Who shows up the most. The Stride leaderboard ranks Bengaluru’s athletes by community runs attended — counts update the moment you check in at a run.',
   keywords: ['Stride Run Club leaderboard', 'running leaderboard Bengaluru', 'most runs attended', 'run club rankings'],
-  alternates: { canonical: '/leaderboard' },
+  alternates: { canonical: '/leaderboard', types: { 'text/markdown': '/leaderboard.md' } },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -52,5 +57,47 @@ export default async function LeaderboardPage() {
   // rather than every athlete.
   const { rows, totalAthletes } = await getLeaderboardTop(BOARD_SIZE)
 
-  return <LeaderboardClient byRuns={rows} totalAthletes={totalAthletes} />
+  // An ItemList of the board. Only athletes who keep their profile public are
+  // named here: `profile_public: false` is a member asking not to be linked,
+  // and putting them in structured data would republish exactly the identifier
+  // they withheld — in the one format built to be copied elsewhere.
+  const jsonLd = graph([
+    {
+      '@type': 'ItemList',
+      '@id': `${PRODUCTION_SITE_URL}/leaderboard#list`,
+      name: 'Stride Run Club leaderboard',
+      description: `Stride athletes ranked by community runs attended, out of ${totalAthletes} in total.`,
+      numberOfItems: rows.filter(row => row.profile_public).length,
+      itemListOrder: 'https://schema.org/ItemListOrderDescending',
+      itemListElement: rows
+        .map((row, index) => ({ row, position: index + 1 }))
+        .filter(({ row }) => row.profile_public)
+        .map(({ row, position }) => ({
+          '@type': 'ListItem',
+          position,
+          name: row.full_name ?? row.username,
+          url: `${PRODUCTION_SITE_URL}/profile/${row.username}`,
+        })),
+    },
+    breadcrumbNode(PRODUCTION_SITE_URL, [{ name: 'Leaderboard', path: '/leaderboard' }]),
+  ])
+
+  return (
+    <>
+      <JsonLd data={jsonLd} />
+      {/* WebMCP: the board as a tool, honouring the same privacy rule */}
+      <LeaderboardTools
+        athletes={rows.map((row, index) => ({
+          rank: index + 1,
+          name: row.full_name ?? row.username,
+          username: row.profile_public ? row.username : null,
+          runsCompleted: row.runs_completed,
+          tier: getMilestone(row.runs_completed).label,
+          url: row.profile_public ? `/profile/${row.username}` : null,
+        }))}
+        totalAthletes={totalAthletes}
+      />
+      <LeaderboardClient byRuns={rows} totalAthletes={totalAthletes} />
+    </>
+  )
 }

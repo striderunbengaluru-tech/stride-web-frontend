@@ -7,6 +7,7 @@ import type { Components } from 'react-markdown'
 export const metadata: Metadata = {
   title: 'Privacy Policy — Stride Run Club',
   description: 'How Stride Run Club Bengaluru collects, uses, and protects your personal information.',
+  alternates: { canonical: '/privacy-policy', types: { 'text/markdown': '/privacy-policy.md' } },
 }
 
 // Deep-link anchor for section headings, e.g. "5. Cookie Policy" →

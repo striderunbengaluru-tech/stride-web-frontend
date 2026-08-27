@@ -4,6 +4,15 @@ import { UpNextSection } from '@/components/home/up-next-section';
 import NewsroomSection from '@/components/home/newsroom-section';
 import SpotlightSection from '@/components/home/spotlight-section';
 import FaqSection from '@/components/home/faq-section';
+import { JsonLd } from '@/components/seo/json-ld';
+import {
+  graph,
+  websiteId,
+  organizationId,
+  faqPageNode,
+  breadcrumbNode,
+} from '@/lib/json-ld';
+import { FAQ_ENTRIES } from '@/lib/markdown/render';
 
 const OG_IMAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/homepage-og.png'
 const SITE_ORIGIN = 'https://www.strideclub.in'
@@ -52,102 +61,52 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: CANONICAL_URL,
+    types: { 'text/markdown': '/index.md' },
   },
   other: {
     'og:logo': 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
   },
 }
 
-const schemaOrg = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE_ORIGIN}/#website`,
-      url: SITE_ORIGIN,
-      name: 'Stride Run Club',
-      description:
-        "Bengaluru's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year.",
-      publisher: { '@id': `${SITE_ORIGIN}/#organization` },
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: {
-          '@type': 'EntryPoint',
-          urlTemplate: `${SITE_ORIGIN}/events?q={search_term_string}`,
-        },
-        'query-input': 'required name=search_term_string',
-      },
-    },
-    {
-      '@type': 'WebPage',
-      '@id': `${CANONICAL_URL}#webpage`,
-      url: CANONICAL_URL,
-      name: 'Stride Run Club Bengaluru — Move as One',
-      description:
-        "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
-      image: OG_IMAGE,
-      inLanguage: 'en-IN',
-      isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
-      about: { '@id': `${SITE_ORIGIN}/#organization` },
-      breadcrumb: {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Home',
-            item: CANONICAL_URL,
-          },
-        ],
-      },
-    },
-    {
-      '@type': 'SportsOrganization',
-      '@id': `${SITE_ORIGIN}/#organization`,
-      name: 'Stride Run Club Bengaluru',
-      alternateName: ['Stride Run Club', 'Stride RC'],
-      url: SITE_ORIGIN,
-      logo: {
-        '@type': 'ImageObject',
-        url: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/logos/stride-logo-color-transparent.png',
-        width: 400,
-        height: 130,
-      },
-      image: OG_IMAGE,
-      description:
-        "India's most engaged running community: 7,000+ athletes, 52,000+ Instagram followers, and 97+ events per year across Bengaluru.",
-      foundingDate: '2022',
-      location: {
-        '@type': 'Place',
-        name: 'Bengaluru, Karnataka, India',
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: 'Bengaluru',
-          addressRegion: 'Karnataka',
-          addressCountry: 'IN',
-        },
-      },
-      sameAs: [
-        'https://www.instagram.com/stride_runclub_bengaluru/',
-        'https://www.strava.com/clubs/stride-run-club',
-      ],
-      numberOfEmployees: {
-        '@type': 'QuantitativeValue',
-        value: 6894,
-        unitText: 'community members',
-      },
-      sport: 'Running',
-    },
-  ],
-}
+/**
+ * The homepage graph.
+ *
+ * Organization and WebSite come from @/lib/json-ld so this page cannot disagree
+ * with the rest of the site — the previous hand-written copy here listed
+ * `strava.com/clubs/stride-run-club`, which is not Stride's Strava club, so the
+ * one property whose job is disambiguating the brand was pointing at the wrong
+ * entity.
+ *
+ * FAQPage is new and reads the same `faq.json` the visible FAQ section renders,
+ * so the structured answers and the on-page answers are the same words.
+ */
+// WebSite and SportsOrganization are NOT repeated here. The root layout emits
+// both on every page from the same @/lib/json-ld functions, so restating them
+// would ship the identical nodes twice per response for no gain — the `@id`
+// references below resolve against the layout's copies.
+const schemaOrg = graph([
+  faqPageNode(SITE_ORIGIN, FAQ_ENTRIES),
+  breadcrumbNode(SITE_ORIGIN, []),
+  {
+    '@type': 'WebPage',
+    '@id': `${CANONICAL_URL}#webpage`,
+    url: CANONICAL_URL,
+    name: 'Stride Run Club Bengaluru — Move as One',
+    description:
+      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
+    image: OG_IMAGE,
+    inLanguage: 'en-IN',
+    isPartOf: { '@id': websiteId(SITE_ORIGIN) },
+    about: { '@id': organizationId(SITE_ORIGIN) },
+    breadcrumb: { '@id': `${SITE_ORIGIN}/#breadcrumb` },
+    primaryImageOfPage: { '@type': 'ImageObject', url: OG_IMAGE },
+  },
+])
 
 export default function Home() {
   return (
     <main>
-      <script
-        type='application/ld+json'
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
-      />
+      <JsonLd data={schemaOrg} />
       <HeroSection />
       {/* Renders nothing when there's no upcoming run */}
       <UpNextSection />
