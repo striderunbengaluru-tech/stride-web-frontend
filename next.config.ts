@@ -58,6 +58,7 @@ const HOMEPAGE_LINK_HEADER = [
  */
 const MARKDOWN_PAGES = [
   '/',
+  '/about',
   '/become-a-member',
   '/blog',
   '/contact-us',

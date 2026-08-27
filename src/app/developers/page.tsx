@@ -1,6 +1,5 @@
-import Link from 'next/link'
 import type { Metadata } from 'next'
-import { ArrowRight, ExternalLink } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { HighlightedText } from '@/components/ui/highlighted-text'
 import { JsonLd } from '@/components/seo/json-ld'
 import { graph, breadcrumbNode, organizationId, websiteId } from '@/lib/json-ld'
@@ -333,7 +332,7 @@ curl -s https://www.strideclub.in/events/map-fitness-rave.md`}</Block>
       </section>
 
       {/* Reference */}
-      <section className='px-6 py-10 max-w-4xl mx-auto'>
+      <section className='px-6 py-10 pb-20 max-w-4xl mx-auto'>
         <h2 className='text-3xl md:text-4xl font-bold font-libre text-copy-white mb-6'>
           Reference
         </h2>
@@ -353,40 +352,6 @@ curl -s https://www.strideclub.in/events/map-fitness-rave.md`}</Block>
         </ul>
       </section>
 
-      {/* Source + CTA */}
-      <section className='px-6 py-10 pb-20 max-w-4xl mx-auto'>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl px-6 py-8 md:px-10'>
-          <h2 className='text-2xl md:text-3xl font-bold font-libre text-copy-white mb-3'>
-            This site is open source
-          </h2>
-          <p className='text-copy-white/60 leading-relaxed mb-6'>
-            Everything above is implemented in the repository, including{' '}
-            <Code>AGENTS.md</Code> and three agent skills. If you need a
-            capability Stride does not expose, open an issue or email{' '}
-            <a href='mailto:striderunclubbengaluru@gmail.com' className='text-stride-yellow-accent hover:underline'>
-              striderunclubbengaluru@gmail.com
-            </a>{' '}
-            — nothing is hidden, so the list above is the whole surface.
-          </p>
-          <div className='flex flex-col sm:flex-row gap-3'>
-            <a
-              href='https://github.com/striderunbengaluru-tech/stride-web-frontend'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='inline-flex items-center justify-center gap-2 min-h-11 bg-stride-yellow-accent text-copy-black font-bold px-6 py-3 rounded-md hover:opacity-90 transition-opacity'
-            >
-              View the source
-              <ArrowRight className='size-4' aria-hidden='true' />
-            </a>
-            <Link
-              href='/events'
-              className='inline-flex items-center justify-center gap-2 min-h-11 border border-white/15 bg-white/10 backdrop-blur-md text-copy-white font-semibold px-6 py-3 rounded-md hover:border-stride-yellow-accent/50 transition-colors'
-            >
-              Or just come for a run
-            </Link>
-          </div>
-        </div>
-      </section>
     </main>
   )
 }

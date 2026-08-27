@@ -22,6 +22,49 @@ const STRAVA_URL = 'https://www.strava.com/clubs/striderunclubbengaluru'
 const GITHUB_URL = 'https://github.com/striderunbengaluru-tech'
 
 /**
+ * The founder, and his LinkedIn.
+ *
+ * Deliberately NOT in the organisation's `sameAs`. That property means "a URL
+ * that unambiguously identifies *this* item", and a personal LinkedIn profile
+ * identifies a person, not a run club — listing it on the Organization would be
+ * a false identity claim, and a consumer merging entities on `sameAs` could
+ * conflate the two.
+ *
+ * Modelled properly instead: a `Person` carrying his own profile, joined to the
+ * club by `founder` / `foundee`. The `@id` matches the Person node the /team
+ * page emits for him, so the two merge into one person rather than competing.
+ */
+const FOUNDER = {
+  name: 'Sidharth Yadav',
+  slug: 'sidharth-yadav',
+  jobTitle: 'Founder and Lead Strider',
+  linkedIn: 'https://www.linkedin.com/in/sidharth-yadav/',
+}
+
+export function founderId(origin: string): string {
+  return `${origin}/team#${FOUNDER.slug}`
+}
+
+/**
+ * The founder as a `Person`.
+ *
+ * Emitted from the root layout so it is present on every page, including the
+ * homepage that entity-linking checks actually read.
+ */
+export function founderNode(origin: string) {
+  return {
+    '@type': 'Person',
+    '@id': founderId(origin),
+    name: FOUNDER.name,
+    jobTitle: FOUNDER.jobTitle,
+    url: `${origin}/team#${FOUNDER.slug}`,
+    worksFor: { '@id': organizationId(origin) },
+    founderOf: { '@id': organizationId(origin) },
+    sameAs: [FOUNDER.linkedIn],
+  }
+}
+
+/**
  * Third-party identities for the club.
  *
  * A Wikidata item is the highest-value entry this list can gain — it is the
@@ -112,6 +155,7 @@ export function organizationNode(origin: string) {
       },
     },
     foundingLocation: { '@type': 'Place', name: 'Bengaluru, India' },
+    founder: { '@id': founderId(origin) },
     member: LEAD_STRIDERS.map(strider => ({
       '@type': 'Person',
       '@id': `${origin}/team#${strider.slug}`,

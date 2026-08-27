@@ -41,6 +41,7 @@
  */
 const NEGOTIABLE_EXACT = new Set([
   '/',
+  '/about',
   '/become-a-member',
   '/blog',
   '/contact-us',

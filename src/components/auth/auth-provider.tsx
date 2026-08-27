@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches } from '@/lib/auth/session-cache'
+import { shouldRefreshForAuthChange, isOnNotFoundRoute } from '@/lib/auth/refresh-guard'
 import type { Role } from '@/types/auth'
 
 // supabase-js and sonner are BOTH loaded lazily and deliberately absent from
@@ -147,13 +148,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Initial state from the locally-stored session — no network round trip
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (cancelled) return
+        // Seeds the refresh guard's baseline: whatever the session is right now
+        // is what the server render already reflects, so it is not a change.
+        shouldRefreshForAuthChange(session?.user?.id ?? null)
         if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
         else setState({ status: 'signed-out', navProfile: null })
       })
 
+      /**
+       * Refreshes the server render, but only when it is both needed and
+       * possible.
+       *
+       * `router.refresh()` used to be called unconditionally here, and that was
+       * the cause of the 404 reload loop: supabase-js emits SIGNED_IN on
+       * ordinary initialisation as well as on a real sign-in, and a refresh on a
+       * not-found route refetches an RSC payload that answers HTTP 404, which
+       * the App Router can only recover from with a full document reload —
+       * which remounts this provider and fires the event again. See
+       * @/lib/auth/refresh-guard for the whole chain.
+       */
+      const refreshIfIdentityChanged = (userId: string | null) => {
+        if (!shouldRefreshForAuthChange(userId)) return
+        // Even a legitimate refresh cannot be applied on a not-found render.
+        if (isOnNotFoundRoute()) return
+        router.refresh()
+      }
+
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN') {
-          router.refresh()
+          refreshIfIdentityChanged(session?.user?.id ?? null)
           if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
           // Only toast on an actual new sign-in, not on every session restoration
           if (!sessionStorage.getItem(AUTHED_KEY)) {
@@ -163,10 +186,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           clearAuthCaches()
           setState({ status: 'signed-out', navProfile: null })
-          router.refresh()
+          refreshIfIdentityChanged(null)
           toast.info('Signed out successfully.', { id: 'signed-out' })
         } else if (event === 'USER_UPDATED') {
-          router.refresh()
+          // A profile edit changes what the server rendered even though the
+          // identity is unchanged, so this one refreshes on its own terms —
+          // still never on a not-found route.
+          if (!isOnNotFoundRoute()) router.refresh()
           if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
         }
         // TOKEN_REFRESHED — silent, no action needed

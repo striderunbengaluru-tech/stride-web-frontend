@@ -11,7 +11,7 @@ import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { CookieNotice } from "@/components/layout/cookie-notice";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { JsonLd } from "@/components/seo/json-ld";
-import { graph, organizationNode, websiteNode } from "@/lib/json-ld";
+import { graph, organizationNode, websiteNode, founderNode } from "@/lib/json-ld";
 import "./globals.css";
 
 const libreBaskerville = Libre_Baskerville({
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
  * deployment: a preview emitting `@id: preview-url/#organization` would be
  * claiming a second, different organisation.
  */
-const jsonLd = graph([websiteNode(SITE_URL), organizationNode(SITE_URL)])
+const jsonLd = graph([websiteNode(SITE_URL), organizationNode(SITE_URL), founderNode(SITE_URL)])
 
 export default function RootLayout({
   children,
