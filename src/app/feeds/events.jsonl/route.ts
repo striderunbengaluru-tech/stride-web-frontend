@@ -1,4 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 import { listEvents, getEvent } from '@/lib/mcp/data'
 import { sportsEventNode } from '@/lib/json-ld'
 
@@ -19,6 +20,8 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request): Promise<Response> {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
   const { events } = await listEvents({ when: 'all', limit: 100 }, false)
 
   const details = await Promise.all(events.map(event => getEvent(event.slug, false)))
@@ -33,6 +36,7 @@ export async function GET(request: Request): Promise<Response> {
       'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600',
       'Access-Control-Allow-Origin': '*',
       'X-Feed-Records': String(lines.length),
+      ...rate.headers,
     },
   })
 }

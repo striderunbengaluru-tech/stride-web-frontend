@@ -38,7 +38,7 @@ async function handle(request: Request): Promise<Response> {
 
   // Nothing here accepts a credential, so a request carrying one has been
   // misconfigured. Say so, with the RFC 9728 pointer that explains why.
-  if (request.headers.get('authorization')) return unauthorized(origin)
+  if (request.headers.get('authorization')) return unauthorized(origin, rateLimitHeaders(limit))
 
   const sandbox = isSandbox(new URL(request.url))
   return serveMcp(request, () => buildProductServer(origin, sandbox), rateLimitHeaders(limit))

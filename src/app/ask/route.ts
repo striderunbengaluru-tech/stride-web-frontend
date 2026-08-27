@@ -59,6 +59,7 @@ function badRequest(
   code: (typeof ERROR_CODES)[keyof typeof ERROR_CODES],
   detail: string,
   hint: string,
+  headers: Record<string, string> = {},
 ): Response {
   return problem({
     status: 400,
@@ -71,6 +72,7 @@ function badRequest(
       usage: 'POST { "query": "upcoming runs in Bengaluru", "limit": 10 } or GET /ask?query=...',
       limits: { maxQueryLength: 500, maxResults: 25 },
     },
+    headers,
   })
 }
 
@@ -87,6 +89,7 @@ function sse(event: string, data: unknown): string {
 
 function streamResponse(
   answer: Awaited<ReturnType<typeof answerQuery>>,
+  extraHeaders: Record<string, string> = {},
 ): Response {
   const encoder = new TextEncoder()
 
@@ -124,6 +127,7 @@ function streamResponse(
       'X-Accel-Buffering': 'no',
       'Access-Control-Allow-Origin': '*',
       'Vary': 'Accept',
+      ...extraHeaders,
     },
   })
 }
@@ -172,7 +176,7 @@ export async function POST(request: Request): Promise<Response> {
     raw = JSON.parse(bodyText)
   } catch {
     return badRequest(origin, ERROR_CODES.invalid_request, 'Body is not valid JSON.',
-      'Send a JSON object, e.g. {"query":"upcoming runs"}.')
+      'Send a JSON object, e.g. {"query":"upcoming runs"}.', rateLimitHeaders(rate))
   }
 
   const parsed = AskSchema.safeParse(raw)
@@ -183,6 +187,7 @@ export async function POST(request: Request): Promise<Response> {
       issue?.path?.[0] === 'query' ? ERROR_CODES.invalid_query : ERROR_CODES.invalid_request,
       issue?.message ?? 'Request body failed validation.',
       'Check the field named in "detail" against /openapi.json.',
+      rateLimitHeaders(rate),
     )
   }
 
@@ -194,14 +199,16 @@ export async function POST(request: Request): Promise<Response> {
     if (decoded === null) {
       return badRequest(origin, ERROR_CODES.invalid_request,
         'The cursor is not one this endpoint issued.',
-        'Pass back _meta.next_cursor from a previous response verbatim. Cursors are opaque and must not be constructed.')
+        'Pass back _meta.next_cursor from a previous response verbatim. Cursors are opaque and must not be constructed.', rateLimitHeaders(rate))
     }
     offset = decoded
   }
 
   const answer = await answerQuery(query, origin, { limit, offset, sandbox: isSandbox(url) })
 
-  if (wantsStream(request, url, prefer?.streaming ?? streaming)) return streamResponse(answer)
+  if (wantsStream(request, url, prefer?.streaming ?? streaming)) {
+    return streamResponse(answer, rateLimitHeaders(rate))
+  }
 
   const payload = JSON.stringify(answer)
   if (idempotencyKey) recordIdempotent(idempotencyKey, bodyText, payload)
@@ -248,7 +255,10 @@ export async function GET(request: Request): Promise<Response> {
           'how do the milestone tiers work',
         ],
       },
-      { headers: JSON_HEADERS },
+      // The rate headers ride on this too. It is the first operation in the
+      // OpenAPI spec and the cheapest thing to probe, so it is very often the
+      // first response a client ever sees.
+      { headers: { ...JSON_HEADERS, ...rateLimitHeaders(rate) } },
     )
   }
 
@@ -256,7 +266,8 @@ export async function GET(request: Request): Promise<Response> {
   if (query.length > 500) {
     return badRequest(origin, ERROR_CODES.query_too_long,
       `query is ${query.length} characters; the maximum is 500.`,
-      'Shorten the query. Long questions rarely retrieve better than short ones here.')
+      'Shorten the query. Long questions rarely retrieve better than short ones here.',
+      rateLimitHeaders(rate))
   }
 
   const cursor = url.searchParams.get('cursor')
@@ -266,7 +277,7 @@ export async function GET(request: Request): Promise<Response> {
     if (decoded === null) {
       return badRequest(origin, ERROR_CODES.invalid_request,
         'The cursor is not one this endpoint issued.',
-        'Pass back _meta.next_cursor from a previous response verbatim.')
+        'Pass back _meta.next_cursor from a previous response verbatim.', rateLimitHeaders(rate))
     }
     offset = decoded
   }
@@ -278,7 +289,7 @@ export async function GET(request: Request): Promise<Response> {
   })
 
   return wantsStream(request, url)
-    ? streamResponse(answer)
+    ? streamResponse(answer, rateLimitHeaders(rate))
     : Response.json(answer, { headers: { ...JSON_HEADERS, ...rateLimitHeaders(rate) } })
 }
 

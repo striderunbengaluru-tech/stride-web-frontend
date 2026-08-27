@@ -1,5 +1,6 @@
 import { getRequestOrigin } from '@/lib/site-url'
 import { notFoundProblem } from '@/lib/api-errors'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * JSON 404 for unmatched paths under `/api`.
@@ -25,7 +26,9 @@ const AVAILABLE = [
 
 function handler(request: Request): Response {
   const origin = getRequestOrigin(request)
-  return notFoundProblem(origin, new URL(request.url).pathname, AVAILABLE)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
+  return notFoundProblem(origin, new URL(request.url).pathname, AVAILABLE, rate.headers)
 }
 
 export const GET = handler

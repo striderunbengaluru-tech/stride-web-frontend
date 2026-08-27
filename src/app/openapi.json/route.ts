@@ -1,5 +1,6 @@
 import { getRequestOrigin } from '@/lib/site-url'
 import { NLWEB_VERSION } from '@/lib/nlweb'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * OpenAPI description of Stride's public HTTP endpoints.
@@ -13,8 +14,18 @@ import { NLWEB_VERSION } from '@/lib/nlweb'
 
 export const dynamic = 'force-dynamic'
 
+/** The rate-limit headers, referenced from every documented 200. */
+const RATE_HEADERS = {
+  'RateLimit-Limit': { $ref: '#/components/headers/RateLimit-Limit' },
+  'RateLimit-Remaining': { $ref: '#/components/headers/RateLimit-Remaining' },
+  'RateLimit-Reset': { $ref: '#/components/headers/RateLimit-Reset' },
+  'RateLimit-Policy': { $ref: '#/components/headers/RateLimit-Policy' },
+} as const
+
 export function GET(request: Request): Response {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
 
   const spec = {
     openapi: '3.1.0',
@@ -33,6 +44,8 @@ export function GET(request: Request): Response {
     tags: [
       { name: 'nlweb', description: 'Microsoft NLWeb natural-language query protocol' },
       { name: 'markdown', description: 'Markdown representation of any public page' },
+      { name: 'discovery', description: 'Machine-readable descriptions of what is here' },
+      { name: 'feeds', description: 'Bulk structured data as JSON Lines' },
     ],
     paths: {
       '/ask': {
@@ -102,6 +115,174 @@ export function GET(request: Request): Response {
           },
         },
       },
+      '/openapi.json': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getOpenApi',
+          summary: 'This document',
+          description: 'The OpenAPI description of every public Stride endpoint.',
+          responses: {
+            '200': {
+              description: 'OpenAPI 3.1 document.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/?mode=agent': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getAgentView',
+          summary: 'Structured view of the whole site',
+          description:
+            'What is callable here — endpoints, auth, capabilities, conventions and the page index — as one JSON document. Reached by adding `?mode=agent` to the site root.',
+          responses: {
+            '200': {
+              description: 'Agent view.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/AgentView' } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/feeds/events.jsonl': {
+        get: {
+          tags: ['feeds'],
+          operationId: 'getEventsFeed',
+          summary: 'Every published event as schema.org SportsEvent',
+          description: 'JSON Lines: one `SportsEvent` object per line, offers priced in INR.',
+          responses: {
+            '200': {
+              description: 'One JSON object per line.',
+              headers: { ...RATE_HEADERS, 'X-Feed-Records': { description: 'Number of lines in the body.', schema: { type: 'integer' } } },
+              content: {
+                'application/jsonl': { schema: { type: 'string', description: 'Newline-delimited schema.org SportsEvent objects.' } },
+                'application/json': { schema: { $ref: '#/components/schemas/SchemaOrgItem' }, examples: { line: { summary: 'A single line of the feed', value: { '@context': 'https://schema.org', '@type': 'SportsEvent' } } } },
+              },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/feeds/blog.jsonl': {
+        get: {
+          tags: ['feeds'],
+          operationId: 'getBlogFeed',
+          summary: 'Every blog post as schema.org BlogPosting',
+          description: 'JSON Lines: one `BlogPosting` per line, including the full article body.',
+          responses: {
+            '200': {
+              description: 'One JSON object per line.',
+              headers: { ...RATE_HEADERS, 'X-Feed-Records': { description: 'Number of lines in the body.', schema: { type: 'integer' } } },
+              content: {
+                'application/jsonl': { schema: { type: 'string' } },
+                'application/json': { schema: { $ref: '#/components/schemas/SchemaOrgItem' } },
+              },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/mcp/server-card.json': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getMcpServerCard',
+          summary: 'MCP server card',
+          description: 'Tool inventory and transport for the product MCP server, generated from the live registry.',
+          responses: {
+            '200': {
+              description: 'Server card.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/McpServerCard' } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/agent-card.json': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getAgentCard',
+          summary: 'A2A agent card',
+          responses: {
+            '200': {
+              description: 'Agent-to-agent capability descriptor.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/agent-skills/index.json': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getAgentSkills',
+          summary: 'Agent skills index',
+          responses: {
+            '200': {
+              description: 'Every capability with its endpoint.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/ard.json': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getArdCatalog',
+          summary: 'Agentic Resource Discovery catalog',
+          description: 'Also served at the predecessor path `/.well-known/ai-catalog.json`.',
+          responses: {
+            '200': {
+              description: 'ARD catalog.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/api-catalog': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getApiCatalog',
+          summary: 'RFC 9727 API catalog',
+          responses: {
+            '200': {
+              description: 'Linkset naming every API in the catalog.',
+              headers: RATE_HEADERS,
+              content: {
+                'application/linkset+json': { schema: { type: 'object', additionalProperties: true } },
+                'application/json': { schema: { type: 'object', additionalProperties: true } },
+              },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
+      '/.well-known/oauth-protected-resource': {
+        get: {
+          tags: ['discovery'],
+          operationId: 'getProtectedResourceMetadata',
+          summary: 'RFC 9728 protected-resource metadata',
+          description:
+            'Reports `authorization_servers: []` and `authorization_required: false`. Read that literally — Stride issues no agent credentials. See /auth.md.',
+          responses: {
+            '200': {
+              description: 'Protected-resource metadata.',
+              headers: RATE_HEADERS,
+              content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
       '/index.md': {
         get: {
           tags: ['markdown'],
@@ -110,9 +291,11 @@ export function GET(request: Request): Response {
           responses: {
             '200': {
               description: 'Markdown opening with a --- frontmatter block.',
+              headers: RATE_HEADERS,
               content: { 'text/markdown': { schema: { type: 'string' } } },
             },
             '404': { $ref: '#/components/responses/NotFound' },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
           },
         },
       },
@@ -127,7 +310,12 @@ export function GET(request: Request): Response {
             { name: 'path', in: 'path', required: true, schema: { type: 'string' }, example: 'events/stride-labs' },
           ],
           responses: {
-            '200': { description: 'Markdown with frontmatter.', content: { 'text/markdown': { schema: { type: 'string' } } } },
+            '200': {
+              description: 'Markdown with frontmatter.',
+              headers: { ...RATE_HEADERS, 'X-Markdown-Tokens': { description: 'Rough token count for the body, at ~4 characters per token.', schema: { type: 'integer' } } },
+              content: { 'text/markdown': { schema: { type: 'string' } } },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
             '404': {
               description: 'No markdown representation. The body is markdown pointing at the sitemap, so a reader lands somewhere useful.',
               content: {
@@ -156,6 +344,10 @@ export function GET(request: Request): Response {
         'Retry-After': {
           description: 'Seconds to wait before retrying. Present on 429.',
           schema: { type: 'integer', example: 42 },
+        },
+        'RateLimit-Policy': {
+          description: 'The policy in force, as `<limit>;w=<window seconds>`.',
+          schema: { type: 'string', example: '60;w=60' },
         },
       },
       // Declared once and referenced from every operation, so the error contract
@@ -199,6 +391,74 @@ export function GET(request: Request): Response {
         },
       },
       schemas: {
+        SchemaOrgItem: {
+          type: 'object',
+          description: 'A schema.org node. `@type` decides the remaining fields.',
+          required: ['@type'],
+          properties: {
+            '@context': { type: 'string', example: 'https://schema.org' },
+            '@type': { type: 'string', example: 'SportsEvent' },
+            '@id': { type: 'string', format: 'uri' },
+            name: { type: 'string' },
+            url: { type: 'string', format: 'uri' },
+          },
+          additionalProperties: true,
+        },
+        McpServerCard: {
+          type: 'object',
+          required: ['name', 'description', 'version', 'serverUrl', 'tools'],
+          properties: {
+            name: { type: 'string' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            version: { type: 'string' },
+            serverUrl: { type: 'string', format: 'uri' },
+            transport: { type: 'string', example: 'streamable-http' },
+            authentication: { type: 'object', additionalProperties: true },
+            sandbox: { type: 'object', additionalProperties: true },
+            tools: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['name', 'description'],
+                properties: {
+                  name: { type: 'string' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  inputs: { type: 'string' },
+                  readOnly: { type: 'boolean' },
+                  uiResourceUri: { type: 'string' },
+                },
+              },
+            },
+          },
+          additionalProperties: true,
+        },
+        AgentView: {
+          type: 'object',
+          required: ['mode', 'entity', 'capabilities', 'endpoints'],
+          properties: {
+            mode: { type: 'string', enum: ['agent'] },
+            entity: { type: 'object', additionalProperties: true },
+            whenToUse: {
+              type: 'object',
+              properties: {
+                goodFor: { type: 'array', items: { type: 'string' } },
+                notFor: { type: 'array', items: { type: 'string' } },
+              },
+            },
+            capabilities: {
+              type: 'object',
+              properties: { read: { type: 'string' }, write: { type: 'string' } },
+            },
+            endpoints: { type: 'object', additionalProperties: true },
+            authentication: { type: 'object', additionalProperties: true },
+            conventions: { type: 'object', additionalProperties: true },
+            pages: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            contact: { type: 'object', additionalProperties: true },
+          },
+          additionalProperties: true,
+        },
         Problem: {
           type: 'object',
           description: 'RFC 9457 problem details, with a stable `code` to branch on and a `hint` for what to do.',
@@ -277,6 +537,7 @@ export function GET(request: Request): Response {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
       'Access-Control-Allow-Origin': '*',
+      ...rate.headers,
     },
   })
 }

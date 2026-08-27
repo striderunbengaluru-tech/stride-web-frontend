@@ -1,5 +1,5 @@
 import { getRequestOrigin } from '@/lib/site-url'
-import { READ_LIMIT } from '@/lib/rate-limit'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * Shared response shape for the `.well-known` documents.
@@ -15,7 +15,15 @@ export function wellKnownJson(
   build: (origin: string) => unknown,
   contentType = 'application/json',
 ): Response {
-  return new Response(JSON.stringify(build(getRequestOrigin(request)), null, 2), {
+  const origin = getRequestOrigin(request)
+
+  // Counted and reported like every other endpoint. A discovery document is
+  // still a request, and a client that reads ten of them should see its budget
+  // move rather than learn the ceiling only once it starts calling tools.
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
+
+  return new Response(JSON.stringify(build(origin), null, 2), {
     headers: {
       'Content-Type': contentType,
       // Short: a mistake in one of these should be fixable in minutes, not
@@ -24,10 +32,7 @@ export function wellKnownJson(
       // These documents are meant to be read cross-origin by agent tooling
       // running in a browser. They contain nothing but public URLs.
       'Access-Control-Allow-Origin': '*',
-      // Advertised on the discovery documents as well as on the endpoints, so a
-      // client that reads the card first knows the ceiling before it starts.
-      'RateLimit-Limit': String(READ_LIMIT.limit),
-      'RateLimit-Policy': `${READ_LIMIT.limit};w=${Math.round(READ_LIMIT.windowMs / 1000)}`,
+      ...rate.headers,
     },
   })
 }

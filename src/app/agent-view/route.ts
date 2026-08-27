@@ -3,6 +3,7 @@ import { ALL_SERVERS, MCP_SERVER_VERSION, REPRESENTATIVE_QUERIES } from '@/lib/m
 import { getClubInfo } from '@/lib/mcp/data'
 import { PAGE_INDEX } from '@/lib/markdown/render'
 import { PROTECTED_RESOURCE_METADATA_PATH } from '@/lib/mcp/discovery'
+import { guardRate, READ_LIMIT } from '@/lib/rate-limit'
 
 /**
  * `/?mode=agent` — the structured answer to "what can I do here".
@@ -20,6 +21,9 @@ export const dynamic = 'force-dynamic'
 
 export function GET(request: Request): Response {
   const origin = getRequestOrigin(request)
+  const rate = guardRate(request, READ_LIMIT, `${origin}/developers`)
+  if (rate.limited) return rate.limited
+
   const club = getClubInfo()
 
   const body = {
@@ -150,6 +154,7 @@ export function GET(request: Request): Response {
       'Link': `<${origin}/>; rel="canonical"`,
       'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600',
       'Access-Control-Allow-Origin': '*',
+      ...rate.headers,
     },
   })
 }

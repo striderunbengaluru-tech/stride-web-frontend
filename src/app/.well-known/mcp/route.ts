@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<Response> {
   const limit = checkRateLimit(request, READ_LIMIT)
   if (!limit.ok) return tooManyRequests(limit, `${origin}/auth.md`)
 
-  if (request.headers.get('authorization')) return unauthorized(origin)
+  if (request.headers.get('authorization')) return unauthorized(origin, rateLimitHeaders(limit))
 
   const sandbox = isSandbox(new URL(request.url))
   return serveMcp(request, () => buildProductServer(origin, sandbox), rateLimitHeaders(limit))
