@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { getRequestOrigin } from '@/lib/site-url'
-import { answerQuery, NLWEB_VERSION } from '@/lib/nlweb'
+import { answerQuery, decodeCursor, NLWEB_VERSION } from '@/lib/nlweb'
+import { problem, ERROR_CODES } from '@/lib/api-errors'
+import { replayIdempotent, recordIdempotent } from '@/lib/idempotency'
 import { isSandbox } from '@/lib/mcp/data'
 import { checkRateLimit, tooManyRequests, rateLimitHeaders, ASK_LIMIT } from '@/lib/rate-limit'
 
@@ -28,6 +30,8 @@ export const dynamic = 'force-dynamic'
 const AskSchema = z.object({
   query: z.string().trim().min(1, 'query must not be empty').max(500, 'query must be 500 characters or fewer'),
   limit: z.number().int().min(1).max(25).optional(),
+  /** Opaque, from a previous response's `_meta.next_cursor`. Never hand-made. */
+  cursor: z.string().max(128).optional(),
   prefer: z.object({ streaming: z.boolean().optional() }).optional(),
   // Accepted and ignored: NLWeb clients send these and a hard rejection would
   // fail a conformant request over a field Stride has no modes for.
@@ -43,15 +47,31 @@ const JSON_HEADERS = {
   'Vary': 'Accept',
 }
 
-function badRequest(message: string): Response {
-  return Response.json(
-    {
-      _meta: { response_type: 'error', version: NLWEB_VERSION },
-      error: message,
-      usage: 'POST { "query": "upcoming runs in Bengaluru" } or GET /ask?query=...',
+/**
+ * `400` as RFC 9457 problem details.
+ *
+ * The previous shape carried a human sentence and no code, so a client had to
+ * string-match the prose to tell a too-long query from malformed JSON. `code` is
+ * the thing to branch on; `detail` is for the log.
+ */
+function badRequest(
+  origin: string,
+  code: (typeof ERROR_CODES)[keyof typeof ERROR_CODES],
+  detail: string,
+  hint: string,
+): Response {
+  return problem({
+    status: 400,
+    code,
+    title: 'Invalid request',
+    detail,
+    hint,
+    origin,
+    extra: {
+      usage: 'POST { "query": "upcoming runs in Bengaluru", "limit": 10 } or GET /ask?query=...',
+      limits: { maxQueryLength: 500, maxResults: 25 },
     },
-    { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } },
-  )
+  })
 }
 
 function wantsStream(request: Request, url: URL, prefer?: boolean): boolean {
@@ -115,27 +135,84 @@ export async function POST(request: Request): Promise<Response> {
   const rate = checkRateLimit(request, ASK_LIMIT)
   if (!rate.ok) return tooManyRequests(rate, `${getRequestOrigin(request)}/auth.md`)
 
+  const origin = getRequestOrigin(request)
+
+  /**
+   * Idempotency-Key.
+   *
+   * /ask is a POST that does real work — it scans the whole corpus — and it is
+   * rate limited. An agent that retries after a dropped connection would
+   * otherwise pay for the scan twice and burn two requests of its budget for one
+   * answer. With a key, the retry replays the first response byte for byte and
+   * costs nothing.
+   *
+   * There is no write to protect here, because Stride exposes none. This is the
+   * honest version of the guarantee: identical request, identical response, no
+   * second execution.
+   */
+  const idempotencyKey = request.headers.get('idempotency-key')
+  const bodyText = await request.text()
+
+  if (idempotencyKey) {
+    const replayed = replayIdempotent(idempotencyKey, bodyText)
+    if (replayed) {
+      return new Response(replayed, {
+        headers: {
+          ...JSON_HEADERS,
+          ...rateLimitHeaders(rate),
+          'Idempotency-Key': idempotencyKey,
+          'Idempotent-Replayed': 'true',
+        },
+      })
+    }
+  }
+
   let raw: unknown
   try {
-    raw = await request.json()
+    raw = JSON.parse(bodyText)
   } catch {
-    return badRequest('Body must be JSON.')
+    return badRequest(origin, ERROR_CODES.invalid_request, 'Body is not valid JSON.',
+      'Send a JSON object, e.g. {"query":"upcoming runs"}.')
   }
 
   const parsed = AskSchema.safeParse(raw)
   if (!parsed.success) {
-    return badRequest(parsed.error.issues[0]?.message ?? 'Invalid request body.')
+    const issue = parsed.error.issues[0]
+    return badRequest(
+      origin,
+      issue?.path?.[0] === 'query' ? ERROR_CODES.invalid_query : ERROR_CODES.invalid_request,
+      issue?.message ?? 'Request body failed validation.',
+      'Check the field named in "detail" against /openapi.json.',
+    )
   }
 
-  const { query, limit, prefer, streaming } = parsed.data
-  const answer = await answerQuery(query, getRequestOrigin(request), {
-    limit,
-    sandbox: isSandbox(url),
-  })
+  const { query, limit, cursor, prefer, streaming } = parsed.data
 
-  return wantsStream(request, url, prefer?.streaming ?? streaming)
-    ? streamResponse(answer)
-    : Response.json(answer, { headers: { ...JSON_HEADERS, ...rateLimitHeaders(rate) } })
+  let offset = 0
+  if (cursor !== undefined) {
+    const decoded = decodeCursor(cursor)
+    if (decoded === null) {
+      return badRequest(origin, ERROR_CODES.invalid_request,
+        'The cursor is not one this endpoint issued.',
+        'Pass back _meta.next_cursor from a previous response verbatim. Cursors are opaque and must not be constructed.')
+    }
+    offset = decoded
+  }
+
+  const answer = await answerQuery(query, origin, { limit, offset, sandbox: isSandbox(url) })
+
+  if (wantsStream(request, url, prefer?.streaming ?? streaming)) return streamResponse(answer)
+
+  const payload = JSON.stringify(answer)
+  if (idempotencyKey) recordIdempotent(idempotencyKey, bodyText, payload)
+
+  return new Response(payload, {
+    headers: {
+      ...JSON_HEADERS,
+      ...rateLimitHeaders(rate),
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
+  })
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -157,7 +234,9 @@ export async function GET(request: Request): Promise<Response> {
           'Ask a natural-language question about Stride Run Club events, pricing, milestone tiers, blog posts or the team. Returns schema.org items — SportsEvent, BlogPosting, Question, Person, WebPage.',
         usage: {
           post: 'POST /ask with { "query": "...", "limit": 10, "prefer": { "streaming": false } }',
-          get: 'GET /ask?query=...',
+          get: 'GET /ask?query=...&limit=10&cursor=...',
+          pagination: 'Read _meta.next_cursor and pass it back as `cursor`. Null means the last page. Cursors are opaque — do not construct one.',
+          idempotency: 'Send an Idempotency-Key header on POST to make a retry replay the first response instead of re-running the query.',
           streaming: 'Accept: text/event-stream, or prefer.streaming, or ?stream=1. Events: start, result, complete.',
           sandbox: 'Add ?sandbox=1 to answer from fixtures instead of live data.',
         },
@@ -173,10 +252,28 @@ export async function GET(request: Request): Promise<Response> {
     )
   }
 
-  if (query.length > 500) return badRequest('query must be 500 characters or fewer')
+  const origin = getRequestOrigin(request)
+  if (query.length > 500) {
+    return badRequest(origin, ERROR_CODES.query_too_long,
+      `query is ${query.length} characters; the maximum is 500.`,
+      'Shorten the query. Long questions rarely retrieve better than short ones here.')
+  }
 
-  const answer = await answerQuery(query, getRequestOrigin(request), {
+  const cursor = url.searchParams.get('cursor')
+  let offset = 0
+  if (cursor) {
+    const decoded = decodeCursor(cursor)
+    if (decoded === null) {
+      return badRequest(origin, ERROR_CODES.invalid_request,
+        'The cursor is not one this endpoint issued.',
+        'Pass back _meta.next_cursor from a previous response verbatim.')
+    }
+    offset = decoded
+  }
+
+  const answer = await answerQuery(query, origin, {
     limit: Number(url.searchParams.get('limit')) || undefined,
+    offset,
     sandbox: isSandbox(url),
   })
 
@@ -192,7 +289,7 @@ export function OPTIONS(): Response {
       'Allow': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Accept',
+      'Access-Control-Allow-Headers': 'Content-Type, Accept, Idempotency-Key',
       'Access-Control-Max-Age': '86400',
     },
   })
