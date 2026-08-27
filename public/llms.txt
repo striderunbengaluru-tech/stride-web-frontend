@@ -19,6 +19,7 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 
 ## How to call Stride
 
+- **Developer docs (start here)** — https://www.strideclub.in/developers — the Stride Run Club API in one page: MCP servers, /ask, markdown twins, feeds, rate limits. Markdown twin at /developers.md.
 - **Any page as markdown** — append `.md` to its path (`https://www.strideclub.in/events.md`) or send `Accept: text/markdown`. Responses open with a `---` frontmatter block carrying title, description, canonical and last-updated.
 - **Site root as markdown** — https://www.strideclub.in/index.md
 - **Live event data over MCP** — https://www.strideclub.in/mcp — read-only, no credential required. Tools: `list_events`, `get_event`, `get_leaderboard`, `get_milestone_tiers`, `get_club_info`.
@@ -44,6 +45,7 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 - [Lead Striders](https://www.strideclub.in/team): the people who organise the club — names, roles, bios, Instagram and Strava
 - [Partnerships](https://www.strideclub.in/partnerships): the brand partnership programme, audience profile and partners to date
 - [Shop](https://www.strideclub.in/shop): official Stride merchandise — the online shop is not open yet
+- [Developer docs](https://www.strideclub.in/developers): the Stride Run Club API — two read-only MCP servers, the NLWeb /ask endpoint, markdown twins of every page, structured feeds, and rate limits. No API key, no write API, no SDK.
 - [Contact](https://www.strideclub.in/contact-us): how to reach the team
 
 ## Scoped indexes
