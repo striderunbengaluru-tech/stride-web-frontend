@@ -2,7 +2,6 @@ import { searchDocs, answerFaq, type DocResult } from '@/lib/mcp/docs'
 import { listEvents, getEvent } from '@/lib/mcp/data'
 import { sportsEventNode, organizationId } from '@/lib/json-ld'
 import { BLOG_POSTS } from '@/content/blog/index'
-import { ORIGINALS } from '@/content/originals'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 
 /**
@@ -83,23 +82,6 @@ function docToSchemaOrg(result: DocResult, origin: string): unknown {
         name: result.title,
         url: origin,
         acceptedAnswer: { '@type': 'Answer', text: entry?.answer ?? result.summary },
-      }
-    }
-
-    case 'original': {
-      const slug = result.id.replace('original:', '')
-      const original = ORIGINALS[slug]
-      return {
-        '@context': 'https://schema.org',
-        '@type': 'EventSeries',
-        '@id': `${url}#series`,
-        name: result.title,
-        alternateName: original?.tagline,
-        description: original?.description ?? result.summary,
-        url,
-        organizer: { '@id': organizationId(origin) },
-        location: { '@type': 'City', name: 'Bengaluru' },
-        encoding: { '@type': 'MediaObject', encodingFormat: 'text/markdown', contentUrl: `${url}.md` },
       }
     }
 

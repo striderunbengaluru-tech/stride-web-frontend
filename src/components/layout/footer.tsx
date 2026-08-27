@@ -4,16 +4,15 @@ import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
 import { NavLoadingLink } from './nav-loading-link'
 import { FooterAccountColumn } from './footer-account-column'
 
-// Every public page worth discovering. Deliberately absent: `/shop` (hidden by
-// request) and `/originals` (no index route, only `/originals/[slug]`).
+// Every public page worth discovering. `/about` and `/originals` were removed
+// deliberately and will return when they are ready; nothing here should link to
+// a route that does not resolve.
 const EXPLORE_LINKS = [
   { title: 'Events',        href: '/events' },
   { title: 'Pricing',       href: '/pricing' },
-  { title: 'About',         href: '/about' },
   { title: 'Milestones',    href: '/milestones' },
   { title: 'Leaderboard',   href: '/leaderboard' },
   { title: 'Blog',          href: '/blog' },
-  { title: 'Originals',     href: '/originals' },
   { title: 'Team',          href: '/team' },
   { title: 'Partnerships',  href: '/partnerships' },
   { title: 'Developers',    href: '/developers' },

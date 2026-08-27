@@ -58,7 +58,6 @@ const HOMEPAGE_LINK_HEADER = [
  */
 const MARKDOWN_PAGES = [
   '/',
-  '/about',
   '/become-a-member',
   '/blog',
   '/contact-us',
@@ -66,7 +65,6 @@ const MARKDOWN_PAGES = [
   '/events',
   '/leaderboard',
   '/milestones',
-  '/originals',
   '/partnerships',
   '/pricing',
   '/privacy-policy',
@@ -75,10 +73,9 @@ const MARKDOWN_PAGES = [
   '/terms-of-service',
   '/blog/:slug',
   '/events/:slug',
-  '/originals/:slug',
 ]
 
-/** `/about` → `{ source: '/about', destination: '/md/about' }`; `/` → `/md`. */
+/** `/pricing` → `{ source: '/pricing', destination: '/md/pricing' }`; `/` → `/md`. */
 const MARKDOWN_NEGOTIABLE_PATHS = MARKDOWN_PAGES.map(source => ({
   source,
   destination: source === '/' ? '/md' : `/md${source}`,

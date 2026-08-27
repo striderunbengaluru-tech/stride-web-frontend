@@ -5,7 +5,6 @@ import { getLeaderboardTop } from '@/lib/leaderboard'
 import { eventRowPriceLabel, eventPriceLabel } from '@/lib/utils/money'
 import { formatDateTimeIST } from '@/lib/utils/ist'
 import { BLOG_POSTS } from '@/content/blog/index'
-import { ORIGINALS, ORIGINALS_LIST } from '@/content/originals'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import { MILESTONE_TIERS } from '@/lib/milestones'
 import { WHY_US, ALL_PARTNERS, PARTNER_CATEGORIES } from '@/app/partnerships/partners-data'
@@ -81,11 +80,9 @@ function readContentFile(name: string): string | null {
 export const PAGE_INDEX: { path: string; label: string; blurb: string }[] = [
   { path: '/events', label: 'Events', blurb: 'every upcoming run and race, with dates, venues, prices and registration' },
   { path: '/pricing', label: 'Pricing', blurb: 'what membership and events cost — membership is free' },
-  { path: '/about', label: 'About', blurb: 'what Stride is, how it started and how a run works' },
   { path: '/milestones', label: 'Milestones', blurb: 'the five tiers, the runs each needs and the perks they unlock' },
   { path: '/leaderboard', label: 'Leaderboard', blurb: 'athletes ranked by community runs attended' },
   { path: '/blog', label: 'Blog', blurb: 'run recaps and community stories' },
-  { path: '/originals', label: 'Stride Originals', blurb: "Stride's own formats — Lake Hop, Stride Like a Woman, Creator Program, Bakery Hop" },
   { path: '/team', label: 'Lead Striders', blurb: 'the people who organise the club' },
   { path: '/developers', label: 'Developer docs', blurb: 'the Stride Run Club API — MCP servers, /ask, markdown twins; read-only and anonymous' },
   { path: '/partnerships', label: 'Partnerships', blurb: 'brand collaborations and the partnership programme' },
@@ -552,66 +549,6 @@ function becomeMemberMarkdown(abs: Abs): MarkdownDoc {
 }
 
 // ---------------------------------------------------------------------------
-// About
-// ---------------------------------------------------------------------------
-
-function aboutMarkdown(abs: Abs): MarkdownDoc {
-  const first = MILESTONE_TIERS[0]
-  const last = MILESTONE_TIERS[MILESTONE_TIERS.length - 1]
-
-  return {
-    title: 'About Stride Run Club',
-    description:
-      "Stride Run Club is Bengaluru's running community — 5,754 runners in 2025, 97 community runs, 63% of them first-timers. How it started, how a run works, and what membership means.",
-    body: tidy([
-      '# About Stride Run Club',
-      '',
-      '> A running community in Bengaluru, Karnataka, India. Tagline: "Move as one." All fitness levels welcome.',
-      '',
-      '## What Stride is',
-      '',
-      'Stride Run Club began as three people meeting to run and grew into a club that puts on two to three runs a week, every week — beginner-friendly 5Ks, hill repeats, interval sessions, long runs, and curated one-offs. At peak, more than 300 people have turned up for a single Stride run.',
-      '',
-      '## By the numbers (2025)',
-      '',
-      '- **5,754** unique runners ran with Stride',
-      '- **63%** of them were running with a club for the first time',
-      '- **97** community runs held, at least one every week of the year',
-      '- **300+** runners at a single event, at peak',
-      '- **52,000+** followers on Instagram',
-      '',
-      '## What "Move as one" means',
-      '',
-      'Nobody gets dropped. Stride is deliberately not a race team — most people who run with us have never run with a club before, and the run is built around that. You can walk it, jog it or chase a personal best, and all three finish in the same place.',
-      '',
-      'The run is also only half of it. A Stride event is a run and a social mixer: guided warm-ups from certified trainers, icebreakers, and coffee or breakfast afterwards.',
-      '',
-      '## How a Stride run works',
-      '',
-      `1. **Find a run** — every run, race and meetup is listed at [${abs('/events')}](${abs('/events')}) with date, start point, distance and price.`,
-      `2. **Register** — most community runs are free; paid experiences show their fee up front. See [${abs('/pricing')}](${abs('/pricing')}).`,
-      '3. **Check in on the day** — every member has a four-character Stride Tag. Read it out at the start line and the run is counted.',
-      `4. **Move up a tier** — runs attended drive ${MILESTONE_TIERS.length} milestone tiers, ${first.label} through ${last.label}. None of them can be bought. See [${abs('/milestones')}](${abs('/milestones')}).`,
-      '',
-      '## Who runs the club',
-      '',
-      `Stride is organised by ${LEAD_STRIDERS.length} Lead Striders — the people who plot the routes and set the pace. Names, roles and profiles: [${abs('/team')}](${abs('/team')}).`,
-      '',
-      '## Where',
-      '',
-      'Bengaluru, Karnataka, India. Every Stride run happens in the city.',
-      '',
-      '## Contact and elsewhere',
-      '',
-      `- Email: ${CONTACT_EMAIL}`,
-      `- Instagram: ${INSTAGRAM_URL}`,
-      `- Strava: ${STRAVA_URL}`,
-      `- Source code (this site is open source): ${REPO_URL}`,
-    ]),
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Pricing
 // ---------------------------------------------------------------------------
 
@@ -781,67 +718,6 @@ function developersMarkdown(abs: Abs): MarkdownDoc {
 }
 
 // ---------------------------------------------------------------------------
-// Originals
-// ---------------------------------------------------------------------------
-
-function originalsIndexMarkdown(abs: Abs): MarkdownDoc {
-  return {
-    title: 'Stride Originals',
-    description:
-      "Stride's own running formats — the Lake Hop Project, Stride Like a Woman, the Stride Creator Program and the Bakery Hop Run.",
-    body: tidy([
-      '# Stride Originals',
-      '',
-      '> Formats Stride built from scratch in Bengaluru. Some monthly, some annual, one invite-only.',
-      '',
-      ORIGINALS_LIST.map(o => tidy([
-        `## ${o.title}`,
-        '',
-        `_${o.tagline}_`,
-        '',
-        o.description,
-        '',
-        ...o.highlights.map(h => `- **${h.label}:** ${h.value}`),
-        '',
-        `Full story: [${abs(`/originals/${o.slug}`)}](${abs(`/originals/${o.slug}`)})`,
-      ])).join('\n'),
-    ]),
-  }
-}
-
-function originalMarkdown(slug: string, abs: Abs): MarkdownDoc | null {
-  const original = ORIGINALS[slug]
-  if (!original) return null
-
-  return {
-    title: `${original.title} — Stride Originals`,
-    description: original.description,
-    body: tidy([
-      `# ${original.title}`,
-      '',
-      `> ${original.tagline}`,
-      '',
-      original.description,
-      '',
-      '## Details',
-      '',
-      ...original.highlights.map(h => `- **${h.label}:** ${h.value}`),
-      '',
-      '## About',
-      '',
-      original.longDescription,
-      '',
-      `> "${original.quote}"`,
-      `> — ${original.quoteAuthor}`,
-      '',
-      '---',
-      '',
-      `All formats: [${abs('/originals')}](${abs('/originals')}).`,
-    ]),
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Legal
 // ---------------------------------------------------------------------------
 
@@ -879,7 +755,6 @@ export async function renderMarkdownPath(
 ): Promise<MarkdownDoc | null> {
   switch (pathname) {
     case '/':                 return homeMarkdown(abs)
-    case '/about':            return aboutMarkdown(abs)
     case '/pricing':          return pricingMarkdown(abs)
     case '/developers':       return developersMarkdown(abs)
     case '/events':           return eventsIndexMarkdown(abs)
@@ -890,7 +765,6 @@ export async function renderMarkdownPath(
     case '/partnerships':     return partnershipsMarkdown(abs)
     case '/contact-us':       return contactMarkdown(abs)
     case '/shop':             return shopMarkdown(abs)
-    case '/originals':        return originalsIndexMarkdown(abs)
     case '/become-a-member':  return becomeMemberMarkdown(abs)
     case '/privacy-policy':
       return legalMarkdown(
@@ -911,9 +785,6 @@ export async function renderMarkdownPath(
 
   const blog = pathname.match(/^\/blog\/([^/]+)$/)
   if (blog) return blogPostMarkdown(blog[1], abs)
-
-  const original = pathname.match(/^\/originals\/([^/]+)$/)
-  if (original) return originalMarkdown(original[1], abs)
 
   return null
 }

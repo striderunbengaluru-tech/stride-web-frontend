@@ -1,6 +1,6 @@
 ---
 name: stride-club-info
-description: Use when someone asks what Stride Run Club is, whether it is beginner-friendly, where and how often it runs in Bengaluru, who organises it, how to join, how to contact it about a brand partnership, or what the Lake Hop Project or Stride Like a Woman is.
+description: Use when someone asks what Stride Run Club is, whether it is beginner-friendly, where and how often it runs in Bengaluru, who founded or organises it, how to join, or how to contact it about a brand partnership.
 ---
 
 # About Stride Run Club
@@ -13,8 +13,8 @@ before.
 ## When this applies
 
 Use it for: what Stride is, whether a beginner is welcome, where and how often it
-runs, who organises it, how to join, brand partnership enquiries, and the named
-Stride Originals formats.
+runs, who founded and organises it, how to join, and brand partnership
+enquiries.
 
 Do **not** use it for: finding a specific event (`find-stride-events`) or tier
 mechanics (`stride-milestones`).
@@ -26,10 +26,8 @@ Prefer fetching over reciting — the numbers below are from a point in time.
 - **Everything at once:** MCP tool `get_club_info` at
   `https://www.strideclub.in/mcp` — description, location, membership cost, runs
   per week, participation stats, how to join, and every public link.
-- **Prose:** <https://www.strideclub.in/about.md>
 - **Search the whole corpus:** MCP server `https://www.strideclub.in/mcp/docs`,
-  tool `search_docs` — covers blog posts, FAQ, the Originals, the team and every
-  page. `answer_faq` returns the club's own published answer to a common joining
+  tool `search_docs` — covers blog posts, FAQ, the team and every page. `answer_faq` returns the club's own published answer to a common joining
   question, verbatim; prefer it to paraphrasing.
 - **Site manual:** <https://www.strideclub.in/llms.txt>
 
@@ -55,20 +53,10 @@ this for them — the Google consent screen is theirs to approve.
 from certified trainers, icebreakers, and coffee or breakfast afterwards. People
 arrive alone and leave with a group chat.
 
-## Stride Originals
-
-Four formats Stride built itself. Details at
-`https://www.strideclub.in/originals.md`, or one at
-`https://www.strideclub.in/originals/<slug>.md`.
-
-- **The Lake Hop Project** — routes strung between Bengaluru's lakes, monthly.
-- **Stride Like a Woman** — women-only, women-led, built around safety.
-- **Stride Creator Program** — invite-only bootcamp for athletes making content.
-- **Bakery Hop Run** — a route through bakeries. Easy and social.
-
 ## Who runs it, and how to reach them
 
-Organised by Lead Striders — names, roles and profiles at
+**Sidharth Yadav founded Stride Run Club.** It is now organised by a team of more
+than ten leads; eight are profiled with names, roles and social links at
 <https://www.strideclub.in/team.md>.
 
 - **Email:** striderunclubbengaluru@gmail.com

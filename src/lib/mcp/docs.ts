@@ -1,5 +1,4 @@
 import { BLOG_POSTS } from '@/content/blog/index'
-import { ORIGINALS_LIST } from '@/content/originals'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import { FAQ_ENTRIES, PAGE_INDEX, renderMarkdownPath, type Abs } from '@/lib/markdown/render'
 import { isNegotiablePath } from '@/lib/markdown-negotiation'
@@ -17,7 +16,7 @@ import { isNegotiablePath } from '@/lib/markdown-negotiation'
  * new blog post or FAQ entry is searchable the moment it ships.
  */
 
-export type DocKind = 'page' | 'blog' | 'original' | 'faq' | 'person'
+export type DocKind = 'page' | 'blog' | 'faq' | 'person'
 
 export type DocEntry = {
   id: string
@@ -53,17 +52,6 @@ function corpus(): DocEntry[] {
       path: `/blog/${post.slug}`,
       summary: post.description,
       text: [post.title, post.description, post.tags.join(' '), post.tldr.join(' '), post.content].join(' '),
-    })
-  }
-
-  for (const original of ORIGINALS_LIST) {
-    entries.push({
-      id: `original:${original.slug}`,
-      kind: 'original',
-      title: original.title,
-      path: `/originals/${original.slug}`,
-      summary: `${original.tagline} — ${original.description}`,
-      text: [original.title, original.tagline, original.description, original.longDescription].join(' '),
     })
   }
 
@@ -185,10 +173,11 @@ export function listDocPages(): { path: string; label: string; markdown: string 
     markdown: path === '/' ? '/index.md' : `${path}.md`,
   }))
 
-  const dynamic = [
-    ...BLOG_POSTS.map(p => ({ path: `/blog/${p.slug}`, label: p.title, markdown: `/blog/${p.slug}.md` })),
-    ...ORIGINALS_LIST.map(o => ({ path: `/originals/${o.slug}`, label: o.title, markdown: `/originals/${o.slug}.md` })),
-  ]
+  const dynamic = BLOG_POSTS.map(p => ({
+    path: `/blog/${p.slug}`,
+    label: p.title,
+    markdown: `/blog/${p.slug}.md`,
+  }))
 
   return [{ path: '/', label: 'Home', markdown: '/index.md' }, ...staticPages, ...dynamic]
 }

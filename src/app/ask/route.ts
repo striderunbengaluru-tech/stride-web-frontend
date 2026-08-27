@@ -154,7 +154,7 @@ export async function GET(request: Request): Promise<Response> {
         _meta: { response_type: 'description', version: NLWEB_VERSION },
         name: 'Stride Run Club NLWeb endpoint',
         description:
-          'Ask a natural-language question about Stride Run Club events, pricing, milestone tiers, blog posts or the team. Returns schema.org items — SportsEvent, BlogPosting, Question, EventSeries, Person, WebPage.',
+          'Ask a natural-language question about Stride Run Club events, pricing, milestone tiers, blog posts or the team. Returns schema.org items — SportsEvent, BlogPosting, Question, Person, WebPage.',
         usage: {
           post: 'POST /ask with { "query": "...", "limit": 10, "prefer": { "streaming": false } }',
           get: 'GET /ask?query=...',
@@ -167,7 +167,6 @@ export async function GET(request: Request): Promise<Response> {
           'upcoming 10k runs in Bengaluru',
           'is there a membership fee for Stride Run Club',
           'how do the milestone tiers work',
-          'what is the Lake Hop Project',
         ],
       },
       { headers: JSON_HEADERS },

@@ -54,7 +54,7 @@ export const revalidate = 60
  * rendered on demand and thrown away — verified against a production build,
  * where the route answered `Cache-Control: private, no-store` on every hit.
  * Declaring the params is what registers the ISR family, exactly as
- * /blog/[slug] and /originals/[slug] already do.
+ * /blog/[slug] already does.
  *
  * `dynamicParams` stays at its default of true, so an event published after
  * the last deploy still resolves — rendered once on first request, then cached
