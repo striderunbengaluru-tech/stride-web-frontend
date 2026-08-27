@@ -93,7 +93,7 @@ export const DOCS_TOOLS: ToolDescriptor[] = [
     name: 'search_docs',
     title: 'Search Stride documentation',
     description:
-      "Keyword search across everything Stride publishes: blog posts, FAQ answers, the Stride Originals formats, the Lead Striders, and every public page. Returns ranked results with a title, summary and path. Use this first when a question is about what Stride says rather than about a specific event.",
+      "Keyword search across everything Stride publishes: blog posts, FAQ answers, the Lead Striders, and every public page. Returns ranked results with a title, summary and path. Use this first when a question is about what Stride says rather than about a specific event.",
     inputSummary: 'query (required), kind ("page" | "blog" | "original" | "faq" | "person"), limit (1-25)',
     readOnly: true,
   },
@@ -139,7 +139,7 @@ export const DOCS_SERVER = {
   path: '/mcp/docs',
   title: 'Stride Run Club Documentation',
   description:
-    'Search and fetch everything Stride Run Club publishes — blog posts, FAQ, pricing rules, milestone rules, Originals formats and every public page as markdown.',
+    'Search and fetch everything Stride Run Club publishes — blog posts, FAQ, pricing rules, milestone rules and every public page as markdown.',
   tools: DOCS_TOOLS,
 } as const
 

@@ -141,7 +141,7 @@ export function GET(request: Request): Response {
             results: {
               type: 'array',
               description:
-                'schema.org items. SportsEvent for events, BlogPosting for posts, Question for FAQ answers, EventSeries for Stride Originals, Person for Lead Striders, WebPage otherwise.',
+                'schema.org items. SportsEvent for events, BlogPosting for posts, Question for FAQ answers, Person for Lead Striders, WebPage otherwise.',
               items: { type: 'object', additionalProperties: true },
             },
           },

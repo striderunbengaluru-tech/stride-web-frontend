@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { adminClient } from '@/lib/supabase/admin'
 import { BLOG_POSTS } from '@/content/blog/index'
-import { ORIGINALS } from '@/content/originals'
 import { PREVIEW_FEATURES_ENABLED, isGatedRoute } from '@/lib/feature-flags'
 
 export const SITE_URL = 'https://www.strideclub.in'
@@ -16,13 +15,11 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL,                         lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
     { url: `${SITE_URL}/events`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
-    { url: `${SITE_URL}/about`,              lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/pricing`,            lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${SITE_URL}/blog`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${SITE_URL}/milestones`,         lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${SITE_URL}/leaderboard`,        lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
     { url: `${SITE_URL}/shop`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
-    { url: `${SITE_URL}/originals`,          lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/team`,               lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/partnerships`,       lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact-us`,         lastModified: now, changeFrequency: 'yearly',  priority: 0.5 },
@@ -38,14 +35,6 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     lastModified: post.publishedAt,
     changeFrequency: 'monthly',
     priority: 0.7,
-  }))
-
-  // Originals (static content)
-  const originalsRoutes: MetadataRoute.Sitemap = Object.values(ORIGINALS).map(item => ({
-    url: `${SITE_URL}/originals/${item.slug}`,
-    lastModified: now,
-    changeFrequency: 'monthly',
-    priority: 0.5,
   }))
 
   // Published events (dynamic — from Supabase). Test events are staging-only,
@@ -65,7 +54,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  const allRoutes = [...staticRoutes, ...blogRoutes, ...originalsRoutes, ...eventRoutes]
+  const allRoutes = [...staticRoutes, ...blogRoutes, ...eventRoutes]
 
   // On production, drop any route hidden by guardPreviewFeature() so the sitemap
   // only lists pages that actually resolve.

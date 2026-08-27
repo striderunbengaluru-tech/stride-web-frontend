@@ -22,7 +22,7 @@ import { checkRateLimit, tooManyRequests, READ_LIMIT } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const DOC_KINDS = ['page', 'blog', 'original', 'faq', 'person'] as const
+const DOC_KINDS = ['page', 'blog', 'faq', 'person'] as const
 
 function buildServer(origin: string): McpServer {
   const abs = (path: string) => `${origin}${path}`

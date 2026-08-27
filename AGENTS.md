@@ -76,7 +76,7 @@ src/lib/
   mcp/              MCP tool registry, data layer, discovery documents
   json-ld.ts        every schema.org node, in one place
   actions/          server actions
-src/content/        static content — blog posts, FAQ, team, Originals
+src/content/        static content — blog posts, FAQ, team
 ```
 
 ## Conventions

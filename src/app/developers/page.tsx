@@ -264,8 +264,7 @@ npx @modelcontextprotocol/inspector https://www.strideclub.in/mcp`}</Block>
     "results": [ { "@type": "SportsEvent", ... } ] }`}</Block>
         <p className='text-copy-white/50 text-sm mt-4 leading-relaxed'>
           Returns <Code>SportsEvent</Code>, <Code>BlogPosting</Code>,{' '}
-          <Code>Question</Code>, <Code>EventSeries</Code>, <Code>Person</Code>{' '}
-          and <Code>WebPage</Code>. Max query length 500 characters, max 25
+          <Code>Question</Code>, <Code>Person</Code> and <Code>WebPage</Code>. Max query length 500 characters, max 25
           results. Full description in the{' '}
           <a href='/openapi.json' className='text-stride-yellow-accent hover:underline'>OpenAPI spec</a>.
         </p>

@@ -41,7 +41,6 @@
  */
 const NEGOTIABLE_EXACT = new Set([
   '/',
-  '/about',
   '/become-a-member',
   '/blog',
   '/contact-us',
@@ -49,7 +48,6 @@ const NEGOTIABLE_EXACT = new Set([
   '/events',
   '/leaderboard',
   '/milestones',
-  '/originals',
   '/partnerships',
   '/pricing',
   '/privacy-policy',
@@ -68,7 +66,6 @@ const NEGOTIABLE_EXACT = new Set([
 const NEGOTIABLE_CHILD = [
   /^\/blog\/[^/]+$/,
   /^\/events\/[^/]+$/,
-  /^\/originals\/[^/]+$/,
 ]
 
 export function isNegotiablePath(pathname: string): boolean {
