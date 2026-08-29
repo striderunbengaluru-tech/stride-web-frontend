@@ -13,7 +13,7 @@
 - Member community & social features
 - Training plans & progress tracking
 
-**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · Supabase · Contentful · Vercel
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (Postgres, Auth, Storage) · Razorpay · Brevo · Vercel
 
 ---
 
@@ -104,15 +104,15 @@ Security is never an afterthought. All code must be written defensively by defau
 - Secret variable names must use the `STRIDE_` prefix for app-specific vars (e.g. `STRIDE_JWT_SECRET`)
 - Public env vars exposed to the client must use `NEXT_PUBLIC_` and must never contain secrets
 
-### Cashfree Payments Security
-- Never process or store raw card data — all payment capture happens exclusively through Cashfree's hosted SDK/checkout
-- Always verify payment status server-side via Cashfree's Orders API after any client-side callback — never trust the client's success signal
-- Validate the `x-webhook-signature` header on every Cashfree webhook before processing — reject unsigned or mismatched payloads immediately
-- Payment webhook handlers must be idempotent — use the Cashfree `order_id` as an idempotency key to prevent double-registration on retries
-- Store only `order_id`, `payment_status`, and `cf_payment_id` — never store card numbers, CVVs, or full PAN data
-- All Cashfree API keys live in Vercel Environment Variables as `STRIDE_CASHFREE_APP_ID` and `STRIDE_CASHFREE_SECRET_KEY` — never in client bundles
-- Use Cashfree's **Test** environment for all non-production deployments — gate the environment via `STRIDE_CASHFREE_ENV=sandbox|production`
-- Registration slots must be held (status: `PENDING`) on order creation and only confirmed (status: `CONFIRMED`) on verified webhook — never on client callback alone
+### Razorpay Payments Security
+- Never process or store raw card data — all payment capture happens exclusively through Razorpay Checkout
+- A client callback is a *hint*, never proof. `/api/events/verify-payment` must do all three: verify the `razorpay_signature` HMAC, confirm the `order_id` matches the one stored on the registration, and then fetch the payment from Razorpay's API and require status `captured` for the exact `amount_due_paise`. The amount is never taken from the client
+- Validate the `x-razorpay-signature` header with `timingSafeEqual` on every webhook before processing — reject unsigned or mismatched payloads with `401`
+- Both confirmation paths (verify-payment and the webhook) must be idempotent — confirmation goes through the `confirm_registration` Postgres function, which is the single source of truth for the PENDING → CONFIRMED transition; an already-confirmed registration is a success, not an error
+- Store only `razorpay_order_id`, `razorpay_payment_id` and status — never card numbers, CVVs, or full PAN data
+- Razorpay keys live in Vercel Environment Variables as `STRIDE_RAZORPAY_KEY_ID`, `STRIDE_RAZORPAY_KEY_SECRET` and `STRIDE_RAZORPAY_WEBHOOK_SECRET`. Only `NEXT_PUBLIC_RAZORPAY_KEY_ID` (the same value as the key id, which is not a secret) may reach the browser
+- Use Razorpay **Test** keys in every non-production environment
+- Registration slots are held as `PENDING` at order creation and only become `CONFIRMED` on server-verified payment — never on the client callback alone
 
 ### Supabase Security
 - Always use the **`supabase-js` server client** (from `@supabase/ssr`) in Server Components, Server Actions, and API routes — never the browser client on the server
@@ -290,12 +290,9 @@ The majority of Stride's users are on mobile. Every component must be designed f
   /layout           # Navbar, Footer, Sidebar, etc.
 /lib
   /supabase         # Supabase client factories (server.ts, client.ts, admin.ts)
-  /contentful       # Contentful client, fetchers, and rich-text renderer config
   /auth             # Auth helpers and session utilities (built on Supabase Auth)
   /validations      # Zod schemas for all forms and API inputs
   /utils            # General utility functions
-/types
-  /contentful       # Auto-generated types from Contentful content models
 /types              # Shared TypeScript types and domain models
 /hooks              # Custom React hooks (client-side only)
 /middleware.ts      # Route protection and security headers
@@ -335,15 +332,12 @@ The majority of Stride's users are on mobile. Every component must be designed f
 | Never use `any` without a `// justification:` comment | Destroys type safety |
 | Never fetch data in a client component if a server component can do it | Performance regression |
 | Never commit `.env.local` or secrets | Security breach |
-| Never expose the Contentful CMA token anywhere in the codebase | Full content write access — critical breach |
-| Never fetch Contentful data in a client component | Performance regression and token exposure risk |
-| Never render Contentful rich text as raw HTML | XSS vulnerability |
 | Never disable RLS on a Supabase table | Exposes all rows to any authenticated user |
 | Never use the service role key in client-side code | Full DB bypass — critical security breach |
 | Never use `select('*')` in production queries | Overfetching, performance regression, data leakage |
 | Never use `dangerouslySetInnerHTML` without explicit sanitization | XSS vulnerability |
 | Never return a block-level element (`div`, `figure`, `SectionReveal`, etc.) from a `react-markdown` `p` component renderer without first checking if the paragraph wraps a block child (e.g. `img`) — if so, return a React fragment `<>{children}</>` instead of `<p>` | `<p><div/></p>` is invalid HTML and causes React hydration errors |
-| Never trust Cashfree client callbacks as payment confirmation | Payment fraud risk |
+| Never trust a Razorpay client callback as payment confirmation | Payment fraud risk |
 | Never store card/payment instrument data locally | PCI compliance violation |
 | Never leave console.log statements in committed code | Noise and potential data leaks |
 | Never skip input validation on API routes | Security breach |
