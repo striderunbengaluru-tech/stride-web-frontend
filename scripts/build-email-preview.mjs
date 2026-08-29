@@ -106,6 +106,12 @@ function variants(html) {
   for (const [url, uri] of Object.entries(dataUris)) h = h.split(url).join(uri)
 
   const start = '/*DARK-START*/', end = '/*DARK-END*/'
+
+  // Light-only templates (the paper sheet the ticket email uses) carry no dark
+  // block, because they paint their own background instead of inheriting the
+  // reader's canvas. There is nothing to pin, so both tabs show the same render.
+  if (h.indexOf(start) === -1) return { light: h, dark: h }
+
   const block = h.slice(h.indexOf(start), h.indexOf(end) + end.length)
   const rules = block.slice(block.indexOf('/*RULES-START*/') + 15, block.indexOf('/*RULES-END*/'))
 
