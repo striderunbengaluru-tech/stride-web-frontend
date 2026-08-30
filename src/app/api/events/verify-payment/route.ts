@@ -75,9 +75,18 @@ export async function POST(request: Request) {
     key_secret: process.env.STRIDE_RAZORPAY_KEY_SECRET ?? '',
   })
 
+  // The ORDER is fetched alongside the payment on purpose. A payment can read
+  // `captured` while its order is still `attempted` — a partial capture, or one
+  // leg of a retry series. Razorpay only marks an order `paid` once it is
+  // settled in full, so that is the status this route treats as money received;
+  // `created` (never paid) and `attempted` (tried, not settled) are not.
   let payment
+  let order
   try {
-    payment = await razorpay.payments.fetch(razorpay_payment_id)
+    ;[payment, order] = await Promise.all([
+      razorpay.payments.fetch(razorpay_payment_id),
+      razorpay.orders.fetch(razorpay_order_id),
+    ])
   } catch (err) {
     console.error('[verify-payment] Razorpay fetch failed', err)
     return NextResponse.json({ error: 'Could not verify payment. Please contact support.' }, { status: 502 })
@@ -90,10 +99,16 @@ export async function POST(request: Request) {
   // in flight at deploy time, whose amount_due_paise is null.
   const expectedAmount = registration.amount_due_paise ?? event?.price_paise ?? -1
 
-  if (payment.order_id !== razorpay_order_id || payment.status !== 'captured' || capturedAmount !== expectedAmount) {
+  if (
+    payment.order_id !== razorpay_order_id ||
+    payment.status !== 'captured' ||
+    order.status !== 'paid' ||
+    capturedAmount !== expectedAmount
+  ) {
     console.error('[verify-payment] Payment does not match order', {
       registrationId,
       status: payment.status,
+      orderStatus: order.status,
       orderMatch: payment.order_id === razorpay_order_id,
       capturedAmount,
       expectedAmount,
