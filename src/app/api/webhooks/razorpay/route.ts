@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createHmac, timingSafeEqual } from 'crypto'
+import Razorpay from 'razorpay'
 import { adminClient } from '@/lib/supabase/admin'
 import { eventRegsTag } from '@/lib/data/events'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
@@ -14,6 +15,60 @@ function verifyWebhookSignature(body: string, signature: string): boolean {
   } catch {
     return false
   }
+}
+
+// Every column the confirm path below needs, kept in one place so the two
+// lookups in findRegistrationForOrder cannot drift apart.
+const REGISTRATION_COLUMNS =
+  // `slug` rides along so the confirm below can purge the rendered event
+  // page, not just the cached counts — see revalidatePath there.
+  'id, status, event_id, amount_due_paise, events(price_paise, slug)'
+
+/**
+ * Resolve the registration a captured payment belongs to.
+ *
+ * The direct match is on razorpay_order_id. When that misses we fall back to
+ * the order's `receipt`, which /api/events/register stamps with the
+ * registration id at creation time. The fallback exists because a runner who
+ * restarts checkout gets a NEW row and a NEW order, while the ORIGINAL order
+ * stays live and payable in a stale tab — so the money can land on an order no
+ * row points at. Returns null when neither lookup resolves; the caller logs
+ * that loudly rather than swallowing it.
+ */
+async function findRegistrationForOrder(orderId: string, razorpay: Razorpay) {
+  const { data: byOrder } = await adminClient
+    .from('event_registrations')
+    .select(REGISTRATION_COLUMNS)
+    .eq('razorpay_order_id', orderId)
+    .maybeSingle()
+
+  if (byOrder) return byOrder
+
+  let receipt: string | null = null
+  try {
+    const order = await razorpay.orders.fetch(orderId)
+    receipt = typeof order.receipt === 'string' ? order.receipt : null
+  } catch (err) {
+    console.error('[razorpay-webhook] Could not fetch order for receipt fallback', { orderId, err })
+    return null
+  }
+
+  if (!receipt) return null
+
+  const { data: byReceipt } = await adminClient
+    .from('event_registrations')
+    .select(REGISTRATION_COLUMNS)
+    .eq('id', receipt)
+    .maybeSingle()
+
+  if (byReceipt) {
+    console.warn('[razorpay-webhook] Recovered registration via order receipt', {
+      orderId,
+      registrationId: receipt,
+    })
+  }
+
+  return byReceipt
 }
 
 export async function POST(request: Request) {
@@ -38,18 +93,30 @@ export async function POST(request: Request) {
 
   if (!orderId) return NextResponse.json({ ok: true })
 
+  const razorpay = new Razorpay({
+    key_id: process.env.STRIDE_RAZORPAY_KEY_ID ?? '',
+    key_secret: process.env.STRIDE_RAZORPAY_KEY_SECRET ?? '',
+  })
+
   if (eventType === 'payment.captured') {
     // Locate the registration this order belongs to (idempotent: the RPC skips
     // an already-CONFIRMED row).
-    const { data: reg } = await adminClient
-      .from('event_registrations')
-      // `slug` rides along so the confirm below can purge the rendered event
-      // page, not just the cached counts — see revalidatePath there.
-      .select('id, status, event_id, amount_due_paise, events(price_paise, slug)')
-      .eq('razorpay_order_id', orderId)
-      .maybeSingle()
+    const reg = await findRegistrationForOrder(orderId, razorpay)
 
-    if (reg && reg.status !== 'CONFIRMED') {
+    if (!reg) {
+      // Money captured against an order no registration references. This branch
+      // previously returned 200 in silence, which is exactly how a runner who
+      // had genuinely paid sat at PENDING unnoticed until the day of the event.
+      // 200 so Razorpay stops retrying — nothing here is going to resolve on a
+      // redelivery — but never again without a trace.
+      console.error(
+        '[razorpay-webhook] CAPTURED PAYMENT WITH NO REGISTRATION — manual reconciliation needed',
+        { orderId, paymentId, capturedAmount },
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    if (reg.status !== 'CONFIRMED') {
       // The captured amount must match what this registration actually owed.
       // This route previously confirmed on the strength of the signature alone
       // and wrote whatever amount the payload claimed. With a single fixed price
@@ -92,23 +159,39 @@ export async function POST(request: Request) {
         // Atomic claim inside prevents a double-send if verify-payment
         // confirms the same registration concurrently.
         after(() => sendConfirmationEmailOnce(reg.id))
+      } else if (outcome !== 'ALREADY_CONFIRMED') {
+        // CAPACITY_FULL, NOT_PENDING or NOT_FOUND. Each means real money was
+        // captured and the seat was NOT granted, so each needs a human. Only
+        // ALREADY_CONFIRMED is a genuine no-op worth staying quiet about.
+        console.error('[razorpay-webhook] Captured payment did not confirm', {
+          orderId,
+          paymentId,
+          registrationId: reg.id,
+          status: reg.status,
+          outcome,
+        })
       }
     }
   } else if (eventType === 'payment.failed') {
-    const { data: cancelled } = await adminClient
-      .from('event_registrations')
-      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
-      .eq('razorpay_order_id', orderId)
-      .neq('status', 'CONFIRMED') // never cancel an already-confirmed registration
-      .select('event_id, events(slug)')
-      .maybeSingle()
-    // A cancelled hold releases its spot, so the page has to be dropped for the
-    // same reason a confirmation does — the figure on it just changed.
-    if (cancelled) {
-      revalidateTag(eventRegsTag(cancelled.event_id), { expire: 0 })
-      const cancelledSlug = (cancelled.events as unknown as { slug: string | null } | null)?.slug
-      if (cancelledSlug) revalidatePath(`/events/${cancelledSlug}`)
-    }
+    // Deliberately does NOT cancel the registration.
+    //
+    // Razorpay's in-checkout "Retry" reuses the SAME order id, so a failed
+    // attempt is very often followed moments later by a successful one on this
+    // very order. Cancelling here moved the row out of PENDING, and the
+    // payment.captured that followed then hit confirm_registration's
+    // `status <> 'PENDING'` guard and returned NOT_PENDING — stranding a runner
+    // who had genuinely paid at CANCELLED for good. Observed in the wild on MAP
+    // Fitness Rave (order_TUcW2uD3LMReEE: paid in Razorpay, CANCELLED here).
+    //
+    // Nothing needs releasing. The seat hold is time-based, not status-based:
+    // register_for_event counts `status = 'PENDING' and created_at > now() -
+    // interval '15 minutes'`, so an abandoned checkout frees its spot on its own
+    // and no cache purge is warranted either — the spots-left figure is
+    // unchanged by this event.
+    console.warn('[razorpay-webhook] payment.failed — registration left PENDING for retry', {
+      orderId,
+      paymentId,
+    })
   }
 
   return NextResponse.json({ ok: true })
