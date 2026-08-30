@@ -236,7 +236,9 @@ export async function POST(request: Request) {
 
   const { data: existing } = await adminClient
     .from('event_registrations')
-    .select('id, status')
+    // razorpay_order_id + amount_due_paise ride along for the resume path
+    // below, which reuses an in-flight order rather than minting a second one.
+    .select('id, status, razorpay_order_id, amount_due_paise')
     .eq('event_id', eventId)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -254,6 +256,132 @@ export async function POST(request: Request) {
   }
   if (existing?.status === 'REJECTED' && inviteOnly) {
     return NextResponse.json({ error: 'Applications for this event are closed for your account.' }, { status: 409 })
+  }
+
+  // ── Resume an in-flight checkout instead of minting a second order ────────
+  // A runner whose first payment attempt failed comes back through this route.
+  // Clearing their row and creating a FRESH Razorpay order (the block below)
+  // left the PREVIOUS order live and payable in whatever tab it was opened in,
+  // and once the row that named it was gone a payment against it matched
+  // nothing — the runner stayed unconfirmed while their money sat in Razorpay.
+  // So when nothing about the charge has changed, hand back the SAME order and
+  // let them retry against it: one order per attempt-series, and it is the
+  // order both confirm paths are actually watching.
+  //
+  // Gated on an identical amount because a Razorpay order's amount is
+  // immutable — a different package, or a coupon applied on the second pass,
+  // genuinely does need a new order and falls through below.
+  const reusableOrderId =
+    existing?.status === 'PENDING' &&
+    !inviteOnly &&
+    chargeTotalPaise > 0 &&
+    existing.amount_due_paise === chargeTotalPaise
+      ? existing.razorpay_order_id
+      : null
+
+  if (existing && reusableOrderId) {
+    const razorpay = new Razorpay({
+      key_id: process.env.STRIDE_RAZORPAY_KEY_ID ?? '',
+      key_secret: process.env.STRIDE_RAZORPAY_KEY_SECRET ?? '',
+    })
+
+    // Left null when Razorpay cannot be reached, which drops through to the
+    // clear-and-recreate path — the behaviour this branch replaced. A runner
+    // must never be blocked from registering by our inability to read an old
+    // order.
+    let order: { status?: string } | null = null
+    try {
+      order = await razorpay.orders.fetch(reusableOrderId)
+    } catch (err) {
+      console.error('[Register] Could not read the in-flight order; starting a new one', {
+        registrationId: existing.id,
+        orderId: reusableOrderId,
+        err,
+      })
+    }
+
+    if (order?.status === 'paid') {
+      // They have ALREADY paid and the confirmation never landed — precisely the
+      // failure this route is being changed to stop. Never hand a paid order
+      // back to Checkout (it refuses one) and never charge a second time:
+      // settle the registration from the captured payment and send them to
+      // their ticket.
+      let capturedId: string | null = null
+      try {
+        const { items } = await razorpay.orders.fetchPayments(reusableOrderId)
+        const captured = items.find(
+          payment => payment.status === 'captured' && Number(payment.amount) === chargeTotalPaise,
+        )
+        capturedId = captured ? String(captured.id) : null
+      } catch (err) {
+        console.error('[Register] Could not read payments on a paid order', {
+          registrationId: existing.id,
+          orderId: reusableOrderId,
+          err,
+        })
+      }
+
+      if (capturedId) {
+        const { data: outcome } = await adminClient.rpc('confirm_registration', {
+          p_registration_id: existing.id,
+          p_razorpay_payment_id: capturedId,
+          p_amount_paid_paise: chargeTotalPaise,
+        })
+
+        if (outcome === 'CONFIRMED' || outcome === 'ALREADY_CONFIRMED') {
+          console.warn('[Register] Settled an already-paid order on re-registration', {
+            registrationId: existing.id,
+            orderId: reusableOrderId,
+            outcome,
+          })
+          revalidateTag(eventRegsTag(eventId), { expire: 0 })
+          revalidatePath(`/events/${event.slug}`)
+          if (outcome === 'CONFIRMED') after(() => sendConfirmationEmailOnce(existing.id))
+          // No razorpayOrderId in the payload, so the modal routes straight to
+          // the confirmation page instead of opening Checkout.
+          return NextResponse.json({ registrationId: existing.id, slug: event.slug })
+        }
+
+        console.error('[Register] Paid order did not confirm', {
+          registrationId: existing.id,
+          orderId: reusableOrderId,
+          outcome,
+        })
+      }
+
+      // Paid, but we could not settle it here. Refuse rather than charge again;
+      // the webhook and a human both still have a path to fix it.
+      return NextResponse.json(
+        { error: "You've already paid for this event — we're finalising it. Please contact support if your ticket doesn't appear shortly." },
+        { status: 409 },
+      )
+    }
+
+    if (order) {
+      // 'created' or 'attempted' — still payable. Save any edited answers on the
+      // row we are keeping, then hand the same order straight back.
+      const { error: reuseError } = await adminClient
+        .from('event_registrations')
+        .update({ custom_responses: customResponsesJson, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .eq('status', 'PENDING')
+
+      if (reuseError) {
+        console.error('[Register] Could not update the resumed registration', reuseError)
+        return NextResponse.json({ error: 'Could not complete your registration. Please try again.' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        registrationId: existing.id,
+        slug: event.slug,
+        razorpayOrderId: reusableOrderId,
+        amount: chargeTotalPaise,
+        currency: 'INR',
+        eventName: event.name,
+        userName: fullName,
+        userEmail: user.email,
+      })
+    }
   }
 
   // A leftover PENDING (abandoned Razorpay checkout), CANCELLED (failed
