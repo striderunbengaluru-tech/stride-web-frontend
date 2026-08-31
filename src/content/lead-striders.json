@@ -39,19 +39,6 @@
     ]
   },
   {
-    "slug": "naman-gupta",
-    "name": "Naman Gupta",
-    "role": "Lead Strider",
-    "bio": "Every finish line is just the start of the next one.",
-    "instagramUrl": "https://www.instagram.com/naman_.gupta._/",
-    "stravaUrl": "https://www.strava.com/athletes/329612751",
-    "images": [
-      "naman-pose-1.webp",
-      "naman-pose-2.webp",
-      "naman-pose-3.webp"
-    ]
-  },
-  {
     "slug": "kushagra-gupta",
     "name": "Kushagra Gupta",
     "role": "Tech Lead",

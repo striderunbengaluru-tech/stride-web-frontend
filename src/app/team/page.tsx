@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   // openGraph/twitter titles below are NOT templated, so they carry it in full.
   title: 'Lead Striders — Meet the Team',
   description:
-    'Meet the eight Lead Striders who run Stride Run Club Bengaluru — the founders, pacers, run captains and organisers behind every group run, training block and race day.',
+    'Meet the seven Lead Striders who run Stride Run Club Bengaluru — the founders, pacers, run captains and organisers behind every group run, training block and race day.',
   keywords: [
     'Stride Run Club team',
     'Lead Striders',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     url: CANONICAL_PATH,
     title: 'Lead Striders — The Team Behind Stride Run Club',
     description:
-      'The eight Lead Striders who set the pace, plan the routes and make race morning happen in Bengaluru.',
+      'The seven Lead Striders who set the pace, plan the routes and make race morning happen in Bengaluru.',
     images: [
       {
         url: DEFAULT_OG_IMAGE,
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Lead Striders — The Team Behind Stride Run Club',
     description:
-      'The eight Lead Striders who set the pace, plan the routes and make race morning happen.',
+      'The seven Lead Striders who set the pace, plan the routes and make race morning happen.',
     images: [DEFAULT_OG_IMAGE],
   },
 }
