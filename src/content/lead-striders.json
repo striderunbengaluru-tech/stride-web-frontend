@@ -26,19 +26,6 @@
     ]
   },
   {
-    "slug": "sanches-baby",
-    "name": "Sanches Baby",
-    "role": "Lead Strider",
-    "bio": "I came for the run and stayed for the people.",
-    "instagramUrl": "https://www.instagram.com/sanchessssgiggles/",
-    "stravaUrl": "https://www.strava.com/athletes/150532830",
-    "images": [
-      "sanches-pose-1.webp",
-      "sanches-pose-2.webp",
-      "sanches-pose-3.webp"
-    ]
-  },
-  {
     "slug": "kushagra-gupta",
     "name": "Kushagra Gupta",
     "role": "Tech Lead",
@@ -62,32 +49,6 @@
       "chethan-pose-1.webp",
       "chethan-pose-2.webp",
       "chethan-pose-3.webp"
-    ]
-  },
-  {
-    "slug": "vagisha-sinha",
-    "name": "Vagisha Sinha",
-    "role": "Lead Strider",
-    "bio": "Slow miles still count. Keep going.",
-    "instagramUrl": "https://www.instagram.com/vagisha._/",
-    "stravaUrl": "https://www.strava.com/athletes/190306963",
-    "images": [
-      "vagisha-pose-1.webp",
-      "vagisha-pose-2.webp",
-      "vagisha-pose-3.webp"
-    ]
-  },
-  {
-    "slug": "janvi-rajesh",
-    "name": "Janvi Rajesh",
-    "role": "Lead Strider",
-    "bio": "Find your pace, then find someone to share it with.",
-    "instagramUrl": "https://www.instagram.com/jawuee/",
-    "stravaUrl": "",
-    "images": [
-      "janvi-pose-1.webp",
-      "janvi-pose-2.webp",
-      "janvi-pose-3.webp"
     ]
   }
 ]
