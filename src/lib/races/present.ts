@@ -63,6 +63,24 @@ export function isRegistrationOpen(
   return true
 }
 
+/** Days ahead beyond which the closing-soon badge stops being urgent. */
+const CLOSING_SOON_DAYS = 7
+const MS_PER_DAY = 86_400_000
+
+/** "Closes in 3 days" / "Closes today" / "Registration closed", or null with no deadline. */
+export function deadlineLabel(
+  race: { dayKey: string; registrationDeadline: string | null },
+  todayKey: string,
+  nowIso: string,
+): { text: string; urgent: boolean } | null {
+  if (!race.registrationDeadline) return null
+  if (!isRegistrationOpen(race, todayKey, nowIso)) return { text: 'Registration closed', urgent: false }
+  const days = Math.round((Date.parse(istDayKey(race.registrationDeadline)) - Date.parse(todayKey)) / MS_PER_DAY)
+  if (days <= 0) return { text: 'Closes today', urgent: true }
+  if (days === 1) return { text: 'Closes tomorrow', urgent: true }
+  return { text: `Closes in ${days} days`, urgent: days <= CLOSING_SOON_DAYS }
+}
+
 /** Distinct cities, alphabetical — the options for the city filter. */
 export function distinctCities(races: readonly { city: string }[]): string[] {
   return [...new Set(races.map(r => r.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))

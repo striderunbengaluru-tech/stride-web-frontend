@@ -10,7 +10,7 @@ import { distanceLabel, sortDistances } from '@/types/race'
 import { RaceDetailCtas } from './race-detail-ctas'
 
 export type PopoverState = {
-  /** preview: hover/focus peek, inert. pinned: opened on purpose, interactive. */
+  /** preview: opened by hover/focus, closes when the pointer leaves chip and card. pinned: opened on purpose. */
   mode: 'preview' | 'pinned'
   anchor: HTMLElement
   races: RaceCardData[]
@@ -21,6 +21,10 @@ type Props = {
   todayKey: string
   nowIso: string
   onClose: () => void
+  /** The pointer entered the card — cancel any pending preview close. */
+  onPointerEnter: () => void
+  /** The pointer left the card — schedule a preview close. */
+  onPointerLeave: () => void
 }
 
 const DESKTOP_QUERY = '(min-width: 640px)'
@@ -53,8 +57,12 @@ function useIsDesktop(): boolean {
  * through a portal so table overflow can never clip it. Anchored beside the
  * chip on wide screens and clamped to the viewport; a bottom sheet on phones,
  * where a 46px-wide cell has nothing to anchor to.
+ *
+ * The card is interactive in both modes. In preview mode it stays open while
+ * the pointer is over the chip or the card and closes a beat after it leaves
+ * both — the grid owns that timer and reports enter/leave through the props.
  */
-export function RacePopover({ state, todayKey, nowIso, onClose }: Props) {
+export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, onPointerLeave }: Props) {
   const mounted = useMounted()
   const isDesktop = useIsDesktop()
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
@@ -121,14 +129,12 @@ export function RacePopover({ state, todayKey, nowIso, onClose }: Props) {
   const body = (
     <>
       <div className='flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-white/10'>
-        <p id={headingId} className='text-stride-yellow-accent text-xs font-bold font-mono uppercase tracking-widest'>
+        <p id={headingId} className='text-stride-yellow-accent text-xs font-bold font-mono'>
           {dayLabel}
         </p>
-        {pinned && (
-          <button type='button' onClick={onClose} aria-label='Close' className='-m-2 p-2 rounded-md text-white/50 hover:text-white min-h-11 min-w-11 inline-flex items-center justify-center'>
-            <X size={16} aria-hidden='true' />
-          </button>
-        )}
+        <button type='button' onClick={onClose} aria-label='Close' className='-m-2 p-2 rounded-md text-white/50 hover:text-white min-h-11 min-w-11 inline-flex items-center justify-center'>
+          <X size={16} aria-hidden='true' />
+        </button>
       </div>
       <ul className='list-none m-0 p-0 divide-y divide-white/10 max-h-[60vh] overflow-y-auto'>
         {state.races.map(race => {
@@ -136,19 +142,19 @@ export function RacePopover({ state, todayKey, nowIso, onClose }: Props) {
           return (
             <li key={race.id} className='px-4 py-4 space-y-3'>
               <div>
-                <p className='text-white font-bold text-base leading-snug line-clamp-2'>{race.name}</p>
+                <p className='font-libre text-white text-lg leading-snug line-clamp-2'>{race.name}</p>
                 <p className='text-white/60 text-sm mt-1 flex items-center gap-1.5 min-w-0'>
                   <MapPin size={12} className='shrink-0 text-white/35' aria-hidden='true' />
                   <span className='truncate'>{[race.venue, race.city].filter(Boolean).join(', ')}</span>
-                  {race.hasStartTime && <span className='shrink-0 text-white/40'>· {formatTimeIST(race.raceDate)}</span>}
+                  {race.hasStartTime && <span className='shrink-0 text-white/40'>{formatTimeIST(race.raceDate)}</span>}
                 </p>
                 {race.distances.length > 0 && (
                   <p className='text-white/50 text-xs mt-1.5 font-semibold'>
-                    {sortDistances(race.distances).map(distanceLabel).join(' · ')}
+                    {sortDistances(race.distances).map(distanceLabel).join(', ')}
                   </p>
                 )}
               </div>
-              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} open={open} />
+              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} open={open} layout='compact' />
               <Link
                 href={`/race-calendar/${race.slug}`}
                 prefetch={false}
@@ -186,10 +192,13 @@ export function RacePopover({ state, todayKey, nowIso, onClose }: Props) {
   return createPortal(
     <div
       ref={panelRef}
-      role={pinned ? 'dialog' : 'tooltip'}
+      role='dialog'
+      aria-modal={false}
       aria-labelledby={headingId}
+      onMouseEnter={onPointerEnter}
+      onMouseLeave={onPointerLeave}
       style={{ top: position?.top ?? 0, left: position?.left ?? 0, width: POPOVER_WIDTH, visibility: position ? 'visible' : 'hidden' }}
-      className={`fixed z-50 max-w-[calc(100vw-16px)] rounded-xl overflow-hidden ${panelChrome} ${pinned ? '' : 'pointer-events-none'}`}
+      className={`fixed z-50 max-w-[calc(100vw-16px)] rounded-xl overflow-hidden ${panelChrome} ${pinned ? 'ring-1 ring-stride-yellow-accent/40' : ''}`}
     >
       {body}
     </div>,

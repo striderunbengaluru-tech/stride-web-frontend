@@ -6,6 +6,7 @@ import { toRaceCardData, distinctCities, type RaceCardData } from '@/lib/races/p
 import { istDayKey } from '@/lib/utils/ist'
 import { RaceCalendarClient } from '@/components/race-calendar/race-calendar-client'
 import { RaceList } from '@/components/race-calendar/race-list'
+import { NextRaceHero } from '@/components/race-calendar/next-race-hero'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 import { JsonLd } from '@/components/seo/json-ld'
 import { graph, raceListNode, breadcrumbNode } from '@/lib/json-ld'
@@ -62,6 +63,8 @@ export default async function RaceCalendarPage() {
   // and no-JS visitors still receive every upcoming race.
   const upcoming = races.filter(r => r.dayKey >= todayKey)
   const past = races.filter(r => r.dayKey < todayKey).reverse()
+  const nextRace = upcoming[0] ?? null
+  const cityCount = cities.length
 
   return (
     <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden'>
@@ -69,14 +72,30 @@ export default async function RaceCalendarPage() {
       <TrackBackdrop />
 
       <section className='relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-24'>
-        <div className='mb-12'>
-          <h1 className='text-6xl sm:text-7xl font-bold text-white leading-[0.95] tracking-tight'>
-            Race calendar
-          </h1>
-          <p className='text-white/45 text-lg mt-5 max-w-lg leading-relaxed'>
-            Races across India that Stride runners are training for, picked by the team. Registration happens on each organiser&apos;s site; where Stride has a coupon code, it&apos;s here.
-          </p>
+        {/* Header: the serif does the talking; one line of copy, then the next race. */}
+        <div className='mb-10 sm:mb-14 grid grid-cols-1 lg:grid-cols-[1fr_auto] lg:items-end gap-6'>
+          <div>
+            <p className='text-white/50 text-sm font-medium'>Race calendar</p>
+            <h1 className='text-5xl sm:text-6xl lg:text-7xl text-white leading-none tracking-tight mt-3 text-balance max-w-3xl'>
+              Every start line worth training for.
+            </h1>
+            <p className='text-white/55 text-lg mt-5 max-w-xl leading-relaxed'>
+              Races across India the Stride team is watching, with the organiser&apos;s registration link and any coupon code we hold for you.
+            </p>
+          </div>
+          {upcoming.length > 0 && (
+            <p className='text-white/45 text-sm font-mono lg:text-right lg:pb-2'>
+              {upcoming.length} upcoming {upcoming.length === 1 ? 'race' : 'races'}
+              {cityCount > 1 ? ` across ${cityCount} cities` : ''}
+            </p>
+          )}
         </div>
+
+        {nextRace && (
+          <div className='mb-12 sm:mb-16'>
+            <NextRaceHero race={nextRace} todayKey={todayKey} nowIso={nowIso} />
+          </div>
+        )}
 
         <Suspense fallback={<RaceList upcoming={upcoming} past={past} todayKey={todayKey} nowIso={nowIso} />}>
           <RaceCalendarClient races={races} cities={cities} todayKey={todayKey} nowIso={nowIso} />

@@ -36,7 +36,9 @@ function matchesDistances(race: RaceCardData, selected: string[]): boolean {
 export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
   const router = useRouter()
   const todayMonth = todayKey.slice(0, 7)
-  const { state, set } = useRaceCalendarParams(todayMonth, cities)
+  // The grid opens on the month of the next race, not on an empty current month.
+  const defaultMonth = races.find(r => r.dayKey >= todayKey)?.monthKey ?? todayMonth
+  const { state, set } = useRaceCalendarParams(defaultMonth, cities)
 
   const hasOther = useMemo(() => races.some(r => r.distances.some(d => !isCanonicalDistance(d))), [races])
 
@@ -133,10 +135,19 @@ export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
     },
   ])
 
+  const inMonth = filtered.filter(r => r.monthKey === state.month).length
+  const countLabel = state.view === 'list'
+    ? `${upcoming.length} upcoming ${upcoming.length === 1 ? 'race' : 'races'}`
+    : `${inMonth} ${inMonth === 1 ? 'race' : 'races'} this month`
+
   return (
     <div className='space-y-8'>
-      <div className='flex flex-col gap-6'>
-        <ViewToggle view={state.view} onChange={view => set({ view })} />
+      {/* One toolbar row: view on the left, filters (and what is active) on the right */}
+      <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-y border-white/10 py-4'>
+        <div className='flex items-center gap-4'>
+          <ViewToggle view={state.view} onChange={view => set({ view })} />
+          <p className='text-white/40 text-sm hidden md:block' aria-live='polite'>{countLabel}</p>
+        </div>
         <RaceFilters
           selectedDistances={state.distances}
           onToggleDistance={toggleDistance}
@@ -150,12 +161,7 @@ export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
           onClear={() => set({ distances: [], city: null, when: 'all' })}
         />
       </div>
-
-      <p className='text-white/40 text-sm' aria-live='polite'>
-        {state.view === 'list'
-          ? `${upcoming.length} upcoming ${upcoming.length === 1 ? 'race' : 'races'}`
-          : `${filtered.filter(r => r.monthKey === state.month).length} ${filtered.filter(r => r.monthKey === state.month).length === 1 ? 'race' : 'races'} this month`}
-      </p>
+      <p className='text-white/40 text-sm md:hidden -mt-4' aria-live='polite'>{countLabel}</p>
 
       {state.view === 'list' ? (
         <RaceList upcoming={upcoming} past={past} todayKey={todayKey} nowIso={nowIso} filtersActive={filtersActive} />

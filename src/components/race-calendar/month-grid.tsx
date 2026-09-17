@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { buildMonthCells, monthKeyLabel, shiftMonth } from '@/lib/utils/month-grid'
 import type { RaceCardData } from '@/lib/races/present'
@@ -27,6 +27,8 @@ const WEEKDAYS = [
 const MAX_VISIBLE_CHIPS = 2
 /** Dots shown per day on phones. */
 const MAX_DOTS = 3
+/** How long a preview survives after the pointer leaves both chip and card — long enough to cross the gap. */
+const PREVIEW_CLOSE_DELAY_MS = 180
 
 function dayNumber(dayKey: string): string {
   return String(Number(dayKey.slice(-2)))
@@ -46,20 +48,37 @@ function longDay(dayKey: string): string {
  */
 export function MonthGrid({ monthKey, racesByDay, todayKey, nowIso, minMonth, maxMonth, onMonthChange }: Props) {
   const [popover, setPopover] = useState<PopoverState | null>(null)
-  const closePopover = useCallback(() => setPopover(null), [])
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelClose = useCallback(() => {
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
+  }, [])
+  const closePopover = useCallback(() => { cancelClose(); setPopover(null) }, [cancelClose])
+  useEffect(() => cancelClose, [cancelClose])
 
   const rows = buildMonthCells(monthKey)
   const canGoBack = monthKey > minMonth
   const canGoForward = monthKey < maxMonth
 
   function preview(anchor: HTMLElement, races: RaceCardData[]) {
+    cancelClose()
     // A pinned card stays put while the pointer wanders over other chips.
     setPopover(current => (current?.mode === 'pinned' ? current : { mode: 'preview', anchor, races }))
   }
-  function endPreview() {
+  // Leaving the chip does not close the preview outright: the pointer needs a
+  // beat to cross into the card, and entering the card cancels this timer.
+  const scheduleClose = useCallback(() => {
+    cancelClose()
+    closeTimer.current = setTimeout(() => {
+      setPopover(current => (current?.mode === 'preview' ? null : current))
+    }, PREVIEW_CLOSE_DELAY_MS)
+  }, [cancelClose])
+  function endPreviewNow() {
+    cancelClose()
     setPopover(current => (current?.mode === 'preview' ? null : current))
   }
   function pin(anchor: HTMLElement, races: RaceCardData[]) {
+    cancelClose()
     setPopover({ mode: 'pinned', anchor, races })
   }
 
@@ -75,7 +94,7 @@ export function MonthGrid({ monthKey, racesByDay, todayKey, nowIso, minMonth, ma
         >
           <ChevronLeft size={18} aria-hidden='true' />
         </button>
-        <h2 className='text-white font-semibold text-lg' aria-live='polite'>{monthKeyLabel(monthKey)}</h2>
+        <h2 className='text-white text-2xl sm:text-3xl' aria-live='polite'>{monthKeyLabel(monthKey)}</h2>
         <button
           type='button'
           onClick={() => onMonthChange(shiftMonth(monthKey, 1))}
@@ -123,9 +142,9 @@ export function MonthGrid({ monthKey, racesByDay, todayKey, nowIso, minMonth, ma
                           key={race.id}
                           type='button'
                           onMouseEnter={e => preview(e.currentTarget, [race])}
-                          onMouseLeave={endPreview}
+                          onMouseLeave={scheduleClose}
                           onFocus={e => preview(e.currentTarget, [race])}
-                          onBlur={endPreview}
+                          onBlur={endPreviewNow}
                           onClick={e => pin(e.currentTarget, [race])}
                           aria-haspopup='dialog'
                           className='w-full text-left rounded px-1.5 min-h-7 text-xs font-semibold leading-tight line-clamp-1 bg-stride-yellow-accent/15 text-stride-yellow-accent hover:bg-stride-yellow-accent hover:text-copy-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-stride-yellow-accent transition-colors'
@@ -176,7 +195,14 @@ export function MonthGrid({ monthKey, racesByDay, todayKey, nowIso, minMonth, ma
         </tbody>
       </table>
 
-      <RacePopover state={popover} todayKey={todayKey} nowIso={nowIso} onClose={closePopover} />
+      <RacePopover
+        state={popover}
+        todayKey={todayKey}
+        nowIso={nowIso}
+        onClose={closePopover}
+        onPointerEnter={cancelClose}
+        onPointerLeave={scheduleClose}
+      />
     </div>
   )
 }

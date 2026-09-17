@@ -54,12 +54,11 @@ export function RaceList({ upcoming, past, todayKey, nowIso, filtersActive = fal
         <div className='space-y-12'>
           {groupByMonth(upcoming).map(group => (
             <section key={group.monthKey} aria-labelledby={`month-${group.monthKey}`}>
-              <div className='flex items-center gap-2 mb-6'>
-                <div className='h-4 w-1 bg-stride-yellow-accent rounded-full' aria-hidden='true' />
-                <h2 id={`month-${group.monthKey}`} className='text-white font-semibold text-lg'>
+              <div className='flex items-baseline gap-3 mb-6'>
+                <h2 id={`month-${group.monthKey}`} className='text-white text-2xl sm:text-3xl'>
                   {monthKeyLabel(group.monthKey)}
                 </h2>
-                <span className='text-white/30 text-sm'>{group.races.length}</span>
+                <span className='text-white/35 text-sm font-mono tabular-nums'>{group.races.length}</span>
               </div>
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10'>
                 {group.races.map(race => (

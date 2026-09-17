@@ -1,9 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin, Tag, Building2 } from 'lucide-react'
-import { formatDateShortIST, formatTimeIST, istDayKey } from '@/lib/utils/ist'
-import { dayKeyDiff } from '@/lib/utils/month-grid'
-import { isRegistrationOpen, type RaceCardData } from '@/lib/races/present'
+import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
+import { deadlineLabel, type RaceCardData } from '@/lib/races/present'
 import { distanceLabel, sortDistances } from '@/types/race'
 
 type Props = {
@@ -14,22 +16,16 @@ type Props = {
   dimmed?: boolean
 }
 
-/** Days ahead beyond which the closing-soon badge turns yellow. */
-const CLOSING_SOON_DAYS = 7
+/** Frame ratio until the poster's real dimensions are known. Most race posters are portrait. */
+const DEFAULT_POSTER_RATIO = 3 / 4
 
-/** "Closes in 3 days" / "Closes today" / "Registration closed", or null with no deadline. */
-export function deadlineLabel(race: RaceCardData, todayKey: string, nowIso: string): { text: string; urgent: boolean } | null {
-  if (!race.registrationDeadline) return null
-  if (!isRegistrationOpen(race, todayKey, nowIso)) return { text: 'Registration closed', urgent: false }
-  const days = dayKeyDiff(istDayKey(race.registrationDeadline), todayKey)
-  if (days <= 0) return { text: 'Closes today', urgent: true }
-  if (days === 1) return { text: 'Closes tomorrow', urgent: true }
-  return { text: `Closes in ${days} days`, urgent: days <= CLOSING_SOON_DAYS }
-}
-
-// No hooks and no 'use client': this card is also what the server renders as
-// the Suspense fallback, so crawlers and no-JS visitors get the full list.
+// A client component only for the poster measurement below; it still renders
+// on the server, which is what lets it be the calendar's Suspense fallback.
 export function RaceCard({ race, todayKey, nowIso, dimmed = false }: Props) {
+  // Organiser posters arrive in every ratio. Sizing the frame to the image
+  // once it loads removes the letterbox bands without cropping the artwork.
+  const [ratio, setRatio] = useState<number | null>(null)
+
   const dateLabel = formatDateShortIST(race.raceDate) + (race.hasStartTime ? ` · ${formatTimeIST(race.raceDate)}` : '')
   const where = [race.venue, race.city].filter(Boolean).join(', ')
   const deadline = deadlineLabel(race, todayKey, nowIso)
@@ -40,12 +36,16 @@ export function RaceCard({ race, todayKey, nowIso, dimmed = false }: Props) {
       prefetch={false}
       className={`group flex flex-col h-full rounded-md border border-white/10 bg-white/4 overflow-hidden hover:border-white/25 hover:bg-white/6 transition-all duration-300 ${dimmed ? 'opacity-60' : ''}`}
     >
-      <div className='relative aspect-[3/4] shrink-0 bg-white/5 overflow-hidden'>
+      <div style={{ aspectRatio: String(ratio ?? DEFAULT_POSTER_RATIO) }} className='relative shrink-0 bg-white/5 overflow-hidden'>
         {race.posterUrl ? (
           <Image
             src={race.posterUrl}
             alt={`${race.name} poster`}
             fill
+            onLoad={(e) => {
+              const img = e.currentTarget
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) setRatio(img.naturalWidth / img.naturalHeight)
+            }}
             className='object-contain group-hover:scale-[1.02] transition-transform duration-500'
             sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
           />
@@ -65,7 +65,7 @@ export function RaceCard({ race, todayKey, nowIso, dimmed = false }: Props) {
         <p className={`text-sm font-medium font-mono ${dimmed ? 'text-white/40' : 'text-stride-yellow-accent'}`}>
           {dateLabel}
         </p>
-        <h3 className='text-white font-bold text-xl leading-snug line-clamp-2 mt-1.5 group-hover:text-stride-yellow-accent transition-colors duration-200'>
+        <h3 className='text-white text-xl leading-snug line-clamp-2 mt-1.5 group-hover:text-stride-yellow-accent transition-colors duration-200'>
           {race.name}
         </h3>
         {race.organizer && (
