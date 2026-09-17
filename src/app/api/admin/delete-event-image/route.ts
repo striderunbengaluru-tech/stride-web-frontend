@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
-
-const STORAGE_BASE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/'
+import { storagePathFromPublicUrl, isAllowedImagePath } from '@/lib/utils/storage-paths'
 
 export async function DELETE(request: Request) {
   const supabase = await createClient()
@@ -26,15 +25,15 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 })
   }
 
-  if (!url.startsWith(STORAGE_BASE)) {
+  const storagePath = storagePathFromPublicUrl(url)
+  if (storagePath === null) {
     return NextResponse.json({ error: 'Invalid storage URL' }, { status: 400 })
   }
 
-  const storagePath = url.slice(STORAGE_BASE.length)
-
-  // Only allow deletion of event images via this endpoint
-  if (!storagePath.startsWith('images/events/')) {
-    return NextResponse.json({ error: 'Can only delete event images' }, { status: 400 })
+  // Only event and race images may be removed through this endpoint — never
+  // avatars, covers or anything else that happens to live in the bucket.
+  if (!isAllowedImagePath(storagePath)) {
+    return NextResponse.json({ error: 'Can only delete event or race images' }, { status: 400 })
   }
 
   const { error } = await adminClient.storage

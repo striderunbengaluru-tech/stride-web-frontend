@@ -5,8 +5,10 @@ import { after } from 'next/server'
 import { revalidatePath, updateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
-import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/lib/actions/require-admin'
+import { firstFormIssue } from '@/lib/utils/form-issues'
+import { storagePathsUnder } from '@/lib/utils/storage-paths'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
 import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema, eventCouponSchema, EVENT_FIELD_ORDER, type EventActionResult } from '@/lib/validations/admin'
 import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, type EventPackage, type SelectedPackage } from '@/types/event'
@@ -72,21 +74,6 @@ function packageColumns(
 // EventActionResult is declared in @/lib/validations/admin. Returning it rather
 // than throwing is deliberate: Next.js masks thrown server-action messages in
 // production, and these are messages the admin must be able to read.
-
-// Picks the topmost problem so the toast names the field the admin will fix
-// first. Zod reports issues in schema-key order, which is not the order the
-// fields appear on screen.
-function firstFormIssue(issues: readonly { path: readonly PropertyKey[]; message: string }[]): { error: string; field?: string } {
-  const order = EVENT_FIELD_ORDER as readonly string[]
-  const rank = (issue: { path: readonly PropertyKey[] }) => {
-    const idx = order.indexOf(String(issue.path[0] ?? ''))
-    return idx === -1 ? order.length : idx
-  }
-  const top = [...issues].sort((a, b) => rank(a) - rank(b))[0]
-  if (!top) return { error: 'Please check the form and try again.' }
-  const field = String(top.path[0] ?? '')
-  return { error: top.message, field: field || undefined }
-}
 
 function parsePackages(raw: string | null | undefined): EventPackage[] {
   if (!raw) return []
@@ -198,35 +185,6 @@ async function validateCapacityReduction(
   return null
 }
 
-/**
- * Gate every admin write. Returns the acting admin plus a display-name snapshot
- * for the attribution columns (`events.created_by/updated_by`,
- * `event_registrations.decided_by`) — a name rather than an id, so the trail
- * survives hardDeleteUser() erasing the users row.
- */
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/')
-
-  // Always read role fresh from DB — JWT claims may hold stale values.
-  const { data: row } = await adminClient
-    .from('users')
-    .select('role, full_name, username')
-    .eq('id', user.id)
-    .single()
-
-  if (row?.role !== 'ADMIN') redirect('/')
-
-  const actorName: string =
-    (row.full_name as string | null)?.trim() ||
-    (row.username as string | null) ||
-    user.email ||
-    'Admin'
-
-  return { user, actorName }
-}
-
 // ── Events ───────────────────────────────────────────────────────────────────
 
 // Signature note: `_prev` is useActionState's previous-state argument. The form
@@ -238,7 +196,7 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
-  if (!parsed.success) return firstFormIssue(parsed.error.issues)
+  if (!parsed.success) return firstFormIssue(parsed.error.issues, EVENT_FIELD_ORDER)
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, ...rest } = parsed.data
   const id = nanoid()
@@ -324,7 +282,7 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
-  if (!parsed.success) return firstFormIssue(parsed.error.issues)
+  if (!parsed.success) return firstFormIssue(parsed.error.issues, EVENT_FIELD_ORDER)
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, capacity, ...rest } = parsed.data
 
@@ -376,8 +334,6 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   redirect('/admin/events')
 }
 
-const STORAGE_URL_PREFIX = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/'
-
 export async function deleteEventAction(id: string): Promise<void> {
   await requireAdmin()
 
@@ -394,10 +350,7 @@ export async function deleteEventAction(id: string): Promise<void> {
     catch { return [] }
   })()
 
-  const storagePaths = bannerUrls
-    .filter(url => url.startsWith(STORAGE_URL_PREFIX))
-    .map(url => url.slice(STORAGE_URL_PREFIX.length))
-    .filter(p => p.startsWith('images/events/'))
+  const storagePaths = storagePathsUnder('event', bannerUrls)
 
   if (storagePaths.length > 0) {
     await adminClient.storage.from('stride-assets').remove(storagePaths)

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { adminClient } from '@/lib/supabase/admin'
+import { getPublishedRaces } from '@/lib/data/races'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { PREVIEW_FEATURES_ENABLED, isGatedRoute } from '@/lib/feature-flags'
 
@@ -15,6 +16,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL,                         lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
     { url: `${SITE_URL}/events`,             lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
+    { url: `${SITE_URL}/race-calendar`,      lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${SITE_URL}/pricing`,            lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${SITE_URL}/about`,              lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/blog`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
@@ -55,7 +57,16 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  const allRoutes = [...staticRoutes, ...blogRoutes, ...eventRoutes]
+  // Published races, through the same cached read the pages use so the
+  // PUBLISHED filter lives in exactly one place.
+  const raceRoutes: MetadataRoute.Sitemap = (await getPublishedRaces()).map(race => ({
+    url: `${SITE_URL}/race-calendar/${race.slug}`,
+    lastModified: race.updated_at ?? now,
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }))
+
+  const allRoutes = [...staticRoutes, ...blogRoutes, ...eventRoutes, ...raceRoutes]
 
   // On production, drop any route hidden by guardPreviewFeature() so the sitemap
   // only lists pages that actually resolve.

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useWebMcpTools } from '@/hooks/use-web-mcp-tools'
 import { toolJson, toolError } from '@/lib/webmcp'
-import type { PublicMilestoneTier, PublicAthlete, PublicEventDetail } from '@/lib/mcp/types'
+import type { PublicMilestoneTier, PublicAthlete, PublicEventDetail, PublicRaceDetail } from '@/lib/mcp/types'
 import type { FaqEntry } from '@/lib/markdown/render'
 
 /**
@@ -171,6 +171,28 @@ export function EventTools({ event }: { event: PublicEventDetail }) {
             'The registration form is opening on screen. The person must review and confirm it themselves; payment, where applicable, is taken by Razorpay after they do. Do not attempt to submit it for them. If they are not signed in they will be sent to sign in first.',
         })
       },
+    },
+  ])
+  return null
+}
+
+/**
+ * Race-detail tool. Read-only, and deliberately without a "start registration"
+ * counterpart: the race is someone else's, registration happens on their site,
+ * and the coupon code is printed on the page for the person to use themselves.
+ */
+export function RaceTools({ race }: { race: PublicRaceDetail }) {
+  useWebMcpTools([
+    {
+      name: 'get_race_details',
+      description:
+        "Full details of the third-party race on this page: date, city, venue, organiser, distances, registration deadline, the organiser's registration link and any Stride coupon code. Stride curates this race but does not organise it or take payment.",
+      execute: () =>
+        toolJson({
+          ...race,
+          registrationNote:
+            "Registration happens on the organiser's website, by the person themselves. Show them the link and the coupon code; do not enter the code or register for them.",
+        }),
     },
   ])
   return null

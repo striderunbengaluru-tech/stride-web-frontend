@@ -1,0 +1,87 @@
+import { Suspense } from 'react'
+import type { Metadata } from 'next'
+import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
+import { getPublishedRaces } from '@/lib/data/races'
+import { toRaceCardData, distinctCities, type RaceCardData } from '@/lib/races/present'
+import { istDayKey } from '@/lib/utils/ist'
+import { RaceCalendarClient } from '@/components/race-calendar/race-calendar-client'
+import { RaceList } from '@/components/race-calendar/race-list'
+import { TrackBackdrop } from '@/components/ui/track-backdrop'
+import { JsonLd } from '@/components/seo/json-ld'
+import { graph, raceListNode, breadcrumbNode } from '@/lib/json-ld'
+import { listRaces } from '@/lib/mcp/data'
+import { PRODUCTION_SITE_URL } from '@/lib/site-url'
+
+// Title omits the brand: the root layout's template appends it.
+export const metadata: Metadata = {
+  title: 'Race Calendar',
+  description:
+    'Upcoming running races in and around Bengaluru, curated by Stride Run Club — 5K to ultra, with dates, cities, registration links and Stride coupon codes.',
+  keywords: ['race calendar', 'marathon Bengaluru', 'half marathon calendar India', '10K races', 'running races 2026', 'race coupon code'],
+  alternates: { canonical: '/race-calendar', types: { 'text/markdown': '/race-calendar.md' } },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    siteName: 'Stride Run Club',
+    url: '/race-calendar',
+    title: 'Race Calendar — Stride Run Club',
+    description: 'Every race worth training for, in one calendar. Dates, distances, registration links and Stride coupon codes.',
+    images: [{ url: DEFAULT_OG_IMAGE, width: OG_IMAGE_WIDTH, height: OG_IMAGE_HEIGHT, alt: 'Stride Run Club — race calendar' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Race Calendar — Stride Run Club',
+    description: 'Every race worth training for, in one calendar.',
+    images: [DEFAULT_OG_IMAGE],
+  },
+}
+
+// ISR, purged on demand by the admin race actions via the 'races' tag.
+export const revalidate = 60
+
+const JSON_LD_LIMIT = 100
+
+async function fetchCalendar(): Promise<{ races: RaceCardData[]; cities: string[]; todayKey: string; nowIso: string }> {
+  const rows = await getPublishedRaces()
+  const races = rows.map(toRaceCardData)
+  const nowIso = new Date().toISOString()
+  return { races, cities: distinctCities(races), todayKey: istDayKey(nowIso), nowIso }
+}
+
+export default async function RaceCalendarPage() {
+  const { races, cities, todayKey, nowIso } = await fetchCalendar()
+
+  const { races: publicRaces } = await listRaces({ when: 'upcoming', limit: JSON_LD_LIMIT }, false)
+  const jsonLd = graph([
+    raceListNode(PRODUCTION_SITE_URL, publicRaces),
+    breadcrumbNode(PRODUCTION_SITE_URL, [{ name: 'Race calendar', path: '/race-calendar' }]),
+  ])
+
+  // The default view, rendered on the server. It is the Suspense fallback for
+  // the client below (which reads the URL and so client-renders), so crawlers
+  // and no-JS visitors still receive every upcoming race.
+  const upcoming = races.filter(r => r.dayKey >= todayKey)
+  const past = races.filter(r => r.dayKey < todayKey).reverse()
+
+  return (
+    <main className='relative min-h-screen bg-stride-purple-primary overflow-hidden'>
+      <JsonLd data={jsonLd} />
+      <TrackBackdrop />
+
+      <section className='relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-24'>
+        <div className='mb-12'>
+          <h1 className='text-6xl sm:text-7xl font-bold text-white leading-[0.95] tracking-tight'>
+            Race calendar
+          </h1>
+          <p className='text-white/45 text-lg mt-5 max-w-lg leading-relaxed'>
+            Races across India that Stride runners are training for, picked by the team. Registration happens on each organiser&apos;s site; where Stride has a coupon code, it&apos;s here.
+          </p>
+        </div>
+
+        <Suspense fallback={<RaceList upcoming={upcoming} past={past} todayKey={todayKey} nowIso={nowIso} />}>
+          <RaceCalendarClient races={races} cities={cities} todayKey={todayKey} nowIso={nowIso} />
+        </Suspense>
+      </section>
+    </main>
+  )
+}

@@ -9,6 +9,7 @@ import { FooterAccountColumn } from './footer-account-column'
 // not resolve.
 const EXPLORE_LINKS = [
   { title: 'Events',        href: '/events' },
+  { title: 'Race calendar', href: '/race-calendar' },
   { title: 'Pricing',       href: '/pricing' },
   { title: 'About',         href: '/about' },
   { title: 'Milestones',    href: '/milestones' },

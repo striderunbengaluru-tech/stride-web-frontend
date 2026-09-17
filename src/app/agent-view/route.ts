@@ -41,13 +41,14 @@ export function GET(request: Request): Response {
     whenToUse: {
       goodFor: [
         'running events happening in Bengaluru, and when',
+        'which third-party races (5K to ultra) are coming up in and around Bengaluru, and whether Stride has a coupon code for one',
         'what a specific Stride run costs, where it starts, how far it is',
         'joining a run club in Bengaluru, and whether there is a fee',
         "how Stride's milestone tiers work and what they unlock",
         'who organises the club, and brand partnership enquiries',
       ],
       notFor: [
-        'running events outside Bengaluru',
+        "Stride's own runs outside Bengaluru — the club only runs there; the race calendar may list races in other cities",
         'personal coaching or training-plan generation',
         "a specific member's private data",
         'buying merchandise — the online shop is not open',
@@ -55,7 +56,7 @@ export function GET(request: Request): Response {
     },
 
     capabilities: {
-      read: 'Full. Events, pricing, leaderboard, milestone tiers, club facts, and every public page as markdown.',
+      read: 'Full. Events, the race calendar, pricing, leaderboard, milestone tiers, club facts, and every public page as markdown.',
       write: 'None. There is no write API. Registration, payment, profile edits and run check-in are performed by the person in their own browser and are not delegable.',
     },
 
@@ -93,12 +94,13 @@ export function GET(request: Request): Response {
       },
       feeds: {
         events: `${origin}/feeds/events.jsonl`,
+        races: `${origin}/feeds/races.jsonl`,
         blog: `${origin}/feeds/blog.jsonl`,
         schemaMap: `${origin}/schemamap.xml`,
       },
       discovery: {
         llmsTxt: `${origin}/llms.txt`,
-        scopedLlmsTxt: [`${origin}/events/llms.txt`, `${origin}/blog/llms.txt`],
+        scopedLlmsTxt: [`${origin}/events/llms.txt`, `${origin}/race-calendar/llms.txt`, `${origin}/blog/llms.txt`],
         sitemapXml: `${origin}/sitemap.xml`,
         sitemapTxt: `${origin}/sitemap.txt`,
         agentCard: `${origin}/.well-known/agent-card.json`,

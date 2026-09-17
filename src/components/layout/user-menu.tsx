@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints,
-  CalendarDays, Handshake, Trophy, ScanLine, Users,
+  CalendarDays, Handshake, Trophy, ScanLine, Users, Flag,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
@@ -18,6 +18,7 @@ import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
 // single word.
 const SITE_LINKS = [
   { label: 'Events',       href: '/events',       icon: CalendarDays },
+  { label: 'Races',        href: '/race-calendar', icon: Flag },
   { label: 'Team',         href: '/team',         icon: Users },
   { label: 'Partnerships', href: '/partnerships', icon: Handshake },
   { label: 'Leaderboard',  href: '/leaderboard',  icon: Trophy },

@@ -115,7 +115,7 @@ export function agentCard(origin: string) {
       id: `${server.name}.${tool.name}`,
       name: tool.title,
       description: tool.description,
-      tags: server === PRODUCT_SERVER ? ['events', 'running', 'bengaluru'] : ['documentation', 'faq'],
+      tags: server === PRODUCT_SERVER ? ['events', 'races', 'running', 'bengaluru'] : ['documentation', 'faq'],
       examples: REPRESENTATIVE_QUERIES[server.name] ?? [],
       inputModes: ['text/plain', 'application/json'],
       outputModes: ['application/json', 'text/markdown'],

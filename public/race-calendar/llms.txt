@@ -1,0 +1,40 @@
+# Stride Run Club — Race Calendar
+
+> Scoped context for the third-party races Stride Run Club curates at /race-calendar: what a listed race is, where the data lives, and where an agent's job ends. For the whole site, see https://www.strideclub.in/llms.txt
+
+## What a listed race is
+
+A race on the calendar is organised by someone else — a city 10K, a half marathon, a trail ultra — that Stride's team thinks its runners should know about. Stride is the curator, not the organiser. It does not take registrations or payment for these races, there is no Stride Tag check-in, and attending one does not count toward Stride milestone tiers. Races may be anywhere in India, not only Bengaluru.
+
+Some races carry a Stride coupon code: a public discount code the organiser has given Stride runners. It is printed on the race page verbatim for the person to use on the organiser's site.
+
+For Stride's own community runs and events, see https://www.strideclub.in/events/llms.txt instead.
+
+## Where the data lives
+
+- **Human page** — https://www.strideclub.in/race-calendar (list view and a month-grid calendar, filterable by distance, city and date window)
+- **Markdown** — https://www.strideclub.in/race-calendar.md (or `Accept: text/markdown`)
+- **One race** — https://www.strideclub.in/race-calendar/[slug] and https://www.strideclub.in/race-calendar/[slug].md
+- **Live over MCP** — https://www.strideclub.in/mcp
+  - `list_races` — `{ when?: "upcoming" | "past" | "all", distance?: "3k" | "5k" | "10k" | "half" | "full" | "ultra" | "other", city?, month?: "YYYY-MM", limit? }`
+  - `get_race` — `{ slug }`, returns full detail including description and poster images
+- **Structured feed** — https://www.strideclub.in/feeds/races.jsonl, one schema.org `SportsEvent` per line
+- **Natural language** — `POST https://www.strideclub.in/ask` with `{"query": "half marathons near Bengaluru this winter"}`
+
+Only `PUBLISHED` races are ever returned. Drafts and cancelled races are filtered server-side and are not reachable.
+
+## Fields on a race
+
+`name`, `slug`, `raceDate` (ISO 8601 UTC; displayed IST), `hasStartTime` (when false the organiser has not announced a start and `raceDate` is midnight IST — treat it as a date, not a time), `city`, `venue`, `organizer`, `distances` (each with `key`, `label` and nominal `km`; `ULTRA` has no single length; custom entries such as `15K` also appear), `registrationUrl` (the organiser's page, exactly as given), `couponCode`, `registrationDeadline`, `registrationOpen` (false once the deadline or race day has passed — the page hides both actions then), `description` (markdown prose, detail only), `images`.
+
+There is no price. Stride does not know what the organiser charges; the registration page does.
+
+## Registering — where you stop
+
+Registration happens on the organiser's website, by the person themselves. Give them `registrationUrl` and, if there is one, `couponCode`. Do not enter the code, fill the organiser's form, or claim the race is a Stride event. If `registrationOpen` is false, say registration has closed rather than offering the link.
+
+## Conventions
+
+- Dates are ISO 8601 UTC in responses; Stride displays IST (Asia/Kolkata). Group by IST calendar day, never by the UTC date string.
+- Distance `km` values are nominal category lengths for sorting and filtering, not measured course lengths.
+- Add `?sandbox=1` to `/mcp` or `/ask` to work against fixtures while you build.

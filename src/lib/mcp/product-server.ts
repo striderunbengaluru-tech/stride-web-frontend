@@ -4,10 +4,14 @@ import { registerAppTool, registerAppResource, RESOURCE_MIME_TYPE } from '@model
 import {
   listEvents,
   getEvent,
+  listRaces,
+  getRace,
   getLeaderboard,
   getMilestoneTiers,
   getClubInfo,
 } from '@/lib/mcp/data'
+import { RACE_DISTANCE_KEYS, OTHER_DISTANCE_KEY } from '@/types/race'
+import { MONTH_KEY_PATTERN } from '@/lib/utils/month-grid'
 import { EVENT_CARD_URI, EVENT_CARD_HTML, LEADERBOARD_URI, LEADERBOARD_HTML } from '@/lib/mcp/ui'
 import { MCP_SERVER_VERSION, PRODUCT_SERVER } from '@/lib/mcp/registry'
 import { jsonResult, notFoundResult } from '@/lib/mcp/serve'
@@ -24,7 +28,7 @@ export function buildProductServer(origin: string, sandbox: boolean): McpServer 
     { name: PRODUCT_SERVER.name, version: MCP_SERVER_VERSION },
     {
       instructions:
-        'Stride Run Club is a running community in Bengaluru, India. Use list_events and get_event for what is happening and what it costs, show_event when the user should see one event, get_leaderboard for standings, get_milestone_tiers for how membership tiers work, and get_club_info for facts about the club. Everything here is read-only: registration, payment and check-in are done by the person in a browser and cannot be performed through this server. Prices are in Indian rupees; dates are ISO 8601 UTC and Stride displays them in IST.',
+        'Stride Run Club is a running community in Bengaluru, India. Use list_events and get_event for what is happening and what it costs, show_event when the user should see one event, list_races and get_race for the calendar of third-party races Stride curates (marathons, half marathons, 10Ks, ultras — organised by others, sometimes with a Stride coupon code), get_leaderboard for standings, get_milestone_tiers for how membership tiers work, and get_club_info for facts about the club. Everything here is read-only: registration, payment and check-in are done by the person in a browser and cannot be performed through this server. Prices are in Indian rupees; dates are ISO 8601 UTC and Stride displays them in IST.',
     },
   )
 
@@ -187,6 +191,63 @@ export function buildProductServer(origin: string, sandbox: boolean): McpServer 
           ]),
         ),
       })
+    },
+  )
+
+  // Race tools sit at indices 7 and 8 of PRODUCT_TOOLS — appended there, never
+  // inserted, precisely because every lookup above is by position.
+  const distanceKeys = [...RACE_DISTANCE_KEYS, OTHER_DISTANCE_KEY].map(k => k.toLowerCase()) as [string, ...string[]]
+
+  server.registerTool(
+    'list_races',
+    {
+      title: PRODUCT_SERVER.tools[7].title,
+      description: PRODUCT_SERVER.tools[7].description,
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      inputSchema: {
+        when: z.enum(['upcoming', 'past', 'all']).optional()
+          .describe('Which races to return. Defaults to upcoming.'),
+        distance: z.enum(distanceKeys).optional()
+          .describe('Only races offering this distance category. "other" matches custom distances such as 15K.'),
+        city: z.string().optional()
+          .describe('Only races in this city, matched case-insensitively against the listed city.'),
+        month: z.string().regex(MONTH_KEY_PATTERN).optional()
+          .describe('Only races in this IST calendar month, as "YYYY-MM".'),
+        limit: z.number().int().min(1).max(100).optional()
+          .describe('Maximum races to return. Defaults to 25.'),
+      },
+    },
+    async args => {
+      const { races, total } = await listRaces(args, sandbox)
+      return jsonResult({
+        races: races.map(withUrl),
+        returned: races.length,
+        totalMatching: total,
+        note: 'Third-party races curated by Stride. Registration and payment happen on the organiser\'s site; a couponCode, where present, is for the person to use there.',
+        sandbox,
+      })
+    },
+  )
+
+  server.registerTool(
+    'get_race',
+    {
+      title: PRODUCT_SERVER.tools[8].title,
+      description: PRODUCT_SERVER.tools[8].description,
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      inputSchema: {
+        slug: z.string().min(1)
+          .describe('The race slug, as returned by list_races.'),
+      },
+    },
+    async ({ slug }) => {
+      const race = await getRace(slug, sandbox)
+      if (!race) {
+        return notFoundResult(
+          `No published race with slug "${slug}" on the Stride race calendar. Call list_races to see what exists.`,
+        )
+      }
+      return jsonResult({ race: withUrl(race), sandbox })
     },
   )
 

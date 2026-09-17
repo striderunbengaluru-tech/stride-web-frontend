@@ -50,6 +50,37 @@ export type PublicEventDetail = PublicEvent & {
   termsAndConditions: string | null
 }
 
+/**
+ * A third-party race from the race calendar. Stride curates these and may hold
+ * a coupon code for one; it does not organise them, take payment or check
+ * anyone in. Everything here is printed on the public race page.
+ */
+export type PublicRace = {
+  slug: string
+  name: string
+  /** ISO 8601 UTC. When `hasStartTime` is false this is midnight IST on race day. */
+  raceDate: string
+  hasStartTime: boolean
+  city: string
+  venue: string | null
+  organizer: string | null
+  distances: { key: string; label: string; km: number | null }[]
+  /** The organiser's registration page, exactly as the organiser gave it. */
+  registrationUrl: string | null
+  /** A public discount code for Stride runners, shown verbatim on the page. */
+  couponCode: string | null
+  registrationDeadline: string | null
+  /** False once the deadline or the race day has passed; the page hides the CTAs then. */
+  registrationOpen: boolean
+  /** Site-relative. The caller makes it absolute against its own origin. */
+  url: string
+}
+
+export type PublicRaceDetail = PublicRace & {
+  description: string | null
+  images: string[]
+}
+
 export type PublicAthlete = {
   rank: number
   /** Display name, or the username when no full name is set. */
