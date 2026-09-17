@@ -6,8 +6,12 @@ type Props = {
   couponCode: string | null
   /** False once the deadline or race day has passed — both CTAs are then withheld. */
   open: boolean
-  /** Side-by-side on the sticky mobile bar; stacked in the desktop panel. */
-  layout?: 'stacked' | 'row'
+  /**
+   * stacked: code readout beside its copy button (detail panel, hero).
+   * row: both CTAs side by side (sticky mobile bar).
+   * compact: everything full width, one under the other (the 288px calendar card).
+   */
+  layout?: 'stacked' | 'row' | 'compact'
 }
 
 /**
@@ -21,7 +25,7 @@ export function RaceDetailCtas({ registrationUrl, couponCode, open, layout = 'st
   }
 
   return (
-    <div className={layout === 'row' ? 'flex gap-2' : 'flex flex-col gap-3'}>
+    <div className={layout === 'row' ? 'flex gap-2' : 'flex flex-col gap-2.5'}>
       {registrationUrl && (
         <a
           href={registrationUrl}
@@ -35,11 +39,11 @@ export function RaceDetailCtas({ registrationUrl, couponCode, open, layout = 'st
         </a>
       )}
       {couponCode && (
-        <div className={`flex items-stretch gap-2 ${layout === 'row' ? 'flex-1 min-w-0' : ''}`}>
-          {layout === 'stacked' && (
+        <div className={`flex gap-2 ${layout === 'compact' ? 'flex-col' : 'items-stretch'} ${layout === 'row' ? 'flex-1 min-w-0' : ''}`}>
+          {layout !== 'row' && (
             <div className='flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 px-4 py-2 flex flex-col justify-center'>
               <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest'>Stride coupon</p>
-              <p className='text-white font-mono font-bold text-base truncate select-all'>{couponCode}</p>
+              <p className='text-white font-mono font-bold text-base break-all select-all'>{couponCode}</p>
             </div>
           )}
           <CopyButton
@@ -47,7 +51,7 @@ export function RaceDetailCtas({ registrationUrl, couponCode, open, layout = 'st
             label={layout === 'row' ? `Copy ${couponCode}` : 'Copy code'}
             copiedLabel='Copied!'
             variant={registrationUrl ? 'ghost' : 'solid'}
-            className={layout === 'row' ? 'flex-1 min-w-0 truncate' : 'shrink-0'}
+            className={layout === 'row' ? 'flex-1 min-w-0 truncate' : layout === 'compact' ? 'w-full' : 'shrink-0'}
           />
         </div>
       )}
