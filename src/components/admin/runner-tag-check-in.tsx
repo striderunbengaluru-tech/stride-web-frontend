@@ -184,10 +184,10 @@ export function RunnerTagCheckIn() {
     }
   }, [pickerOpen])
 
-  // Check-in counter derived from the admin-gated attendee list (below) rather
+  // Check-in counter derived from the staff-gated attendee list (below) rather
   // than a browser-side count query: that query ran through the RLS-scoped
-  // anon client and could only see the admin's OWN registrations, so it showed
-  // a bogus "0 / 1". The attendee list comes from /api/admin/event-attendees
+  // anon client and could only see the viewer's OWN registrations, so it showed
+  // a bogus "0 / 1". The attendee list comes from /api/events/check-in/attendees
   // (service role), so counting it gives the true checked-in / total figures —
   // and it updates automatically as attendees are optimistically checked in.
   const eventStats = useMemo<EventStats | null>(() => {
@@ -218,7 +218,7 @@ export function RunnerTagCheckIn() {
   const fetchAttendees = useCallback(async (eventId: string, since: string | null) => {
     const params = new URLSearchParams({ eventId })
     if (since) params.set('since', since)
-    const res = await fetch(`/api/admin/event-attendees?${params}`, { cache: 'no-store' })
+    const res = await fetch(`/api/events/check-in/attendees?${params}`, { cache: 'no-store' })
     if (!res.ok) throw new Error(`attendees ${res.status}`)
     return await res.json() as { attendees: Attendee[]; serverTime: string; mode: 'full' | 'delta' }
   }, [])
