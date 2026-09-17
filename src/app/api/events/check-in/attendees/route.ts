@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { isPortalRole } from '@/types/auth'
 
-// Returns the CONFIRMED attendees of an event so the admin check-in screen can
-// search/select by name. Admin-only — gated identically to the rest of the
-// admin surface (session + fresh DB role lookup).
+// Returns the CONFIRMED attendees of an event so the check-in screen can
+// search/select by name.
+//
+// ADMIN or LEAD, mirroring ../route.ts and ../undo/route.ts: the attendee list
+// IS the check-in screen — without it a lead sees an empty roster and cannot
+// check anyone in. That is why this lives under /api/events/check-in/ and not
+// /api/admin/: nothing under /api/admin/* may ever admit a LEAD (see
+// types/auth.ts), and this route is a check-in dependency, not an admin one.
+// Gated identically to its siblings: session + fresh DB role lookup.
 //
 // `?since=<ISO>` returns only the rows checked in after that instant. The check-in
 // screen polls with it every few seconds so several admins working the same run
@@ -28,7 +35,7 @@ export async function GET(request: Request) {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (adminUser?.role !== 'ADMIN') {
+  if (!isPortalRole(adminUser?.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -57,7 +64,7 @@ export async function GET(request: Request) {
   const { data, error } = await query
 
   if (error) {
-    console.error('[event-attendees]', error)
+    console.error('[check-in/attendees]', error)
     return NextResponse.json({ error: 'Failed to load attendees' }, { status: 500 })
   }
 
