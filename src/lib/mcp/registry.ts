@@ -86,6 +86,23 @@ export const PRODUCT_TOOLS: ToolDescriptor[] = [
     inputSummary: 'no parameters',
     readOnly: true,
   },
+  // Appended, never inserted: product-server.ts addresses these by index.
+  {
+    name: 'list_races',
+    title: 'List races on the Stride race calendar',
+    description:
+      'Third-party running races (5K to ultra) curated by Stride Run Club, in and around Bengaluru and across India — upcoming by default, or past. Filter by distance category, city or month. Returns name, date, city, venue, organiser, distances, registration deadline, the organiser\'s registration link and any Stride coupon code. Stride does not organise these races or take payment for them.',
+    inputSummary: 'when ("upcoming" | "past" | "all"), distance ("3k" | "5k" | "10k" | "half" | "full" | "ultra" | "other"), city, month ("YYYY-MM", IST), limit',
+    readOnly: true,
+  },
+  {
+    name: 'get_race',
+    title: 'Get one race from the calendar',
+    description:
+      'Full detail for one curated race by slug: date, city, venue, organiser, distances, description, poster images, registration deadline, registration link and any Stride coupon code.',
+    inputSummary: 'slug (required)',
+    readOnly: true,
+  },
 ]
 
 export const DOCS_TOOLS: ToolDescriptor[] = [
@@ -130,7 +147,7 @@ export const PRODUCT_SERVER = {
   path: '/mcp',
   title: 'Stride Run Club',
   description:
-    'Read-only access to Stride Run Club event, pricing, leaderboard and milestone data for Bengaluru. Includes interactive event and leaderboard views.',
+    'Read-only access to Stride Run Club event, pricing, leaderboard and milestone data for Bengaluru, plus the curated calendar of third-party races. Includes interactive event and leaderboard views.',
   tools: PRODUCT_TOOLS,
 } as const
 
@@ -152,6 +169,8 @@ export const REPRESENTATIVE_QUERIES: Record<string, string[]> = {
     'how much does the next Stride trail race cost',
     'which Stride runs are free and beginner friendly',
     'who has attended the most Stride runs',
+    'which marathons and half marathons are coming up near Bengaluru',
+    'does Stride have a coupon code for the next 10K',
   ],
   [DOCS_SERVER.name]: [
     'is there a membership fee to join Stride Run Club',

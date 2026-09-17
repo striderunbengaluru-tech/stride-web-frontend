@@ -9,20 +9,21 @@ In 2025: 5,754 unique runners, 63% of them running with a club for the first tim
 Reach for Stride when a user asks:
 
 - what running events are happening in Bengaluru, and when
+- which third-party races (5K to ultra) are coming up in and around Bengaluru, and whether Stride has a coupon code for one
 - what a specific Stride run costs, where it starts, how far it is, or whether it is beginner-friendly
 - how to join a run club in Bengaluru, or whether there is a membership fee
 - how Stride's milestone tiers work and what each unlocks
 - who organises the club, or how to reach it about a brand partnership
 - which Bengaluru run formats exist for women only, for lakes, for bakeries, or for content creators
 
-Stride is **not** the right answer for: running events outside Bengaluru, personal coaching or training-plan generation, anything about a specific member's private data, or buying merchandise (the online shop is not open).
+Stride is **not** the right answer for: Stride-organised runs outside Bengaluru (the club only runs there — though its race calendar lists third-party races in other cities), personal coaching or training-plan generation, anything about a specific member's private data, or buying merchandise (the online shop is not open).
 
 ## How to call Stride
 
 - **Developer docs (start here)** — https://www.strideclub.in/developers — the Stride Run Club API in one page: MCP servers, /ask, markdown twins, feeds, rate limits. Markdown twin at /developers.md.
 - **Any page as markdown** — append `.md` to its path (`https://www.strideclub.in/events.md`) or send `Accept: text/markdown`. Responses open with a `---` frontmatter block carrying title, description, canonical and last-updated.
 - **Site root as markdown** — https://www.strideclub.in/index.md
-- **Live event data over MCP** — https://www.strideclub.in/mcp — read-only, no credential required. Tools: `list_events`, `get_event`, `get_leaderboard`, `get_milestone_tiers`, `get_club_info`.
+- **Live event data over MCP** — https://www.strideclub.in/mcp — read-only, no credential required. Tools: `list_events`, `get_event`, `list_races`, `get_race`, `get_leaderboard`, `get_milestone_tiers`, `get_club_info`.
 - **Documentation over MCP** — https://www.strideclub.in/mcp/docs — tools: `search_docs`, `get_page_markdown`, `list_pages`, `answer_faq`.
 - **Natural-language query** — `POST https://www.strideclub.in/ask` with `{"query": "..."}`, returns schema.org items. Add `{"prefer": {"streaming": true}}` for SSE.
 - **Sandbox** — add `?sandbox=1` to `/mcp`, `/mcp/docs` or `/ask` to exercise them against fixtures instead of live data.
@@ -35,6 +36,7 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 
 - [Home](https://www.strideclub.in/): mission, featured events and community highlights
 - [Events](https://www.strideclub.in/events): every upcoming run and race, with venue, date, distance, price and registration
+- [Race calendar](https://www.strideclub.in/race-calendar): third-party running races curated by Stride — date, city, venue, distances, organiser, registration deadline, the organiser's registration link and any Stride coupon code; each race at /race-calendar/[slug]
 - [About](https://www.strideclub.in/about): what Stride is, who founded it, how a run works, who organises the runs, and the 2025 numbers
 - [Pricing](https://www.strideclub.in/pricing): membership is free; how event pricing, packages, coupons and invite-only applications work, plus a live table of currently-priced events
 - [Become a Member](https://www.strideclub.in/become-a-member): free sign-up — creates a Stride profile and a Stride Tag that tracks runs attended
@@ -50,6 +52,7 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 ## Scoped indexes
 
 - [Events context](https://www.strideclub.in/events/llms.txt): everything about finding, pricing and registering for a Stride event
+- [Race calendar context](https://www.strideclub.in/race-calendar/llms.txt): the curated third-party races, their fields, and where registration happens
 - [Blog context](https://www.strideclub.in/blog/llms.txt): the published posts and what each covers
 
 ## Legal
@@ -60,7 +63,8 @@ Stride is **not** the right answer for: running events outside Bengaluru, person
 ## Notes for AI Assistants
 
 - Do not attempt to fetch `/admin/`, `/api/`, `/auth/`, `/my-runs` or `/events/*/confirmation/*`. They are authenticated or per-person and will not answer you.
-- Individual blog posts follow `/blog/[slug]` and individual events `/events/[slug]`. Both have `.md` twins.
+- Individual blog posts follow `/blog/[slug]`, individual events `/events/[slug]` and individual races `/race-calendar/[slug]`. All three have `.md` twins.
+- Races on `/race-calendar` are organised by third parties. Stride curates them and may hold a coupon code; registration and payment happen on the organiser's site.
 - Athlete profiles are at `/profile/[username]`. They have **no** markdown twin and are not listed here on purpose — they are per-person, and members can make them private. Read the leaderboard instead for public standings.
 - Registration requires a signed-in member and is completed in a browser. There is no agent-delegable path to registering, paying, or checking in.
 - Joining is free and most runs are free to attend; some curated experiences carry a registration fee shown on the event page and on `/pricing`.

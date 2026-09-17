@@ -1,13 +1,19 @@
 import { getPublishedEvents, getEventBySlug, getConfirmedCount, getPackageSpotsTaken } from '@/lib/data/events'
+import { getPublishedRaces, getRaceBySlug } from '@/lib/data/races'
 import { getLeaderboardTop } from '@/lib/leaderboard'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
 import { eventRowPriceLabel, eventPriceLabel } from '@/lib/utils/money'
+import { istDayKey, istMonthKey } from '@/lib/utils/ist'
+import { isRegistrationOpen } from '@/lib/races/present'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import type { EventPackage } from '@/types/event'
+import { distanceKm, distanceLabel, isCanonicalDistance, OTHER_DISTANCE_KEY, type RaceRow } from '@/types/race'
 import type {
   PublicEvent,
   PublicEventDetail,
   PublicEventPackage,
+  PublicRace,
+  PublicRaceDetail,
   PublicAthlete,
   PublicMilestoneTier,
   PublicClubInfo,
@@ -15,6 +21,8 @@ import type {
 import {
   SANDBOX_EVENTS,
   SANDBOX_EVENT_DETAIL,
+  SANDBOX_RACES,
+  SANDBOX_RACE_DETAIL,
   SANDBOX_ATHLETES,
   SANDBOX_TOTAL_ATHLETES,
 } from './fixtures'
@@ -184,6 +192,98 @@ export async function getEvent(
 }
 
 // ---------------------------------------------------------------------------
+// Races (third-party, curated)
+// ---------------------------------------------------------------------------
+
+export type ListRacesArgs = {
+  when?: 'upcoming' | 'past' | 'all'
+  /** A canonical key ('5k', 'half', …) or 'other' for custom distances. Case-insensitive. */
+  distance?: string
+  city?: string
+  /** 'YYYY-MM', IST. */
+  month?: string
+  limit?: number
+}
+
+const DEFAULT_RACE_LIMIT = 25
+const MAX_RACE_LIMIT = 100
+
+/** Does a race offer this distance key? 'OTHER' matches any custom distance. */
+export function raceHasDistance(distances: readonly string[], key: string): boolean {
+  const wanted = key.toUpperCase()
+  if (wanted === OTHER_DISTANCE_KEY) return distances.some(d => !isCanonicalDistance(d))
+  return distances.some(d => d.toUpperCase() === wanted)
+}
+
+function toPublicRace(row: RaceRow, nowIso: string): PublicRace {
+  const dayKey = istDayKey(row.race_date)
+  return {
+    slug: row.slug,
+    name: row.name,
+    raceDate: row.race_date,
+    hasStartTime: row.has_start_time,
+    city: row.city,
+    venue: row.venue,
+    organizer: row.organizer,
+    distances: (row.distances ?? []).map(key => ({ key, label: distanceLabel(key), km: distanceKm(key) })),
+    registrationUrl: row.registration_url,
+    couponCode: row.coupon_code,
+    registrationDeadline: row.registration_deadline,
+    registrationOpen: isRegistrationOpen(
+      { dayKey, registrationDeadline: row.registration_deadline },
+      istDayKey(nowIso),
+      nowIso,
+    ),
+    url: `/race-calendar/${row.slug}`,
+  }
+}
+
+export async function listRaces(
+  args: ListRacesArgs,
+  sandbox: boolean,
+): Promise<{ races: PublicRace[]; total: number }> {
+  const when = args.when ?? 'upcoming'
+  const limit = Math.min(Math.max(args.limit ?? DEFAULT_RACE_LIMIT, 1), MAX_RACE_LIMIT)
+  const nowIso = new Date().toISOString()
+  const todayKey = istDayKey(nowIso)
+
+  const all: PublicRace[] = sandbox
+    ? SANDBOX_RACES
+    : (await getPublishedRaces()).map(row => toPublicRace(row, nowIso))
+
+  const filtered = all.filter(race => {
+    const dayKey = istDayKey(race.raceDate)
+    if (when === 'upcoming' && dayKey < todayKey) return false
+    if (when === 'past' && dayKey >= todayKey) return false
+    if (args.month && istMonthKey(race.raceDate) !== args.month) return false
+    if (args.city && race.city.toLowerCase() !== args.city.trim().toLowerCase()) return false
+    if (args.distance && !raceHasDistance(race.distances.map(d => d.key), args.distance)) return false
+    return true
+  })
+
+  // Upcoming soonest-first; past most-recent-first.
+  const sorted = [...filtered].sort((a, b) => {
+    const diff = a.raceDate.localeCompare(b.raceDate)
+    return when === 'past' ? -diff : diff
+  })
+
+  return { races: sorted.slice(0, limit), total: sorted.length }
+}
+
+export async function getRace(slug: string, sandbox: boolean): Promise<PublicRaceDetail | null> {
+  if (sandbox) return SANDBOX_RACE_DETAIL[slug] ?? null
+
+  const row = await getRaceBySlug(slug)
+  if (!row || row.status !== 'PUBLISHED') return null
+
+  return {
+    ...toPublicRace(row, new Date().toISOString()),
+    description: row.description,
+    images: row.poster_images ?? [],
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Leaderboard
 // ---------------------------------------------------------------------------
 
@@ -255,6 +355,7 @@ export function getClubInfo(): PublicClubInfo {
     links: {
       website: '/',
       events: '/events',
+      raceCalendar: '/race-calendar',
       pricing: '/pricing',
       about: '/about',
       milestones: '/milestones',

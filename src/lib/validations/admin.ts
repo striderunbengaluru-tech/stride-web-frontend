@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField, type EventPackage } from '@/types/event'
+import {
+  MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS, MAX_RACE_COUPON_LENGTH,
+  normaliseDistance,
+} from '@/types/race'
 import { validatePackageSpots } from '@/lib/events/package-spots'
+import { istLocalToUtcIso } from '@/lib/utils/ist'
 
 // Object.fromEntries(formData) always includes every field's key, so an empty
 // input arrives as '' rather than being absent. z.coerce.number() turns '' into
@@ -220,6 +225,110 @@ export const eventCouponSchema = z.object({
 })
 
 export type EventCouponFormData = z.infer<typeof eventCouponSchema>
+
+// ── Races ────────────────────────────────────────────────────────────────────
+
+// The race form posts array-valued fields as JSON strings through hidden mirror
+// inputs (Object.fromEntries(formData) keeps only the last value of a repeated
+// key). This turns that string into an array BEFORE the element schema runs, so
+// the action receives a typed string[] rather than re-parsing JSON.
+const jsonStringToArray = (v: unknown): unknown[] =>
+  typeof v === 'string' ? parseJsonArray<unknown>(v) : Array.isArray(v) ? v : []
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const HH_MM = /^\d{2}:\d{2}$/
+
+export const raceSchema = z.object({
+  name: z.string().trim().min(1, 'Race name is required').max(120),
+  // Markdown. Optional: a poster plus a link is a complete listing.
+  description: z.string().max(20_000).optional(),
+  // <input type="date"> — the IST calendar day the race is run.
+  raceDate: z.string().trim().regex(ISO_DATE, 'Race date is required'),
+  // <input type="time">. Blank when the organiser has not announced a start;
+  // the action then stores 00:00 IST and sets has_start_time = false.
+  startTime: z.preprocess(
+    blankToUndefined,
+    z.string().regex(HH_MM, 'Enter a valid start time').optional(),
+  ),
+  city: z.string().trim().min(1, 'City is required').max(100),
+  venue: z.string().trim().max(200).optional(),
+  organizer: z.string().trim().max(120).optional(),
+  // Canonical codes (3K … ULTRA) and free-text customs like "15K". Normalised
+  // to upper case and de-duplicated so "15k" and "15K" cannot both be saved.
+  distances: z.preprocess(
+    jsonStringToArray,
+    z.array(
+      z.string().trim().min(1).max(MAX_CUSTOM_DISTANCE_LENGTH, 'Keep each distance short')
+        .regex(/^[A-Za-z0-9 .+-]+$/, 'Distances may only use letters, numbers, spaces, ., + and -'),
+    )
+      .min(1, 'Pick at least one distance')
+      .max(MAX_RACE_DISTANCES, `At most ${MAX_RACE_DISTANCES} distances`),
+  ).transform(list => [...new Set(list.map(normaliseDistance))]),
+  // Pasted as-is from the organiser. No UTM builder.
+  registrationUrl: z.preprocess(
+    blankToUndefined,
+    z.string().trim().url('Must be a valid URL').max(2000).optional(),
+  ),
+  // A third-party code shown to runners, so it is display text rather than
+  // something we redeem — only length is constrained.
+  couponCode: z.preprocess(
+    blankToUndefined,
+    z.string().trim()
+      .min(2, 'A coupon code needs at least 2 characters')
+      .max(MAX_RACE_COUPON_LENGTH, `Keep the code under ${MAX_RACE_COUPON_LENGTH} characters`)
+      .optional(),
+  ),
+  // <input type="datetime-local">, IST wall clock like events.endDate.
+  registrationDeadline: z.string().optional(),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
+  // Public storage URLs from /api/admin/upload-event-cover with kind=race.
+  posterImages: z.preprocess(
+    jsonStringToArray,
+    z.array(z.string().url()).max(MAX_RACE_POSTERS, `At most ${MAX_RACE_POSTERS} posters`),
+  ),
+})
+  // Cross-field rules — the server-side backstop for what the form checks
+  // before posting. The database repeats the first one as a CHECK constraint.
+  .superRefine((data, ctx) => {
+    if (!data.registrationUrl && !data.couponCode) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['registrationUrl'],
+        message: 'Add a registration link or a coupon code — runners need at least one.',
+      })
+    }
+
+    // A deadline after the race is a typo, not a policy. ISO strings compare
+    // lexically, which is exact for two instants in the same format.
+    if (data.registrationDeadline) {
+      const deadline = istLocalToUtcIso(data.registrationDeadline)
+      const raceEnd = istLocalToUtcIso(`${data.raceDate}T23:59`)
+      if (!deadline) {
+        ctx.addIssue({ code: 'custom', path: ['registrationDeadline'], message: 'Enter a valid registration deadline' })
+      } else if (raceEnd && deadline > raceEnd) {
+        ctx.addIssue({ code: 'custom', path: ['registrationDeadline'], message: 'The registration deadline must be on or before race day' })
+      }
+    }
+  })
+
+export type RaceFormData = z.infer<typeof raceSchema>
+export type RaceActionResult = EventActionResult
+
+/** Visual top-to-bottom order of the race form — see EVENT_FIELD_ORDER. */
+export const RACE_FIELD_ORDER = [
+  'name',
+  'description',
+  'raceDate',
+  'startTime',
+  'registrationDeadline',
+  'city',
+  'venue',
+  'organizer',
+  'distances',
+  'registrationUrl',
+  'couponCode',
+  'posterImages',
+] as const
 
 export const productSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),

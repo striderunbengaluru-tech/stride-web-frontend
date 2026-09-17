@@ -1,6 +1,7 @@
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import { MILESTONE_TIERS } from '@/lib/milestones'
-import type { PublicEvent, PublicEventDetail } from '@/lib/mcp/types'
+import type { PublicEvent, PublicEventDetail, PublicRace, PublicRaceDetail } from '@/lib/mcp/types'
+import { istDayKey } from '@/lib/utils/ist'
 
 /**
  * Every schema.org node Stride emits, built in one place.
@@ -330,6 +331,79 @@ export function eventListNode(origin: string, events: PublicEvent[]) {
       position: i + 1,
       url: `${origin}${event.url}`,
       name: event.name,
+    })),
+  }
+}
+
+/**
+ * A third-party race as `SportsEvent`.
+ *
+ * Not `sportsEventNode`: that one states Stride as organiser and performer,
+ * prices offers in paise and pins the venue to Bengaluru — all wrong for a race
+ * someone else runs, possibly in another city. Stride is the curator here, so
+ * the page is `isPartOf` the Stride website while `organizer` names the real
+ * organiser. No price is emitted because Stride does not know it.
+ */
+export function raceEventNode(origin: string, race: PublicRaceDetail) {
+  const url = `${origin}${race.url}`
+  const offers = race.registrationOpen && race.registrationUrl
+    ? {
+        '@type': 'Offer',
+        name: 'Race registration',
+        url: race.registrationUrl,
+        availability: 'https://schema.org/InStock',
+        validThrough: race.registrationDeadline ?? undefined,
+        category: 'Race registration',
+      }
+    : undefined
+
+  return {
+    '@type': 'SportsEvent',
+    '@id': `${url}#race`,
+    name: race.name,
+    description: race.description
+      ? race.description.slice(0, 300)
+      : `${race.name} — a ${race.distances.map(d => d.label).join(' / ')} race in ${race.city}.`,
+    url,
+    image: race.images.length > 0 ? race.images : undefined,
+    // schema.org accepts a bare Date; a date-only race must not claim a time.
+    startDate: race.hasStartTime ? race.raceDate : istDayKey(race.raceDate),
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    sport: 'Running',
+    location: {
+      '@type': 'Place',
+      name: race.venue ?? race.city,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: race.venue ?? undefined,
+        addressLocality: race.city,
+        addressCountry: 'IN',
+      },
+    },
+    organizer: race.organizer ? { '@type': 'Organization', name: race.organizer } : undefined,
+    isPartOf: { '@id': websiteId(origin) },
+    offers,
+    additionalProperty: race.distances.map(d =>
+      d.km !== null
+        ? { '@type': 'PropertyValue', name: 'Distance', value: d.km, unitCode: 'KMT' }
+        : { '@type': 'PropertyValue', name: 'Distance', value: d.label },
+    ),
+  }
+}
+
+/** The race calendar as an `ItemList` of lightweight race references. */
+export function raceListNode(origin: string, races: PublicRace[]) {
+  return {
+    '@type': 'ItemList',
+    '@id': `${origin}/race-calendar#list`,
+    name: 'Race calendar — running races curated by Stride Run Club',
+    numberOfItems: races.length,
+    itemListElement: races.map((race, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${origin}${race.url}`,
+      name: race.name,
     })),
   }
 }

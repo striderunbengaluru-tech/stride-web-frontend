@@ -19,8 +19,8 @@ export function MobileBottomNavClient() {
   // the opening screen isn't crowded with floating chrome.
   const revealed = useRevealAfterFold()
 
-  // Hide on event detail pages — the sticky register bar is the primary mobile CTA there
-  if (/^\/events\/.+/.test(pathname)) return null
+  // Hide on event and race detail pages — their sticky CTA bar owns the bottom edge there
+  if (/^\/(events|race-calendar)\/.+/.test(pathname)) return null
   if (!revealed) return null
 
   return (

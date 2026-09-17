@@ -1,9 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import { getPublishedEvents, getEventBySlug } from '@/lib/data/events'
+import { getPublishedRaces, getRaceBySlug } from '@/lib/data/races'
 import { getLeaderboardTop } from '@/lib/leaderboard'
 import { eventRowPriceLabel, eventPriceLabel } from '@/lib/utils/money'
-import { formatDateTimeIST } from '@/lib/utils/ist'
+import { formatDateTimeIST, formatDateFullIST, istDayKey, istMonthKey } from '@/lib/utils/ist'
+import { monthKeyLabel } from '@/lib/utils/month-grid'
+import { isRegistrationOpen } from '@/lib/races/present'
+import { distanceLabel, sortDistances, type RaceRow } from '@/types/race'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 import { MILESTONE_TIERS } from '@/lib/milestones'
@@ -79,6 +83,7 @@ function readContentFile(name: string): string | null {
  */
 export const PAGE_INDEX: { path: string; label: string; blurb: string }[] = [
   { path: '/events', label: 'Events', blurb: 'every upcoming run and race, with dates, venues, prices and registration' },
+  { path: '/race-calendar', label: 'Race calendar', blurb: 'third-party running races in and around Bengaluru curated by Stride — dates, distances, cities, registration links and coupon codes' },
   { path: '/pricing', label: 'Pricing', blurb: 'what membership and events cost — membership is free' },
   { path: '/about', label: 'About', blurb: 'what Stride is, who founded it, how a run works and who organises them' },
   { path: '/milestones', label: 'Milestones', blurb: 'the five tiers, the runs each needs and the perks they unlock' },
@@ -238,6 +243,116 @@ async function eventMarkdown(slug: string, abs: Abs): Promise<MarkdownDoc | null
       '---',
       '',
       `Register at [${abs(`/events/${event.slug}`)}](${abs(`/events/${event.slug}`)}). Registration requires a free Stride account and is completed by the athlete in a browser — it cannot be done on someone's behalf by an agent.`,
+    ]),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Race calendar
+// ---------------------------------------------------------------------------
+
+const RACE_DISCLAIMER =
+  'These races are organised by third parties. Stride curates them and, where an organiser has given one, lists a coupon code for Stride runners; registration and payment happen on the organiser\'s site. Times are IST.'
+
+/** "Sat, 17 Jan 2027" or "Sat, 17 Jan 2027, 5:30 am" depending on whether a start time is known. */
+function raceWhen(race: RaceRow): string {
+  return race.has_start_time ? formatDateTimeIST(race.race_date) : formatDateFullIST(race.race_date)
+}
+
+function raceRegistrationLine(race: RaceRow, todayKey: string, nowIso: string): string {
+  const open = isRegistrationOpen({ dayKey: istDayKey(race.race_date), registrationDeadline: race.registration_deadline }, todayKey, nowIso)
+  if (!open) return 'Registration closed'
+  return race.registration_deadline
+    ? `Registration closes ${formatDateTimeIST(race.registration_deadline)}`
+    : 'Registration open'
+}
+
+async function raceCalendarMarkdown(abs: Abs): Promise<MarkdownDoc> {
+  const races = await getPublishedRaces()
+  const nowIso = new Date().toISOString()
+  const todayKey = istDayKey(nowIso)
+  const upcoming = races.filter(r => istDayKey(r.race_date) >= todayKey)
+  const past = races.filter(r => istDayKey(r.race_date) < todayKey).reverse()
+
+  const row = (r: RaceRow) => {
+    const where = [r.venue, r.city].filter(Boolean).join(', ')
+    const distances = sortDistances(r.distances ?? []).map(distanceLabel).join(' / ')
+    const coupon = r.coupon_code ? ` · Coupon: \`${r.coupon_code}\`` : ''
+    return `- [${r.name}](${abs(`/race-calendar/${r.slug}`)}) — ${raceWhen(r)} · ${where} · ${distances} · ${raceRegistrationLine(r, todayKey, nowIso)}${coupon}`
+  }
+
+  // Grouped by IST month, the way the page groups them.
+  const byMonth: string[] = []
+  let currentMonth: string | null = null
+  for (const r of upcoming) {
+    const month = istMonthKey(r.race_date)
+    if (month !== currentMonth) {
+      byMonth.push('', `### ${monthKeyLabel(month)}`, '')
+      currentMonth = month
+    }
+    byMonth.push(row(r))
+  }
+
+  return {
+    title: 'Race calendar — Stride Run Club',
+    description:
+      'Upcoming running races in and around Bengaluru curated by Stride Run Club — 5K to ultra, with dates, cities, registration links and Stride coupon codes.',
+    body: tidy([
+      '# Race calendar — Stride Run Club',
+      '',
+      RACE_DISCLAIMER,
+      '',
+      '## Upcoming',
+      upcoming.length > 0 ? byMonth.join('\n') : '\n_No upcoming races listed right now. New races are added as organisers announce them._',
+      '',
+      past.length > 0 ? '## Past' : null,
+      '',
+      past.length > 0 ? past.map(row).join('\n') : null,
+      '',
+      '---',
+      '',
+      `Stride's own runs and events are at [${abs('/events')}](${abs('/events')}).`,
+    ]),
+  }
+}
+
+async function raceMarkdown(slug: string, abs: Abs): Promise<MarkdownDoc | null> {
+  const race = await getRaceBySlug(slug)
+  if (!race) return null
+
+  const nowIso = new Date().toISOString()
+  const todayKey = istDayKey(nowIso)
+  const open = isRegistrationOpen({ dayKey: istDayKey(race.race_date), registrationDeadline: race.registration_deadline }, todayKey, nowIso)
+  const distances = sortDistances(race.distances ?? []).map(distanceLabel).join(', ')
+  const where = [race.venue, race.city].filter(Boolean).join(', ')
+
+  return {
+    title: race.name,
+    description: `${race.name} — a ${distances} race in ${race.city} on ${formatDateFullIST(race.race_date)}, listed on the Stride Run Club race calendar.`,
+    body: tidy([
+      `# ${race.name}`,
+      '',
+      race.organizer ? `> Organised by ${race.organizer}` : null,
+      '',
+      '## Details',
+      '',
+      `- **When:** ${raceWhen(race)} IST${race.has_start_time ? '' : ' (start time to be announced by the organiser)'}`,
+      `- **Where:** ${where}`,
+      `- **Distances:** ${distances}`,
+      race.organizer ? `- **Organiser:** ${race.organizer}` : null,
+      `- **Registration:** ${raceRegistrationLine(race, todayKey, nowIso)}`,
+      open && race.registration_url ? `- **Register at:** ${race.registration_url}` : null,
+      open && race.coupon_code ? `- **Stride coupon code:** \`${race.coupon_code}\`` : null,
+      '',
+      race.description ? '## About' : null,
+      '',
+      race.description ?? null,
+      '',
+      '---',
+      '',
+      RACE_DISCLAIMER,
+      '',
+      `Back to the calendar: [${abs('/race-calendar')}](${abs('/race-calendar')}).`,
     ]),
   }
 }
@@ -779,7 +894,7 @@ function developersMarkdown(abs: Abs): MarkdownDoc {
       '',
       '## Source',
       '',
-      `This site is open source, including \`AGENTS.md\` and three agent skills: ${REPO_URL}`,
+      `This site is open source, including \`AGENTS.md\` and four agent skills: ${REPO_URL}`,
       '',
       `If you need a capability Stride does not expose, open an issue or email ${CONTACT_EMAIL} — nothing is hidden, so the list above is the whole surface.`,
     ]),
@@ -828,6 +943,7 @@ export async function renderMarkdownPath(
     case '/about':            return aboutMarkdown(abs)
     case '/developers':       return developersMarkdown(abs)
     case '/events':           return eventsIndexMarkdown(abs)
+    case '/race-calendar':    return raceCalendarMarkdown(abs)
     case '/blog':             return blogIndexMarkdown(abs)
     case '/milestones':       return milestonesMarkdown(abs)
     case '/leaderboard':      return leaderboardMarkdown(abs)
@@ -852,6 +968,9 @@ export async function renderMarkdownPath(
 
   const event = pathname.match(/^\/events\/([^/]+)$/)
   if (event) return eventMarkdown(event[1], abs)
+
+  const race = pathname.match(/^\/race-calendar\/([^/]+)$/)
+  if (race) return raceMarkdown(race[1], abs)
 
   const blog = pathname.match(/^\/blog\/([^/]+)$/)
   if (blog) return blogPostMarkdown(blog[1], abs)

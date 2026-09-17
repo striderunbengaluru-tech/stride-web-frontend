@@ -133,6 +133,7 @@ const RESOURCES = [
 
 const FEEDS = [
   { label: 'Events', href: '/feeds/events.jsonl', type: 'schema.org SportsEvent, one per line' },
+  { label: 'Races', href: '/feeds/races.jsonl', type: 'schema.org SportsEvent for each curated third-party race' },
   { label: 'Blog', href: '/feeds/blog.jsonl', type: 'schema.org BlogPosting, full article body included' },
   { label: 'Schema map', href: '/schemamap.xml', type: 'NLWeb feed index, declared from robots.txt' },
 ] as const

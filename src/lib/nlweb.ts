@@ -1,6 +1,6 @@
 import { searchDocs, answerFaq, type DocResult } from '@/lib/mcp/docs'
-import { listEvents, getEvent } from '@/lib/mcp/data'
-import { sportsEventNode, organizationId } from '@/lib/json-ld'
+import { listEvents, getEvent, listRaces, getRace } from '@/lib/mcp/data'
+import { sportsEventNode, raceEventNode, organizationId } from '@/lib/json-ld'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
 
@@ -76,6 +76,22 @@ const EVENT_INTENT = [
 function wantsEvents(query: string): boolean {
   const lower = query.toLowerCase()
   return EVENT_INTENT.some(term => lower.includes(term))
+}
+
+/**
+ * Terms that mean "show me races on the calendar". Narrower than EVENT_INTENT
+ * on purpose: 'race' and 'marathon' also live there, so a race question gets
+ * Stride's own events AND the curated races — both are honest answers to
+ * "which marathons are coming up", and the consumer ranks them.
+ */
+const RACE_INTENT = [
+  'race', 'races', 'marathon', 'half marathon', 'ultra', 'trail run',
+  'race calendar', 'running calendar', 'coupon', 'discount code', 'promo code',
+]
+
+function wantsRaces(query: string): boolean {
+  const lower = query.toLowerCase()
+  return RACE_INTENT.some(term => lower.includes(term))
 }
 
 /** A pattern like "10k" or "21 km" in the query, as kilometres. */
@@ -198,6 +214,16 @@ export async function answerQuery(
     for (const detail of details) {
       if (detail) {
         results.push({ '@context': 'https://schema.org', ...sportsEventNode(origin, detail) })
+      }
+    }
+  }
+
+  if (wantsRaces(query)) {
+    const { races } = await listRaces({ when: 'upcoming', limit: CANDIDATE_CEILING }, sandbox)
+    const details = await Promise.all(races.map(race => getRace(race.slug, sandbox)))
+    for (const detail of details) {
+      if (detail) {
+        results.push({ '@context': 'https://schema.org', ...raceEventNode(origin, detail) })
       }
     }
   }

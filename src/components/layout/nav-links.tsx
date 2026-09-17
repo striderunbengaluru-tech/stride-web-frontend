@@ -9,6 +9,7 @@ import { useAuth } from '@/components/auth/auth-provider'
 // "Partner With Us" CTA pointing at the same page.
 const NAV_LINKS = [
   { label: 'Events',      href: '/events' },
+  { label: 'Races',       href: '/race-calendar' },
   { label: 'Leaderboard', href: '/leaderboard' },
 ] as const
 

@@ -10,6 +10,7 @@ import {
   Users,
   ScanLine,
   GraduationCap,
+  Flag,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
 import { ROLES, type Role } from '@/types/auth'
@@ -17,6 +18,7 @@ import { ROLES, type Role } from '@/types/auth'
 const navLinks = [
   { href: '/admin',               label: 'Dashboard',      icon: LayoutDashboard, exact: true },
   { href: '/admin/events',        label: 'Events',         icon: CalendarDays },
+  { href: '/admin/race-calendar', label: 'Race calendar',  icon: Flag },
   { href: '/admin/registrations', label: 'Registrations',  icon: ClipboardList },
   { href: '/admin/products',      label: 'Products',       icon: ShoppingBag },
   { href: '/admin/users',         label: 'Users',          icon: Users },

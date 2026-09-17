@@ -71,11 +71,13 @@ const MARKDOWN_PAGES = [
   '/partnerships',
   '/pricing',
   '/privacy-policy',
+  '/race-calendar',
   '/shop',
   '/team',
   '/terms-of-service',
   '/blog/:slug',
   '/events/:slug',
+  '/race-calendar/:slug',
 ]
 
 /** `/pricing` → `{ source: '/pricing', destination: '/md/pricing' }`; `/` → `/md`. */

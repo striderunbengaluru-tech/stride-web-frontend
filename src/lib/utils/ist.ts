@@ -46,6 +46,22 @@ export function utcIsoToIstLocal(iso: string | null | undefined): string | undef
 }
 
 /**
+ * Stored UTC instant → 'YYYY-MM-DD', the IST civil date. The key everything that
+ * groups by day (the race calendar's month grid, "upcoming" cut-offs) must use:
+ * a date-only race is stored as 00:00 IST, which is 18:30Z the previous day, so
+ * `toISOString().slice(0, 10)` would file it under the wrong date.
+ */
+export function istDayKey(value: string | Date | number): string {
+  const ms = typeof value === 'number' ? value : new Date(value).getTime()
+  return new Date(ms + IST_OFFSET_MS).toISOString().slice(0, 10)
+}
+
+/** Stored UTC instant → 'YYYY-MM', the IST civil month. */
+export function istMonthKey(value: string | Date | number): string {
+  return istDayKey(value).slice(0, 7)
+}
+
+/**
  * Whole IST **calendar** days from `from` (default: now) to `value`.
  * Same IST day → 0, next IST day → 1, and so on. Negative for a past day.
  *

@@ -167,6 +167,24 @@ export function GET(request: Request): Response {
           },
         },
       },
+      '/feeds/races.jsonl': {
+        get: {
+          tags: ['feeds'],
+          operationId: 'getRacesFeed',
+          summary: 'Every curated third-party race as schema.org SportsEvent',
+          description: 'JSON Lines: one `SportsEvent` per race on the Stride race calendar, naming the organiser, with a registration Offer while entries are open. No price — Stride does not set it.',
+          responses: {
+            '200': {
+              description: 'One JSON object per line.',
+              headers: { ...RATE_HEADERS, 'X-Feed-Records': { description: 'Number of lines in the body.', schema: { type: 'integer' } } },
+              content: {
+                'application/jsonl': { schema: { type: 'string', description: 'Newline-delimited schema.org SportsEvent objects.' } },
+              },
+            },
+            '429': { $ref: '#/components/responses/TooManyRequests' },
+          },
+        },
+      },
       '/feeds/blog.jsonl': {
         get: {
           tags: ['feeds'],

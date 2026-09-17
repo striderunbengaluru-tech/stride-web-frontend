@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { IMAGE_KINDS, imageKindSchema } from '@/lib/utils/storage-paths'
 
+/**
+ * Converts an admin-uploaded poster to WebP and files it under the prefix for
+ * its `kind` ('event' by default, 'race' for the race calendar). One route for
+ * both because the pipeline is identical — only the folder differs, and the
+ * allowlisted enum is what keeps a request from choosing an arbitrary one.
+ */
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,6 +26,10 @@ export async function POST(request: Request) {
   }
 
   const form = await request.formData()
+  const kindResult = imageKindSchema.safeParse(form.get('kind') ?? undefined)
+  if (!kindResult.success) return NextResponse.json({ error: 'Unknown image kind' }, { status: 400 })
+  const kind = kindResult.data
+
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
@@ -35,15 +46,16 @@ export async function POST(request: Request) {
     .webp({ quality: 85 })
     .toBuffer()
 
-  const rawName = (form.get('eventName') as string | null)?.trim() ?? ''
+  // `name` is the generic field; `eventName` is what the event form has always sent.
+  const rawName = ((form.get('name') ?? form.get('eventName')) as string | null)?.trim() ?? ''
   const slug = rawName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')   // collapse non-alphanum runs to hyphens
     .replace(/^-|-$/g, '')          // trim leading/trailing hyphens
     .slice(0, 48)                   // keep it readable in the DB path
-    || 'event'
+    || kind
   const suffix = Date.now().toString(36)  // base-36 timestamp — short and unique
-  const path = `images/events/${slug}-${suffix}.webp`
+  const path = `${IMAGE_KINDS[kind]}${slug}-${suffix}.webp`
 
   const { error: uploadError } = await adminClient.storage
     .from('stride-assets')

@@ -1,4 +1,4 @@
-import type { PublicEvent, PublicEventDetail, PublicAthlete } from './types'
+import type { PublicEvent, PublicEventDetail, PublicRace, PublicRaceDetail, PublicAthlete } from './types'
 
 /**
  * Sandbox data for `?sandbox=1`.
@@ -97,6 +97,76 @@ export const SANDBOX_EVENT_DETAIL: Record<string, PublicEventDetail> = {
     termsAndConditions: null,
   },
 }
+
+// Three shapes a race can take: link only, coupon only, and both.
+export const SANDBOX_RACES: PublicRace[] = [
+  {
+    slug: 'sandbox-city-10k',
+    name: 'Sandbox City 10K',
+    raceDate: '2099-01-17T18:30:00.000Z',
+    hasStartTime: false,
+    city: 'Bengaluru',
+    venue: 'Example Stadium',
+    organizer: 'Example Race Co.',
+    distances: [
+      { key: '5K', label: '5K', km: 5 },
+      { key: '10K', label: '10K', km: 10 },
+    ],
+    registrationUrl: 'https://example.com/register/sandbox-city-10k',
+    couponCode: null,
+    registrationDeadline: '2099-01-10T18:29:00.000Z',
+    registrationOpen: true,
+    url: '/race-calendar/sandbox-city-10k',
+  },
+  {
+    slug: 'sandbox-coastal-half-marathon',
+    name: 'Sandbox Coastal Half Marathon',
+    raceDate: '2099-02-14T00:00:00.000Z',
+    hasStartTime: true,
+    city: 'Mumbai',
+    venue: 'Example Promenade',
+    organizer: 'Example Sports Trust',
+    distances: [
+      { key: 'HALF', label: 'Half marathon', km: 21.0975 },
+      { key: '15K', label: '15K', km: 15 },
+    ],
+    registrationUrl: null,
+    couponCode: 'SANDBOX10',
+    registrationDeadline: null,
+    registrationOpen: true,
+    url: '/race-calendar/sandbox-coastal-half-marathon',
+  },
+  {
+    slug: 'sandbox-hill-ultra',
+    name: 'Sandbox Hill Ultra',
+    raceDate: '2099-03-07T00:30:00.000Z',
+    hasStartTime: true,
+    city: 'Ooty',
+    venue: null,
+    organizer: 'Example Trails',
+    distances: [
+      { key: 'FULL', label: 'Marathon', km: 42.195 },
+      { key: 'ULTRA', label: 'Ultra', km: null },
+    ],
+    registrationUrl: 'https://example.com/register/sandbox-hill-ultra',
+    couponCode: 'SANDBOXTRAIL',
+    registrationDeadline: '2099-02-28T18:29:00.000Z',
+    registrationOpen: true,
+    url: '/race-calendar/sandbox-hill-ultra',
+  },
+]
+
+export const SANDBOX_RACE_DETAIL: Record<string, PublicRaceDetail> = Object.fromEntries(
+  SANDBOX_RACES.map(race => [
+    race.slug,
+    {
+      ...race,
+      description:
+        'This is sandbox data. A real race listing carries the organiser\'s description of the route, categories and what the entry includes.',
+      images: [],
+    },
+  ]),
+)
 
 export const SANDBOX_ATHLETES: PublicAthlete[] = [
   { rank: 1, name: 'Example Athlete One', username: 'sandbox-athlete-one', runsCompleted: 118, tier: 'Stride Legend', url: '/profile/sandbox-athlete-one' },

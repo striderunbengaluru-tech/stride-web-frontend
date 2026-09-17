@@ -29,6 +29,12 @@ const FEEDS: Feed[] = [
     description: 'Every published Stride Run Club event, one SportsEvent per line, with offers priced in INR.',
   },
   {
+    path: '/feeds/races.jsonl',
+    type: 'application/jsonl',
+    schemaType: 'https://schema.org/SportsEvent',
+    description: 'Every third-party race on the Stride race calendar, one SportsEvent per line, with the organiser named and a registration Offer while entries are open.',
+  },
+  {
     path: '/feeds/blog.jsonl',
     type: 'application/jsonl',
     schemaType: 'https://schema.org/BlogPosting',
