@@ -11,6 +11,8 @@ type Props = {
   className?: string
   /** 'solid' is the yellow CTA; 'ghost' sits beside a mono code readout. */
   variant?: 'solid' | 'ghost'
+  /** Square icon button; `label` becomes the accessible name and the live region stays screen-reader only. */
+  iconOnly?: boolean
 }
 
 const VARIANT_CLASSES = {
@@ -23,17 +25,18 @@ const VARIANT_CLASSES = {
  * through a polite live region so screen-reader users hear the confirmation
  * the sighted user sees.
  */
-export function CopyButton({ value, label, copiedLabel = 'Copied', className = '', variant = 'solid' }: Props) {
+export function CopyButton({ value, label, copiedLabel = 'Copied', className = '', variant = 'solid', iconOnly = false }: Props) {
   const { copied, copy } = useCopyToClipboard()
 
   return (
     <button
       type='button'
       onClick={() => { void copy(value) }}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-bold min-h-11 transition-colors ${VARIANT_CLASSES[variant]} ${className}`}
+      aria-label={iconOnly ? label : undefined}
+      className={`inline-flex items-center justify-center gap-2 rounded-md py-3 text-sm font-bold min-h-11 transition-colors ${iconOnly ? 'px-3 min-w-11' : 'px-5'} ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {copied ? <Check size={16} aria-hidden='true' /> : <Copy size={16} aria-hidden='true' />}
-      <span aria-live='polite'>{copied ? copiedLabel : label}</span>
+      <span aria-live='polite' className={iconOnly ? 'sr-only' : undefined}>{copied ? copiedLabel : label}</span>
     </button>
   )
 }

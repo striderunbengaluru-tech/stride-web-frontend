@@ -34,9 +34,10 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
 
   return (
     <section aria-labelledby='next-race-heading' className='relative overflow-hidden rounded-2xl border border-white/15 bg-white/6 backdrop-blur-md'>
-      <div className='grid grid-cols-1 sm:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,18rem)_1fr] sm:items-start'>
-        {/* Poster */}
-        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-[3/4] bg-white/5 group'>
+      <div className='grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]'>
+        {/* Poster — like the events banner: posters are 3:4, so a fixed 3:4
+            column that the image fills exactly, and the grid row takes its height. */}
+        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-3/4 bg-white/5 overflow-hidden group'>
           {race.posterUrl ? (
             <Image
               src={race.posterUrl}
@@ -44,7 +45,7 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
               fill
               priority
               className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
-              sizes='(max-width: 640px) 100vw, 18rem'
+              sizes='(max-width: 768px) 100vw, 340px'
             />
           ) : (
             <div className='absolute inset-0 flex items-center justify-center text-white/10 text-7xl select-none'>🏁</div>
@@ -57,7 +58,7 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
         </Link>
 
         {/* Copy + actions */}
-        <div className='flex flex-col p-5 sm:p-7 lg:p-9 min-w-0'>
+        <div className='flex flex-col justify-center p-5 sm:p-7 lg:p-9 min-w-0'>
           <p className='text-stride-yellow-accent text-sm font-semibold font-mono'>
             Next up · {countdown(race.dayKey, todayKey)}
           </p>
