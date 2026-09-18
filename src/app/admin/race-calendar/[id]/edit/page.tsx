@@ -23,7 +23,7 @@ export default async function EditRacePage({ params }: Props) {
 
   const { data } = await adminClient
     .from('races')
-    .select('id, name, slug, description, poster_images, race_date, has_start_time, city, venue, organizer, distances, registration_url, coupon_code, registration_deadline, status, updated_at')
+    .select('id, name, slug, description, poster_images, race_date, has_start_time, city, venue, organizer, distances, registration_url, coupon_code, discount_percent, registration_deadline, status, updated_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -50,6 +50,7 @@ export default async function EditRacePage({ params }: Props) {
           distances: race.distances ?? [],
           registrationUrl: race.registration_url ?? '',
           couponCode: race.coupon_code ?? '',
+          discountPercent: race.discount_percent === null ? '' : String(race.discount_percent),
           status: race.status,
           posterImages: race.poster_images ?? [],
         }}

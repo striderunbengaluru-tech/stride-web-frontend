@@ -8,6 +8,7 @@ import { RaceCalendarClient } from '@/components/race-calendar/race-calendar-cli
 import { RaceList } from '@/components/race-calendar/race-list'
 import { NextRaceHero } from '@/components/race-calendar/next-race-hero'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
+import { PageHeader } from '@/components/ui/page-header'
 import { JsonLd } from '@/components/seo/json-ld'
 import { graph, raceListNode, breadcrumbNode } from '@/lib/json-ld'
 import { listRaces } from '@/lib/mcp/data'
@@ -72,24 +73,20 @@ export default async function RaceCalendarPage() {
       <TrackBackdrop />
 
       <section className='relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-24'>
-        {/* Header: the serif does the talking; one line of copy, then the next race. */}
-        <div className='mb-10 sm:mb-14 grid grid-cols-1 lg:grid-cols-[1fr_auto] lg:items-end gap-6'>
-          <div>
-            <p className='text-white/50 text-sm font-medium'>Race calendar</p>
-            <h1 className='text-5xl sm:text-6xl lg:text-7xl text-white leading-none tracking-tight mt-3 text-balance max-w-3xl'>
-              Every start line worth training for.
-            </h1>
-            <p className='text-white/55 text-lg mt-5 max-w-xl leading-relaxed'>
-              Races across India the Stride team is watching, with the organiser&apos;s registration link and any coupon code we hold for you.
-            </p>
-          </div>
-          {upcoming.length > 0 && (
-            <p className='text-white/45 text-sm font-mono lg:text-right lg:pb-2'>
-              {upcoming.length} upcoming {upcoming.length === 1 ? 'race' : 'races'}
-              {cityCount > 1 ? ` across ${cityCount} cities` : ''}
-            </p>
-          )}
-        </div>
+        <PageHeader
+          backHref='/'
+          eyebrow='Partner races'
+          title='Race Calendar'
+          description='Stride Run Club has partnered with these races. Use our coupon code when you register and get an exciting discount on your entry.'
+          meta={
+            upcoming.length > 0 && (
+              <>
+                {upcoming.length} upcoming {upcoming.length === 1 ? 'race' : 'races'}
+                {cityCount > 1 ? ` across ${cityCount} cities` : ''}
+              </>
+            )
+          }
+        />
 
         {nextRace && (
           <div className='mb-12 sm:mb-16'>

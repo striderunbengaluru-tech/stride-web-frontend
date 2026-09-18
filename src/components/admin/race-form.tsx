@@ -7,12 +7,12 @@ import dynamic from 'next/dynamic'
 import { nanoid } from 'nanoid'
 import {
   X, Plus, Eye, GripVertical, AlertTriangle, CheckCircle2, PauseCircle, XCircle,
-  Type, FileText, Calendar, Clock, Hourglass, MapPin, Building2, Gauge, Link2, Tag, ImageIcon, Flag,
+  Type, FileText, Calendar, Clock, Hourglass, MapPin, Building2, Gauge, Link2, Tag, Percent, ImageIcon, Flag,
 } from 'lucide-react'
 import type { RaceActionResult } from '@/lib/validations/admin'
 import {
   RACE_DISTANCES, RACE_DISTANCE_KEYS, MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS,
-  MAX_RACE_COUPON_LENGTH, isCanonicalDistance, normaliseDistance, distanceLabel,
+  MAX_RACE_COUPON_LENGTH, MIN_RACE_DISCOUNT_PERCENT, MAX_RACE_DISCOUNT_PERCENT, isCanonicalDistance, normaliseDistance, distanceLabel,
 } from '@/types/race'
 import { reportFormError, type FieldError } from '@/lib/utils/form-errors'
 import { HelpHint } from '@/components/ui/help-hint'
@@ -50,6 +50,8 @@ export type RaceFormValues = {
   distances: string[]
   registrationUrl: string
   couponCode: string
+  /** Whole percent as typed, '' when unset. */
+  discountPercent: string
   status: Status
   posterImages: string[]
 }
@@ -85,6 +87,7 @@ export function RaceForm({ action, defaultValues = {}, submitLabel }: Props) {
   const [customDistance, setCustomDistance] = useState('')
   const [registrationUrl, setRegistrationUrl] = useState(defaultValues.registrationUrl ?? '')
   const [couponCode, setCouponCode] = useState(defaultValues.couponCode ?? '')
+  const [discountPercent, setDiscountPercent] = useState(defaultValues.discountPercent ?? '')
   const [status, setStatus] = useState<Status>(defaultValues.status ?? 'DRAFT')
   const [posterImages, setPosterImages] = useState<string[]>(defaultValues.posterImages ?? [])
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([])
@@ -226,13 +229,20 @@ export function RaceForm({ action, defaultValues = {}, submitLabel }: Props) {
     if (couponCode.trim() && couponCode.trim().length < 2) {
       return { message: 'A coupon code needs at least 2 characters', field: 'couponCode' }
     }
+    if (discountPercent.trim()) {
+      const pct = Number(discountPercent)
+      if (!Number.isInteger(pct) || pct < MIN_RACE_DISCOUNT_PERCENT || pct > MAX_RACE_DISCOUNT_PERCENT) {
+        return { message: `Discount must be a whole number from ${MIN_RACE_DISCOUNT_PERCENT} to ${MAX_RACE_DISCOUNT_PERCENT}`, field: 'discountPercent' }
+      }
+      if (!couponCode.trim()) return { message: 'A discount needs a coupon code to go with it', field: 'couponCode' }
+    }
     return null
   }
 
   function handlePreview() {
     const payload = {
       name, description, raceDate, startTime, registrationDeadline, city, venue, organizer,
-      distances, registrationUrl, couponCode, posterImages, slug: previewSlug,
+      distances, registrationUrl, couponCode, discountPercent, posterImages, slug: previewSlug,
     }
     try { sessionStorage.setItem(RACE_PREVIEW_STORAGE_KEY, JSON.stringify(payload)) } catch {}
     window.open(`${ADMIN_RACES_PATH}/preview`, '_blank')
@@ -463,6 +473,14 @@ export function RaceForm({ action, defaultValues = {}, submitLabel }: Props) {
                   help={`The organiser's discount code for Stride runners. Shown with a copy button. Up to ${MAX_RACE_COUPON_LENGTH} characters.`}
                 />
               </div>
+              <div className='mt-4'>
+                <Field
+                  icon={<Percent size={14} />} label='Discount' type='number'
+                  name='discountPercent' value={discountPercent} onChange={setDiscountPercent}
+                  placeholder='e.g. 10'
+                  help={`Whole percent off the organiser's fee with this code. Shown as "10% off" beside the coupon. ${MIN_RACE_DISCOUNT_PERCENT}–${MAX_RACE_DISCOUNT_PERCENT}.`}
+                />
+              </div>
             </Widget>
 
             {/* ── POSTERS ── */}
@@ -561,7 +579,7 @@ export function RaceForm({ action, defaultValues = {}, submitLabel }: Props) {
           <RacePreview
             name={name} description={description} raceDate={raceDate} startTime={startTime}
             registrationDeadline={registrationDeadline} city={city} venue={venue} organizer={organizer}
-            distances={distances} registrationUrl={registrationUrl} couponCode={couponCode}
+            distances={distances} registrationUrl={registrationUrl} couponCode={couponCode} discountPercent={discountPercent}
             posterImages={posterImages} slug={previewSlug}
           />
         </div>

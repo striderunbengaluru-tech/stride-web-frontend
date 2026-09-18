@@ -107,7 +107,7 @@ export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
           matched: scoped.length,
           races: scoped.map(r => ({
             name: r.name, slug: r.slug, date: r.raceDate, dateOnly: !r.hasStartTime, city: r.city, venue: r.venue,
-            organizer: r.organizer, distances: r.distances, registrationUrl: r.registrationUrl, couponCode: r.couponCode,
+            organizer: r.organizer, distances: r.distances, registrationUrl: r.registrationUrl, couponCode: r.couponCode, discountPercent: r.discountPercent,
             registrationDeadline: r.registrationDeadline, url: `/race-calendar/${r.slug}`,
           })),
         })

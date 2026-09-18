@@ -25,6 +25,7 @@ export type RacePreviewProps = {
   distances: string[]
   registrationUrl: string
   couponCode: string
+  discountPercent: string
   posterImages: string[]
   slug?: string
 }
@@ -46,7 +47,7 @@ function raceInstant(raceDate: string, startTime: string): string | null {
 function PreviewContent(props: Omit<RacePreviewProps, 'slug'> & { layout: ViewMode }) {
   const {
     name, description, raceDate, startTime, registrationDeadline, city, venue, organizer,
-    distances, registrationUrl, couponCode, posterImages, layout,
+    distances, registrationUrl, couponCode, discountPercent, posterImages, layout,
   } = props
 
   const instant = raceInstant(raceDate, startTime)
@@ -142,7 +143,10 @@ function PreviewContent(props: Omit<RacePreviewProps, 'slug'> & { layout: ViewMo
             <div className='flex items-center gap-2 rounded-lg border border-white/12 bg-white/5 px-3 py-2'>
               <div className='flex-1 min-w-0'>
                 <p className='text-white/40 text-[9px] font-bold font-mono uppercase tracking-widest'>Stride coupon</p>
-                <p className='text-white font-mono font-bold text-sm truncate'>{couponCode.trim()}</p>
+                <p className='text-white font-mono font-bold text-sm truncate'>
+                  {couponCode.trim()}
+                  {discountPercent.trim() && <span className='ml-2 text-stride-yellow-accent text-[10px] font-sans'>{discountPercent.trim()}% off</span>}
+                </p>
               </div>
               <span className='inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[10px] font-semibold text-white/80'>
                 <Copy size={10} /> Copy

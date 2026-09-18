@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight, MapPin, X } from 'lucide-react'
 import { formatDateFullIST, formatTimeIST } from '@/lib/utils/ist'
 import { isRegistrationOpen, type RaceCardData } from '@/lib/races/present'
@@ -31,6 +32,8 @@ const DESKTOP_QUERY = '(min-width: 640px)'
 const VIEWPORT_MARGIN = 8
 const ANCHOR_GAP = 6
 const POPOVER_WIDTH = 288
+/** Posters are portrait; a 4:3 band shows the artwork without turning the card into a tower. */
+const POSTER_BAND = 'aspect-[4/3]'
 
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -141,6 +144,17 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
           const open = isRegistrationOpen(race, todayKey, nowIso)
           return (
             <li key={race.id} className='px-4 py-4 space-y-3'>
+              {race.posterUrl && (
+                <div className={`relative -mx-4 -mt-4 ${POSTER_BAND} bg-white/5 overflow-hidden`}>
+                  <Image
+                    src={race.posterUrl}
+                    alt={`${race.name} poster`}
+                    fill
+                    sizes='(max-width: 640px) 100vw, 288px'
+                    className='object-cover'
+                  />
+                </div>
+              )}
               <div>
                 <p className='font-libre text-white text-lg leading-snug line-clamp-2'>{race.name}</p>
                 <p className='text-white/60 text-sm mt-1 flex items-center gap-1.5 min-w-0'>
@@ -154,7 +168,7 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
                   </p>
                 )}
               </div>
-              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} open={open} layout='compact' />
+              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} discountPercent={race.discountPercent} open={open} layout='compact' />
               <Link
                 href={`/race-calendar/${race.slug}`}
                 prefetch={false}

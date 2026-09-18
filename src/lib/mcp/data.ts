@@ -228,6 +228,7 @@ function toPublicRace(row: RaceRow, nowIso: string): PublicRace {
     distances: (row.distances ?? []).map(key => ({ key, label: distanceLabel(key), km: distanceKm(key) })),
     registrationUrl: row.registration_url,
     couponCode: row.coupon_code,
+    discountPercent: row.discount_percent,
     registrationDeadline: row.registration_deadline,
     registrationOpen: isRegistrationOpen(
       { dayKey, registrationDeadline: row.registration_deadline },

@@ -277,7 +277,7 @@ async function raceCalendarMarkdown(abs: Abs): Promise<MarkdownDoc> {
   const row = (r: RaceRow) => {
     const where = [r.venue, r.city].filter(Boolean).join(', ')
     const distances = sortDistances(r.distances ?? []).map(distanceLabel).join(' / ')
-    const coupon = r.coupon_code ? ` · Coupon: \`${r.coupon_code}\`` : ''
+    const coupon = r.coupon_code ? ` · Coupon: \`${r.coupon_code}\`${r.discount_percent ? ` (${r.discount_percent}% off)` : ''}` : ''
     return `- [${r.name}](${abs(`/race-calendar/${r.slug}`)}) — ${raceWhen(r)} · ${where} · ${distances} · ${raceRegistrationLine(r, todayKey, nowIso)}${coupon}`
   }
 
@@ -342,7 +342,7 @@ async function raceMarkdown(slug: string, abs: Abs): Promise<MarkdownDoc | null>
       race.organizer ? `- **Organiser:** ${race.organizer}` : null,
       `- **Registration:** ${raceRegistrationLine(race, todayKey, nowIso)}`,
       open && race.registration_url ? `- **Register at:** ${race.registration_url}` : null,
-      open && race.coupon_code ? `- **Stride coupon code:** \`${race.coupon_code}\`` : null,
+      open && race.coupon_code ? `- **Stride coupon code:** \`${race.coupon_code}\`${race.discount_percent ? ` — ${race.discount_percent}% off` : ''}` : null,
       '',
       race.description ? '## About' : null,
       '',

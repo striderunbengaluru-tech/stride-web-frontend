@@ -147,9 +147,9 @@ export function MonthGrid({ monthKey, racesByDay, todayKey, nowIso, minMonth, ma
                           onBlur={endPreviewNow}
                           onClick={e => pin(e.currentTarget, [race])}
                           aria-haspopup='dialog'
-                          className='w-full text-left rounded px-1.5 min-h-7 text-xs font-semibold leading-tight line-clamp-1 bg-stride-yellow-accent/15 text-stride-yellow-accent hover:bg-stride-yellow-accent hover:text-copy-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-stride-yellow-accent transition-colors'
+                          className='w-full text-left rounded px-1.5 py-1 min-h-7 text-xs font-semibold leading-tight bg-stride-yellow-accent/15 text-stride-yellow-accent hover:bg-stride-yellow-accent hover:text-copy-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-stride-yellow-accent transition-colors'
                         >
-                          {race.name}
+                          <span className='line-clamp-2'>{race.name}</span>
                         </button>
                       ))}
                       {overflow > 0 && (

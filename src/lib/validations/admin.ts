@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField, type EventPackage } from '@/types/event'
 import {
-  MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS, MAX_RACE_COUPON_LENGTH,
+  MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS, MAX_RACE_COUPON_LENGTH, MIN_RACE_DISCOUNT_PERCENT, MAX_RACE_DISCOUNT_PERCENT,
   normaliseDistance,
 } from '@/types/race'
 import { validatePackageSpots } from '@/lib/events/package-spots'
@@ -278,6 +278,15 @@ export const raceSchema = z.object({
       .max(MAX_RACE_COUPON_LENGTH, `Keep the code under ${MAX_RACE_COUPON_LENGTH} characters`)
       .optional(),
   ),
+  // Whole percent off, displayed next to the code. Meaningless without one.
+  discountPercent: z.preprocess(
+    blankToUndefined,
+    z.coerce.number()
+      .int('Use a whole number')
+      .min(MIN_RACE_DISCOUNT_PERCENT, `At least ${MIN_RACE_DISCOUNT_PERCENT}%`)
+      .max(MAX_RACE_DISCOUNT_PERCENT, `At most ${MAX_RACE_DISCOUNT_PERCENT}%`)
+      .optional(),
+  ),
   // <input type="datetime-local">, IST wall clock like events.endDate.
   registrationDeadline: z.string().optional(),
   status: z.enum(['DRAFT', 'PUBLISHED', 'CANCELLED']).default('DRAFT'),
@@ -296,6 +305,10 @@ export const raceSchema = z.object({
         path: ['registrationUrl'],
         message: 'Add a registration link or a coupon code — runners need at least one.',
       })
+    }
+
+    if (data.discountPercent !== undefined && !data.couponCode) {
+      ctx.addIssue({ code: 'custom', path: ['discountPercent'], message: 'A discount needs a coupon code to go with it' })
     }
 
     // A deadline after the race is a typo, not a policy. ISO strings compare
@@ -327,6 +340,7 @@ export const RACE_FIELD_ORDER = [
   'distances',
   'registrationUrl',
   'couponCode',
+  'discountPercent',
   'posterImages',
 ] as const
 

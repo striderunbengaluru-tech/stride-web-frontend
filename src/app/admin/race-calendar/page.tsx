@@ -21,6 +21,7 @@ type RaceAdminRowDb = {
   distances: string[] | null
   registration_url: string | null
   coupon_code: string | null
+  discount_percent: number | null
   poster_images: string[] | null
   created_at: string
   updated_at: string
@@ -31,7 +32,7 @@ type RaceAdminRowDb = {
 async function fetchAdminRaces(): Promise<{ rows: AdminRaceRow[]; todayKey: string }> {
   const { data } = await adminClient
     .from('races')
-    .select('id, name, slug, status, race_date, has_start_time, registration_deadline, city, venue, organizer, distances, registration_url, coupon_code, poster_images, created_at, updated_at, created_by, updated_by')
+    .select('id, name, slug, status, race_date, has_start_time, registration_deadline, city, venue, organizer, distances, registration_url, coupon_code, discount_percent, poster_images, created_at, updated_at, created_by, updated_by')
     .order('race_date', { ascending: false })
 
   const rows: AdminRaceRow[] = ((data ?? []) as unknown as RaceAdminRowDb[]).map(r => ({
@@ -48,6 +49,7 @@ async function fetchAdminRaces(): Promise<{ rows: AdminRaceRow[]; todayKey: stri
     distances: r.distances ?? [],
     registrationUrl: r.registration_url,
     couponCode: r.coupon_code,
+    discountPercent: r.discount_percent,
     thumbUrl: r.poster_images?.[0] ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,

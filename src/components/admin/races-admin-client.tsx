@@ -22,6 +22,7 @@ export type AdminRaceRow = {
   distances: string[]
   registrationUrl: string | null
   couponCode: string | null
+  discountPercent: number | null
   thumbUrl: string | null
   createdAt: string
   updatedAt: string
@@ -196,7 +197,7 @@ export function RacesAdminClient({ races, todayKey }: { races: AdminRaceRow[]; t
                       )}
                       {race.couponCode && (
                         <span className='flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-stride-yellow-accent/15 text-stride-yellow-accent shrink-0'>
-                          <Tag size={10} aria-hidden='true' /> COUPON
+                          <Tag size={10} aria-hidden='true' /> COUPON{race.discountPercent ? ` · ${race.discountPercent}% OFF` : ''}
                         </span>
                       )}
                     </div>
@@ -275,7 +276,10 @@ export function RacesAdminClient({ races, todayKey }: { races: AdminRaceRow[]; t
                     {race.couponCode && (
                       <div>
                         <p className='text-white/25 font-mono uppercase tracking-widest mb-1.5'>Coupon code</p>
-                        <p className='text-white font-mono font-bold'>{race.couponCode}</p>
+                        <p className='text-white font-mono font-bold'>
+                          {race.couponCode}
+                          {race.discountPercent && <span className='ml-2 text-stride-yellow-accent text-xs font-sans'>{race.discountPercent}% off</span>}
+                        </p>
                       </div>
                     )}
                     <div>

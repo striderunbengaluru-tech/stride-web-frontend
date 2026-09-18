@@ -34,9 +34,9 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
 
   return (
     <section aria-labelledby='next-race-heading' className='relative overflow-hidden rounded-2xl border border-white/15 bg-white/6 backdrop-blur-md'>
-      <div className='grid grid-cols-1 sm:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,18rem)_1fr]'>
+      <div className='grid grid-cols-1 sm:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,18rem)_1fr] sm:items-start'>
         {/* Poster */}
-        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-[3/4] sm:aspect-auto sm:min-h-full bg-white/5 group'>
+        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-[3/4] bg-white/5 group'>
           {race.posterUrl ? (
             <Image
               src={race.posterUrl}
@@ -100,7 +100,7 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
 
           <div className='mt-auto pt-6'>
             <div className='sm:max-w-md'>
-              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} open={open} />
+              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} discountPercent={race.discountPercent} open={open} />
             </div>
             <div className='flex flex-wrap items-center justify-between gap-3 mt-3'>
               {deadline ? (
