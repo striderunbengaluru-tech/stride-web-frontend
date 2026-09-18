@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, MapPin, X } from 'lucide-react'
 import { formatDateFullIST, formatTimeIST } from '@/lib/utils/ist'
 import { isRegistrationOpen, type RaceCardData } from '@/lib/races/present'
@@ -32,8 +33,10 @@ const DESKTOP_QUERY = '(min-width: 640px)'
 const VIEWPORT_MARGIN = 8
 const ANCHOR_GAP = 6
 const POPOVER_WIDTH = 288
-/** Posters are portrait; a 4:3 band shows the artwork without turning the card into a tower. */
+/** Posters are portrait; a 4:3 band keeps the card short, with the full poster letterboxed over a blurred copy of itself. */
 const POSTER_BAND = 'aspect-[4/3]'
+const REVEAL_SECONDS = 0.18
+const SHEET_SECONDS = 0.28
 
 const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
@@ -68,7 +71,8 @@ function useIsDesktop(): boolean {
 export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, onPointerLeave }: Props) {
   const mounted = useMounted()
   const isDesktop = useIsDesktop()
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
+  const [position, setPosition] = useState<{ top: number; left: number; above: boolean } | null>(null)
+  const reduceMotion = useReducedMotion()
   const panelRef = useRef<HTMLDivElement>(null)
   const lastAnchor = useRef<HTMLElement | null>(null)
 
@@ -87,7 +91,7 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
       const fitsBelow = below + height <= window.innerHeight - VIEWPORT_MARGIN
       const top = fitsBelow ? below : Math.max(VIEWPORT_MARGIN, anchor.top - ANCHOR_GAP - height)
       const left = Math.min(Math.max(anchor.left, VIEWPORT_MARGIN), window.innerWidth - width - VIEWPORT_MARGIN)
-      setPosition({ top, left })
+      setPosition({ top, left, above: !fitsBelow })
     }
     place()
     window.addEventListener('scroll', place, true)
@@ -128,6 +132,9 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
   const pinned = state.mode === 'pinned'
   const dayLabel = formatDateFullIST(state.races[0].raceDate)
   const headingId = 'race-popover-heading'
+  // Re-mounting on a new set of races replays the reveal; preview → pinned on the same chip does not.
+  const revealKey = state.races.map(r => r.id).join(',')
+  const revealDuration = reduceMotion ? 0 : REVEAL_SECONDS
 
   const body = (
     <>
@@ -146,12 +153,13 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
             <li key={race.id} className='px-4 py-4 space-y-3'>
               {race.posterUrl && (
                 <div className={`relative -mx-4 -mt-4 ${POSTER_BAND} bg-white/5 overflow-hidden`}>
+                  <Image src={race.posterUrl} alt='' aria-hidden='true' fill sizes='64px' className='object-cover scale-125 blur-2xl opacity-70' />
                   <Image
                     src={race.posterUrl}
                     alt={`${race.name} poster`}
                     fill
                     sizes='(max-width: 640px) 100vw, 288px'
-                    className='object-cover'
+                    className='object-contain'
                   />
                 </div>
               )}
@@ -189,33 +197,59 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
     // Phones: a bottom sheet, always interactive.
     return createPortal(
       <div className='fixed inset-0 z-50 flex flex-col justify-end'>
-        <button type='button' onClick={onClose} aria-label='Close' className='absolute inset-0 bg-black/60' />
-        <div
+        <motion.button
+          type='button'
+          onClick={onClose}
+          aria-label='Close'
+          className='absolute inset-0 bg-black/60'
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: reduceMotion ? 0 : SHEET_SECONDS }}
+        />
+        <motion.div
+          key={revealKey}
           ref={panelRef}
           role='dialog'
           aria-labelledby={headingId}
           className={`relative rounded-t-2xl max-h-[70dvh] overflow-hidden pb-[env(safe-area-inset-bottom)] ${panelChrome}`}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : SHEET_SECONDS, ease: [0.22, 1, 0.36, 1] }}
         >
           {body}
-        </div>
+        </motion.div>
       </div>,
       document.body,
     )
   }
 
+  // Grows out of the chip: from the top edge when placed below it, from the
+  // bottom edge when flipped above. Hidden until measured so the first frame
+  // cannot flash at 0,0.
+  const offsetY = position?.above ? 8 : -8
   return createPortal(
-    <div
+    <motion.div
+      key={revealKey}
       ref={panelRef}
       role='dialog'
       aria-modal={false}
       aria-labelledby={headingId}
       onMouseEnter={onPointerEnter}
       onMouseLeave={onPointerLeave}
-      style={{ top: position?.top ?? 0, left: position?.left ?? 0, width: POPOVER_WIDTH, visibility: position ? 'visible' : 'hidden' }}
+      style={{
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        width: POPOVER_WIDTH,
+        visibility: position ? 'visible' : 'hidden',
+        transformOrigin: position?.above ? 'bottom left' : 'top left',
+      }}
+      initial={{ opacity: 0, y: offsetY, scale: 0.96 }}
+      animate={position ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: offsetY, scale: 0.96 }}
+      transition={{ duration: revealDuration, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed z-50 max-w-[calc(100vw-16px)] rounded-xl overflow-hidden ${panelChrome} ${pinned ? 'ring-1 ring-stride-yellow-accent/40' : ''}`}
     >
       {body}
-    </div>,
+    </motion.div>,
     document.body,
   )
 }
