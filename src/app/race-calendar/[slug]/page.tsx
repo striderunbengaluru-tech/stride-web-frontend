@@ -193,7 +193,7 @@ export default async function RaceDetailPage({ params }: Props) {
                 {race.registration_deadline && open && (
                   <p className='text-white/55 text-sm'>Registrations close {formatDateTimeIST(race.registration_deadline)} IST.</p>
                 )}
-                <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} open={open} />
+                <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} discountPercent={race.discount_percent} open={open} />
                 <p className='text-white/35 text-xs leading-relaxed'>
                   Stride doesn&apos;t organise this race or take payment for it. Registration, fees and refunds are handled by the organiser.
                 </p>
@@ -218,7 +218,7 @@ export default async function RaceDetailPage({ params }: Props) {
               text={[
                 'Hey!',
                 `${race.name} is on ${formatDateLongIST(race.race_date)} in ${race.city} 🏁`,
-                race.coupon_code ? `Stride coupon code: ${race.coupon_code}` : null,
+                race.coupon_code ? `Stride coupon code: ${race.coupon_code}${race.discount_percent ? ` (${race.discount_percent}% off)` : ''}` : null,
                 'Details here -',
               ].filter(Boolean).join('\n')}
             />
@@ -229,7 +229,7 @@ export default async function RaceDetailPage({ params }: Props) {
       {/* Sticky mobile CTA bar */}
       <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom))]'>
         <div className='max-w-lg mx-auto'>
-          <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} open={open} layout='row' />
+          <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} discountPercent={race.discount_percent} open={open} layout='row' />
         </div>
       </div>
     </main>

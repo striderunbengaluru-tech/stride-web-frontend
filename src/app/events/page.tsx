@@ -5,6 +5,7 @@ import { eventRowPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import { EventsClient } from '@/components/events/events-client'
 import { UpNextCarousel } from '@/components/events/up-next-carousel'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
+import { PageHeader } from '@/components/ui/page-header'
 import { JsonLd } from '@/components/seo/json-ld'
 import { graph, eventListNode, breadcrumbNode } from '@/lib/json-ld'
 import { listEvents as listPublicEvents } from '@/lib/mcp/data'
@@ -114,15 +115,18 @@ export default async function EventsPage() {
 
       <section className='relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-24'>
 
-        {/* Header */}
-        <div className='mb-12'>
-          <h1 className='text-6xl sm:text-7xl font-bold text-white leading-[0.95] tracking-tight'>
-            Events
-          </h1>
-          <p className='text-white/45 text-lg mt-5 max-w-md leading-relaxed'>
-            Everything Stride hosts across Bengaluru, from weekly group runs to race day. Pick one and show up.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow='Hosted by Stride'
+          title='Events'
+          description='Everything Stride hosts across Bengaluru, from weekly group runs to race day. Pick one and show up.'
+          meta={
+            upNext.length > 0 && (
+              <>
+                {upNext.length} upcoming {upNext.length === 1 ? 'event' : 'events'}
+              </>
+            )
+          }
+        />
 
         {upNext.length > 0 && (
           <div className='mb-14'>

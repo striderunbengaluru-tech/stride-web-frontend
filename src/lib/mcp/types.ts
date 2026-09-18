@@ -69,6 +69,8 @@ export type PublicRace = {
   registrationUrl: string | null
   /** A public discount code for Stride runners, shown verbatim on the page. */
   couponCode: string | null
+  /** Whole percent off with the coupon code, when the organiser told Stride. */
+  discountPercent: number | null
   registrationDeadline: string | null
   /** False once the deadline or the race day has passed; the page hides the CTAs then. */
   registrationOpen: boolean

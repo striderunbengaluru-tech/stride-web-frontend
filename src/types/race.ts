@@ -39,6 +39,9 @@ export const MAX_RACE_DISTANCES = 10
 export const MAX_CUSTOM_DISTANCE_LENGTH = 20
 export const MAX_RACE_POSTERS = 5
 export const MAX_RACE_COUPON_LENGTH = 40
+/** Whole-number percentage off the organiser's fee, shown beside the coupon code. */
+export const MIN_RACE_DISCOUNT_PERCENT = 1
+export const MAX_RACE_DISCOUNT_PERCENT = 100
 
 export function isCanonicalDistance(value: string): value is RaceDistance {
   return value in RACE_DISTANCES
@@ -95,6 +98,8 @@ export type RaceRow = {
   distances: string[]
   registration_url: string | null
   coupon_code: string | null
+  /** 1–100, only meaningful with a coupon_code. */
+  discount_percent: number | null
   registration_deadline: string | null
   status: RaceStatus
   updated_at: string

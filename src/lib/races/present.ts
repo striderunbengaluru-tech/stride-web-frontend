@@ -24,6 +24,7 @@ export type RaceCardData = {
   posterUrl: string | null
   registrationUrl: string | null
   couponCode: string | null
+  discountPercent: number | null
   registrationDeadline: string | null
 }
 
@@ -43,6 +44,7 @@ export function toRaceCardData(row: RaceRow): RaceCardData {
     posterUrl: row.poster_images?.[0] ?? null,
     registrationUrl: row.registration_url,
     couponCode: row.coupon_code,
+    discountPercent: row.discount_percent,
     registrationDeadline: row.registration_deadline,
   }
 }

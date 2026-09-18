@@ -17,7 +17,7 @@ const RACES_REVALIDATE = 60
 // updated_at is included for sitemap lastModified.
 const RACE_PUBLIC_COLUMNS =
   'id, name, slug, description, poster_images, race_date, has_start_time, city, venue, ' +
-  'organizer, distances, registration_url, coupon_code, registration_deadline, status, updated_at'
+  'organizer, distances, registration_url, coupon_code, discount_percent, registration_deadline, status, updated_at'
 
 /** Every PUBLISHED race, past and future, soonest first. Callers split on IST day. */
 export const getPublishedRaces = cache((): Promise<RaceRow[]> =>

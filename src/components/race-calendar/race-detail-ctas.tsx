@@ -4,6 +4,8 @@ import { CopyButton } from '@/components/ui/copy-button'
 type Props = {
   registrationUrl: string | null
   couponCode: string | null
+  /** Whole percent off, shown beside the code when known. */
+  discountPercent?: number | null
   /** False once the deadline or race day has passed — both CTAs are then withheld. */
   open: boolean
   /**
@@ -19,7 +21,7 @@ type Props = {
  * copy Stride's coupon code. Either may be absent, never both — the schema and
  * the database both enforce that.
  */
-export function RaceDetailCtas({ registrationUrl, couponCode, open, layout = 'stacked' }: Props) {
+export function RaceDetailCtas({ registrationUrl, couponCode, discountPercent = null, open, layout = 'stacked' }: Props) {
   if (!open) {
     return <p className='text-white/50 text-sm'>Registration for this race has closed.</p>
   }
@@ -43,12 +45,17 @@ export function RaceDetailCtas({ registrationUrl, couponCode, open, layout = 'st
           {layout !== 'row' && (
             <div className='flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 px-4 py-2 flex flex-col justify-center'>
               <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest'>Stride coupon</p>
-              <p className='text-white font-mono font-bold text-base break-all select-all'>{couponCode}</p>
+              <p className='flex flex-wrap items-baseline gap-x-2'>
+                <span className='text-white font-mono font-bold text-base break-all select-all'>{couponCode}</span>
+                {discountPercent && (
+                  <span className='text-stride-yellow-accent text-xs font-bold'>{discountPercent}% off</span>
+                )}
+              </p>
             </div>
           )}
           <CopyButton
             value={couponCode}
-            label={layout === 'row' ? `Copy ${couponCode}` : 'Copy code'}
+            label={layout === 'row' ? `Copy ${couponCode}${discountPercent ? ` · ${discountPercent}% off` : ''}` : 'Copy code'}
             copiedLabel='Copied!'
             variant={registrationUrl ? 'ghost' : 'solid'}
             className={layout === 'row' ? 'flex-1 min-w-0 truncate' : layout === 'compact' ? 'w-full' : 'shrink-0'}

@@ -46,6 +46,7 @@ function raceColumns(data: RaceFormData) {
     distances: data.distances,
     registration_url: data.registrationUrl ?? null,
     coupon_code: data.couponCode ?? null,
+    discount_percent: data.couponCode ? data.discountPercent ?? null : null,
     registration_deadline: istLocalToUtcIso(data.registrationDeadline),
     status: data.status,
   }
