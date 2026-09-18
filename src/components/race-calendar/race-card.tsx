@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Tag, Building2 } from 'lucide-react'
+import { MapPin, Building2 } from 'lucide-react'
 import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
 import { deadlineLabel, type RaceCardData } from '@/lib/races/present'
 import { distanceLabel, sortDistances } from '@/types/race'
@@ -53,11 +53,6 @@ export function RaceCard({ race, todayKey, nowIso, dimmed = false }: Props) {
           <div className='absolute inset-0 flex items-center justify-center text-white/8 text-6xl select-none bg-linear-to-br from-stride-purple-primary to-stride-yellow-accent/8'>
             🏁
           </div>
-        )}
-        {race.couponCode && (
-          <span className='absolute top-2.5 left-2.5 z-10 inline-flex items-center gap-1 rounded-md bg-stride-yellow-accent px-2 py-1 text-[10px] font-black uppercase tracking-wider text-copy-black'>
-            <Tag size={10} aria-hidden='true' /> Coupon
-          </span>
         )}
       </div>
 

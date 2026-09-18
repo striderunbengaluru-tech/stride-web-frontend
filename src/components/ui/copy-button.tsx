@@ -9,8 +9,8 @@ type Props = {
   label: string
   copiedLabel?: string
   className?: string
-  /** 'solid' is the yellow CTA; 'ghost' sits beside a mono code readout. */
-  variant?: 'solid' | 'ghost'
+  /** 'solid' is the yellow CTA; 'ghost' sits beside a mono code readout; 'inline' lives inside a bordered readout box. */
+  variant?: 'solid' | 'ghost' | 'inline'
   /** Square icon button; `label` becomes the accessible name and the live region stays screen-reader only. */
   iconOnly?: boolean
 }
@@ -18,6 +18,7 @@ type Props = {
 const VARIANT_CLASSES = {
   solid: 'bg-stride-yellow-accent text-copy-black hover:bg-stride-yellow-accent/90',
   ghost: 'bg-white/8 border border-white/15 text-white hover:border-stride-yellow-accent/50',
+  inline: 'bg-white/10 text-white hover:bg-stride-yellow-accent hover:text-copy-black',
 } as const
 
 /**
