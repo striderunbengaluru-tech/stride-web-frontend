@@ -35,18 +35,29 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
   return (
     <section aria-labelledby='next-race-heading' className='relative overflow-hidden rounded-2xl border border-white/15 bg-white/6 backdrop-blur-md'>
       <div className='grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr]'>
-        {/* Poster — like the events banner: posters are 3:4, so a fixed 3:4
-            column that the image fills exactly, and the grid row takes its height. */}
-        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-3/4 bg-white/5 overflow-hidden group'>
+        {/* Poster — a fixed 3:4 column on mobile; from md the column stretches to
+            the row height and the poster sits uncropped (object-contain) over a
+            blurred copy of itself, so a taller text column never leaves a gap. */}
+        <Link href={`/race-calendar/${race.slug}`} prefetch={false} className='relative block aspect-3/4 md:aspect-auto md:h-full md:min-h-[400px] lg:min-h-[453px] bg-white/5 overflow-hidden group'>
           {race.posterUrl ? (
-            <Image
-              src={race.posterUrl}
-              alt={`${race.name} poster`}
-              fill
-              priority
-              className='object-cover group-hover:scale-[1.02] transition-transform duration-500'
-              sizes='(max-width: 768px) 100vw, 340px'
-            />
+            <>
+              <Image
+                src={race.posterUrl}
+                alt=''
+                aria-hidden='true'
+                fill
+                sizes='64px'
+                className='hidden md:block object-cover scale-125 blur-2xl opacity-70'
+              />
+              <Image
+                src={race.posterUrl}
+                alt={`${race.name} poster`}
+                fill
+                priority
+                className='object-cover md:object-contain group-hover:scale-[1.02] transition-transform duration-500'
+                sizes='(max-width: 768px) 100vw, 340px'
+              />
+            </>
           ) : (
             <div className='absolute inset-0 flex items-center justify-center text-white/10 text-7xl select-none'>🏁</div>
           )}
