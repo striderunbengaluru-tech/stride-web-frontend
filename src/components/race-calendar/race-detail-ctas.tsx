@@ -9,9 +9,8 @@ type Props = {
   /** False once the deadline or race day has passed — both CTAs are then withheld. */
   open: boolean
   /**
-   * stacked: code readout beside its copy button (detail panel, hero).
-   * row: both CTAs side by side (sticky mobile bar).
-   * compact: everything full width, one under the other (the 288px calendar card).
+   * stacked / compact: register button above the coupon row (detail panel, hero, calendar card).
+   * row: both CTAs side by side with tighter coupon padding (sticky mobile bar).
    */
   layout?: 'stacked' | 'row' | 'compact'
 }
@@ -35,30 +34,31 @@ export function RaceDetailCtas({ registrationUrl, couponCode, discountPercent = 
           rel='noopener noreferrer nofollow'
           className={`inline-flex items-center justify-center gap-2 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm px-5 py-3 min-h-11 hover:bg-stride-yellow-accent/90 transition-colors ${layout === 'row' ? 'flex-1' : 'w-full'}`}
         >
-          Register on organiser&apos;s site
+          {layout === 'row' ? 'Register' : <>Register on organiser&apos;s site</>}
           <ExternalLink size={15} aria-hidden='true' />
           <span className='sr-only'>(opens in a new tab)</span>
         </a>
       )}
       {couponCode && (
-        <div className={`flex gap-2 ${layout === 'compact' ? 'flex-col' : 'items-stretch'} ${layout === 'row' ? 'flex-1 min-w-0' : ''}`}>
-          {layout !== 'row' && (
-            <div className='flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 px-4 py-2 flex flex-col justify-center'>
-              <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest'>Stride coupon</p>
-              <p className='flex flex-wrap items-baseline gap-x-2'>
-                <span className='text-white font-mono font-bold text-base break-all select-all'>{couponCode}</span>
-                {discountPercent && (
-                  <span className='text-stride-yellow-accent text-xs font-bold'>{discountPercent}% off</span>
-                )}
-              </p>
-            </div>
+        <div className={`flex items-stretch gap-2 ${layout === 'row' ? 'shrink-0 max-w-[60%]' : ''}`}>
+          <div className={`flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 flex flex-col justify-center ${layout === 'row' ? 'px-3' : 'px-4 py-2'}`}>
+            {layout !== 'row' && (
+              <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest truncate'>{layout === 'compact' ? 'Coupon' : 'Stride coupon'}</p>
+            )}
+            <p className={`text-white font-mono font-bold truncate select-all ${layout === 'row' ? 'text-sm' : 'text-base'}`}>{couponCode}</p>
+          </div>
+          {discountPercent && (
+            <p className={`shrink-0 inline-flex items-center rounded-md border border-stride-yellow-accent/40 bg-stride-yellow-accent/15 font-bold text-stride-yellow-accent ${layout === 'row' ? 'px-2 text-xs' : 'px-3 text-sm'}`}>
+              {discountPercent}% off
+            </p>
           )}
           <CopyButton
             value={couponCode}
-            label={layout === 'row' ? `Copy ${couponCode}${discountPercent ? ` · ${discountPercent}% off` : ''}` : 'Copy code'}
-            copiedLabel='Copied!'
+            label={`Copy code ${couponCode}`}
+            copiedLabel='Copied'
             variant={registrationUrl ? 'ghost' : 'solid'}
-            className={layout === 'row' ? 'flex-1 min-w-0 truncate' : layout === 'compact' ? 'w-full' : 'shrink-0'}
+            iconOnly
+            className='shrink-0'
           />
         </div>
       )}
