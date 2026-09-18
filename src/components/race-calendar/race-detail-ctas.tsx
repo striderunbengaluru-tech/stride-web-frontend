@@ -41,25 +41,28 @@ export function RaceDetailCtas({ registrationUrl, couponCode, discountPercent = 
       )}
       {couponCode && (
         <div className={`flex items-stretch gap-2 ${layout === 'row' ? 'shrink-0 max-w-[60%]' : ''}`}>
-          <div className={`flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 flex flex-col justify-center ${layout === 'row' ? 'px-3' : 'px-4 py-2'}`}>
-            {layout !== 'row' && (
-              <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest truncate'>{layout === 'compact' ? 'Coupon' : 'Stride coupon'}</p>
-            )}
-            <p className={`text-white font-mono font-bold truncate select-all ${layout === 'row' ? 'text-sm' : 'text-base'}`}>{couponCode}</p>
+          {/* Code readout with its copy button inside the same box */}
+          <div className={`flex-1 min-w-0 rounded-md border border-white/15 bg-white/5 flex items-center gap-2 ${layout === 'row' ? 'pl-3 pr-1 py-1' : 'pl-4 pr-1.5 py-1.5'}`}>
+            <div className='flex-1 min-w-0'>
+              {layout !== 'row' && (
+                <p className='text-white/40 text-[10px] font-bold font-mono uppercase tracking-widest truncate'>{layout === 'compact' ? 'Coupon' : 'Stride coupon'}</p>
+              )}
+              <p className={`text-white font-mono font-bold truncate select-all ${layout === 'row' ? 'text-sm' : 'text-base'}`}>{couponCode}</p>
+            </div>
+            <CopyButton
+              value={couponCode}
+              label={`Copy code ${couponCode}`}
+              copiedLabel='Copied'
+              variant='inline'
+              iconOnly
+              className='shrink-0'
+            />
           </div>
           {discountPercent && (
             <p className={`shrink-0 inline-flex items-center rounded-md border border-stride-yellow-accent/40 bg-stride-yellow-accent/15 font-bold text-stride-yellow-accent ${layout === 'row' ? 'px-2 text-xs' : 'px-3 text-sm'}`}>
               {discountPercent}% off
             </p>
           )}
-          <CopyButton
-            value={couponCode}
-            label={`Copy code ${couponCode}`}
-            copiedLabel='Copied'
-            variant={registrationUrl ? 'ghost' : 'solid'}
-            iconOnly
-            className='shrink-0'
-          />
         </div>
       )}
     </div>

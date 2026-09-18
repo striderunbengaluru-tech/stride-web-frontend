@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, MapPin, Building2 } from 'lucide-react'
-import { formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST } from '@/lib/utils/ist'
+import { formatDateLongIST, formatTimeIST } from '@/lib/utils/ist'
 import { dayKeyDiff } from '@/lib/utils/month-grid'
 import { isRegistrationOpen, deadlineLabel, type RaceCardData } from '@/lib/races/present'
 import { distanceLabel, sortDistances } from '@/types/race'
@@ -61,11 +61,6 @@ export function NextRaceHero({ race, todayKey, nowIso }: Props) {
           ) : (
             <div className='absolute inset-0 flex items-center justify-center text-white/10 text-7xl select-none'>🏁</div>
           )}
-          {/* Date badge over the poster corner */}
-          <div className='absolute top-3 left-3 rounded-lg bg-stride-purple-primary/90 backdrop-blur-md border border-white/15 px-3 py-2 text-center leading-none'>
-            <p className='text-stride-yellow-accent text-[10px] font-black font-mono tracking-widest'>{formatMonthIST(race.raceDate)}</p>
-            <p className='text-white font-bold text-2xl font-mono mt-0.5'>{formatDayIST(race.raceDate)}</p>
-          </div>
         </Link>
 
         {/* Copy + actions */}
