@@ -301,8 +301,9 @@ export async function getLeaderboard(
     return { athletes: SANDBOX_ATHLETES.slice(0, size), totalAthletes: SANDBOX_TOTAL_ATHLETES }
   }
 
-  // Runs board only. The km board is Strava data, and Strava's API terms
-  // forbid passing it to AI agents — never add getLeaderboardKmTop here.
+  // Fields are projected one by one below, and `ytd_distance_m` is left out on
+  // purpose: it's Strava data, and Strava's API terms forbid passing it to AI
+  // agents.
   const { rows, totalAthletes } = await getLeaderboardTop(size)
 
   // `profile_public: false` is an athlete opting out of being linked. The HTML

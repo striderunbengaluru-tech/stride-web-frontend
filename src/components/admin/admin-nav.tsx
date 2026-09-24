@@ -11,6 +11,7 @@ import {
   ScanLine,
   GraduationCap,
   Flag,
+  Activity,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
 import { ROLES, type Role } from '@/types/auth'
@@ -23,6 +24,7 @@ const navLinks = [
   { href: '/admin/products',      label: 'Products',       icon: ShoppingBag },
   { href: '/admin/users',         label: 'Users',          icon: Users },
   { href: '/admin/graduation',    label: 'Graduation',     icon: GraduationCap },
+  { href: '/admin/strava',        label: 'Strava',         icon: Activity },
   { href: '/admin/check-in',      label: 'Check-in',       icon: ScanLine },
 ]
 

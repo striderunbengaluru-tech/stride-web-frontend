@@ -29,3 +29,14 @@ export function clearAuthCaches(): void {
     // sessionStorage unavailable (private mode, disabled storage) — nothing to clear
   }
 }
+
+/**
+ * Whether this browser holds a Supabase session cookie — a synchronous, free
+ * "probably signed in" hint, available before supabase-js has even loaded.
+ * @supabase/ssr stores the session in `sb-<projectRef>-auth-token` (suffixed
+ * .0/.1 when chunked); the key is derived exactly the way supabase-js does.
+ */
+export function hasSessionCookie(): boolean {
+  const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]
+  return document.cookie.includes(`sb-${projectRef}-auth-token`)
+}
