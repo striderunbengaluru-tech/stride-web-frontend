@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { adminClient } from '@/lib/supabase/admin'
 import type { StravaActivitySummary, StravaProfile } from '@/types/strava'
-import { STRAVA_RECENT_RUNS } from './config'
+import { STRAVA_PUBLIC_DISPLAY, STRAVA_RECENT_RUNS } from './config'
 import { currentIstYear } from './connection'
 
 // Read side for pages. Selects display columns only — the encrypted token
@@ -35,14 +35,37 @@ function toSummary(row: ActivityRow): StravaActivitySummary {
   }
 }
 
-export async function isStravaConnected(userId: string): Promise<boolean> {
+type UsernameYtdRow = {
+  username: string
+  // One-to-one embed (strava_connections.user_id is the PK and an FK to users),
+  // so PostgREST returns an object or null rather than an array.
+  strava_connections: { ytd_run_distance_m: number; ytd_year: number } | null
+}
+
+/**
+ * Year-to-date Strava distance (metres) for the given usernames — only those
+ * who are connected and have synced this year appear in the map. Returns an
+ * empty map when Strava data isn't shown publicly.
+ */
+export async function getYtdDistanceByUsername(usernames: string[]): Promise<Map<string, number>> {
+  const byUsername = new Map<string, number>()
+  if (!STRAVA_PUBLIC_DISPLAY || usernames.length === 0) return byUsername
+
   const { data, error } = await adminClient
-    .from('strava_connections')
-    .select('user_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (error) console.error('[strava] connection check failed', { userId, error: error.message })
-  return Boolean(data)
+    .from('users')
+    .select('username, strava_connections(ytd_run_distance_m, ytd_year)')
+    .in('username', usernames)
+  if (error) {
+    console.error('[strava] ytd lookup failed', { error: error.message })
+    return byUsername
+  }
+
+  const year = currentIstYear()
+  for (const row of (data ?? []) as unknown as UsernameYtdRow[]) {
+    const connection = row.strava_connections
+    if (connection && connection.ytd_year === year) byUsername.set(row.username, connection.ytd_run_distance_m)
+  }
+  return byUsername
 }
 
 export const getStravaProfile = cache(async (userId: string): Promise<StravaProfile> => {

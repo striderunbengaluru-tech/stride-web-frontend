@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
-import { STRAVA_PUBLIC_DISPLAY } from '@/lib/strava/config'
+import { getYtdDistanceByUsername } from '@/lib/strava/data'
 
 // Single source of truth for leaderboard reads, shared by the board itself and
 // the "your position" endpoint so the two can never disagree.
@@ -50,10 +50,16 @@ export type LeaderboardRow = {
   runs_completed: number
   /** When false the entry shows a name and run count only — no photo, no link. */
   profile_public: boolean
+  /**
+   * Metres run this calendar year, synced from Strava — shown beside the name,
+   * never ranked on. Null when the athlete hasn't connected Strava (or Strava
+   * data isn't shown publicly; see STRAVA_PUBLIC_DISPLAY).
+   */
+  ytd_distance_m: number | null
 }
 
 /** A `leaderboard_top` row: the public fields plus the total, repeated per row. */
-type TopRow = LeaderboardRow & { total_athletes: number }
+type TopRow = Omit<LeaderboardRow, 'ytd_distance_m'> & { total_athletes: number }
 
 export type LeaderboardBoard = {
   rows: LeaderboardRow[]
@@ -67,6 +73,7 @@ export type ViewerRank = {
   username: string
   fullName: string | null
   avatarUrl: string | null
+  ytdDistanceM: number | null
 }
 
 /**
@@ -98,6 +105,9 @@ export const getLeaderboardTop = cache((limit: number): Promise<LeaderboardBoard
       }
 
       const rows = (data ?? []) as TopRow[]
+      // Strava km for the athletes on this page of the board — one extra query,
+      // inside the same cache entry, so the board still costs ~8 reads a day.
+      const ytdByUsername = await getYtdDistanceByUsername(rows.map(row => row.username))
       return {
         // Projected field by field rather than spread-minus-total, so a column
         // added to the SQL function can never reach the client by default.
@@ -107,6 +117,7 @@ export const getLeaderboardTop = cache((limit: number): Promise<LeaderboardBoard
           avatar_url: row.avatar_url,
           runs_completed: row.runs_completed,
           profile_public: row.profile_public,
+          ytd_distance_m: ytdByUsername.get(row.username) ?? null,
         })),
         // Repeated on every row by the window function; an empty board has none.
         totalAthletes: rows[0]?.total_athletes ?? 0,
@@ -138,6 +149,8 @@ export const getViewerRank = cache((userId: string): Promise<ViewerRank | null> 
       const row = (data ?? [])[0]
       if (!row) return null
 
+      const ytdByUsername = await getYtdDistanceByUsername([row.username])
+
       // rank/total come back as bigint, which PostgREST serialises as a string.
       return {
         rank: Number(row.rank),
@@ -146,6 +159,7 @@ export const getViewerRank = cache((userId: string): Promise<ViewerRank | null> 
         username: row.username,
         fullName: row.full_name,
         avatarUrl: row.avatar_url,
+        ytdDistanceM: ytdByUsername.get(row.username) ?? null,
       }
     },
     ['leaderboard-rank', userId],
@@ -153,106 +167,8 @@ export const getViewerRank = cache((userId: string): Promise<ViewerRank | null> 
   )()
 )
 
-// ── Km board ──────────────────────────────────────────────────────────────────
-// Year-to-date running distance, synced from Strava (see @/lib/strava/sync).
-// Same two cache layers and tag as the runs board, so one purge refreshes both.
-// Ranking lives in `leaderboard_km_top` / `leaderboard_km_rank_for`
-// (supabase-migrations/2026-09-23-strava-integration.sql).
-//
-// Deliberately absent from every agent-facing surface — the MCP leaderboard
-// tool, WebMCP, markdown twins, JSON-LD, llms.txt: Strava's API terms forbid
-// feeding its data to AI/ML systems.
-
-export type KmLeaderboardRow = LeaderboardRow & {
-  /** Metres run this calendar year (IST). Converted to km only for display. */
-  ytd_distance_m: number
-}
-
-export type KmLeaderboardBoard = {
-  rows: KmLeaderboardRow[]
-  totalAthletes: number
-}
-
-export type ViewerKmRank = {
-  rank: number
-  totalAthletes: number
-  ytdDistanceM: number
-  runsCompleted: number
-  username: string
-  fullName: string | null
-  avatarUrl: string | null
-}
-
-type KmTopRow = Omit<KmLeaderboardRow, 'ytd_distance_m'> & {
-  ytd_run_distance_m: number
-  total_athletes: number
-}
-
-export const getLeaderboardKmTop = cache((limit: number): Promise<KmLeaderboardBoard> => {
-  if (!STRAVA_PUBLIC_DISPLAY) return Promise.resolve({ rows: [], totalAthletes: 0 })
-
-  return unstable_cache(
-    async () => {
-      const { data, error } = await adminClient.rpc('leaderboard_km_top', { p_limit: limit })
-
-      if (error) {
-        console.error('[leaderboard] leaderboard_km_top failed', error)
-        return { rows: [], totalAthletes: 0 }
-      }
-
-      const rows = (data ?? []) as KmTopRow[]
-      return {
-        rows: rows.map(row => ({
-          username: row.username,
-          full_name: row.full_name,
-          avatar_url: row.avatar_url,
-          runs_completed: row.runs_completed,
-          profile_public: row.profile_public,
-          ytd_distance_m: row.ytd_run_distance_m,
-        })),
-        totalAthletes: Number(rows[0]?.total_athletes ?? 0),
-      }
-    },
-    ['leaderboard-km-top', String(limit)],
-    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
-  )()
-})
-
-/** Null when the athlete isn't connected or has no runs logged this year. */
-export const getViewerKmRank = cache((userId: string): Promise<ViewerKmRank | null> =>
-  unstable_cache(
-    async () => {
-      const { data, error } = await adminClient.rpc('leaderboard_km_rank_for', {
-        p_user_id: userId,
-      })
-
-      if (error) {
-        console.error('[leaderboard] leaderboard_km_rank_for failed', error)
-        return null
-      }
-
-      const row = (data ?? [])[0]
-      if (!row) return null
-
-      return {
-        rank: Number(row.rank),
-        totalAthletes: Number(row.total_athletes),
-        ytdDistanceM: row.ytd_run_distance_m,
-        runsCompleted: row.runs_completed,
-        username: row.username,
-        fullName: row.full_name,
-        avatarUrl: row.avatar_url,
-      }
-    },
-    ['leaderboard-km-rank', userId],
-    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
-  )()
-)
-
-/** GET /api/leaderboard/me — the signed-in viewer's own place on both boards. */
+/** GET /api/leaderboard/me — the signed-in viewer's own place on the board. */
 export type ViewerStanding = {
   signedIn: boolean
   runs?: ViewerRank | null
-  km?: ViewerKmRank | null
-  stravaConnected?: boolean
 }

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches } from '@/lib/auth/session-cache'
+import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches, hasSessionCookie } from '@/lib/auth/session-cache'
 import { shouldRefreshForAuthChange, isOnNotFoundRoute } from '@/lib/auth/refresh-guard'
 import type { Role } from '@/types/auth'
 
@@ -60,12 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthContextValue>({ status: 'loading', navProfile: null })
 
   useEffect(() => {
-    // Synchronous, free, and the whole point of the deferral: @supabase/ssr
-    // stores the session in `sb-<projectRef>-auth-token` (suffixed .0/.1 when
-    // chunked). The key is derived exactly the way supabase-js derives it, so a
-    // signed-out visitor is resolved here and never downloads supabase-js at all.
-    const projectRef = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]
-    if (!document.cookie.includes(`sb-${projectRef}-auth-token`)) {
+    // Synchronous, free, and the whole point of the deferral: a signed-out
+    // visitor is resolved here and never downloads supabase-js at all.
+    if (!hasSessionCookie()) {
       setState({ status: 'signed-out', navProfile: null })
       return
     }

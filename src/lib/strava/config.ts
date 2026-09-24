@@ -13,6 +13,13 @@ export const STRAVA_PUBLIC_DISPLAY = true
 /** The activity types that count as a run — matches Strava's own ytd_run_totals. */
 export const STRAVA_RUN_TYPES: readonly string[] = ['Run', 'TrailRun', 'VirtualRun']
 
+/**
+ * Athletes the Strava API app may connect at its current tier — Strava enforces
+ * this (403 on token exchange); the admin Strava tab shows usage against it.
+ * Update when Strava raises the limit.
+ */
+export const STRAVA_ATHLETE_CAP = 10
+
 /** How many recent runs are kept and shown per athlete. */
 export const STRAVA_RECENT_RUNS = 5
 

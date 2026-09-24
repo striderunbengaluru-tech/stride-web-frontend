@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import LeaderboardClient, { type Board } from './leaderboard-client'
-import { getLeaderboardKmTop, getLeaderboardTop } from '@/lib/leaderboard'
-import { STRAVA_PUBLIC_DISPLAY } from '@/lib/strava/config'
+import LeaderboardClient from './leaderboard-client'
+import { getLeaderboardTop } from '@/lib/leaderboard'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
 import { JsonLd } from '@/components/seo/json-ld'
 import { graph, breadcrumbNode } from '@/lib/json-ld'
@@ -48,26 +47,13 @@ export default async function LeaderboardPage() {
   // `revalidate = 300`. The viewer's own position is fetched client-side from
   // /api/leaderboard/me instead, so this stays cacheable for everyone.
   //
-  // Ranking and the LIMIT both happen in Postgres, so each board reads
-  // BOARD_SIZE rows rather than every athlete. The km board comes from Strava
-  // (strava_connections) and is only fetched when Strava data is public.
-  const [{ rows, totalAthletes }, kmBoard] = await Promise.all([
-    getLeaderboardTop(BOARD_SIZE),
-    STRAVA_PUBLIC_DISPLAY ? getLeaderboardKmTop(BOARD_SIZE) : null,
-  ])
+  // Ranking and the LIMIT both happen in Postgres, so this reads BOARD_SIZE
+  // rows rather than every athlete. Each row also carries the athlete's Strava
+  // km this year, shown beside their name (not ranked on).
+  const { rows, totalAthletes } = await getLeaderboardTop(BOARD_SIZE)
 
-  const runsBoard: Board = {
-    rows: rows.map(row => ({ ...row, value: row.runs_completed })),
-    totalAthletes,
-  }
-  const km: Board | null = kmBoard && {
-    rows: kmBoard.rows.map(({ ytd_distance_m, ...row }) => ({ ...row, value: ytd_distance_m })),
-    totalAthletes: kmBoard.totalAthletes,
-  }
-
-  // An ItemList of the runs board only — the km board is Strava data, which
-  // Strava's API terms keep out of anything built for machines to consume.
-  // Only athletes who keep their profile public are
+  // An ItemList of the board, without the Strava km — Strava's API terms keep
+  // its data out of anything built for machines to consume. Only athletes who keep their profile public are
   // named here: `profile_public: false` is a member asking not to be linked,
   // and putting them in structured data would republish exactly the identifier
   // they withheld — in the one format built to be copied elsewhere.
@@ -95,8 +81,8 @@ export default async function LeaderboardPage() {
   return (
     <>
       <JsonLd data={jsonLd} />
-      {/* WebMCP: the runs board as a tool, honouring the same privacy rule.
-          No km data here — Strava forbids passing its data to AI agents. */}
+      {/* WebMCP: the board as a tool, honouring the same privacy rule.
+          No Strava km here — Strava forbids passing its data to AI agents. */}
       <LeaderboardTools
         athletes={rows.map((row, index) => ({
           rank: index + 1,
@@ -108,7 +94,7 @@ export default async function LeaderboardPage() {
         }))}
         totalAthletes={totalAthletes}
       />
-      <LeaderboardClient boards={{ runs: runsBoard, km }} />
+      <LeaderboardClient rows={rows} totalAthletes={totalAthletes} />
     </>
   )
 }
