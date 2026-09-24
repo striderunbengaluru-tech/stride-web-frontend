@@ -1,4 +1,5 @@
 import { adminClient } from '@/lib/supabase/admin'
+import { removeStravaConnection } from '@/lib/strava/connection'
 
 // Permanent, irreversible account erasure (DPDP right to erasure).
 // Server-only: imports adminClient (service role). Shared by the profile
@@ -109,6 +110,15 @@ export async function hardDeleteUser(userId: string): Promise<HardDeleteResult> 
   if (regError) {
     console.error('[hardDeleteUser] failed to delete registrations', { userId, regError })
     return { ok: false, userId, storageErrors, fatalError: `registrations delete: ${regError.message}` }
+  }
+
+  //       Strava link + synced runs: same reasoning as above (both tables
+  //       cascade from users, but the erasure is made explicit). Also revokes
+  //       Stride's access on Strava's side, best effort.
+  const stravaRemoval = await removeStravaConnection(userId, { revokeOnStrava: true })
+  if (!stravaRemoval.ok) {
+    console.error('[hardDeleteUser] failed to delete Strava data', { userId, error: stravaRemoval.error })
+    return { ok: false, userId, storageErrors, fatalError: `strava delete: ${stravaRemoval.error}` }
   }
 
   // ── 3. Delete the public.users row — every profile field, including the

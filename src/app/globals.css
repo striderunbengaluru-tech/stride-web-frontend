@@ -8,6 +8,7 @@
   --color-stride-bg: #4B2862;             /* Default page background (solid purple) */
   --color-copy-white: #ffffff;            /* Text on dark/purple surfaces */
   --color-copy-black: #010101;            /* Text on light/yellow surfaces */
+  --color-strava-orange: #FC5200;         /* Strava brand guideline — Strava icon/attribution only */
 
   /* ── Font Families ──
      Titles → Libre Baskerville · Body → Figtree · Uppercase (eyebrows,

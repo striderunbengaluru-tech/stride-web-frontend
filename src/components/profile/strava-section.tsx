@@ -1,222 +1,132 @@
-'use client'
+import { StravaIcon } from '@/components/ui/brand-icons'
+import { PoweredByStrava } from '@/components/ui/powered-by-strava'
+import { StravaActivityCard } from '@/components/profile/strava-activity-card'
+import { DisconnectStravaButton } from '@/components/profile/disconnect-strava-button'
+import { getStravaProfile } from '@/lib/strava/data'
+import { STRAVA_PUBLIC_DISPLAY, STRAVA_RECENT_RUNS } from '@/lib/strava/config'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { RefreshCw, Unlink, ExternalLink } from 'lucide-react'
-import { Spinner } from '@/components/ui/spinner'
-import type { StravaPBs, StravaActivity } from '@/types/strava'
-import { formatDateNumericIST } from '@/lib/utils/ist'
+// The profile's Strava card: a connect prompt for the owner, or year-to-date
+// kilometres plus the latest runs once connected. Server component, streamed
+// in under <Suspense> like the attended-runs section.
 
-const STRAVA_ICON = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/strava-icon.svg'
+/** Keyed by the `strava_error` values /api/strava/callback redirects with. */
+const STRAVA_ERROR_MESSAGES: Record<string, string> = {
+  denied: 'Strava connection was cancelled. You can connect any time.',
+  invalid_state: 'That Strava sign-in link expired. Please try connecting again.',
+  scope: 'Stride needs permission to read your activities. Please connect again and keep "View data about your activities" ticked.',
+  capacity: 'Strava spots are full for now — we’re working with Strava to open more. Please try again later.',
+  already_linked: 'That Strava account is already connected to another Stride profile.',
+  failed: 'Something went wrong connecting Strava. Please try again.',
+}
+
+const kmFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const METRES_PER_KM = 1000
 
 type Props = {
-  stravaConnected: boolean
-  stravaPbs: StravaPBs
-  stravaRecentActivities: StravaActivity[]
-  stravaSyncedAt: string | null
+  userId: string
   isOwnProfile: boolean
+  /** From the callback redirect's query string. */
+  errorCode?: string
 }
 
-const PB_LABELS: { key: keyof StravaPBs; label: string }[] = [
-  { key: 'mile', label: '1 Mile' },
-  { key: '5k', label: '5K' },
-  { key: '10k', label: '10K' },
-  { key: 'half', label: 'Half' },
-  { key: 'full', label: 'Full' },
-]
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
-  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  return `${m}:${String(s).padStart(2, '0')}`
-}
-
-function formatPace(avgSpeed: number): string {
-  if (!avgSpeed) return '—'
-  const paceSecPerKm = 1000 / avgSpeed
-  const m = Math.floor(paceSecPerKm / 60)
-  const s = Math.round(paceSecPerKm % 60)
-  return `${m}:${String(s).padStart(2, '0')}/km`
-}
-
-function formatDistance(meters: number): string {
-  return meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${meters} m`
-}
-
-function formatRelativeDate(isoString: string): string {
-  return formatDateNumericIST(isoString)
-}
-
-export function StravaSection({ stravaConnected, stravaPbs, stravaRecentActivities, stravaSyncedAt, isOwnProfile }: Props) {
-  const [removing, setRemoving] = useState(false)
-  const router = useRouter()
-
-  const hasPbs = Object.values(stravaPbs).some(Boolean)
-  const hasActivities = stravaRecentActivities.length > 0
-
-  async function handleRemove() {
-    setRemoving(true)
-    await fetch('/api/strava/disconnect', { method: 'POST' })
-    setRemoving(false)
-    router.refresh()
-  }
-
-  // Not connected and not own profile — nothing to show
-  if (!stravaConnected && !isOwnProfile) return null
-
-  // Not connected — own profile sees the connect prompt
-  if (!stravaConnected) {
-    return (
-      <div className='mt-8'>
-        <p className='text-white/40 text-xs font-mono uppercase tracking-widest mb-3'>Strava</p>
-        <div className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5'>
-          <div className='flex items-center gap-2 mb-2'>
-            <Image src={STRAVA_ICON} alt='Strava' width={16} height={16} />
-            <span className='text-white font-medium text-sm'>Connect Strava</span>
-          </div>
-          <p className='text-white/50 text-sm mb-4'>
-            Sign in with your Strava account to display your personal bests and recent workouts.
-          </p>
-          {/* A real document navigation, not a client-side route change: this
-              endpoint 302s to Strava's OAuth consent screen, and <Link> would
-              try to fetch it as an RSC payload and break the handshake. The rule
-              started firing when a catch-all JSON 404 route was added under
-              src/app/api/, which makes Next treat /api/* as page routes. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
-            href='/api/strava/connect'
-            className='inline-flex items-center gap-2 px-4 py-2.5 bg-[#FC4C02] text-white text-sm font-semibold rounded-md hover:bg-[#e04400] transition-colors min-h-11'
-          >
-            <Image src={STRAVA_ICON} alt='' width={15} height={15} />
-            Connect with Strava
-          </a>
-        </div>
-      </div>
-    )
-  }
-
-  // Connected — show PBs + recent activities
+function SectionHeader() {
   return (
-    <div className='mt-8'>
-      <div className='flex items-center justify-between mb-3'>
-        <div className='flex items-center gap-2'>
-          <p className='text-white/40 text-xs font-mono uppercase tracking-widest'>Strava</p>
-          {stravaSyncedAt && (
-            <span className='text-white/25 text-xs'>
-              · {formatRelativeDate(stravaSyncedAt)}
-            </span>
-          )}
-        </div>
-        {isOwnProfile && (
-          <div className='flex items-center gap-3'>
-            {/* Same OAuth navigation as above — see the note there. */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a
-              href='/api/strava/connect'
-              className='flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors'
-              title='Re-authenticate with Strava to pull latest data'
-            >
-              <RefreshCw size={12} />
-              Refresh
-            </a>
-            <button
-              onClick={handleRemove}
-              disabled={removing}
-              className='flex items-center gap-1.5 text-xs text-white/30 hover:text-red-400 transition-colors disabled:opacity-50'
-              title='Remove Strava data from profile'
-            >
-              {removing ? <Spinner /> : <Unlink size={12} />}
-              Remove
-            </button>
-          </div>
-        )}
+    <div className='mb-4 flex items-center justify-between gap-3'>
+      <div className='flex items-center gap-2'>
+        <div className='h-4 w-1 rounded-full bg-stride-yellow-accent' aria-hidden='true' />
+        <h2 id='strava-heading' className='text-sm font-semibold tracking-wide text-white'>Strava</h2>
       </div>
+      <PoweredByStrava />
+    </div>
+  )
+}
 
-      {/* Personal Bests */}
-      {hasPbs && (
-        <div className='mb-5'>
-          <p className='text-white/30 text-xs font-mono uppercase tracking-wider mb-2'>Personal Bests</p>
-          <div className='grid grid-cols-5 gap-2'>
-            {PB_LABELS.map(({ key, label }) => {
-              const pb = stravaPbs[key]
-              return (
-                <div
-                  key={key}
-                  className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-3 flex flex-col items-center text-center'
-                >
-                  <span className='text-white/40 text-[10px] font-mono uppercase tracking-wider mb-1'>{label}</span>
-                  {pb ? (
-                    <>
-                      <span className='text-white font-bold text-sm tabular-nums'>{formatTime(pb.time)}</span>
-                      <span className='text-white/30 text-[10px] mt-0.5'>{formatRelativeDate(pb.date)}</span>
-                    </>
-                  ) : (
-                    <span className='text-white/25 text-sm'>—</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <p className='text-white/20 text-[10px] mt-2'>
-            Best race times from last 100 runs · <a href='https://www.strava.com' target='_blank' rel='noopener noreferrer' className='hover:text-white/40 transition-colors'>view full data on Strava</a>
-          </p>
-        </div>
-      )}
+function ConnectPrompt() {
+  return (
+    <div className='flex flex-col gap-4 rounded-xl border border-white/15 bg-white/10 p-5 backdrop-blur-md sm:flex-row sm:items-center'>
+      <StravaIcon size={28} className='shrink-0 text-strava-orange' />
+      <div className='min-w-0 flex-1'>
+        <p className='text-sm font-semibold text-white'>Connect Strava</p>
+        {/* Consent copy: says plainly what becomes public before they grant access */}
+        <p className='mt-1 text-sm text-white/70'>
+          Your running kilometres this year and your last {STRAVA_RECENT_RUNS} public runs (with route maps) will be
+          shown on your Stride profile and on the leaderboard. You can disconnect any time, and your Strava data is
+          deleted when you do.
+        </p>
+      </div>
+      {/* A GET form, not <Link>: this is a full-page redirect into Strava's OAuth flow. */}
+      <form action='/api/strava/connect' method='get' className='shrink-0'>
+        <button
+          type='submit'
+          className='inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-stride-yellow-accent px-5 text-sm font-semibold text-copy-black transition-opacity hover:opacity-90'
+        >
+          <StravaIcon size={15} />
+          Connect with Strava
+        </button>
+      </form>
+    </div>
+  )
+}
 
-      {!hasPbs && (
-        <p className='mb-5 text-white/30 text-sm italic'>
-          No race times found in your last 100 runs yet.
+export async function StravaSection({ userId, isOwnProfile, errorCode }: Props) {
+  // Strava data is shown to others only when the club has chosen to display it
+  // publicly (see STRAVA_PUBLIC_DISPLAY).
+  if (!isOwnProfile && !STRAVA_PUBLIC_DISPLAY) return null
+
+  const strava = await getStravaProfile(userId)
+  if (!strava.connected && !isOwnProfile) return null
+
+  const errorMessage = isOwnProfile && errorCode ? STRAVA_ERROR_MESSAGES[errorCode] : undefined
+
+  return (
+    <section
+      id='strava'
+      aria-labelledby='strava-heading'
+      className='mt-4 scroll-mt-28 animate-fade-in-up rounded-2xl border border-white/10 bg-white/8 p-5 transition-colors hover:border-white/15'
+    >
+      <SectionHeader />
+
+      {errorMessage && (
+        <p role='alert' className='mb-4 rounded-lg border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100'>
+          {errorMessage}
         </p>
       )}
 
-      {/* Recent Workouts */}
-      {hasActivities && (
-        <div>
-          <p className='text-white/30 text-xs font-mono uppercase tracking-wider mb-2'>Recent Workouts</p>
-          <div className='space-y-2'>
-            {stravaRecentActivities.map((act) => (
-              <div
-                key={act.id}
-                className='bg-white/10 backdrop-blur-md border border-white/15 rounded-xl px-4 py-3 hover:border-stride-yellow-accent/30 transition-colors'
-              >
-                <div className='flex items-start justify-between gap-2'>
-                  <div className='min-w-0'>
-                    <p className='text-white text-sm font-medium truncate'>{act.name}</p>
-                    <p className='text-white/40 text-xs mt-0.5'>{formatRelativeDate(act.start_date)}</p>
-                  </div>
-                  <a
-                    href={`https://www.strava.com/activities/${act.id}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-white/25 hover:text-[#FC4C02] transition-colors mt-0.5 shrink-0'
-                    aria-label='View on Strava'
-                  >
-                    <ExternalLink size={13} />
-                  </a>
-                </div>
-                <div className='flex items-center gap-3 mt-2 text-white/50 text-xs tabular-nums'>
-                  <span className='flex items-center gap-1'>
-                    <Image src={STRAVA_ICON} alt='' width={11} height={11} className='opacity-60' />
-                    {formatDistance(act.distance)}
-                  </span>
-                  <span>{formatTime(act.moving_time)}</span>
-                  <span>{formatPace(act.average_speed)}</span>
-                  {act.average_heartrate && (
-                    <span>{Math.round(act.average_heartrate)} bpm</span>
-                  )}
-                </div>
-              </div>
-            ))}
+      {!strava.connected ? (
+        <ConnectPrompt />
+      ) : (
+        <>
+          <div className='mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3'>
+            <p className='flex items-baseline gap-1.5 font-mono tabular-nums'>
+              <span className='text-3xl font-bold leading-none text-white'>
+                {kmFormatter.format(strava.ytdDistanceM / METRES_PER_KM)}
+              </span>
+              <span className='text-sm font-medium text-white/60'>km this year</span>
+            </p>
+            <p className='text-xs text-white/50'>
+              {strava.ytdRunCount} {strava.ytdRunCount === 1 ? 'run' : 'runs'} logged on Strava
+            </p>
           </div>
-        </div>
-      )}
 
-      {!hasActivities && (
-        <p className='text-white/30 text-sm italic'>No recent runs found.</p>
+          {strava.activities.length > 0 ? (
+            <div className='grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3'>
+              {strava.activities.map(activity => (
+                <StravaActivityCard key={activity.id} activity={activity} />
+              ))}
+            </div>
+          ) : (
+            <p className='rounded-xl border border-white/15 bg-white/10 px-4 py-6 text-center text-sm text-white/60 backdrop-blur-md'>
+              No public runs yet. Runs shared with &ldquo;Everyone&rdquo; on Strava show up here.
+            </p>
+          )}
+
+          {isOwnProfile && (
+            <div className='mt-4 flex justify-end'>
+              <DisconnectStravaButton />
+            </div>
+          )}
+        </>
       )}
-    </div>
+    </section>
   )
 }

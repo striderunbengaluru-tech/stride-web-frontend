@@ -6,7 +6,10 @@ import { motion } from 'framer-motion'
 import { Trophy, Crown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getMilestone } from '@/lib/milestones'
 import { TierBadge } from '@/components/ui/tier-badge'
-import type { LeaderboardUser } from './page'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import { PoweredByStrava } from '@/components/ui/powered-by-strava'
+import { StravaIcon } from '@/components/ui/brand-icons'
+import type { LeaderboardRow, ViewerStanding } from '@/lib/leaderboard'
 
 // Per-place styling, index 0 = 1st: brand yellow, then cool slate, then bronze.
 const PLACE = [
@@ -35,8 +38,55 @@ const PLACE = [
 
 const PAGE_SIZE = 10
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number]
+const METRES_PER_KM = 1000
 
-function initialsOf(user: LeaderboardUser): string {
+export type BoardKey = 'runs' | 'km'
+
+/** A board row: the public athlete fields plus the number it's ranked by. */
+export type BoardEntry = LeaderboardRow & { value: number }
+
+export type Board = { rows: BoardEntry[]; totalAthletes: number }
+
+type Metric = {
+  format: (value: number) => string
+  unit: (value: number) => string
+  column: string
+  eyebrow: string
+  subtitle: string
+  rule: string
+  empty: string
+}
+
+const kmFormatter = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+const METRICS: Record<BoardKey, Metric> = {
+  runs: {
+    format: value => String(value),
+    unit: value => (value === 1 ? 'run' : 'runs'),
+    column: 'Runs',
+    eyebrow: 'Most runs attended',
+    subtitle: 'Counts update when you check in at a run.',
+    rule: 'Athletes with the same number of runs completed, the one who completed the runs first will rank higher.',
+    empty: 'No athletes yet. Be the first to show up!',
+  },
+  km: {
+    // Values are metres; km is a display unit only.
+    format: value => kmFormatter.format(value / METRES_PER_KM),
+    unit: () => 'km',
+    column: 'Km',
+    eyebrow: 'Kilometres this year',
+    subtitle: 'Year-to-date running distance, synced from Strava.',
+    rule: 'Counts the runs you share publicly on Strava since 1 January. Athletes on the same distance are ordered by username.',
+    empty: 'No Strava runs logged this year yet. Connect Strava from your profile to get on the board.',
+  },
+}
+
+const BOARD_OPTIONS = [
+  { value: 'runs', label: 'Most Stride runs' },
+  { value: 'km', label: 'Km this year' },
+] as const
+
+function initialsOf(user: LeaderboardRow): string {
   return (user.full_name ?? user.username ?? '?')
     .split(' ')
     .map((w) => w[0])
@@ -45,18 +95,16 @@ function initialsOf(user: LeaderboardUser): string {
     .toUpperCase()
 }
 
-const runLabel = (n: number) => `${n} ${n === 1 ? 'run' : 'runs'}`
-
 /**
  * `placeholder` forces the initials tile even when the member has a photo — used
- * for private profiles, which expose nothing but a name and a run count.
+ * for private profiles, which expose nothing but a name and a number.
  */
 function Avatar({
   user,
   size = 'md',
   placeholder = false,
 }: {
-  user: LeaderboardUser
+  user: LeaderboardRow
   size?: 'sm' | 'md' | 'lg'
   placeholder?: boolean
 }) {
@@ -83,7 +131,7 @@ function Avatar({
   )
 }
 
-function PodiumColumn({ user, rank }: { user: LeaderboardUser; rank: 1 | 2 | 3 }) {
+function PodiumColumn({ user, rank, metric }: { user: BoardEntry; rank: 1 | 2 | 3; metric: Metric }) {
   const idx = rank - 1
   const place = PLACE[idx]
   const isPublic = user.profile_public
@@ -122,16 +170,13 @@ function PodiumColumn({ user, rank }: { user: LeaderboardUser; rank: 1 | 2 | 3 }
         </span>
       )}
 
-      {/* Run count is the whole point of the board, so the number carries the
-          weight and the unit shrinks to a label beside it. As one 12px line it
-          was the smallest text in the podium. */}
+      {/* The ranked value is the whole point of the board, so the number carries
+          the weight and the unit shrinks to a label beside it. */}
       <p className='flex items-baseline gap-1 font-mono tabular-nums'>
         <span className={`font-bold leading-none text-white ${rank === 1 ? 'text-3xl' : 'text-2xl'}`}>
-          {user.runs_completed}
+          {metric.format(user.value)}
         </span>
-        <span className='text-[11px] font-medium text-white/50'>
-          {user.runs_completed === 1 ? 'run' : 'runs'}
-        </span>
+        <span className='text-[11px] font-medium text-white/50'>{metric.unit(user.value)}</span>
       </p>
     </motion.div>
   )
@@ -175,36 +220,64 @@ function PodiumColumn({ user, rank }: { user: LeaderboardUser; rank: 1 | 2 | 3 }
   )
 }
 
-type MyPosition = {
-  signedIn: boolean
-  rank?: number | null
-  total?: number
-  runsCompleted?: number
-  username?: string
-  fullName?: string | null
-  avatarUrl?: string | null
+/** The viewer's own row on the selected board, as `YourPosition` renders it. */
+type PositionRow = {
+  rank: number
+  value: number
+  runsCompleted: number
+  username: string
+  fullName: string | null
+  avatarUrl: string | null
+}
+
+function positionFor(board: BoardKey, standing: ViewerStanding): PositionRow | null {
+  if (board === 'runs') {
+    const me = standing.runs
+    return me ? { ...me, value: me.runsCompleted } : null
+  }
+  const me = standing.km
+  return me ? { ...me, value: me.ytdDistanceM } : null
+}
+
+function ConnectStravaPrompt({ connected }: { connected: boolean }) {
+  if (connected) {
+    return (
+      <p className='mb-8 rounded-2xl border border-white/15 bg-white/10 px-5 py-4 text-center text-sm text-white/70 backdrop-blur-md'>
+        Your Strava is connected. You&rsquo;ll appear here once a public run from this year syncs.
+      </p>
+    )
+  }
+  return (
+    <div className='mb-8 flex flex-col items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-5 py-4 text-center backdrop-blur-md sm:flex-row sm:text-left'>
+      <StravaIcon size={20} className='shrink-0 text-strava-orange' />
+      <p className='flex-1 text-sm text-white/80'>Connect Strava to join this board with your kilometres this year.</p>
+      {/* A GET form, not <Link>: this is a full-page redirect into Strava's OAuth flow. */}
+      <form action='/api/strava/connect' method='get' className='shrink-0'>
+        <button
+          type='submit'
+          className='inline-flex min-h-11 items-center rounded-md bg-stride-yellow-accent px-4 text-sm font-semibold text-copy-black transition-opacity hover:opacity-90'
+        >
+          Connect Strava
+        </button>
+      </form>
+    </div>
+  )
 }
 
 /**
- * The viewer's own standing. Fetched client-side on purpose: reading the session
- * on the server would make the whole leaderboard route dynamic and throw away
- * its 5-minute ISR cache. Renders nothing at all for signed-out visitors.
+ * The viewer's own standing. Fetched client-side (by the parent) on purpose:
+ * reading the session on the server would make the whole leaderboard route
+ * dynamic and throw away its ISR cache. Renders nothing for signed-out visitors.
  */
-function YourPosition() {
-  const [me, setMe] = useState<MyPosition | null>(null)
+function YourPosition({ board, standing, metric }: { board: BoardKey; standing: ViewerStanding | null; metric: Metric }) {
+  if (!standing?.signedIn) return null
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/leaderboard/me')
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (!cancelled) setMe(data) })
-      .catch(() => { /* a missing standing is not worth surfacing */ })
-    return () => { cancelled = true }
-  }, [])
+  const me = positionFor(board, standing)
+  if (!me) {
+    return board === 'km' ? <ConnectStravaPrompt connected={Boolean(standing.stravaConnected)} /> : null
+  }
 
-  if (!me?.signedIn || !me.rank || !me.username) return null
-
-  const tier = getMilestone(me.runsCompleted ?? 0)
+  const tier = getMilestone(me.runsCompleted)
 
   return (
     <Link
@@ -218,9 +291,9 @@ function YourPosition() {
         <Avatar
           user={{
             username: me.username,
-            full_name: me.fullName ?? null,
-            avatar_url: me.avatarUrl ?? null,
-            runs_completed: me.runsCompleted ?? 0,
+            full_name: me.fullName,
+            avatar_url: me.avatarUrl,
+            runs_completed: me.runsCompleted,
             profile_public: true,
           }}
           size='md'
@@ -239,177 +312,228 @@ function YourPosition() {
         <span className='hidden sm:inline'>{tier.label}</span>
       </span>
       <span className='shrink-0 font-mono text-sm font-semibold tabular-nums text-white/80'>
-        {runLabel(me.runsCompleted ?? 0)}
+        {metric.format(me.value)} {metric.unit(me.value)}
       </span>
     </Link>
   )
 }
 
-export default function LeaderboardClient({
-  byRuns,
-  totalAthletes,
-}: {
-  byRuns: LeaderboardUser[]
-  totalAthletes: number
-}) {
-  const [page, setPage] = useState(0)
+function BoardTable({ rows, page, metric }: { rows: BoardEntry[]; page: number; metric: Metric }) {
+  const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  const podium = byRuns.slice(0, 3)
-  const tableRows = byRuns.slice(3)
-  const pageRows = tableRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  return (
+    <div className='overflow-hidden rounded-2xl border border-white/12 bg-white/4 shadow-2xl shadow-black/20 backdrop-blur-md'>
+      <div className='grid grid-cols-[3.5rem_1fr_auto] items-center border-b border-white/10 bg-white/3 px-5 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-stride-yellow-accent/80'>
+        <span>Rank</span>
+        <span>Athlete</span>
+        <span className='text-right'>{metric.column}</span>
+      </div>
+
+      {pageRows.map((user, i) => {
+        const rank = page * PAGE_SIZE + i + 4 // podium takes 1-3
+        const isPublic = user.profile_public
+        const tier = getMilestone(user.runs_completed)
+        const rowClass =
+          'group grid grid-cols-[3.5rem_1fr_auto] items-center border-b border-white/6 px-5 py-4 last:border-0'
+
+        const rowContent = (
+          <>
+            <span className='font-mono text-sm font-semibold tabular-nums text-white/30 transition-colors group-hover:text-stride-yellow-accent/70'>
+              {String(rank).padStart(2, '0')}
+            </span>
+            <div className='flex min-w-0 items-center gap-3.5'>
+              <div className='rounded-full ring-1 ring-white/15 transition-colors group-hover:ring-stride-yellow-accent/40'>
+                <Avatar user={user} size='md' placeholder={!isPublic} />
+              </div>
+              <div className='min-w-0'>
+                <p className='line-clamp-1 text-sm font-semibold text-white transition-colors group-hover:text-stride-yellow-accent'>
+                  {user.full_name ?? user.username}
+                </p>
+                {/* Private profiles stop here — name and number only */}
+                {isPublic && (
+                  <div className='flex min-w-0 items-center gap-2'>
+                    <p className='shrink-0 text-xs text-white/40'>@{user.username}</p>
+                    <span className='inline-flex min-w-0 items-center gap-1 text-xs text-white/50'>
+                      <TierBadge tier={tier} size='sm' />
+                      <span className='line-clamp-1'>{tier.label}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <span className='text-right font-mono tabular-nums'>
+              <span className='block text-xl font-bold leading-none text-white'>
+                {metric.format(user.value)}
+              </span>
+              <span className='mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/40'>
+                {metric.unit(user.value)}
+              </span>
+            </span>
+          </>
+        )
+
+        return isPublic ? (
+          <Link
+            key={user.username}
+            href={`/profile/${user.username}`}
+            prefetch={false}
+            className={`${rowClass} transition-colors hover:bg-white/5`}
+          >
+            {rowContent}
+          </Link>
+        ) : (
+          <div key={user.username} className={rowClass}>
+            {rowContent}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (page: number) => void }) {
+  const buttonClass =
+    'group inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-white/70 transition-all hover:border-stride-yellow-accent/40 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25'
+
+  return (
+    <div className='mt-8 flex items-center justify-center gap-2'>
+      <button
+        onClick={() => onPage(Math.max(0, page - 1))}
+        disabled={page === 0}
+        aria-label='Previous page'
+        className={buttonClass}
+      >
+        <ChevronLeft size={16} aria-hidden='true' className='transition-transform group-hover:-translate-x-0.5' />
+        Previous
+      </button>
+
+      <span className='px-3 font-mono text-xs tabular-nums text-white/40'>
+        {page + 1} <span className='text-white/20'>/</span> {totalPages}
+      </span>
+
+      <button
+        onClick={() => onPage(Math.min(totalPages - 1, page + 1))}
+        disabled={page === totalPages - 1}
+        aria-label='Next page'
+        className={buttonClass}
+      >
+        Next
+        <ChevronRight size={16} aria-hidden='true' className='transition-transform group-hover:translate-x-0.5' />
+      </button>
+    </div>
+  )
+}
+
+/** Fetches the signed-in viewer's standing on both boards, once. */
+function useViewerStanding(): ViewerStanding | null {
+  const [standing, setStanding] = useState<ViewerStanding | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/leaderboard/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: ViewerStanding | null) => { if (!cancelled) setStanding(data) })
+      .catch(() => { /* a missing standing is not worth surfacing */ })
+    return () => { cancelled = true }
+  }, [])
+
+  return standing
+}
+
+export default function LeaderboardClient({
+  boards,
+}: {
+  /** `km` is null when Strava data isn't shown publicly — the toggle then hides. */
+  boards: { runs: Board; km: Board | null }
+}) {
+  const [boardKey, setBoardKey] = useState<BoardKey>('runs')
+  const [page, setPage] = useState(0)
+  const standing = useViewerStanding()
+
+  const board = (boardKey === 'km' ? boards.km : null) ?? boards.runs
+  const activeKey: BoardKey = board === boards.runs ? 'runs' : 'km'
+  const metric = METRICS[activeKey]
+
+  const podium = board.rows.slice(0, 3)
+  const tableRows = board.rows.slice(3)
   const totalPages = Math.ceil(tableRows.length / PAGE_SIZE)
 
   // Visual order 2nd | 1st | 3rd, so first place stands in the middle.
   const podiumOrder = [podium[1], podium[0], podium[2]]
     .map((u, i) => (u ? { user: u, rank: ([2, 1, 3] as const)[i] } : null))
-    .filter(Boolean) as { user: LeaderboardUser; rank: 1 | 2 | 3 }[]
+    .filter(Boolean) as { user: BoardEntry; rank: 1 | 2 | 3 }[]
+
+  function selectBoard(next: BoardKey) {
+    setBoardKey(next)
+    setPage(0)
+  }
 
   return (
     <main className='min-h-screen pt-32 pb-16 sm:pt-36'>
       <section className='container mx-auto max-w-3xl px-4'>
 
         {/* Header */}
-        <div className='mb-12 text-center'>
+        <div className='mb-8 text-center'>
           <p className='mb-3 font-mono text-xs font-semibold uppercase tracking-widest text-stride-yellow-accent'>
-            Most runs attended
+            {metric.eyebrow}
           </p>
           <h1 className='mb-2 font-libre text-4xl font-bold sm:text-5xl'>Leaderboard</h1>
-          <p className='text-base text-white/50'>
-            Counts update when you check in at a run.
-          </p>
+          <p className='text-base text-white/50'>{metric.subtitle}</p>
+          {activeKey === 'km' && <PoweredByStrava className='mt-3' />}
         </div>
 
-        {/* Viewer's own standing — signed-in members only */}
-        <YourPosition />
-
-        {/* Podium */}
-        {podium.length > 0 && (
-          <div className='mb-12 flex items-end justify-center gap-3 px-2 sm:gap-6'>
-            {podiumOrder.map(({ user, rank }) => (
-              <PodiumColumn key={user.username} user={user} rank={rank} />
-            ))}
+        {boards.km && (
+          <div className='mb-10 flex justify-center'>
+            <SegmentedControl
+              options={BOARD_OPTIONS}
+              value={activeKey}
+              onChange={selectBoard}
+              label='Leaderboard'
+              idPrefix='leaderboard'
+              className='w-full max-w-sm'
+            />
           </div>
         )}
 
-        {/* 4th onwards */}
-        {tableRows.length > 0 && (
-          <div className='overflow-hidden rounded-2xl border border-white/12 bg-white/4 shadow-2xl shadow-black/20 backdrop-blur-md'>
-            <div className='grid grid-cols-[3.5rem_1fr_auto] items-center border-b border-white/10 bg-white/3 px-5 py-3.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-stride-yellow-accent/80'>
-              <span>Rank</span>
-              <span>Athlete</span>
-              <span className='text-right'>Runs</span>
+        <div
+          id='leaderboard-panel'
+          role={boards.km ? 'tabpanel' : undefined}
+          aria-labelledby={boards.km ? `leaderboard-tab-${activeKey}` : undefined}
+        >
+          {/* Viewer's own standing — signed-in members only */}
+          <YourPosition board={activeKey} standing={standing} metric={metric} />
+
+          {/* Podium */}
+          {podium.length > 0 && (
+            <div className='mb-12 flex items-end justify-center gap-3 px-2 sm:gap-6'>
+              {podiumOrder.map(({ user, rank }) => (
+                <PodiumColumn key={`${activeKey}-${user.username}`} user={user} rank={rank} metric={metric} />
+              ))}
             </div>
+          )}
 
-            {pageRows.map((user, i) => {
-              const rank = page * PAGE_SIZE + i + 4 // podium takes 1-3
-              const isPublic = user.profile_public
-              const tier = getMilestone(user.runs_completed)
-              const rowClass =
-                'group grid grid-cols-[3.5rem_1fr_auto] items-center border-b border-white/6 px-5 py-4 last:border-0'
+          {/* 4th onwards */}
+          {tableRows.length > 0 && <BoardTable rows={tableRows} page={page} metric={metric} />}
 
-              const rowContent = (
-                <>
-                  <span className='font-mono text-sm font-semibold tabular-nums text-white/30 transition-colors group-hover:text-stride-yellow-accent/70'>
-                    {String(rank).padStart(2, '0')}
-                  </span>
-                  <div className='flex min-w-0 items-center gap-3.5'>
-                    <div className='rounded-full ring-1 ring-white/15 transition-colors group-hover:ring-stride-yellow-accent/40'>
-                      <Avatar user={user} size='md' placeholder={!isPublic} />
-                    </div>
-                    <div className='min-w-0'>
-                      <p className='line-clamp-1 text-sm font-semibold text-white transition-colors group-hover:text-stride-yellow-accent'>
-                        {user.full_name ?? user.username}
-                      </p>
-                      {/* Private profiles stop here — name and runs only */}
-                      {isPublic && (
-                        <div className='flex min-w-0 items-center gap-2'>
-                          <p className='shrink-0 text-xs text-white/40'>@{user.username}</p>
-                          <span className='inline-flex min-w-0 items-center gap-1 text-xs text-white/50'>
-                            <TierBadge tier={tier} size='sm' />
-                            <span className='line-clamp-1'>{tier.label}</span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {/* Same treatment as the podium: a bare 14px numeral read as
-                      incidental next to the name, when it's the value the whole
-                      row is ordered by. */}
-                  <span className='text-right font-mono tabular-nums'>
-                    <span className='block text-xl font-bold leading-none text-white'>
-                      {user.runs_completed}
-                    </span>
-                    <span className='mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-white/40'>
-                      {user.runs_completed === 1 ? 'run' : 'runs'}
-                    </span>
-                  </span>
-                </>
-              )
+          {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onPage={setPage} />}
 
-              return isPublic ? (
-                <Link
-                  key={user.username}
-                  href={`/profile/${user.username}`}
-                  prefetch={false}
-                  className={`${rowClass} transition-colors hover:bg-white/5`}
-                >
-                  {rowContent}
-                </Link>
-              ) : (
-                <div key={user.username} className={rowClass}>
-                  {rowContent}
-                </div>
-              )
-            })}
-          </div>
-        )}
+          {board.rows.length === 0 && (
+            <div className='py-20 text-center text-white/40'>
+              <Trophy className='mx-auto mb-4 h-12 w-12 opacity-30' aria-hidden='true' />
+              <p>{metric.empty}</p>
+            </div>
+          )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className='mt-8 flex items-center justify-center gap-2'>
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              aria-label='Previous page'
-              className='group inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-white/70 transition-all hover:border-stride-yellow-accent/40 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25'
-            >
-              <ChevronLeft size={16} aria-hidden='true' className='transition-transform group-hover:-translate-x-0.5' />
-              Previous
-            </button>
-
-            <span className='px-3 font-mono text-xs tabular-nums text-white/40'>
-              {page + 1} <span className='text-white/20'>/</span> {totalPages}
-            </span>
-
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page === totalPages - 1}
-              aria-label='Next page'
-              className='group inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-sm font-medium text-white/70 transition-all hover:border-stride-yellow-accent/40 hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25'
-            >
-              Next
-              <ChevronRight size={16} aria-hidden='true' className='transition-transform group-hover:translate-x-0.5' />
-            </button>
-          </div>
-        )}
-
-        {byRuns.length === 0 && (
-          <div className='py-20 text-center text-white/40'>
-            <Trophy className='mx-auto mb-4 h-12 w-12 opacity-30' aria-hidden='true' />
-            <p>No athletes yet. Be the first to show up!</p>
-          </div>
-        )}
-
-        {/* Ranking rule — matches the tie-break in lib/leaderboard.ts */}
-        {byRuns.length > 0 && (
-          <p className='mx-auto mt-8 max-w-lg text-center text-xs leading-relaxed text-white/30'>
-            Athletes with the same number of runs completed, the one who completed
-            the runs first will rank higher.
-            {totalAthletes > byRuns.length && (
-              <> Showing the top {byRuns.length} of {totalAthletes} athletes.</>
-            )}
-          </p>
-        )}
+          {/* Ranking rule — matches the tie-break in the board's SQL function */}
+          {board.rows.length > 0 && (
+            <p className='mx-auto mt-8 max-w-lg text-center text-xs leading-relaxed text-white/30'>
+              {metric.rule}
+              {board.totalAthletes > board.rows.length && (
+                <> Showing the top {board.rows.length} of {board.totalAthletes} athletes.</>
+              )}
+            </p>
+          )}
+        </div>
       </section>
     </main>
   )
