@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
+import { STRAVA_PUBLIC_DISPLAY } from '@/lib/strava/config'
 
 // Single source of truth for leaderboard reads, shared by the board itself and
 // the "your position" endpoint so the two can never disagree.
@@ -151,3 +152,107 @@ export const getViewerRank = cache((userId: string): Promise<ViewerRank | null> 
     { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
   )()
 )
+
+// ── Km board ──────────────────────────────────────────────────────────────────
+// Year-to-date running distance, synced from Strava (see @/lib/strava/sync).
+// Same two cache layers and tag as the runs board, so one purge refreshes both.
+// Ranking lives in `leaderboard_km_top` / `leaderboard_km_rank_for`
+// (supabase-migrations/2026-09-23-strava-integration.sql).
+//
+// Deliberately absent from every agent-facing surface — the MCP leaderboard
+// tool, WebMCP, markdown twins, JSON-LD, llms.txt: Strava's API terms forbid
+// feeding its data to AI/ML systems.
+
+export type KmLeaderboardRow = LeaderboardRow & {
+  /** Metres run this calendar year (IST). Converted to km only for display. */
+  ytd_distance_m: number
+}
+
+export type KmLeaderboardBoard = {
+  rows: KmLeaderboardRow[]
+  totalAthletes: number
+}
+
+export type ViewerKmRank = {
+  rank: number
+  totalAthletes: number
+  ytdDistanceM: number
+  runsCompleted: number
+  username: string
+  fullName: string | null
+  avatarUrl: string | null
+}
+
+type KmTopRow = Omit<KmLeaderboardRow, 'ytd_distance_m'> & {
+  ytd_run_distance_m: number
+  total_athletes: number
+}
+
+export const getLeaderboardKmTop = cache((limit: number): Promise<KmLeaderboardBoard> => {
+  if (!STRAVA_PUBLIC_DISPLAY) return Promise.resolve({ rows: [], totalAthletes: 0 })
+
+  return unstable_cache(
+    async () => {
+      const { data, error } = await adminClient.rpc('leaderboard_km_top', { p_limit: limit })
+
+      if (error) {
+        console.error('[leaderboard] leaderboard_km_top failed', error)
+        return { rows: [], totalAthletes: 0 }
+      }
+
+      const rows = (data ?? []) as KmTopRow[]
+      return {
+        rows: rows.map(row => ({
+          username: row.username,
+          full_name: row.full_name,
+          avatar_url: row.avatar_url,
+          runs_completed: row.runs_completed,
+          profile_public: row.profile_public,
+          ytd_distance_m: row.ytd_run_distance_m,
+        })),
+        totalAthletes: Number(rows[0]?.total_athletes ?? 0),
+      }
+    },
+    ['leaderboard-km-top', String(limit)],
+    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
+  )()
+})
+
+/** Null when the athlete isn't connected or has no runs logged this year. */
+export const getViewerKmRank = cache((userId: string): Promise<ViewerKmRank | null> =>
+  unstable_cache(
+    async () => {
+      const { data, error } = await adminClient.rpc('leaderboard_km_rank_for', {
+        p_user_id: userId,
+      })
+
+      if (error) {
+        console.error('[leaderboard] leaderboard_km_rank_for failed', error)
+        return null
+      }
+
+      const row = (data ?? [])[0]
+      if (!row) return null
+
+      return {
+        rank: Number(row.rank),
+        totalAthletes: Number(row.total_athletes),
+        ytdDistanceM: row.ytd_run_distance_m,
+        runsCompleted: row.runs_completed,
+        username: row.username,
+        fullName: row.full_name,
+        avatarUrl: row.avatar_url,
+      }
+    },
+    ['leaderboard-km-rank', userId],
+    { tags: [LEADERBOARD_TAG], revalidate: LEADERBOARD_REVALIDATE }
+  )()
+)
+
+/** GET /api/leaderboard/me — the signed-in viewer's own place on both boards. */
+export type ViewerStanding = {
+  signedIn: boolean
+  runs?: ViewerRank | null
+  km?: ViewerKmRank | null
+  stravaConnected?: boolean
+}

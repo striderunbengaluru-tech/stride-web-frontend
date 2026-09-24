@@ -1,5 +1,4 @@
 import type { Role } from './auth'
-import type { StravaPBs, StravaActivity } from './strava'
 
 // A textual Q&A prompt shown on the athlete profile. Stored as a JSON array on
 // `users.prompts` (max 3, drag-sortable).
@@ -41,8 +40,4 @@ export type UserProfile = {
   prompts: Prompt[]
   runs_completed: number
   runner_tag: string | null
-  strava_connected: boolean
-  strava_pbs: StravaPBs
-  strava_recent_activities: StravaActivity[]
-  strava_synced_at: string | null
 }

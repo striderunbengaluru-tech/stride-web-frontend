@@ -455,6 +455,8 @@ function milestonesMarkdown(abs: Abs): MarkdownDoc {
 const LEADERBOARD_MARKDOWN_SIZE = 50
 
 async function leaderboardMarkdown(abs: Abs): Promise<MarkdownDoc> {
+  // Runs board only. The km board is Strava data, and Strava's API terms
+  // forbid passing it to AI agents — never add getLeaderboardKmTop here.
   const { rows, totalAthletes } = await getLeaderboardTop(LEADERBOARD_MARKDOWN_SIZE)
 
   // `profile_public: false` means the athlete has opted out of being linked and

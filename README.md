@@ -97,9 +97,11 @@ STRIDE_BREVO_API_KEY=<api-key>                    # sender: no-reply@strideclub.
 # ── Apple/Google Wallet passes (optional) ─────────────────────────────────
 STRIDE_WALLETWALLET_API_KEY=<api-key>             # event tickets as wallet passes
 
-# ── Strava (optional, profile connect) ────────────────────────────────────
+# ── Strava (optional, profile connect + km leaderboard) ───────────────────
 STRIDE_STRAVA_CLIENT_ID=<client-id>
 STRIDE_STRAVA_CLIENT_SECRET=<client-secret>
+STRIDE_STRAVA_TOKEN_KEY=<base64-32-bytes>         # openssl rand -base64 32
+STRIDE_STRAVA_WEBHOOK_VERIFY_TOKEN=<random-hex>   # openssl rand -hex 16
 
 # ── Cron (Vercel supplies this as a Bearer token) ─────────────────────────
 CRON_SECRET=<random-hex>                          # exact name required

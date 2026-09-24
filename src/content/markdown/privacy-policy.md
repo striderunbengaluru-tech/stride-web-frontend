@@ -1,6 +1,6 @@
 # Privacy Policy - Stride Run Club Bengaluru
 
-*Effective Date: 26/08/2026*
+*Effective Date: 23/09/2026*
 
 This Privacy Policy is published in accordance with the Digital Personal Data Protection Act, 2023 ("DPDP Act") and the Information Technology Act, 2000, and constitutes the notice required under Section 5 of the DPDP Act.
 
@@ -46,6 +46,14 @@ While using our Service, we may ask you to provide us with certain personally id
 3.2 Tracking Technologies and Cookies
 
 We use cookies that are strictly necessary to operate the Service, and analytics cookies that help us understand how the Service is used. A complete description of every cookie we set, its purpose, and its lifetime is set out in Section 5 (Cookie Policy) of this Privacy Policy. We do not use advertising cookies, and we do not permit third parties to place advertising cookies through our Service.
+
+3.3 Strava Connection (Optional)
+
+If You choose to connect Your Strava account, We receive, through Strava's official authorisation process and only with the permissions You approve on Strava: Your Strava athlete identifier, Your year-to-date running distance and run count, and the name, date, start time, distance, moving time, elevation gain and route map of Your most recent runs that You have shared with "Everyone" on Strava. We do not receive activities You have set to "Only You", route sections inside Your Strava privacy zones, heart-rate data, or Your Strava password.
+
+We use this data only to show Your kilometres this year on the Stride leaderboard and Your last five (5) public runs on Your Stride profile, where they are visible to other visitors in the same way as the rest of Your profile. We keep only Your five (5) most recent public runs, and the access credentials Strava issues to Us are stored encrypted. We do not use Strava data for advertising, and We do not share it with, or use it to train, any artificial-intelligence system.
+
+You may disconnect Strava at any time from Your profile, or by removing Stride Run Club from Your Strava settings. When You do, or when You delete Your Stride account, all Strava data We hold about You is permanently deleted.
 
 ## 4. How We Use Your Information
 

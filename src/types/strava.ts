@@ -1,27 +1,27 @@
-export type StravaPB = {
-  time: number // seconds
-  date: string // ISO string
-  activityId: number
-} | null
-
-export type StravaPBs = {
-  mile: StravaPB
-  '5k': StravaPB
-  '10k': StravaPB
-  half: StravaPB
-  full: StravaPB
-}
-
-export type StravaActivity = {
+/** One synced run, as stored in `strava_activities` and shown on the profile. */
+export type StravaActivitySummary = {
   id: number
   name: string
-  distance: number // meters
-  moving_time: number // seconds
-  elapsed_time: number // seconds
-  start_date: string // ISO string
-  type: string
-  sport_type: string
-  average_speed: number // m/s
-  average_heartrate?: number
-  pr_count?: number
+  sportType: string
+  /** UTC ISO timestamp. */
+  startDate: string
+  /** Seconds east of UTC where the run started — gives its local start time. */
+  utcOffsetS: number
+  distanceM: number
+  movingTimeS: number
+  elapsedTimeS: number
+  elevationGainM: number
+  /** Google-encoded polyline; null for treadmill / indoor runs. */
+  summaryPolyline: string | null
 }
+
+/** Everything the profile needs about one athlete's Strava link. */
+export type StravaProfile =
+  | { connected: false }
+  | {
+      connected: true
+      ytdDistanceM: number
+      ytdRunCount: number
+      lastSyncedAt: string | null
+      activities: StravaActivitySummary[]
+    }

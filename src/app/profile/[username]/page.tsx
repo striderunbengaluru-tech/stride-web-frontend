@@ -20,11 +20,16 @@ import { EditSpecialtiesSection } from '@/components/profile/edit-specialties-se
 import { PromptsSection } from '@/components/profile/prompts-section'
 import { OfficialRunsSection } from '@/components/profile/official-runs-section'
 import { EventsAttendedSection } from '@/components/profile/events-attended-section'
+import { StravaSection } from '@/components/profile/strava-section'
 import { ChevronRight, ScanLine } from 'lucide-react'
 import { formatMonthYearIST } from '@/lib/utils/ist'
 import { isPortalRole } from '@/types/auth'
 
-type Props = { params: Promise<{ username: string }> }
+type Props = {
+  params: Promise<{ username: string }>
+  /** `strava_error` is set by /api/strava/callback when a connection fails. */
+  searchParams: Promise<{ strava_error?: string | string[] }>
+}
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'
 
@@ -126,8 +131,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProfilePage({ params }: Props) {
+export default async function ProfilePage({ params, searchParams }: Props) {
   const { username } = await params
+  const { strava_error: stravaErrorParam } = await searchParams
+  const stravaError = typeof stravaErrorParam === 'string' ? stravaErrorParam : undefined
 
   const row = await getProfileRow(username)
 
@@ -143,10 +150,6 @@ export default async function ProfilePage({ params }: Props) {
     cover_url: null,
     x_url: row.x_url ?? null,
     runner_tag: row.runner_tag ?? null,
-    strava_connected: false,
-    strava_pbs: { mile: null, '5k': null, '10k': null, half: null, full: null },
-    strava_recent_activities: [],
-    strava_synced_at: null,
   }
 
   const officialRuns = parseJson<OfficialRun[]>((row as Record<string, string | null>).official_runs, [])
@@ -376,6 +379,11 @@ export default async function ProfilePage({ params }: Props) {
             <OfficialRunsSection initialRuns={officialRuns} isOwnProfile={isOwnProfile} />
           </div>
         </div>
+
+        {/* ── Strava ── owner always (connect prompt); others only once connected */}
+        <Suspense fallback={null}>
+          <StravaSection userId={row.id} isOwnProfile={isOwnProfile} errorCode={stravaError} />
+        </Suspense>
 
         {/* ── Account settings ── */}
         {isOwnProfile && (
