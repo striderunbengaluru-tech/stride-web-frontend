@@ -2,11 +2,12 @@ import { StravaIcon } from '@/components/ui/brand-icons'
 import { PoweredByStrava } from '@/components/ui/powered-by-strava'
 import { StravaActivityCard } from '@/components/profile/strava-activity-card'
 import { DisconnectStravaButton } from '@/components/profile/disconnect-strava-button'
-import { getStravaProfile } from '@/lib/strava/data'
+import { getStravaProfile, hasStravaSpotsLeft } from '@/lib/strava/data'
 import { STRAVA_PUBLIC_DISPLAY, STRAVA_RECENT_RUNS } from '@/lib/strava/config'
 
-// The profile's Strava card: a connect prompt for the owner, or year-to-date
-// kilometres plus the latest runs once connected. Server component, streamed
+// The profile's Strava card: a connect prompt for the owner (only while the
+// Strava app has athlete spots left), or year-to-date kilometres plus the
+// latest runs once connected. Server component, streamed
 // in under <Suspense> like the attended-runs section.
 
 /** Keyed by the `strava_error` values /api/strava/callback redirects with. */
@@ -75,6 +76,9 @@ export async function StravaSection({ userId, isOwnProfile, errorCode }: Props) 
 
   const strava = await getStravaProfile(userId)
   if (!strava.connected && !isOwnProfile) return null
+  // Connected athletes keep their card; everyone else only sees the prompt
+  // while Strava will accept them (see STRAVA_ATHLETE_CAP).
+  if (!strava.connected && !(await hasStravaSpotsLeft())) return null
 
   const errorMessage = isOwnProfile && errorCode ? STRAVA_ERROR_MESSAGES[errorCode] : undefined
 
@@ -109,11 +113,20 @@ export async function StravaSection({ userId, isOwnProfile, errorCode }: Props) 
           </div>
 
           {strava.activities.length > 0 ? (
-            <div className='grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3'>
-              {strava.activities.map(activity => (
-                <StravaActivityCard key={activity.id} activity={activity} />
-              ))}
-            </div>
+            <>
+              <div className='grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3'>
+                {strava.activities.map(activity => (
+                  <StravaActivityCard key={activity.id} activity={activity} />
+                ))}
+              </div>
+              {/* OpenStreetMap's licence requires credit wherever its tiles appear — once here, not on every card */}
+              <p className='mt-3 text-[10px] text-white/40'>
+                Maps ©{' '}
+                <a href='https://www.openstreetmap.org/copyright' target='_blank' rel='noopener noreferrer' className='underline-offset-2 hover:text-white/70 hover:underline'>
+                  OpenStreetMap contributors
+                </a>
+              </p>
+            </>
           ) : (
             <p className='rounded-xl border border-white/15 bg-white/10 px-4 py-6 text-center text-sm text-white/60 backdrop-blur-md'>
               No public runs yet. Runs shared with &ldquo;Everyone&rdquo; on Strava show up here.

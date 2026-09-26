@@ -15,8 +15,9 @@ export const STRAVA_RUN_TYPES: readonly string[] = ['Run', 'TrailRun', 'VirtualR
 
 /**
  * Athletes the Strava API app may connect at its current tier — Strava enforces
- * this (403 on token exchange); the admin Strava tab shows usage against it.
- * Update when Strava raises the limit.
+ * this (403 on token exchange). At the cap the profile's connect prompt is
+ * hidden from athletes who aren't connected; the admin Strava tab shows usage
+ * against it. Raise this when Strava raises the limit and the prompt returns.
  */
 export const STRAVA_ATHLETE_CAP = 10
 

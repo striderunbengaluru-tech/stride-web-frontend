@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { adminClient } from '@/lib/supabase/admin'
 import type { StravaActivitySummary, StravaProfile } from '@/types/strava'
-import { STRAVA_PUBLIC_DISPLAY, STRAVA_RECENT_RUNS } from './config'
+import { STRAVA_ATHLETE_CAP, STRAVA_PUBLIC_DISPLAY, STRAVA_RECENT_RUNS } from './config'
 import { currentIstYear } from './connection'
 
 // Read side for pages. Selects display columns only — the encrypted token
@@ -104,3 +104,19 @@ export const getStravaProfile = cache(async (userId: string): Promise<StravaProf
     activities: ((activities ?? []) as ActivityRow[]).map(toSummary),
   }
 })
+
+/**
+ * Whether the Strava app can take another athlete. Strava rejects new
+ * connections past STRAVA_ATHLETE_CAP, so the connect prompt is hidden until a
+ * spot frees up or the cap is raised. Fails closed: an unknown count hides it.
+ */
+export async function hasStravaSpotsLeft(): Promise<boolean> {
+  const { count, error } = await adminClient
+    .from('strava_connections')
+    .select('user_id', { count: 'exact', head: true })
+  if (error || count === null) {
+    console.error('[strava] connection count failed', { error: error?.message })
+    return false
+  }
+  return count < STRAVA_ATHLETE_CAP
+}
