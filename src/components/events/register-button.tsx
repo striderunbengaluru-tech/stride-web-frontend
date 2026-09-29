@@ -166,7 +166,7 @@ export function RegisterButton({
         onClick={() => setModalOpen(true)}
         className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'
       >
-        <span className='relative z-10'>{inviteOnly ? 'Apply to join' : 'Join the run'}</span>
+        <span className='relative z-10'>{inviteOnly ? 'Apply to join' : 'Join here'}</span>
       </button>
 
       <ParticipantDetailsModal
