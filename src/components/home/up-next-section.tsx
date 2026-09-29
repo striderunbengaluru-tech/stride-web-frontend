@@ -1,7 +1,6 @@
-import { getPublishedEvents, type EventListRow } from '@/lib/data/events'
+import { getPublishedEvents, getLivePriceLabel, type EventListRow } from '@/lib/data/events'
 import { type UpNextEvent } from '@/components/events/up-next-banner'
 import { UpNextCarousel } from '@/components/events/up-next-carousel'
-import { eventRowPriceLabel } from '@/lib/utils/money'
 
 // Kept out of the component body: reading the clock during render trips
 // react-hooks/purity, and the selection is easier to reason about on its own.
@@ -11,7 +10,7 @@ function findUpcoming(events: EventListRow[]): EventListRow[] {
   return events.filter(e => e.event_date && new Date(e.event_date).getTime() >= now)
 }
 
-function toUpNextEvent(row: EventListRow): UpNextEvent {
+async function toUpNextEvent(row: EventListRow): Promise<UpNextEvent> {
   let imageUrl: string | null = row.cover_url ?? null
   if (row.banner_images) {
     try {
@@ -29,7 +28,7 @@ function toUpNextEvent(row: EventListRow): UpNextEvent {
     price_paise: row.price_paise,
     imageUrl,
     invite_only: row.invite_only,
-    priceLabel: eventRowPriceLabel(row.price_paise, row.packages, row.packages_enabled),
+    priceLabel: await getLivePriceLabel(row),
   }
 }
 
@@ -42,7 +41,7 @@ function toUpNextEvent(row: EventListRow): UpNextEvent {
 export async function UpNextSection() {
   const events = await getPublishedEvents()
 
-  const upcoming = findUpcoming(events).map(toUpNextEvent)
+  const upcoming = await Promise.all(findUpcoming(events).map(toUpNextEvent))
   if (upcoming.length === 0) return null
 
   return (

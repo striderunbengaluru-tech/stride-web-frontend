@@ -14,7 +14,7 @@ import { EventHero } from '@/components/events/event-hero'
 import { Reveal } from '@/components/ui/reveal'
 import { ShareButton } from '@/components/events/share-button'
 import { ArrowLeft, MapPin, Route, Users, ExternalLink, Gauge, Activity } from 'lucide-react'
-import type { AdditionalField, EventPackage } from '@/types/event'
+import { selectableTierIds, type AdditionalField, type EventPackage } from '@/types/event'
 import {
   formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST,
 } from '@/lib/utils/ist'
@@ -189,8 +189,12 @@ export default async function EventDetailPage({ params }: Props) {
   const startTime = fmtTime(event.event_date)
   const endTime   = fmtTime(event.end_date)
   // With packages the headline can only be a "From ₹X" — the runner picks the
-  // total. Under invite-only there is nothing to charge, so it reads as free.
-  const priceLabel = inviteOnly ? FREE_LABEL : eventPriceLabel(event.price_paise, packages, packagesEnabled)
+  // total — and only open tiers count, so a sold-out Early Bird stops setting it.
+  // Under invite-only there is nothing to charge, so it reads as free.
+  const openPackageIds = selectableTierIds(packages, packageSpotsTaken, event.packages_progressive === true)
+  const priceLabel = inviteOnly
+    ? FREE_LABEL
+    : eventPriceLabel(event.price_paise, packages, packagesEnabled, openPackageIds)
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   // `overflow-clip`, NOT `overflow-hidden`: hidden makes this a scroll container,
