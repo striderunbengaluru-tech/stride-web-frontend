@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { DEFAULT_OG_IMAGE, OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT } from '@/lib/seo'
-import { getPublishedEvents } from '@/lib/data/events'
-import { eventRowPriceLabel, FREE_LABEL } from '@/lib/utils/money'
+import { getPublishedEvents, getLivePriceLabel } from '@/lib/data/events'
+import { FREE_LABEL } from '@/lib/utils/money'
 import { EventsClient } from '@/components/events/events-client'
 import { UpNextCarousel } from '@/components/events/up-next-carousel'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
@@ -71,7 +71,7 @@ type EventRow = {
 async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow[] }> {
   const allEvents = await getPublishedEvents()
 
-  const events: EventRow[] = (allEvents ?? []).map(event => {
+  const events: EventRow[] = await Promise.all((allEvents ?? []).map(async event => {
     let imageUrl: string | null = event.cover_url ?? null
     if (event.banner_images) {
       try {
@@ -79,9 +79,9 @@ async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow
         if (arr[0]) imageUrl = arr[0]
       } catch { /* keep cover_url fallback */ }
     }
-    const priceLabel = eventRowPriceLabel(event.price_paise, event.packages, event.packages_enabled)
+    const priceLabel = await getLivePriceLabel(event)
     return { ...event, imageUrl, priceLabel, isFree: priceLabel === FREE_LABEL }
-  })
+  }))
 
   // Every event still ahead of us, soonest first — the carousel rotates through
   // them, and falls back to a plain banner when there's only one.

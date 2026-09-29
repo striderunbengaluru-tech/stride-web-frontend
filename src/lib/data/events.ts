@@ -2,6 +2,8 @@ import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
 import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
+import { selectableTierIds } from '@/types/event'
+import { eventRowPriceLabel, parsePackagesJson } from '@/lib/utils/money'
 
 // Events flagged `is_test_event` exist so features can be exercised against real
 // data without the live site showing them. They resolve normally on staging,
@@ -103,6 +105,8 @@ export type EventListRow = {
    */
   packages: string | null
   packages_enabled: boolean | null
+  /** One tier open at a time — decides which tier's price the headline shows. */
+  packages_progressive: boolean | null
 }
 
 export const getEventBySlug = cache((slug: string): Promise<EventDetailRow | null> =>
@@ -185,7 +189,7 @@ export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
     async () => {
       const query = adminClient
         .from('events')
-        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event, invite_only, packages, packages_enabled')
+        .select('id, name, subtitle, slug, event_date, location, price_paise, cover_url, banner_images, is_test_event, invite_only, packages, packages_enabled, packages_progressive')
         .eq('status', 'PUBLISHED')
       if (!SHOW_TEST_EVENTS) query.eq('is_test_event', false)
 
@@ -196,3 +200,22 @@ export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
     { tags: [EVENTS_TAG], revalidate: EVENTS_LIST_REVALIDATE }
   )()
 )
+
+type PricedEventRow = Pick<EventListRow, 'id' | 'price_paise' | 'packages' | 'packages_enabled' | 'packages_progressive'>
+
+/**
+ * The headline price for an event card or detail page, counting only the tiers
+ * a runner can still pick. Without this a sold-out Early Bird kept advertising
+ * its price everywhere until the runner reached checkout and found it gone.
+ *
+ * Reads the same tagged spot counts the registration modal uses, so a
+ * registration that fills a tier purges the stale label along with them.
+ */
+export async function getLivePriceLabel(row: PricedEventRow): Promise<string> {
+  const packages = row.packages_enabled ? parsePackagesJson(row.packages) : []
+  if (packages.length === 0) return eventRowPriceLabel(row.price_paise, row.packages, row.packages_enabled)
+
+  const spotsTaken = await getPackageSpotsTaken(row.id)
+  const openIds = selectableTierIds(packages, spotsTaken, row.packages_progressive === true)
+  return eventRowPriceLabel(row.price_paise, row.packages, true, openIds)
+}

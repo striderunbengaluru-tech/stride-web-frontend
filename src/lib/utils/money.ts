@@ -32,15 +32,23 @@ export function priceLabel(paise: number): string {
  *
  * Falls back to the fixed price if packages are enabled but none survived
  * validation, which the admin action should prevent but a hand-edited row could not.
+ *
+ * `openIds` — the tiers a runner can pick right now (see `selectableTierIds`).
+ * When given, sold-out and closed tiers are left out, so a filled Early Bird
+ * stops advertising a price nobody can pay. If nothing is open the event is
+ * full anyway, and the label falls back to every tier.
  */
 export function eventPriceLabel(
   pricePaise: number,
   packages: readonly EventPackage[],
-  packagesEnabled: boolean
+  packagesEnabled: boolean,
+  openIds?: ReadonlySet<string>
 ): string {
   if (!packagesEnabled || packages.length === 0) return priceLabel(pricePaise)
 
-  const amounts = packages.map(pkg => pkg.amountPaise)
+  const open = openIds ? packages.filter(pkg => openIds.has(pkg.id)) : []
+  const priced = open.length > 0 ? open : packages
+  const amounts = priced.map(pkg => pkg.amountPaise)
   const cheapest = Math.min(...amounts)
   const dearest = Math.max(...amounts)
 
@@ -59,17 +67,21 @@ export function eventPriceLabel(
 export function eventRowPriceLabel(
   pricePaise: number,
   packagesJson: string | null | undefined,
-  packagesEnabled: boolean | null | undefined
+  packagesEnabled: boolean | null | undefined,
+  openIds?: ReadonlySet<string>
 ): string {
   if (!packagesEnabled) return priceLabel(pricePaise)
+  return eventPriceLabel(pricePaise, parsePackagesJson(packagesJson), true, openIds)
+}
 
-  let packages: EventPackage[] = []
+/** `events.packages` → packages. Malformed JSON reads as no packages. */
+export function parsePackagesJson(packagesJson: string | null | undefined): EventPackage[] {
   try {
     const parsed = JSON.parse(packagesJson ?? '[]')
-    if (Array.isArray(parsed)) packages = parsed as EventPackage[]
-  } catch { /* fall through to the fixed price */ }
-
-  return eventPriceLabel(pricePaise, packages, true)
+    return Array.isArray(parsed) ? parsed as EventPackage[] : []
+  } catch {
+    return []
+  }
 }
 
 /** Total for a selection, formatted. `[]` → "Free". */
