@@ -128,21 +128,8 @@ export default function Footer() {
 
         {/* ── Bottom bar — tagline + copyright ── */}
         <div className='mt-12 pt-8 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4'>
-          {/* The repo link is here on purpose, not only in llms.txt: agent
-              tooling looks for a project's coding-agent config by following a
-              link from the homepage, and a repo it has to guess at is a repo it
-              does not find. */}
           <p className='text-white/70 text-xs font-figtree'>
-            &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru{' '}
-            <span aria-hidden='true' className='text-white/30'>·</span>{' '}
-            <a
-              href='https://github.com/striderunbengaluru-tech/stride-web-frontend'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='hover:text-stride-yellow-accent transition-colors duration-150'
-            >
-              Open source
-            </a>
+            &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru
           </p>
           <p className='font-libre font-bold text-stride-yellow-accent text-xl tracking-tight'>
             Move as One.
