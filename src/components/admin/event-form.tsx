@@ -18,7 +18,9 @@ import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
   isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
   type AdditionalField, type AdditionalFieldType, type EventPackage, type EventCoupon, TIER_GATES } from '@/types/event'
-import { validatePackageSpots, splitSpotsEvenly } from '@/lib/events/package-spots'
+import {
+  validatePackageSpots, splitSpotsEvenly, countRetiredSpots, allocatableSpots, type SpotHold,
+} from '@/lib/events/package-spots'
 import { reportFormError, type FieldError } from '@/lib/utils/form-errors'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
@@ -56,9 +58,14 @@ type Props = {
   eventId?: string | null
   /** Existing coupons, managed by their own immediate actions rather than this form. */
   coupons?: EventCoupon[]
+  /**
+   * Package ids of every registration holding a spot. Empty while creating.
+   * Lets the form see spots sold by a package that has since been removed.
+   */
+  spotHolds?: readonly SpotHold[]
 }
 
-export function EventForm({ action, defaultValues = {}, submitLabel, pendingApplications = 0, eventId = null, coupons = [] }: Props) {
+export function EventForm({ action, defaultValues = {}, submitLabel, pendingApplications = 0, eventId = null, coupons = [], spotHolds = [] }: Props) {
   const router = useRouter()
   const [actionResult, formAction] = useActionState(action, undefined)
 
@@ -261,13 +268,18 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   const [packagesProgressive, setPackagesProgressive] = useState(defaultValues.packagesProgressive ?? false)
   const [pkgDragSrc, setPkgDragSrc] = useState<number | null>(null)
   const [pkgDragOver, setPkgDragOver] = useState<number | null>(null)
+  // Spots held by runners whose package has been removed. They still count
+  // against capacity, so the remaining packages share only what is left.
+  const retiredSpots = countRetiredSpots(spotHolds, packages)
+  const allocatable = allocatableSpots(capacityValue, retiredSpots)
+  const allocated = sumPackageSpots(packages)
 
   function addPackage() {
     if (packages.length >= MAX_PACKAGES) return
     // Seed the new package with whatever capacity is still unallocated, so the
     // common case (one package taking the whole event) needs no extra typing and
     // the allocation lands balanced straight away.
-    const unallocated = capacityValue - sumPackageSpots(packages)
+    const unallocated = allocatable - allocated
     setPackages(prev => [...prev, {
       id: nanoid(8),
       name: '',
@@ -298,8 +310,8 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
     })
   }
   function splitSpotsAcrossPackages() {
-    if (capacityValue < 1 || packages.length === 0) return
-    const shares = splitSpotsEvenly(capacityValue, packages.length)
+    if (allocatable < 1 || packages.length === 0) return
+    const shares = splitSpotsEvenly(allocatable, packages.length)
     setPackages(prev => prev.map((p, i) => ({ ...p, spotsTotal: shares[i] })))
     markDirty()
   }
@@ -332,7 +344,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
   // POST is rejected the same way — this copy exists for the feedback, not the
   // enforcement.
   const [formError, setFormError] = useState<FieldError | null>(null)
-  const spotsProblem = validatePackageSpots(packages, capacityValue || null, packagesEnabled)
+  const spotsProblem = validatePackageSpots(packages, capacityValue || null, packagesEnabled, retiredSpots)
 
   // Whether this event charges anything at all, which is what decides if the
   // coupon block is worth showing. Under packages the flat price is ignored, so
@@ -1182,10 +1194,11 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
 
                     {packages.length > 0 && (
                       <>
-                        {/* Spot allocation. The sum has to equal capacity exactly:
-                            each package enforces its own budget at registration,
-                            so an under-allocation would strand spots nobody can
-                            book and an over-allocation would oversell the run. */}
+                        {/* Spot allocation. The sum has to equal capacity, less
+                            spots held by removed packages, exactly: each package
+                            enforces its own budget at registration, so an
+                            under-allocation would strand spots nobody can book
+                            and an over-allocation would oversell the run. */}
                         <div
                           className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2.5 text-xs ${
                             spotsProblem
@@ -1195,16 +1208,21 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                         >
                           <Scale size={13} className='shrink-0' />
                           <span className='font-semibold tabular-nums'>
-                            Spots allocated {sumPackageSpots(packages)} / {capacityValue || '—'}
+                            Spots allocated {allocated} / {capacityValue ? allocatable : '—'}
                           </span>
-                          {capacityValue > 0 && sumPackageSpots(packages) !== capacityValue && (
+                          {capacityValue > 0 && allocated !== allocatable && (
                             <span className='opacity-80 tabular-nums'>
-                              {sumPackageSpots(packages) > capacityValue
-                                ? `${sumPackageSpots(packages) - capacityValue} over capacity`
-                                : `${capacityValue - sumPackageSpots(packages)} unallocated`}
+                              {allocated > allocatable
+                                ? `${allocated - allocatable} ${allocated - allocatable === 1 ? 'spot' : 'spots'} sold out`
+                                : `${allocatable - allocated} unallocated`}
                             </span>
                           )}
-                          {capacityValue > 0 && (
+                          {capacityValue > 0 && retiredSpots > 0 && (
+                            <span className='opacity-80 tabular-nums'>
+                              {retiredSpots} of {capacityValue} already sold by removed packages
+                            </span>
+                          )}
+                          {allocatable > 0 && (
                             <button
                               type='button'
                               onClick={splitSpotsAcrossPackages}

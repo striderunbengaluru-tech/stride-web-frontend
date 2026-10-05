@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { adminClient } from '@/lib/supabase/admin'
 import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events-admin-client'
-import { validatePackageSpots } from '@/lib/events/package-spots'
+import { validatePackageSpots, collectSpotHolds, countRetiredSpots, type SpotHoldRow } from '@/lib/events/package-spots'
 import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import type { EventPackage } from '@/types/event'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
@@ -20,10 +20,10 @@ export default async function AdminEventsPage(){
       .order('event_date', { ascending: false }),
     // Paged: these rows are counted per event, and a count is only right over
     // the whole table. An unpaged select stops at db.max_rows (1000) silently.
-    fetchAllRows<{ event_id: string; status: string }>('registration counts', (from, to) =>
+    fetchAllRows<SpotHoldRow & { event_id: string; status: string }>('registration counts', (from, to) =>
       adminClient
         .from('event_registrations')
-        .select('event_id, status')
+        .select('event_id, status, created_at, selected_packages')
         .order('id', { ascending: true })
         .range(from, to)
     ),
@@ -33,7 +33,13 @@ export default async function AdminEventsPage(){
   // applications are still waiting on a decision.
   const confirmedByEvent = new Map<string, number>()
   const appliedByEvent = new Map<string, number>()
+  // Registrations per event, for spots held by packages that have been removed.
+  const regsByEvent = new Map<string, SpotHoldRow[]>()
   for (const reg of regCounts) {
+    const regs = regsByEvent.get(reg.event_id) ?? []
+    regs.push(reg)
+    regsByEvent.set(reg.event_id, regs)
+
     if (reg.status === 'CONFIRMED') {
       confirmedByEvent.set(reg.event_id, (confirmedByEvent.get(reg.event_id) ?? 0) + 1)
     } else if (reg.status === 'APPLIED') {
@@ -58,8 +64,12 @@ export default async function AdminEventsPage(){
       const parsed = JSON.parse(e.packages ?? '[]')
       if (Array.isArray(parsed)) packages = parsed as EventPackage[]
     } catch { /* treated as no packages */ }
+    const packagesEnabled = e.packages_enabled ?? false
+    const retiredSpots = packagesEnabled
+      ? countRetiredSpots(collectSpotHolds(regsByEvent.get(e.id) ?? []), packages)
+      : 0
     const spotsMismatch = Boolean(
-      validatePackageSpots(packages, e.capacity ?? null, e.packages_enabled ?? false)
+      validatePackageSpots(packages, e.capacity ?? null, packagesEnabled, retiredSpots)
     )
     const priceLabel = eventPriceLabel(e.price_paise ?? 0, packages, e.packages_enabled ?? false)
 

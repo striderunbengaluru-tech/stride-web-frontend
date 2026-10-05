@@ -1,10 +1,9 @@
 import { z } from 'zod'
-import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField, type EventPackage } from '@/types/event'
+import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField } from '@/types/event'
 import {
   MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS, MAX_RACE_COUPON_LENGTH, MIN_RACE_DISCOUNT_PERCENT, MAX_RACE_DISCOUNT_PERCENT,
   normaliseDistance,
 } from '@/types/race'
-import { validatePackageSpots } from '@/lib/events/package-spots'
 import { istLocalToUtcIso } from '@/lib/utils/ist'
 
 // Object.fromEntries(formData) always includes every field's key, so an empty
@@ -50,8 +49,8 @@ export const eventPackageSchema = z.object({
   // How many of the event's spots this package may take. Optional at the entry
   // level on purpose: sanitisePackages drops entries that fail this schema, so
   // requiring it here would silently delete every package authored before spots
-  // existed. The sum-equals-capacity rule (validatePackageSpots, applied to the
-  // whole list below) is what actually forces the admin to fill these in.
+  // existed. The sum-equals-capacity rule (validatePackageSpots, applied by the
+  // event actions) is what actually forces the admin to fill these in.
   spotsTotal:  z.number().int().min(1).max(100_000).optional(),
   // Progressive pricing only. Absent = 'auto' = follow the sell-out rule, which
   // is what every tier authored before this feature should do.
@@ -147,14 +146,9 @@ export const eventSchema = z.object({
       })
     }
 
-    const spotsProblem = validatePackageSpots(
-      parseJsonArray<EventPackage>(data.packages),
-      data.capacity,
-      data.packagesEnabled,
-    )
-    if (spotsProblem) {
-      ctx.addIssue({ code: 'custom', path: [spotsProblem.field], message: spotsProblem.message })
-    }
+    // The package-spots rule is NOT checked here: on an edit it depends on
+    // spots already sold by deleted packages, which needs a registrations read.
+    // createEventAction and updateEventAction apply validatePackageSpots.
   })
 
 // The form posts these as JSON strings. A malformed value is treated as empty

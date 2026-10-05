@@ -11,7 +11,9 @@ import { firstFormIssue } from '@/lib/utils/form-issues'
 import { storagePathsUnder } from '@/lib/utils/storage-paths'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
 import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema, eventCouponSchema, EVENT_FIELD_ORDER, type EventActionResult } from '@/lib/validations/admin'
-import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, type EventPackage, type SelectedPackage } from '@/types/event'
+import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, type EventPackage } from '@/types/event'
+import { validatePackageSpots, countRetiredSpots } from '@/lib/events/package-spots'
+import { getSpotHolds } from '@/lib/events/spot-holds'
 import { normaliseCouponCode } from '@/lib/events/coupons'
 import { slugify } from '@/lib/utils/slug'
 import { istLocalToUtcIso } from '@/lib/utils/ist'
@@ -83,41 +85,15 @@ function parsePackages(raw: string | null | undefined): EventPackage[] {
   } catch { return [] }
 }
 
-// Registrations that hold a spot: confirmed, plus in-checkout holds younger than
-// the 15-minute window register_for_event reserves. Mirrors the RPC exactly so
-// the admin form and the registration guard agree on "taken".
-const HOLD_WINDOW_MS = 15 * 60 * 1000
-
 /**
  * How many spots each package has taken, keyed by package id. Read from the
  * `selected_packages` snapshots so it survives package renames and price edits.
  */
 async function packageSpotsTaken(eventId: string): Promise<Record<string, number>> {
-  const { data } = await adminClient
-    .from('event_registrations')
-    .select('status, created_at, selected_packages')
-    .eq('event_id', eventId)
-    .not('selected_packages', 'is', null)
-
-  const cutoff = Date.now() - HOLD_WINDOW_MS
   const taken: Record<string, number> = {}
-
-  for (const row of data ?? []) {
-    const holds = row.status === 'CONFIRMED'
-      || (row.status === 'PENDING' && new Date(row.created_at as string).getTime() > cutoff)
-    if (!holds) continue
-
-    let chosen: SelectedPackage[] = []
-    try {
-      const parsed = JSON.parse(row.selected_packages as string)
-      if (Array.isArray(parsed)) chosen = parsed as SelectedPackage[]
-    } catch { continue }
-
-    for (const pkg of chosen) {
-      taken[pkg.id] = (taken[pkg.id] ?? 0) + 1
-    }
+  for (const ids of await getSpotHolds(eventId)) {
+    for (const id of ids) taken[id] = (taken[id] ?? 0) + 1
   }
-
   return taken
 }
 
@@ -199,6 +175,11 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
   if (!parsed.success) return firstFormIssue(parsed.error.issues, EVENT_FIELD_ORDER)
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, ...rest } = parsed.data
+
+  // A new event has no registrations, so nothing is retired yet.
+  const spotsProblem = validatePackageSpots(parsePackages(packages), rest.capacity, packagesEnabled)
+  if (spotsProblem) return { error: spotsProblem.message, field: spotsProblem.field }
+
   const id = nanoid()
   const slug = slugify(name)
 
@@ -285,6 +266,13 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   if (!parsed.success) return firstFormIssue(parsed.error.issues, EVENT_FIELD_ORDER)
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, capacity, ...rest } = parsed.data
+
+  // Spots sold by packages the admin has since deleted still count against
+  // capacity, so the remaining packages must add up to what is left.
+  const nextPackages = parsePackages(packages)
+  const retiredSpots = packagesEnabled ? countRetiredSpots(await getSpotHolds(id), nextPackages) : 0
+  const spotsProblem = validatePackageSpots(nextPackages, capacity, packagesEnabled, retiredSpots)
+  if (spotsProblem) return { error: spotsProblem.message, field: spotsProblem.field }
 
   const packageColumnValues = packageColumns(packages, packagesEnabled, packagesMultiSelect, packagesProgressive)
 
