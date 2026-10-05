@@ -5,6 +5,7 @@ import { updateEventAction } from '@/lib/actions/admin'
 import { utcIsoToIstLocal } from '@/lib/utils/ist'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
 import { listEventCoupons } from '@/lib/events/coupon-lookup'
+import { getSpotHolds } from '@/lib/events/spot-holds'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -18,7 +19,7 @@ export default async function EditEventPage({ params }: Props){
 
   // Applications still awaiting a decision, so the form can warn before an
   // admin switches invite-only off and assumes they were cancelled.
-  const [{ data: event }, { count: pendingApplications }, coupons] = await Promise.all([
+  const [{ data: event }, { count: pendingApplications }, coupons, spotHolds] = await Promise.all([
     adminClient
       .from('events')
       .select('*')
@@ -33,6 +34,9 @@ export default async function EditEventPage({ params }: Props){
     // server component, so they only ever cross to the client for an admin who
     // has already passed requireFullAdmin above.
     listEventCoupons(id),
+    // Package ids per registration holding a spot, so the form can take spots
+    // sold by a package the admin deletes off what the rest may share.
+    getSpotHolds(id),
   ])
 
   if (!event) notFound()
@@ -48,6 +52,7 @@ export default async function EditEventPage({ params }: Props){
         pendingApplications={pendingApplications ?? 0}
         eventId={id}
         coupons={coupons}
+        spotHolds={spotHolds}
         defaultValues={{
           name: event.name ?? undefined,
           subtitle: event.subtitle ?? undefined,
