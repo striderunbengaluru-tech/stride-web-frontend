@@ -796,12 +796,18 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   <span className='text-white/60 text-sm'>
                     {selectedPackages.length > 1 ? `Total · ${selectedPackages.length} packages` : 'Total'}
                   </span>
-                  <span className='flex items-baseline gap-2'>
-                    {appliedCoupon && (
-                      <span className='text-white/35 text-sm font-mono line-through'>{priceOf(subtotalPaise)}</span>
-                    )}
-                    <span className='text-white font-bold text-lg font-mono'>{priceOf(totalPaise)}</span>
-                  </span>
+                  {/* Picking a package is required, so an empty selection is not a
+                      free registration — showing "Free" here misled people. */}
+                  {selectedPackages.length === 0 ? (
+                    <span className='text-white/50 text-sm text-right'>Select a package to see what you pay</span>
+                  ) : (
+                    <span className='flex items-baseline gap-2'>
+                      {appliedCoupon && (
+                        <span className='text-white/35 text-sm font-mono line-through'>{priceOf(subtotalPaise)}</span>
+                      )}
+                      <span className='text-white font-bold text-lg font-mono'>{priceOf(totalPaise)}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             )}
