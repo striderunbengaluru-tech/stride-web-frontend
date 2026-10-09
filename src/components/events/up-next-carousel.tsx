@@ -7,6 +7,8 @@ import { UpNextBanner, type UpNextEvent } from './up-next-banner'
 
 /** Time each slide holds before advancing. */
 const AUTOPLAY_MS = 4000
+/** Duration of the slide between events, in seconds. */
+const SLIDE_S = 0.5
 
 type Props = {
   /** Upcoming events, soonest first. */
@@ -25,11 +27,11 @@ type Props = {
  * all matching the Press & Media rail (see `FocusRail`) so the two carousels on
  * the homepage read as the same control.
  *
- * Every slide stays mounted in the same grid cell so the container is always
- * as tall as the tallest one: crossfading between differently-sized posters
- * would otherwise shunt the rest of the page up and down on each tick.
- * Off-screen slides are `inert`, which keeps their links out of the tab order
- * and away from the pointer.
+ * Every slide stays mounted in one flex row so the container is always as tall
+ * as the tallest one: swapping differently-sized slides would otherwise shunt
+ * the rest of the page up and down on each tick. Off-screen slides are
+ * `inert`, which keeps their links out of the tab order and away from the
+ * pointer.
  */
 export function UpNextCarousel({ events, showLabel = true, imagePriority = false }: Props) {
   const [index, setIndex] = useState(0)
@@ -81,25 +83,40 @@ export function UpNextCarousel({ events, showLabel = true, imagePriority = false
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className='grid'>
-        {events.map((event, i) => {
-          const active = i === index
-          return (
-            <motion.div
-              key={event.slug}
-              className='col-start-1 row-start-1'
-              animate={{ opacity: active ? 1 : 0 }}
-              initial={false}
-              transition={{ duration: reduceMotion ? 0 : 0.35, ease: 'easeOut' }}
-              inert={!active}
-              aria-hidden={!active}
-              aria-roledescription='slide'
-              aria-label={`${i + 1} of ${count}`}
-            >
-              <UpNextBanner event={event} showLabel={showLabel} imagePriority={imagePriority && i === 0} />
-            </motion.div>
-          )
-        })}
+      {/* Slides sit side by side in one row that translates, rather than
+          crossfading in a stack: mid-crossfade both cards are half see-through,
+          so the poster washes out and the two titles ghost over each other.
+          The row stretches every slide to the tallest one, so the page below
+          doesn't shift. The blur lives on this static frame — a
+          backdrop-filter on each card would also sit under the moving row. */}
+      <div className='overflow-hidden rounded-2xl backdrop-blur-md'>
+        <motion.div
+          className='flex'
+          animate={{ x: `${-index * 100}%` }}
+          initial={false}
+          transition={{ duration: reduceMotion ? 0 : SLIDE_S, ease: [0.32, 0.72, 0, 1] }}
+        >
+          {events.map((event, i) => {
+            const active = i === index
+            return (
+              <div
+                key={event.slug}
+                className='w-full shrink-0'
+                inert={!active}
+                aria-hidden={!active}
+                aria-roledescription='slide'
+                aria-label={`${i + 1} of ${count}`}
+              >
+                <UpNextBanner
+                  event={event}
+                  showLabel={showLabel}
+                  imagePriority={imagePriority && i === 0}
+                  backdropBlur={false}
+                />
+              </div>
+            )
+          })}
+        </motion.div>
       </div>
 
       {/* Progress — sits directly below the card */}

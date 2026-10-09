@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import clsx from 'clsx'
 import { Calendar, MapPin } from 'lucide-react'
 import { AnimatedNumberCountdown } from '@/components/ui/countdown-number'
 import { formatDateTimeIST } from '@/lib/utils/ist'
@@ -37,14 +38,25 @@ type Props = {
    * already carries that heading, so the words don't appear twice.
    */
   showLabel?: boolean
+  /**
+   * Off inside the carousel, which supplies the blur from a static layer.
+   * A backdrop-filter under an ancestor whose opacity is animating is dropped
+   * for the whole fade, then snaps back at the end — a visible flicker.
+   */
+  backdropBlur?: boolean
 }
 
-export function UpNextBanner({ event, imagePriority = false, showLabel = true }: Props) {
+export function UpNextBanner({ event, imagePriority = false, showLabel = true, backdropBlur = true }: Props) {
   const priceLabel = event.priceLabel
 
   return (
-    <Link href={`/events/${event.slug}`} className='group block'>
-      <div className='grid grid-cols-1 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] bg-white/6 backdrop-blur-md border border-white/12 rounded-2xl overflow-hidden hover:border-stride-yellow-accent/50 transition-colors'>
+    <Link href={`/events/${event.slug}`} className='group block h-full'>
+      <div
+        className={clsx(
+          'h-full grid grid-cols-1 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_340px] bg-white/6 border border-white/12 rounded-2xl overflow-hidden hover:border-stride-yellow-accent/50 transition-colors',
+          backdropBlur && 'backdrop-blur-md',
+        )}
+      >
         {/* Image — posters are always 3:4 (admin crops to 3:4), so the column
             is a fixed 3:4 frame the poster fills exactly: no letterbox gap */}
         <div className='relative aspect-3/4 md:order-2 bg-white/5 overflow-hidden'>
