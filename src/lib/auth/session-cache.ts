@@ -17,10 +17,14 @@ export const AUTHED_KEY = '_stride_authed'
 export const NAV_PROFILE_KEY = '_stride_nav_profile_v2'
 const NAV_PROFILE_PREFIX = '_stride_nav_profile'
 
+/** Set once this tab has had its session cookie re-issued by the server. */
+export const SESSION_REISSUED_KEY = '_stride_session_reissued'
+
 /** Removes the sign-in marker and every cached nav profile. */
 export function clearAuthCaches(): void {
   try {
     sessionStorage.removeItem(AUTHED_KEY)
+    sessionStorage.removeItem(SESSION_REISSUED_KEY)
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const key = sessionStorage.key(i)
       if (key?.startsWith(NAV_PROFILE_PREFIX)) sessionStorage.removeItem(key)

@@ -1,10 +1,10 @@
 import { z } from 'zod'
 import { isPlausibleDob, MIN_REGISTRATION_AGE } from '@/lib/utils/age'
 import { MAX_COUPON_CODE_LENGTH } from '@/types/event'
+import { PHONE_DIGITS, PHONE_PATTERN } from '@/lib/utils/phone'
 
-// 10 or 11 digits, digits only — no spaces, letters, or symbols.
 const phoneNumber = (label: string) =>
-  z.string().trim().regex(/^\d{10,11}$/, `Enter a valid 10 or 11 digit ${label} (digits only)`)
+  z.string().trim().regex(PHONE_PATTERN, `Enter a valid ${PHONE_DIGITS}-digit ${label} (digits only)`)
 
 export const participantDetailsSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name is required'),

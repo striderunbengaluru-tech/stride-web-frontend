@@ -41,7 +41,12 @@ export function GoogleSignInButton({ nextUrl }: { nextUrl?: string } = {}) {
     }
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // Always show Google's account chooser. Without it Google silently
+        // reuses the last account, so signing out could never switch accounts.
+        queryParams: { prompt: 'select_account' },
+      },
     })
     // Page will redirect — no need to reset loading
   }
