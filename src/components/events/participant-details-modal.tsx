@@ -19,6 +19,7 @@ import { isChoiceFieldType, sumPackageAmountPaise, hasSpotBudget, resolveTierAva
 import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
 import { reportFormError } from '@/lib/utils/form-errors'
+import { PHONE_DIGITS, PHONE_PATTERN } from '@/lib/utils/phone'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -78,7 +79,25 @@ const validateFullName = (v: string) =>
   v.trim().length < 2 ? 'Please enter your full name' : null
 const validateDob = (v: string) => dobError(v)
 const validatePhone = (v: string) =>
-  !/^\d{10,11}$/.test(v) ? 'Enter a valid 10 or 11 digit number (digits only)' : null
+  !PHONE_PATTERN.test(v) ? `Enter a valid ${PHONE_DIGITS}-digit number (digits only)` : null
+// Emergency number is valid only if well-formed AND different from the
+// primary contact.
+const validateEmergency = (v: string, contact: string) =>
+  validatePhone(v) ?? (v === contact ? 'Emergency number must be different from your contact number' : null)
+
+/**
+ * Errors for numbers prefilled from the profile. Older registrations accepted
+ * 11 digits, so a returning runner can arrive with a number that is no longer
+ * valid — flag it the moment the form opens rather than at submit.
+ */
+function prefilledPhoneErrors(contact: string, emergency: string): Record<string, string> {
+  const errors: Record<string, string> = {}
+  const contactError = contact ? validatePhone(contact) : null
+  const emergencyError = emergency ? validateEmergency(emergency, contact) : null
+  if (contactError) errors.contactNumber = contactError
+  if (emergencyError) errors.emergencyContactNumber = emergencyError
+  return errors
+}
 
 function validateCustomField(field: AdditionalField, raw: string): string | null {
   const v = raw.trim()
@@ -208,7 +227,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   // Live validation — a field validates on blur once it's dirty (the user
   // actually typed in it), and re-validates on every change while it has an
   // error so the message clears the moment the input becomes valid.
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>(
+    () => prefilledPhoneErrors(initial.contactNumber ?? '', initial.emergencyContactNumber ?? '')
+  )
   const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>({})
 
   function setFieldError(key: string, msg: string | null) {
@@ -250,16 +271,15 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
     if (atEnd) setTermsRead(true)
   }
 
-  // Emergency number is valid only if well-formed AND different from the
-  // primary contact — needs both values, so it can't be a module validator.
-  const validateEmergency = (v: string, contact: string) =>
-    validatePhone(v) ?? (v === contact ? 'Emergency number must be different from your contact number' : null)
-
   // With packages the amount depends on what's selected, so it's derived rather
   // than taken from the pricePaise prop. This total is for DISPLAY only — the
   // server recomputes it from the event's own package rows and never trusts
   // anything the client sends about money.
   const hasPackages = !inviteOnly && packagesEnabled && packages.length > 0
+
+  // A bad number keeps the submit button disabled until it's fixed — the inline
+  // error under the field says what's wrong.
+  const hasPhoneError = Boolean(fieldErrors.contactNumber || fieldErrors.emergencyContactNumber)
 
   // Which tiers may be picked right now, keyed by id. Computed with the very
   // same function the register route enforces with, so the modal can never
@@ -677,7 +697,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 placeholder='9876543210'
                 inputMode='numeric'
                 pattern='\d*'
-                maxLength={11}
+                maxLength={PHONE_DIGITS}
                 className={`${inputBase} ${fieldErrors.contactNumber ? inputErrorBorder : ''}`}
                 required
               />
@@ -705,7 +725,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 placeholder='9876543210'
                 inputMode='numeric'
                 pattern='\d*'
-                maxLength={11}
+                maxLength={PHONE_DIGITS}
                 className={`${inputBase} ${fieldErrors.emergencyContactNumber ? inputErrorBorder : ''}`}
                 required
               />
@@ -1120,7 +1140,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
             {/* Submit */}
             <button
               type='submit'
-              disabled={loading || (hasTerms && !accepted) || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
+              disabled={loading || hasPhoneError || (hasTerms && !accepted) || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
               className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-11 flex items-center justify-center gap-2'
             >
               {loading ? (
