@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { AUTHED_KEY, NAV_PROFILE_KEY, clearAuthCaches, hasSessionCookie } from '@/lib/auth/session-cache'
+import { AUTHED_KEY, NAV_PROFILE_KEY, SESSION_REISSUED_KEY, clearAuthCaches, hasSessionCookie } from '@/lib/auth/session-cache'
 import { shouldRefreshForAuthChange, isOnNotFoundRoute } from '@/lib/auth/refresh-guard'
 import type { Role } from '@/types/auth'
 
@@ -44,6 +44,25 @@ const AuthContext = createContext<AuthContextValue>({ status: 'loading', navProf
 
 export function useAuth(): AuthContextValue {
   return useContext(AuthContext)
+}
+
+/**
+ * Once per tab, asks the server to re-write the session cookie with a
+ * `Set-Cookie` header. Safari caps cookies written by JS (which is how
+ * supabase-js refreshes them) at 7 days or less; server-written ones aren't —
+ * see /api/auth/session. Best-effort: on failure the session is no worse off
+ * than before, and the next tab tries again.
+ */
+function reissueSessionCookie(): void {
+  try {
+    if (sessionStorage.getItem(SESSION_REISSUED_KEY)) return
+    sessionStorage.setItem(SESSION_REISSUED_KEY, '1')
+  } catch {
+    // sessionStorage unavailable — still worth one attempt per mount
+  }
+  fetch('/api/auth/session', { method: 'POST', credentials: 'same-origin' }).catch(() => {
+    // Network failure — the existing cookie still works, so nothing to undo
+  })
 }
 
 function readCachedProfile(userId: string): NavProfile | null {
@@ -148,8 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Seeds the refresh guard's baseline: whatever the session is right now
         // is what the server render already reflects, so it is not a change.
         shouldRefreshForAuthChange(session?.user?.id ?? null)
-        if (session?.user) void loadProfile(session.user.id, session.user.email ?? null)
-        else setState({ status: 'signed-out', navProfile: null })
+        if (session?.user) {
+          // After getSession(), so any due refresh has already happened in the
+          // browser and the server won't race it with a second one.
+          reissueSessionCookie()
+          void loadProfile(session.user.id, session.user.email ?? null)
+        } else setState({ status: 'signed-out', navProfile: null })
       })
 
       /**
