@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
 import { NavLoadingLink } from './nav-loading-link'
 import { FooterAccountColumn } from './footer-account-column'
+import { FooterAnalyticsToggle } from './footer-analytics-toggle'
 
 // Every public page worth discovering. `/originals` was removed deliberately and
 // will return when it is ready; nothing here should link to a route that does
@@ -126,11 +127,14 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* ── Bottom bar — tagline + copyright ── */}
+        {/* ── Bottom bar — tagline + copyright + analytics choice ── */}
         <div className='mt-12 pt-8 border-t border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4'>
-          <p className='text-white/70 text-xs font-figtree'>
-            &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru
-          </p>
+          <div className='flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-6'>
+            <p className='text-white/70 text-xs font-figtree'>
+              &copy; {new Date().getFullYear()} Stride Run Club, Bengaluru
+            </p>
+            <FooterAnalyticsToggle />
+          </div>
           <p className='font-libre font-bold text-stride-yellow-accent text-xl tracking-tight'>
             Move as One.
           </p>

@@ -26,6 +26,7 @@ Disallow: /events/*/confirmation/
 Disallow: /my-runs
 Disallow: /login/
 Disallow: /register/
+Disallow: /unsubscribe
 
 # ---------------------------------------------------------------------------
 # Answer-engine and agent crawlers — explicitly welcome.
@@ -61,6 +62,7 @@ Disallow: /events/*/confirmation/
 Disallow: /my-runs
 Disallow: /login/
 Disallow: /register/
+Disallow: /unsubscribe
 
 # ---------------------------------------------------------------------------
 # Training-only crawlers — disallowed.

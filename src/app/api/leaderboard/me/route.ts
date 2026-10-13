@@ -8,6 +8,10 @@ import { getViewerRank, type ViewerStanding } from '@/lib/leaderboard'
 //
 // Returns only the caller's own aggregate position — never another athlete's
 // identity — so there's nothing here a signed-in member can't already see.
+//
+// An under-18 viewer gets `runs: null`, the same "not ranked" answer as a member
+// with no users row: minors are left off the public board entirely (see
+// getMinorAthletes in @/lib/leaderboard), so there is no position to show.
 
 export async function GET() {
   const supabase = await createClient()

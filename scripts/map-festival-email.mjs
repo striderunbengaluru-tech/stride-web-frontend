@@ -299,6 +299,14 @@ fontLink +
         'Bengaluru\u2019s running community for every pace.<br>Events, group runs, and training.' +
       '</td></tr>' +
       '<tr><td align="center" style="padding:16px 0 0;text-align:center;' + bodyText + 'font-size:12px;line-height:1.9;">' + footerLinks + '</td></tr>' +
+      /* Marketing mail must carry a working unsubscribe. Only rendered when the
+         sender passes a signed link, so a preview build shows no dead link. */
+      (opts.unsubscribeUrl
+        ? '<tr><td align="center" style="padding:12px 0 0;text-align:center;' + bodyText + 'font-size:11px;line-height:1.6;color:' + C.muted + ';">' +
+            'You\u2019re getting this because you opted in to emails about Stride runs and partner events. ' +
+            '<a href="' + esc(opts.unsubscribeUrl) + '" style="' + bodyText + 'font-size:11px;color:' + C.muted + ';text-decoration:underline;">Unsubscribe</a>' +
+          '</td></tr>'
+        : '') +
       '<tr><td align="center" style="padding:16px 0 0;text-align:center;">' +
         '<a href="' + INSTAGRAM_URL + '" style="display:inline-block;padding:0 9px;text-decoration:none;">' +
           '<img src="' + opts.ig + '" width="22" height="22" alt="Instagram" style="display:inline-block;width:22px;height:22px;border:0;">' +
@@ -328,10 +336,13 @@ fontLink +
 
 const CHOSEN = PAIRINGS.filter(function (x) { return x.id === 'elegant'; })[0];
 
-export function render(firstName) {
+/* `unsubscribeUrl` is the signed per-recipient link (see unsubscribeUrl in the
+   send script). Optional only so preview builds can render without a secret. */
+export function render(firstName, unsubscribeUrl) {
   return buildEmail({
     pairing: CHOSEN, name: firstName, fallback: false,
-    poster: POSTER_LIVE, logo: LOGO_LIVE, ducky: DUCKY_LIVE, ig: IG_LIVE, strava: STRAVA_LIVE
+    poster: POSTER_LIVE, logo: LOGO_LIVE, ducky: DUCKY_LIVE, ig: IG_LIVE, strava: STRAVA_LIVE,
+    unsubscribeUrl: unsubscribeUrl
   });
 }
 export const PAIRING_NAME = CHOSEN.name;
