@@ -25,6 +25,7 @@ type Props = {
     gender: string | null
     contactNumber: string | null
     emergencyContactNumber: string | null
+    marketingOptIn: boolean
   }
   additionalFields?: AdditionalField[]
   termsAndConditions?: string | null

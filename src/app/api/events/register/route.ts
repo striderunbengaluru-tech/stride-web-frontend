@@ -6,6 +6,8 @@ import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { registerEventSchema } from '@/lib/validations/events'
+import { requiresGuardianConsent } from '@/lib/utils/age'
+import { revalidateLeaderboard } from '@/lib/leaderboard'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { CLEARABLE_REGISTRATION_STATUSES } from '@/lib/events/invite-only'
 import { findActiveCoupon } from '@/lib/events/coupon-lookup'
@@ -26,11 +28,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Please fill all required fields' }, { status: 400 })
   }
 
-  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses, selectedPackageIds, couponCode } = parsed.data
+  const { eventId, fullName, dateOfBirth, gender, contactNumber, emergencyContactNumber, acceptedTerms, customResponses, selectedPackageIds, couponCode, marketingOptIn } = parsed.data
 
   // Persist participant details on the user row — idempotent (re-running with
   // the same values is a no-op). full_name overwrites any previous value so
   // the user can correct typos at any time.
+  //
+  // The marketing opt-in is written only when ticked. An unticked box leaves an
+  // existing opt-in alone: revoking is done from the profile toggle or the
+  // unsubscribe link, never as a side effect of signing up for a run.
   const { error: profileError } = await adminClient
     .from('users')
     .update({
@@ -39,6 +45,9 @@ export async function POST(request: Request) {
       gender,
       contact_number: contactNumber,
       emergency_contact_number: emergencyContactNumber,
+      ...(marketingOptIn === true
+        ? { marketing_opt_in: true, marketing_opt_in_at: new Date().toISOString() }
+        : {}),
     })
     .eq('id', user.id)
 
@@ -46,6 +55,11 @@ export async function POST(request: Request) {
     console.error('[Register] Failed to save participant details', profileError)
     return NextResponse.json({ error: 'Could not save your details. Please try again.' }, { status: 500 })
   }
+
+  // Under-18s are kept off the public leaderboard, and this is where a date of
+  // birth usually first lands. Purge so a minor never sits on the cached board
+  // for a window — rare enough that the purge costs nothing in practice.
+  if (requiresGuardianConsent(dateOfBirth)) revalidateLeaderboard()
 
   const { data: event } = await adminClient
     .from('events')

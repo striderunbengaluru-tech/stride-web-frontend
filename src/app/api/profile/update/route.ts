@@ -33,6 +33,9 @@ const schema = z.object({
   stravaUrl: socialUrl('Strava', ['strava.com', 'strava.app.link']).optional().or(z.literal('')),
   xUrl: socialUrl('X', ['x.com', 'twitter.com']).optional().or(z.literal('')),
   profilePublic: z.boolean().optional(),
+  // Marketing-email consent. Both directions are allowed here — this is the
+  // member's own settings page, unlike registration, which can only opt in.
+  marketingOptIn: z.boolean().optional(),
 })
 
 export async function POST(request: Request) {
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { skills, linkedinUrl, instagramUrl, stravaUrl, xUrl, name, profilePublic, ...rest } = parsed.data
+  const { skills, linkedinUrl, instagramUrl, stravaUrl, xUrl, name, profilePublic, marketingOptIn, ...rest } = parsed.data
 
   const { error: updateError } = await adminClient
     .from('users')
@@ -59,6 +62,10 @@ export async function POST(request: Request) {
       strava_url: stravaUrl !== undefined ? (stravaUrl || null) : undefined,
       x_url: xUrl !== undefined ? (xUrl || null) : undefined,
       skills: skills !== undefined ? JSON.stringify(skills) : undefined,
+      // The timestamp records when consent was given; clearing consent clears it.
+      ...(marketingOptIn !== undefined
+        ? { marketing_opt_in: marketingOptIn, marketing_opt_in_at: marketingOptIn ? new Date().toISOString() : null }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)

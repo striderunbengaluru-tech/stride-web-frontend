@@ -4,18 +4,23 @@ import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Cookie } from 'lucide-react'
 import { useRevealAfterFold } from '@/hooks/use-reveal-after-fold'
+import { optOutOfAnalytics } from '@/lib/analytics-consent'
 
-// DPDP transparency notice. This banner INFORMS — it has no accept/reject, so it
-// is not a consent gate.
+// DPDP transparency notice with an analytics OPT-OUT. It is not a prior-consent
+// gate: Google Analytics (src/components/analytics/google-analytics.tsx) sets
+// `_ga` cookies on production by default, and this banner tells the visitor so
+// and offers a one-tap way to switch them off.
 //
-// That was accurate while every cookie was strictly necessary. It no longer is:
-// Google Analytics (src/components/analytics/google-analytics.tsx) sets `_ga`
-// cookies on production, which are analytics, not essential. The copy below and
-// Section 5 of the privacy policy were updated to say so.
+// That opt-out model is a deliberate product decision and a KNOWN DEVIATION from
+// legal advice, which recommended asking for consent BEFORE any non-essential
+// cookie is set. If that advice is adopted, the default flips in one place —
+// src/lib/analytics-consent.ts — and this banner becomes the opt-in prompt.
 //
-// So if a consent gate is ever built, this is the component to build it in, and
-// GoogleAnalytics is what it has to gate — do not add another cookie-setting
-// third party on the assumption that this banner covers it.
+// "Opt out of analytics" records the choice (shared store, also driven by the
+// footer toggle) AND dismisses the notice; GA stops reporting immediately. The
+// copy below and Section 5 of the privacy policy must keep describing this
+// accurately. Do not add another cookie-setting third party on the assumption
+// that this banner covers it — it only knows how to switch off GA.
 //
 // Pressing OK stores the acknowledgement in a 1-year cookie (strictly necessary
 // category), so the banner shows only once per browser. Legacy localStorage
@@ -66,6 +71,11 @@ function dismiss() {
   listeners.forEach(listener => listener())
 }
 
+function optOutAndDismiss() {
+  optOutOfAnalytics()
+  dismiss()
+}
+
 export function CookieNotice() {
   const dismissed = useSyncExternalStore(subscribe, isDismissed, () => true)
   // On mobile, hold the notice back until the visitor scrolls past the first
@@ -77,13 +87,13 @@ export function CookieNotice() {
     <div
       role='region'
       aria-label='Cookie notice'
-      className='animate-fade-in-up fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-90 bg-stride-purple-primary/80 backdrop-blur-xl border border-white/15 rounded-xl shadow-2xl px-4 py-3.5'
+      className='animate-fade-in-up fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:max-w-sm z-90 bg-stride-purple-primary/80 backdrop-blur-xl border border-white/15 rounded-xl shadow-2xl px-4 py-3.5 flex flex-col gap-3'
     >
       <div className='flex items-start gap-3'>
         <Cookie size={16} className='text-stride-yellow-accent shrink-0 mt-0.5' aria-hidden='true' />
         <p className='text-white/80 text-xs leading-relaxed'>
-          We use essential cookies to keep you signed in, and analytics cookies to
-          understand how the site is used. No ads.{' '}
+          We use essential cookies to keep you signed in. Analytics cookies, which
+          help us understand how the site is used, run unless you opt out. No ads.{' '}
           <Link
             href='/privacy-policy#cookie-policy'
             className='text-stride-yellow-accent hover:underline underline-offset-2'
@@ -91,6 +101,16 @@ export function CookieNotice() {
             Read our cookie policy
           </Link>
         </p>
+      </div>
+      {/* Secondary action first so the primary OK stays on the thumb side. */}
+      <div className='flex items-center justify-end gap-2'>
+        <button
+          type='button'
+          onClick={optOutAndDismiss}
+          className='shrink-0 border border-white/20 text-white/80 text-xs font-semibold px-4 rounded-md hover:border-stride-yellow-accent/50 hover:text-white active:scale-95 transition-all duration-100 min-h-11 touch-manipulation'
+        >
+          Opt out of analytics
+        </button>
         <button
           type='button'
           onClick={dismiss}

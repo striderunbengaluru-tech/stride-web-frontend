@@ -12,6 +12,7 @@ import { SignOutButton } from '@/components/profile/sign-out-button'
 import { DeleteAccountButton } from '@/components/profile/delete-account-button'
 import { AvatarUpload } from '@/components/profile/avatar-upload'
 import { ProfileVisibilityToggle } from '@/components/profile/profile-visibility-toggle'
+import { MarketingEmailToggle } from '@/components/profile/marketing-email-toggle'
 import { AvatarImage } from '@/components/profile/avatar-image'
 import { ShareButton } from '@/components/profile/share-button'
 import { EditHeaderSection } from '@/components/profile/edit-header-section'
@@ -94,6 +95,24 @@ const getProfileRow = reactCache(async (username: string) => {
   return data
 })
 
+// The owner's marketing-email choice. Read separately rather than added to
+// getProfileRow, whose row is spread into the profile object every visitor's
+// render is built from — a consent flag has no business riding along there.
+// Only ever called for the owner. A failed read shows the switch as off, which
+// is the safe reading of an unknown consent state.
+async function getMarketingOptIn(userId: string): Promise<boolean> {
+  const { data, error } = await adminClient
+    .from('users')
+    .select('marketing_opt_in')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) {
+    console.error('[Profile] marketing_opt_in read failed', error)
+    return false
+  }
+  return data?.marketing_opt_in === true
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params
   const row = await getProfileRow(username)
@@ -157,6 +176,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
+  const marketingOptIn = isOwnProfile ? await getMarketingOptIn(profile.id) : false
 
   // Shareability gate (DPDP consent): a private profile is reachable only by
   // its owner and club admins — everyone else gets a 404, direct URL included,
@@ -215,6 +235,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                   <>
                     <AvatarUpload currentUrl={profile.avatar_url} displayName={displayName} frameColor={currentTier.frame} frameRingColor={currentTier.frameRing} />
                     <ProfileVisibilityToggle initialPublic={profile.profile_public} />
+                    <MarketingEmailToggle initialOptIn={marketingOptIn} />
                   </>
                 ) : publicAvatarUrl ? (
                   <AvatarImage

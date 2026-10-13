@@ -33,6 +33,9 @@ export const registerEventSchema = z.object({
   // percentage and the discount are looked up server-side. A client that could
   // send `percent` could send 100.
   couponCode: z.string().trim().min(1).max(MAX_COUPON_CODE_LENGTH).optional(),
+  // Optional marketing-email opt-in. Only `true` does anything: registering is
+  // a place to say yes, not a place to revoke an earlier yes.
+  marketingOptIn: z.boolean().optional(),
 }).and(participantDetailsSchema)
 
 /** Body of POST /api/events/coupon/validate. */

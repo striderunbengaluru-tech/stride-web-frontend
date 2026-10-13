@@ -27,6 +27,7 @@ type ViewerPayload = {
     gender: string | null
     contactNumber: string | null
     emergencyContactNumber: string | null
+    marketingOptIn: boolean
   }
 }
 
@@ -40,6 +41,7 @@ const ANONYMOUS: ViewerPayload = {
     gender: null,
     contactNumber: null,
     emergencyContactNumber: null,
+    marketingOptIn: false,
   },
 }
 

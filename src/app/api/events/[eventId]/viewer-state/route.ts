@@ -29,6 +29,7 @@ const EMPTY_INITIAL = {
   gender: null as string | null,
   contactNumber: null as string | null,
   emergencyContactNumber: null as string | null,
+  marketingOptIn: false,
 }
 
 /** Per-user data — must never land in a shared cache. */
@@ -66,7 +67,7 @@ export async function GET(
       .maybeSingle(),
     adminClient
       .from('users')
-      .select('full_name, date_of_birth, gender, contact_number, emergency_contact_number')
+      .select('full_name, date_of_birth, gender, contact_number, emergency_contact_number, marketing_opt_in')
       .eq('id', user.id)
       .maybeSingle(),
   ])
@@ -82,6 +83,9 @@ export async function GET(
         gender: profile.gender ?? null,
         contactNumber: profile.contact_number ?? null,
         emergencyContactNumber: profile.emergency_contact_number ?? null,
+        // Pre-ticks the modal's opt-in box for someone who already said yes, so
+        // it never reads as though registering again had quietly revoked it.
+        marketingOptIn: profile.marketing_opt_in === true,
       }
     : { ...EMPTY_INITIAL, fullName: oauthName }
 

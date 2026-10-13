@@ -157,6 +157,8 @@ type Props = {
     gender: string | null
     contactNumber: string | null
     emergencyContactNumber: string | null
+    /** Whether the runner already opted in to marketing email — pre-ticks the box. */
+    marketingOptIn: boolean
   }
   additionalFields?: AdditionalField[]
   termsAndConditions?: string | null
@@ -213,6 +215,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   const [agreedPolicies, setAgreedPolicies] = useState(false)
   const [agreedGuardian, setAgreedGuardian] = useState(false)
   const [agreedSafety, setAgreedSafety] = useState(false)
+  // Optional and unticked unless they already said yes — consent to marketing
+  // email has to be an affirmative act, never a default (DPDP s.6). Unticking
+  // it here doesn't revoke an existing opt-in either: the register route only
+  // ever turns it on, and revoking lives on the profile and the unsubscribe link.
+  const [marketingOptIn, setMarketingOptIn] = useState(initial.marketingOptIn)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   // ── Coupon ──
@@ -349,6 +356,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
       setAgreedPolicies(false)
       setAgreedGuardian(false)
       setAgreedSafety(false)
+      setMarketingOptIn(initial.marketingOptIn)
       setFieldErrors({})
       setDirtyFields({})
       setCouponInput('')
@@ -468,7 +476,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
     if (hasTerms && !accepted) return fail('Please accept the terms & conditions to continue', 'acceptedTerms')
     if (!agreedPolicies) return fail('Please agree to the Privacy Policy and Terms of Service', 'agreedPolicies')
     if (isMinor && !agreedGuardian) return fail('Please confirm you have your guardian’s consent to attend', 'agreedGuardian')
-    if (!agreedSafety) return fail('Please accept the safety declaration to continue', 'agreedSafety')
+    if (!agreedSafety) return fail('Please confirm the medical fitness declaration to continue', 'agreedSafety')
 
     setLoading(true)
     try {
@@ -491,6 +499,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
           // The code only, for the same reason. The register route resolves the
           // percentage and re-checks the coupon is still live.
           couponCode: appliedCoupon?.code,
+          marketingOptIn,
         }),
       })
       const data = await res.json()
@@ -730,7 +739,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 required
               />
               <FieldError msg={fieldErrors.emergencyContactNumber} />
-              <p className='text-white/30 text-[11px] mt-1.5'>Someone we can reach if anything happens during the run.</p>
+              <p className='text-white/30 text-[11px] mt-1.5'>
+                Someone we can reach if anything happens during the run. Let them know you&apos;ve listed them — we&apos;ll only contact them in an emergency on event day.
+              </p>
             </div>
 
             {/* Package selection — the runner builds their own total here */}
@@ -1078,7 +1089,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
               </div>
             )}
 
-            {/* Consent declarations — all required before registering */}
+            {/* Consent declarations — required ones first, then the optional
+                marketing opt-in, which never gates the submit button. */}
             <div className='pt-4 mt-2 border-t border-white/8 space-y-3'>
               <label className='flex items-start gap-2.5 cursor-pointer select-none'>
                 <input
@@ -1123,8 +1135,27 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   onChange={e => setAgreedSafety(e.target.checked)}
                   className={checkboxBase}
                 />
+                {/* Medical fitness + assumption of risk. Points at the waiver clause
+                    itself rather than restating it, so the two can't drift apart. */}
                 <span className='text-white/70 text-xs leading-snug'>
-                  I am solely responsible for my safety and health during the entire experience, and the organisers are not responsible for the same.
+                  I am medically fit to take part, have no condition that makes it unsafe for me to run, and I accept the risks of participating as set out in the{' '}
+                  <Link href='/terms-of-service#assumption-of-risk' target='_blank' className='text-stride-yellow-accent hover:underline underline-offset-2'>
+                    Assumption of Risk
+                  </Link>
+                  {' '}clause of the Terms.
+                </span>
+              </label>
+
+              <label className='flex items-start gap-2.5 cursor-pointer select-none'>
+                <input
+                  type='checkbox'
+                  data-field='marketingOptIn'
+                  checked={marketingOptIn}
+                  onChange={e => setMarketingOptIn(e.target.checked)}
+                  className={checkboxBase}
+                />
+                <span className='text-white/70 text-xs leading-snug'>
+                  Email me about other Stride runs and partner events. You can unsubscribe anytime.
                 </span>
               </label>
             </div>
