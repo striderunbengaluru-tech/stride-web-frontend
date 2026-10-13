@@ -3,27 +3,12 @@ import path from 'path'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { headingId } from '@/lib/utils/heading-id'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Stride Run Club',
   description: 'How Stride Run Club Bengaluru collects, uses, and protects your personal information.',
   alternates: { canonical: '/privacy-policy', types: { 'text/markdown': '/privacy-policy.md' } },
-}
-
-// Deep-link anchor for section headings, e.g. "5. Cookie Policy" →
-// "cookie-policy" (the cookie banner links to /privacy-policy#cookie-policy).
-// Leading numbers are stripped so anchors survive renumbering.
-function headingId(children: React.ReactNode): string | undefined {
-  const text = Array.isArray(children)
-    ? children.filter((c): c is string => typeof c === 'string').join(' ')
-    : typeof children === 'string' ? children : ''
-  if (!text) return undefined
-  return text
-    .toLowerCase()
-    .replace(/^\d+\.?\s*/, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
 }
 
 const components: Components = {
@@ -51,16 +36,20 @@ const components: Components = {
   strong: ({ children }) => (
     <strong className='text-white font-semibold'>{children}</strong>
   ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target='_blank'
-      rel='noopener noreferrer'
-      className='text-stride-yellow-accent hover:underline underline-offset-2'
-    >
-      {children}
-    </a>
-  ),
+  // In-page anchors (#changelog) stay in the tab; every other link opens a new one.
+  a: ({ href, children }) => {
+    const external = !href?.startsWith('#')
+    return (
+      <a
+        href={href}
+        target={external ? '_blank' : undefined}
+        rel={external ? 'noopener noreferrer' : undefined}
+        className='text-stride-yellow-accent hover:underline underline-offset-2'
+      >
+        {children}
+      </a>
+    )
+  },
   hr: () => <hr className='border-white/10 my-8' />,
   // Prevent <p> wrapping block elements — avoid hydration errors
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

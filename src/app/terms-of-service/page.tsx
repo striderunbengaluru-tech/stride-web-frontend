@@ -3,6 +3,7 @@ import path from 'path'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { headingId } from '@/lib/utils/heading-id'
 
 export const metadata: Metadata = {
   title: 'Terms of Service — Stride Run Club',
@@ -15,7 +16,7 @@ const components: Components = {
     <h1 className='text-3xl sm:text-4xl font-bold text-white mt-10 mb-4 first:mt-0'>{children}</h1>
   ),
   h2: ({ children }) => (
-    <h2 className='text-xl font-bold text-white mt-10 mb-3 pb-2 border-b border-white/10'>{children}</h2>
+    <h2 id={headingId(children)} className='text-xl font-bold text-white mt-10 mb-3 pb-2 border-b border-white/10 scroll-mt-24'>{children}</h2>
   ),
   h3: ({ children }) => (
     <h3 className='text-base font-semibold text-white/90 mt-6 mb-2'>{children}</h3>
@@ -35,16 +36,20 @@ const components: Components = {
   strong: ({ children }) => (
     <strong className='text-white font-semibold'>{children}</strong>
   ),
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target='_blank'
-      rel='noopener noreferrer'
-      className='text-stride-yellow-accent hover:underline underline-offset-2'
-    >
-      {children}
-    </a>
-  ),
+  // In-page anchors (#changelog) stay in the tab; every other link opens a new one.
+  a: ({ href, children }) => {
+    const external = !href?.startsWith('#')
+    return (
+      <a
+        href={href}
+        target={external ? '_blank' : undefined}
+        rel={external ? 'noopener noreferrer' : undefined}
+        className='text-stride-yellow-accent hover:underline underline-offset-2'
+      >
+        {children}
+      </a>
+    )
+  },
   hr: () => <hr className='border-white/10 my-8' />,
   blockquote: ({ node: _node, ...props }) => (
     <blockquote className='border-l-2 border-stride-yellow-accent/50 pl-4 my-4 text-white/50 italic text-sm' {...props} />

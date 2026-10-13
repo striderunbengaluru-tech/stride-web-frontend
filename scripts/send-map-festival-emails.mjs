@@ -1,7 +1,8 @@
 // Send the MAP Fitness Festival promo mail to the club, one batch at a time.
 //
 // Run:  node --env-file=.env.local scripts/send-map-festival-emails.mjs [--batch=200] [--send]
-// Needs: STRIDE_BREVO_API_KEY, NEXT_PUBLIC_SUPABASE_URL, STRIDE_SUPABASE_SERVICE_ROLE_KEY
+// Needs: STRIDE_BREVO_API_KEY, NEXT_PUBLIC_SUPABASE_URL, STRIDE_SUPABASE_SERVICE_ROLE_KEY,
+//        STRIDE_UNSUBSCRIBE_SECRET (must match the deployed app's, or the links fail)
 //
 // Dry run unless --send is passed. Run it dry first, every time: the dry run
 // prints exactly who the next batch would reach and how many are left after it.
@@ -25,14 +26,22 @@
 //
 // ── Audience ──
 //
-// Every user except the ADMIN accounts and anyone already registered for this
-// event (a "Register now" mail to someone holding a ticket reads as a mistake).
+// Only members who opted in to marketing email (users.marketing_opt_in — set by
+// the registration checkbox or the profile toggle, cleared by unsubscribing).
+// Of those: everyone except the ADMIN accounts and anyone already registered
+// for this event (a "Register now" mail to someone holding a ticket reads as a
+// mistake).
+//
+// Every mail carries a signed one-click unsubscribe link in the footer and in
+// the List-Unsubscribe / List-Unsubscribe-Post headers (RFC 8058), which Gmail
+// and Yahoo require of bulk senders.
 // Ranked most-engaged first: runs completed, then past registrations, then id as
 // a stable tiebreaker so the ordering never shifts between runs.
 
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { createHmac } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { render, PAIRING_NAME } from './map-festival-email.mjs'
 
@@ -68,6 +77,24 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 if (!BREVO_KEY) {
   console.error('Missing STRIDE_BREVO_API_KEY')
   process.exit(1)
+}
+const UNSUBSCRIBE_SECRET = process.env.STRIDE_UNSUBSCRIBE_SECRET
+if (!UNSUBSCRIBE_SECRET) {
+  console.error('Missing STRIDE_UNSUBSCRIBE_SECRET — refusing to send mail nobody can unsubscribe from')
+  process.exit(1)
+}
+
+// Signed unsubscribe link. A reimplementation of unsubscribeUrl() in
+// src/lib/email/unsubscribe-token.ts, which is the source of truth — this
+// script can't import TypeScript. Same algorithm (hex HMAC-SHA256 of the user
+// id, keyed by STRIDE_UNSUBSCRIBE_SECRET), same production origin, same path and
+// parameter names. Change one, change both.
+const UNSUBSCRIBE_ENDPOINT = 'https://www.strideclub.in/api/email/unsubscribe'
+function unsubscribeUrl(userId) {
+  const url = new URL(UNSUBSCRIBE_ENDPOINT)
+  url.searchParams.set('u', userId)
+  url.searchParams.set('t', createHmac('sha256', UNSUBSCRIBE_SECRET).update(userId).digest('hex'))
+  return url.toString()
 }
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
@@ -137,7 +164,7 @@ if (eventError || !event) {
   process.exit(1)
 }
 
-const users = await fetchAll('users', 'id, email, full_name, role, runs_completed')
+const users = await fetchAll('users', 'id, email, full_name, role, runs_completed, marketing_opt_in')
 const registrations = await fetchAll('event_registrations', 'id, user_id, event_id')
 
 const registeredForThis = new Set(
@@ -152,6 +179,9 @@ const VALID_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 const eligible = users
   .filter(u => u.email && VALID_EMAIL.test(u.email))
+  // Consent first: no opt-in, no marketing mail. Strictly `true` — a missing
+  // column (migration not run) reads as undefined and excludes everyone.
+  .filter(u => u.marketing_opt_in === true)
   .filter(u => u.role !== 'ADMIN')
   .filter(u => !registeredForThis.has(u.id))
   // Most-engaged first. `id` last so the order is identical on every run, which
@@ -185,7 +215,8 @@ console.log(`Log      : ${LOG_PATH}`)
 console.log(`Mode     : ${LIVE ? 'LIVE SEND' : 'dry run'}`)
 console.log('')
 console.log(`Users            : ${users.length}`)
-console.log(`  minus admins   : -${users.filter(u => u.role === 'ADMIN').length}`)
+console.log(`  not opted in   : -${users.filter(u => u.marketing_opt_in !== true).length}`)
+console.log(`  minus admins   : -${users.filter(u => u.marketing_opt_in === true && u.role === 'ADMIN').length}`)
 console.log(`  minus registered: -${registeredForThis.size}`)
 console.log(`Eligible         : ${eligible.length}`)
 console.log(`Already sent     : ${alreadySent.size}`)
@@ -222,7 +253,13 @@ for (const user of batch) {
       sender: SENDER,
       to: [{ email: user.email, name: user.full_name ?? undefined }],
       subject: SUBJECT,
-      htmlContent: render(firstName(user)),
+      htmlContent: render(firstName(user), unsubscribeUrl(user.id)),
+      // RFC 8058 one-click: the mail client POSTs `List-Unsubscribe=One-Click`
+      // to this URL. Same signed link as the footer.
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl(user.id)}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     }),
   }).catch(err => ({ ok: false, status: 0, _err: err.message }))
 
