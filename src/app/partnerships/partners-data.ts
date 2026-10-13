@@ -150,6 +150,7 @@ export const PARTNER_CATEGORIES: PartnerCategory[] = [
         name: 'Amaha Health',
         logoUrl: `${SUPABASE_LOGOS}/amaha-health-logo.webp`,
       },
+      { id: 'oppo', name: 'OPPO', logoUrl: `${SUPABASE_LOGOS}/oppo-logo.webp` },
     ],
   },
 ];
