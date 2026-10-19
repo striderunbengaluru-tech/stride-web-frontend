@@ -1,3 +1,4 @@
+import { strideFoodPharmerRunContent } from './stride-food-pharmer-run'
 import { strideKyroTerritoryRunContent } from './stride-kyro-territory-run'
 import { stridePokemonGoRunContent } from './stride-pokemon-go-run'
 
@@ -24,19 +25,39 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'stride-food-pharmer-run',
+    title: 'Run With Food Pharmer',
+    description:
+      'Stride Run Club and Only What\'s Needed, the company run by Food Pharmer, hosted a 3 km run through Cubbon Park, a workout bingo card that paid out in protein shots, and a Q&A with Food Pharmer himself.',
+    publishedAt: '2026-10-19',
+    author: {
+      name: 'Sidharth Yadav',
+      role: 'Founder, Stride Run Club',
+      avatarUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/sidharth-yadav-dp.png',
+      instagramUrl: 'https://www.instagram.com/the_sid_way/',
+    },
+    coverUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/events/run-with-food-pharmer-join-the-waitlist-msifweiy.webp',
+    tags: ['Community', 'Events', 'Collab'],
+    tldr: [
+      'Stride Run Club partnered with Only What\'s Needed, the company run by Revant Himatsingka, known online as Food Pharmer, on Saturday 8 August.',
+      'Runners checked in on the Stride web app at Hard Rock Cafe, St. Mark\'s Road, warmed up and ran 3 km through Cubbon Park with Revant.',
+      'Back at the cafe, jumping jacks, lunges and more filled a bingo card. A full card earned a protein shot at the Only What\'s Needed protein bar.',
+      'The morning closed with a Q&A with Food Pharmer about his journey and plans for the brand, then a group photo.',
+    ],
+    readingTimeMin: 3,
+    content: strideFoodPharmerRunContent,
+  },
+  {
     slug: 'stride-kyro-territory-run',
     title: 'Running Around in Circles (Literally) With the KYRO App',
     description:
       'Stride Run Club ran a team territory battle in Cubbon Park on the KYRO app, where closed loops claim ground and anyone can run over yours to take it.',
     publishedAt: '2026-08-23',
     author: {
-      name: 'Kushagra Gupta',
-      role: 'Tech Lead, Stride Run Club',
-      // The author's own Stride profile photo. Stored without the `?v=` cache
-      // buster the profile UI appends, so this always resolves to whatever
-      // avatar the account currently has rather than pinning one upload.
-      avatarUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/avatars/8bce4cab-ffae-4063-8ded-921cc3fc43c3.webp',
-      instagramUrl: 'https://www.instagram.com/kushagra.gupta.15/',
+      name: 'Sidharth Yadav',
+      role: 'Founder, Stride Run Club',
+      avatarUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/sidharth-yadav-dp.png',
+      instagramUrl: 'https://www.instagram.com/the_sid_way/',
     },
     coverUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-kyro-1.webp',
     ogImageUrl: 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/blogs/blog-kyro-og.webp',

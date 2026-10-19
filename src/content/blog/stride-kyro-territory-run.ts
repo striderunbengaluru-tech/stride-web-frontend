@@ -57,7 +57,7 @@ Team standings were not the only thing being counted. Once everybody was back at
 
 Back at Shiro we finished with a cool-down, a dance session that outlasted the cool-down, and an Asian breakfast spread I would happily have earned twice over.
 
-What stayed with me was how well the two halves fit. I work on the tech side of Stride, so a morning where the software and the workout were the same activity was not something I expected to enjoy this much. Nobody was carrying an app around the park. We were playing it with our legs.
+What stayed with me was how well the two halves fit. For Kushagra, the tech lead of Stride, a morning where the software and the workout were the same activity was not something he expected to enjoy this much. Nobody was carrying an app around the park. We were playing it with our legs.
 
 ## Try It Yourself
 
