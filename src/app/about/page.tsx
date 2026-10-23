@@ -47,7 +47,7 @@ const STATS = [
   { value: '5,754', label: 'runners in 2025' },
   { value: '63%', label: 'were first-timers' },
   { value: '97', label: 'community runs in 2025' },
-  { value: '52K+', label: 'on Instagram' },
+  { value: '55K+', label: 'on Instagram' },
 ] as const
 
 const jsonLd = graph([

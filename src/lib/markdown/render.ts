@@ -556,11 +556,11 @@ function partnershipsMarkdown(abs: Abs): MarkdownDoc {
   return {
     title: 'Partnerships — Stride Run Club',
     description:
-      "Brand partnerships with Bengaluru's most engaged running community — 52,000+ Instagram followers, 7,000+ athletes, 55+ brand partners.",
+      "Brand partnerships with Bengaluru's most engaged running community — 55,000+ Instagram followers, 10,000+ athletes, 55+ brand partners.",
     body: tidy([
       '# Partnerships — Stride Run Club',
       '',
-      "> Put your brand at every finish line in Bengaluru. 52,000+ Instagram followers, 7,000+ athletes, 55+ brand partners to date.",
+      "> Put your brand at every finish line in Bengaluru. 55,000+ Instagram followers, 10,000+ athletes, 55+ brand partners to date.",
       '',
       '## Why brands work with Stride',
       '',
@@ -694,7 +694,7 @@ function aboutMarkdown(abs: Abs): MarkdownDoc {
       '- **63%** of them were running with a club for the first time',
       '- **97** community runs held, at least one every week of the year',
       '- **300+** runners at a single event, at peak',
-      '- **52,000+** followers on Instagram',
+      '- **55,000+** followers on Instagram',
       '',
       '## What "Move as one" means',
       '',

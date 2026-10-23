@@ -352,7 +352,7 @@ export function getClubInfo(): PublicClubInfo {
       firstTimeRunnerShare2025: '63%',
       communityRuns2025: '97',
       peakAttendanceSingleRun: '300+',
-      instagramFollowers: '52000+',
+      instagramFollowers: '55000+',
       leadStriders: String(LEAD_STRIDERS.length),
       milestoneTiers: String(MILESTONE_TIERS.length),
     },

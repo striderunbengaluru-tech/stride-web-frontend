@@ -22,7 +22,7 @@ const CANONICAL_URL = 'https://www.strideclub.in/'
 export const metadata: Metadata = {
   title: "Stride Run Club Bengaluru - The 'Fittest Club' in India.",
   description:
-    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here. Join Stride Run Club.",
+    "Bengaluru's most engaged running community. 55,000+ followers, 10,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here. Join Stride Run Club.",
   keywords: [
     'Stride Run Club',
     'running club Bengaluru',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here.",
+      "Bengaluru's most engaged running community. 55,000+ followers, 10,000+ athletes, 97+ events a year. Whether you're chasing a PB or your first 5K, you belong here.",
     url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
+      "Bengaluru's most engaged running community. 55,000+ followers, 10,000+ athletes, 97+ events a year.",
     images: [OG_IMAGE],
   },
   alternates: {
@@ -98,7 +98,7 @@ const schemaOrg = graph([
     url: CANONICAL_URL,
     name: 'Stride Run Club Bengaluru — Move as One',
     description:
-      "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year.",
+      "Bengaluru's most engaged running community. 55,000+ followers, 10,000+ athletes, 97+ events a year.",
     image: OG_IMAGE,
     inLanguage: 'en-IN',
     isPartOf: { '@id': websiteId(SITE_ORIGIN) },

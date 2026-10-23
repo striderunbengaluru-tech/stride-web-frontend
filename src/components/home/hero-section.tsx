@@ -1,10 +1,15 @@
 import HeroContent from './hero-content'
 import { HeroBgSlideshow } from './hero-bg-slideshow'
 import { HeroMemberCta } from './hero-member-cta'
+import { findUpcoming } from './up-next-section'
+import { getPublishedEvents } from '@/lib/data/events'
 import heroData from '@/content/hero.json'
 
-const HeroSection = () => {
+// Async only to ask whether a run is coming up. Same tagged, revalidating
+// cache as the Up next section, so the homepage stays statically generated.
+const HeroSection = async () => {
   const { title } = heroData
+  const hasUpcoming = findUpcoming(await getPublishedEvents()).length > 0
 
   return (
     <div className='bg-stride-purple-primary'>
@@ -21,10 +26,9 @@ const HeroSection = () => {
           {title}
         </h1>
 
-        {/* Primary CTA — staging/preview only while membership is gated on
-            production, and only for signed-out visitors (resolved client-side
-            so the homepage stays static) */}
-        <HeroMemberCta />
+        {/* Primary CTA — the next event when there is one, otherwise the
+            membership pitch for signed-out visitors */}
+        <HeroMemberCta hasUpcoming={hasUpcoming} />
       </section>
 
       {/* ── Panel 2: Content ── */}
