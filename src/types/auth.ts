@@ -2,14 +2,15 @@ export const ROLES = {
   GUEST: 'GUEST',
   MEMBER: 'MEMBER',
   /**
-   * Run staff. Opens the admin portal, but only ever reaches the check-in
-   * screen — every other admin surface treats a LEAD as an outsider. Granted
-   * and revoked by an ADMIN only.
+   * Run staff. Opens the admin portal, but only reaches check-in and the
+   * Events tab — and on Events only lead-created events (events.owner_role =
+   * 'LEAD'); admin-created events are invisible to them. Every other admin
+   * surface treats a LEAD as an outsider. Granted and revoked by an ADMIN only.
    *
-   * Deliberately NOT a lesser admin: nothing that keys off ADMIN (the server
-   * actions in lib/actions/admin.ts, the /api/admin/* routes, the RLS policies
-   * on the admin tables, the last-admin protection) should ever match a LEAD.
-   * See lib/auth/admin-access.ts for the two guards that draw that line.
+   * Deliberately NOT a lesser admin: nothing that keys off ADMIN (products,
+   * users, races, the RLS policies on the admin tables, the last-admin
+   * protection) should ever match a LEAD. See lib/auth/admin-access.ts for the
+   * guards and lib/auth/event-access.ts for the event ownership rule.
    */
   LEAD: 'LEAD',
   ADMIN: 'ADMIN',

@@ -3,22 +3,24 @@
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { TrendingUp, CheckCircle2, UsersRound, Cake } from 'lucide-react'
+import { TrendingUp, UsersRound, Cake, UserPlus } from 'lucide-react'
 
 type WeeklyData = { week: string; registrations: number }
-type EventCheckInData = { name: string; confirmed: number; checkedIn: number }
+type WeeklyMembers = { week: string; members: number }
 type GenderSlice = { label: string; key: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY'; value: number }
 type AgeSlice = { bucket: '18-24' | '25-34' | '35-44' | '45+'; count: number }
 
 type Props = {
   weeklyRegistrations: WeeklyData[]
-  eventCheckIns: EventCheckInData[]
+  weeklyNewMembers: WeeklyMembers[]
   genderDistribution: GenderSlice[]
   ageDistribution: AgeSlice[]
 }
@@ -66,7 +68,7 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
-export function DashboardCharts({ weeklyRegistrations, eventCheckIns, genderDistribution, ageDistribution }: Props) {
+export function DashboardCharts({ weeklyRegistrations, weeklyNewMembers, genderDistribution, ageDistribution }: Props) {
   const genderTotal = genderDistribution.reduce((s, g) => s + g.value, 0)
   const ageTotal    = ageDistribution.reduce((s, a) => s + a.count, 0)
 
@@ -102,22 +104,21 @@ export function DashboardCharts({ weeklyRegistrations, eventCheckIns, genderDist
         )}
       </ChartCard>
 
-      {/* 2. Event check-in rates */}
-      <ChartCard title='Check-in rate by event' icon={<CheckCircle2 size={14} />}>
-        {eventCheckIns.length === 0 ? (
+      {/* 2. New members — a line beside the registrations bars, so a growth
+          push and its effect on sign-ups read side by side */}
+      <ChartCard title='New members — last 8 weeks' icon={<UserPlus size={14} />}>
+        {weeklyNewMembers.every(w => w.members === 0) ? (
           <div className='h-40 flex items-center justify-center'>
-            <p className='text-white/20 text-sm'>No events yet</p>
+            <p className='text-white/20 text-sm'>No new members in the last 8 weeks</p>
           </div>
         ) : (
           <ResponsiveContainer width='100%' height={180}>
-            <BarChart data={eventCheckIns} barSize={14} barGap={2}>
+            <LineChart data={weeklyNewMembers} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <XAxis
-                dataKey='name'
-                tick={{ fill: WHITE_30, fontSize: 10 }}
+                dataKey='week'
+                tick={{ fill: WHITE_30, fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
-                interval={0}
-                tickFormatter={v => (v as string).length > 10 ? (v as string).slice(0, 10) + '…' : v as string}
               />
               <YAxis
                 tick={{ fill: WHITE_30, fontSize: 11 }}
@@ -126,10 +127,17 @@ export function DashboardCharts({ weeklyRegistrations, eventCheckIns, genderDist
                 allowDecimals={false}
                 width={28}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: WHITE_10 }} />
-              <Bar dataKey='confirmed' fill={PURPLE} stroke={WHITE_30} strokeWidth={1} radius={[3, 3, 0, 0]} name='Confirmed' />
-              <Bar dataKey='checkedIn' fill={GREEN} radius={[3, 3, 0, 0]} name='Checked in' />
-            </BarChart>
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: WHITE_10 }} />
+              <Line
+                type='monotone'
+                dataKey='members'
+                stroke={GREEN}
+                strokeWidth={2}
+                dot={{ r: 3, fill: GREEN, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+                name='New members'
+              />
+            </LineChart>
           </ResponsiveContainer>
         )}
       </ChartCard>

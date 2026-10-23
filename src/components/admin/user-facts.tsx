@@ -1,5 +1,5 @@
 // Shared building blocks for the admin user views. Both /admin/users and the
-// attendee rows under /admin/registrations show the same person in the same
+// attendee rows under each event on /admin/events show the same person in the same
 // shape, so the avatar and the labelled-fact row live here rather than being
 // re-written per screen.
 

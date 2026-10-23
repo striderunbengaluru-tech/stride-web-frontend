@@ -5,31 +5,38 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   CalendarDays,
-  ClipboardList,
   ShoppingBag,
   Users,
   ScanLine,
   GraduationCap,
   Flag,
-  Activity,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
+import { StravaIcon } from '@/components/ui/brand-icons'
 import { ROLES, type Role } from '@/types/auth'
+
+/**
+ * Strava's own glyph — the one the footer uses — in a lucide-shaped wrapper so
+ * it sits in the same icon slot. `strokeWidth` is accepted and ignored: the
+ * brand mark is a filled path.
+ */
+function StravaNavIcon({ size, className }: { size?: number; strokeWidth?: number; className?: string }) {
+  return <StravaIcon size={size} className={className} />
+}
 
 const navLinks = [
   { href: '/admin',               label: 'Dashboard',      icon: LayoutDashboard, exact: true },
   { href: '/admin/events',        label: 'Events',         icon: CalendarDays },
   { href: '/admin/race-calendar', label: 'Race calendar',  icon: Flag },
-  { href: '/admin/registrations', label: 'Registrations',  icon: ClipboardList },
   { href: '/admin/products',      label: 'Products',       icon: ShoppingBag },
   { href: '/admin/users',         label: 'Users',          icon: Users },
   { href: '/admin/graduation',    label: 'Graduation',     icon: GraduationCap },
-  { href: '/admin/strava',        label: 'Strava',         icon: Activity },
+  { href: '/admin/strava',        label: 'Strava',         icon: StravaNavIcon },
   { href: '/admin/check-in',      label: 'Check-in',       icon: ScanLine },
 ]
 
-/** The only route a LEAD may reach. Kept in step with lib/auth/admin-access. */
-const LEAD_LINKS = ['/admin/check-in']
+/** The routes a LEAD may reach. Kept in step with lib/auth/admin-access. */
+const LEAD_LINKS = ['/admin/events', '/admin/check-in']
 
 export function AdminNav({ role }: { role: Role }) {
   const pathname = usePathname()

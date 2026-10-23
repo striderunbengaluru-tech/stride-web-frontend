@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { AdminNav } from '@/components/admin/admin-nav'
+import { AdminSaveToast } from '@/components/admin/admin-save-toast'
 import { requirePortalAccess } from '@/lib/auth/admin-access'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +20,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* pt-28 clears the fixed main site navbar (top-4 + min-h-[60px] = 76px, +36px margin) */}
       <div className='pt-28'>
         <AdminNav role={role} />
+        {/* Success toast after an event or race save redirect */}
+        <Suspense fallback={null}>
+          <AdminSaveToast />
+        </Suspense>
         <main className='w-full px-4 sm:px-6 py-8'>
           {children}
         </main>

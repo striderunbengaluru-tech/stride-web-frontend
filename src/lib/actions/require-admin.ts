@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
+import { ROLES, type Role } from '@/types/auth'
 
 /**
  * Gate every admin write. Returns the acting admin plus a display-name snapshot
@@ -33,4 +34,33 @@ export async function requireAdmin() {
     'Admin'
 
   return { user, actorName }
+}
+
+/**
+ * Gate every event write (create, update, delete, approve/reject, coupons).
+ * Admits ADMIN and LEAD; every caller except create must then confirm the
+ * specific event with canManageEventId(role, eventId), because a LEAD may only
+ * touch lead-created events. Role is read fresh from the DB, as above.
+ */
+export async function requireEventManager(): Promise<{ actorName: string; role: Role }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/')
+
+  const { data: row } = await adminClient
+    .from('users')
+    .select('role, full_name, username')
+    .eq('id', user.id)
+    .single()
+
+  const role = row?.role as Role | undefined
+  if (role !== ROLES.ADMIN && role !== ROLES.LEAD) redirect('/')
+
+  const actorName: string =
+    (row?.full_name as string | null)?.trim() ||
+    (row?.username as string | null) ||
+    user.email ||
+    'Staff'
+
+  return { actorName, role }
 }

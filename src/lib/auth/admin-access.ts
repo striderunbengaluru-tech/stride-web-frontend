@@ -6,15 +6,17 @@ import { ROLES, isPortalRole, LEAD_HOME, type Role } from '@/types/auth'
 /**
  * The two gates every admin surface goes through.
  *
- * There are exactly two levels of access to the portal and it matters that
- * they stay explicit rather than being re-derived page by page:
+ * The levels of access to the portal, and it matters that they stay explicit
+ * rather than being re-derived page by page:
  *
  *   requirePortalAccess()  ADMIN or LEAD — may load the portal shell
- *   requireFullAdmin()     ADMIN only    — everything except check-in
+ *   requireEventsAccess()  ADMIN or LEAD — the Events pages; a LEAD then sees
+ *                          only lead-created events (lib/auth/event-access.ts)
+ *   requireFullAdmin()     ADMIN only    — everything else except check-in
  *
- * A LEAD is run staff: they check athletes in at an event and nothing else.
- * They are not a junior admin, so a page that forgets to call the right guard
- * must fail closed. That is why `requireFullAdmin` is a positive assertion each
+ * A LEAD is run staff: they check athletes in and run lead-created events, and
+ * nothing else. They are not a junior admin, so a page that forgets to call the
+ * right guard must fail closed. That is why `requireFullAdmin` is a positive assertion each
  * page makes for itself rather than something the layout infers — the layout
  * cannot see which route rendered beneath it, and a shared parent gate that
  * silently admits two different roles is exactly how a portal grows a hole.
@@ -77,7 +79,17 @@ export async function requireFullAdmin(): Promise<PortalViewer> {
 }
 
 /**
- * Check-in, the one surface a LEAD shares with an ADMIN.
+ * The Events pages. Admits ADMIN and LEAD; the page must then narrow a LEAD to
+ * lead-created events with canManageEvent / ownerRoleFilter.
+ */
+export async function requireEventsAccess(): Promise<PortalViewer> {
+  const viewer = await readViewer()
+  if (!viewer || !isPortalRole(viewer.role)) redirect('/')
+  return viewer
+}
+
+/**
+ * Check-in, a surface a LEAD shares with an ADMIN.
  *
  * Returns null instead of redirecting so callers embedded in a page render
  * (the wallet-pass scan handler) can decline the mutation without hijacking

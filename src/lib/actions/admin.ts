@@ -6,7 +6,9 @@ import { revalidatePath, updateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
 import { adminClient } from '@/lib/supabase/admin'
-import { requireAdmin } from '@/lib/actions/require-admin'
+import { requireAdmin, requireEventManager } from '@/lib/actions/require-admin'
+import { canManageEventId } from '@/lib/auth/event-access'
+import { withSaveNotice } from '@/lib/admin/save-notice'
 import { firstFormIssue } from '@/lib/utils/form-issues'
 import { storagePathsUnder } from '@/lib/utils/storage-paths'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
@@ -163,12 +165,19 @@ async function validateCapacityReduction(
 
 // ── Events ───────────────────────────────────────────────────────────────────
 
+// Event writes admit ADMIN and LEAD (requireEventManager); a LEAD may only touch
+// lead-created events, so every write but create re-checks the specific event
+// with canManageEventId before reading or changing anything. Same message
+// whether the event is missing or merely not theirs — a lead learns nothing
+// about admin events from it.
+const EVENT_NOT_MANAGEABLE = 'That event doesn’t exist or isn’t one you can manage.'
+
 // Signature note: `_prev` is useActionState's previous-state argument. The form
 // binds these with useActionState so a rejection can reach the UI as a toast
 // without a page reload — the old redirect-with-?slug_error round trip threw
 // away unsaved markdown and freshly uploaded banners.
 export async function createEventAction(_prev: EventActionResult, formData: FormData): Promise<EventActionResult> {
-  const { actorName } = await requireAdmin()
+  const { actorName, role } = await requireEventManager()
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
@@ -225,10 +234,13 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
     // by a hand-posted field of the same name.
     created_by: actorName,
     updated_by: actorName,
+    // Ownership, stamped once and never updated. A LEAD's event is one every
+    // lead may manage; an ADMIN's is invisible to leads.
+    owner_role: role,
   })
 
   revalidateEventCaches(slug)
-  redirect('/admin/events')
+  redirect(withSaveNotice('/admin/events', 'event-created'))
 }
 
 // Purge every cache layer that serves event data: the tag-cached reads in
@@ -259,7 +271,8 @@ function revalidateEventCaches(slug: string | null) {
 }
 
 export async function updateEventAction(id: string, _prev: EventActionResult, formData: FormData): Promise<EventActionResult> {
-  const { actorName } = await requireAdmin()
+  const { actorName, role } = await requireEventManager()
+  if (!(await canManageEventId(role, id))) return { error: EVENT_NOT_MANAGEABLE }
 
   const raw = Object.fromEntries(formData)
   const parsed = eventSchema.safeParse(raw)
@@ -319,11 +332,14 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   // is visible to runners immediately rather than up to 60s later.
   revalidateEventCaches(updated?.slug ?? null)
   updateTag(eventRegsTag(id))
-  redirect('/admin/events')
+  redirect(withSaveNotice('/admin/events', 'event-updated'))
 }
 
 export async function deleteEventAction(id: string): Promise<void> {
-  await requireAdmin()
+  const { role } = await requireEventManager()
+  // Refused quietly: the button only renders on events the viewer can manage,
+  // so reaching here otherwise means a hand-crafted call.
+  if (!(await canManageEventId(role, id))) redirect('/admin/events')
 
   // Fetch banner images (for storage cleanup) and slug (for cache purge)
   // before deleting the row
@@ -378,13 +394,14 @@ type Preflight =
   | { ok: false; error: string }
   | { ok: true; actorName: string; ids: string[] }
 
-/** Shared guard: admin session, then a sane, deduped id list scoped to one event. */
+/** Shared guard: admin or lead session that may manage this event, then a sane, deduped id list scoped to it. */
 async function decisionPreflight(eventId: string, ids: string[]): Promise<Preflight> {
-  const { actorName } = await requireAdmin()
+  const { actorName, role } = await requireEventManager()
 
   if (typeof eventId !== 'string' || !eventId.trim()) {
     return { ok: false, error: 'Missing event.' }
   }
+  if (!(await canManageEventId(role, eventId))) return { ok: false, error: EVENT_NOT_MANAGEABLE }
 
   const clean = [...new Set((Array.isArray(ids) ? ids : []).filter(
     (id): id is string => typeof id === 'string' && id.trim().length > 0,
@@ -458,7 +475,6 @@ export async function approveRegistrationsAction(eventId: string, ids: string[])
   // so the admin's next read would still see the stale confirmed count.
   updateTag(eventRegsTag(eventId))
   if (context.slug) revalidatePath(`/events/${context.slug}`)
-  revalidatePath('/admin/registrations')
   revalidatePath('/admin/events')
 
   if (approved.length > 0) {
@@ -519,7 +535,6 @@ export async function rejectRegistrationsAction(eventId: string, ids: string[]):
 
   // No eventRegsTag purge: rejecting changes no confirmed count and frees no
   // package spot, so nothing the public event page caches has moved.
-  revalidatePath('/admin/registrations')
   revalidatePath('/admin/events')
 
   const context = await eventDecisionContext(eventId)
@@ -619,7 +634,8 @@ export async function updateUserRoleAction(userId: string, role: string): Promis
 export type CouponActionResult = { error: string } | void
 
 /** The slug is needed to purge the event page's caches after any coupon write. */
-async function eventSlugForCoupon(couponId: string): Promise<string | null> {
+/** The coupon's event, or null when the coupon (or its event) is gone. */
+async function eventForCoupon(couponId: string): Promise<{ id: string; slug: string | null } | null> {
   const { data } = await adminClient
     .from('event_coupons')
     .select('event_id')
@@ -629,17 +645,18 @@ async function eventSlugForCoupon(couponId: string): Promise<string | null> {
 
   const { data: event } = await adminClient
     .from('events')
-    .select('slug')
+    .select('id, slug')
     .eq('id', data.event_id)
     .maybeSingle()
-  return event?.slug ?? null
+  return event ? { id: event.id as string, slug: (event.slug as string | null) ?? null } : null
 }
 
 export async function upsertEventCouponAction(
   eventId: string,
   input: { id?: string; code: string; percent: number },
 ): Promise<CouponActionResult> {
-  await requireAdmin()
+  const { role } = await requireEventManager()
+  if (!(await canManageEventId(role, eventId))) return { error: EVENT_NOT_MANAGEABLE }
 
   const parsed = eventCouponSchema.safeParse(input)
   if (!parsed.success) {
@@ -676,7 +693,9 @@ export async function upsertEventCouponAction(
   }
 
   const { error } = id
-    ? await adminClient.from('event_coupons').update(row).eq('id', id)
+    // Scoped to the event as well as the id: the ownership check above was on
+    // `eventId`, so a coupon id from another event must match nothing here.
+    ? await adminClient.from('event_coupons').update(row).eq('id', id).eq('event_id', eventId)
     : await adminClient.from('event_coupons').insert({ ...row, id: nanoid(), active: true })
 
   if (error) {
@@ -703,9 +722,10 @@ export async function setCouponActiveAction(
   couponId: string,
   active: boolean,
 ): Promise<CouponActionResult> {
-  await requireAdmin()
-
-  const slug = await eventSlugForCoupon(couponId)
+  const { role } = await requireEventManager()
+  const event = await eventForCoupon(couponId)
+  if (!event || !(await canManageEventId(role, event.id))) return { error: EVENT_NOT_MANAGEABLE }
+  const slug = event.slug
 
   const { error } = await adminClient
     .from('event_coupons')
@@ -727,9 +747,10 @@ export async function setCouponActiveAction(
  * registration row, not here, so deleting a coupon never rewrites a receipt.
  */
 export async function deleteEventCouponAction(couponId: string): Promise<CouponActionResult> {
-  await requireAdmin()
-
-  const slug = await eventSlugForCoupon(couponId)
+  const { role } = await requireEventManager()
+  const event = await eventForCoupon(couponId)
+  if (!event || !(await canManageEventId(role, event.id))) return { error: EVENT_NOT_MANAGEABLE }
+  const slug = event.slug
 
   const { error } = await adminClient.from('event_coupons').delete().eq('id', couponId)
   if (error) {

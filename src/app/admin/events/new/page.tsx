@@ -1,12 +1,13 @@
 import { EventForm } from '@/components/admin/event-form'
 import { createEventAction } from '@/lib/actions/admin'
-import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { requireEventsAccess } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'New Event — Admin' }
 
 export default async function NewEventPage(){
-  // ADMIN only. A LEAD reaching this route is redirected to check-in.
-  await requireFullAdmin()
+  // ADMIN or LEAD. createEventAction stamps the creator's role as owner_role,
+  // which is what makes a lead's event manageable by other leads.
+  await requireEventsAccess()
 
   return (
     <div>
