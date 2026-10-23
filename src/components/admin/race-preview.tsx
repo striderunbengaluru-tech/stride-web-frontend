@@ -71,10 +71,7 @@ function PreviewContent(props: Omit<RacePreviewProps, 'slug'> & { layout: ViewMo
 
   const contentBlock = (
     <div className='px-4 sm:px-5 pt-5 pb-6'>
-      <span className='inline-flex items-center gap-1 rounded-full bg-white/8 border border-white/15 px-2 py-0.5 text-[9px] font-bold font-mono uppercase tracking-widest text-white/60'>
-        Third-party race
-      </span>
-      <h2 className='text-2xl font-bold text-white leading-tight tracking-tight mt-2'>
+      <h2 className='text-2xl font-bold text-white leading-tight tracking-tight'>
         {name || <span className='text-white/20'>Your race name</span>}
       </h2>
       {organizer.trim() && (

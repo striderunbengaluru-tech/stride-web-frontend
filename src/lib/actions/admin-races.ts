@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { withSaveNotice } from '@/lib/admin/save-notice'
 import { revalidatePath, updateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { adminClient } from '@/lib/supabase/admin'
@@ -94,7 +95,7 @@ export async function createRaceAction(_prev: RaceActionResult, formData: FormDa
   }
 
   revalidateRaceCaches(slug)
-  redirect(ADMIN_RACES_PATH)
+  redirect(withSaveNotice(ADMIN_RACES_PATH, 'race-created'))
 }
 
 /** The slug is fixed at creation — renaming a race never breaks a shared link. */
@@ -116,7 +117,7 @@ export async function updateRaceAction(id: string, _prev: RaceActionResult, form
   }
 
   revalidateRaceCaches(updated?.slug ?? null)
-  redirect(ADMIN_RACES_PATH)
+  redirect(withSaveNotice(ADMIN_RACES_PATH, 'race-updated'))
 }
 
 export async function deleteRaceAction(id: string): Promise<void> {

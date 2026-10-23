@@ -6,7 +6,6 @@ import { toRaceCardData, distinctCities, type RaceCardData } from '@/lib/races/p
 import { istDayKey } from '@/lib/utils/ist'
 import { RaceCalendarClient } from '@/components/race-calendar/race-calendar-client'
 import { RaceList } from '@/components/race-calendar/race-list'
-import { NextRaceHero } from '@/components/race-calendar/next-race-hero'
 import { TrackBackdrop } from '@/components/ui/track-backdrop'
 import { PageHeader } from '@/components/ui/page-header'
 import { JsonLd } from '@/components/seo/json-ld'
@@ -64,7 +63,6 @@ export default async function RaceCalendarPage() {
   // and no-JS visitors still receive every upcoming race.
   const upcoming = races.filter(r => r.dayKey >= todayKey)
   const past = races.filter(r => r.dayKey < todayKey).reverse()
-  const nextRace = upcoming[0] ?? null
   const cityCount = cities.length
 
   return (
@@ -77,7 +75,7 @@ export default async function RaceCalendarPage() {
           backHref='/'
           eyebrow='Partner races'
           title='Race Calendar'
-          description='Stride Run Club has partnered with these races. Use our coupon code when you register and get an exciting discount on your entry.'
+          description='Stride Run Club has partnered with these races. Get discounts using our coupon code.'
           meta={
             upcoming.length > 0 && (
               <>
@@ -87,12 +85,6 @@ export default async function RaceCalendarPage() {
             )
           }
         />
-
-        {nextRace && (
-          <div className='mb-12 sm:mb-16'>
-            <NextRaceHero race={nextRace} todayKey={todayKey} nowIso={nowIso} />
-          </div>
-        )}
 
         <Suspense fallback={<RaceList upcoming={upcoming} past={past} todayKey={todayKey} nowIso={nowIso} />}>
           <RaceCalendarClient races={races} cities={cities} todayKey={todayKey} nowIso={nowIso} />

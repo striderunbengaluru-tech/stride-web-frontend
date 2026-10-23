@@ -18,7 +18,7 @@ export default function SocialSection() {
           Join the movement
         </p>
         <p className='text-copy-white/60 text-base md:text-lg mb-10'>
-          <span className='font-mono'>7,000+</span> athletes. <span className='font-mono'>97</span> runs. Every week of <span className='font-mono'>2025</span>.
+          <span className='font-mono'>10,000+</span> athletes. <span className='font-mono'>97</span> runs. Every week of <span className='font-mono'>2025</span>.
         </p>
 
         <div className='flex flex-col sm:flex-row items-center justify-center gap-4'>

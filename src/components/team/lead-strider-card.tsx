@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useReducedMotion } from 'framer-motion'
 import { InstagramIcon, StravaIcon } from '@/components/ui/brand-icons'
 import { striderImageUrls, type LeadStrider } from '@/content/lead-striders'
 import { cn } from '@/lib/utils'
@@ -64,12 +64,19 @@ type Props = {
 }
 
 /**
+ * Which pose is showing and which one it is fading in over. Tracking the
+ * outgoing pose lets it stay fully opaque underneath until the incoming one has
+ * finished fading in — a symmetric crossfade dips both to ~50% mid-way and lets
+ * whatever is behind them flash through.
+ */
+type Frame = { current: number; previous: number | null }
+
+/**
  * One Lead Strider: portrait that auto-cycles through their poses, then name,
  * role, bio and social links.
  *
- * `images[0]` (hand-folded + smile) is painted as a static underlay beneath the
- * animated stack, so a pose whose bytes have not arrived yet crossfades over
- * that portrait instead of over an empty box.
+ * Every pose stays mounted for the card's lifetime, so each image is fetched and
+ * decoded once up front rather than remounted (and re-requested) on every tick.
  */
 export function LeadStriderCard({
   strider,
@@ -78,7 +85,8 @@ export function LeadStriderCard({
   className,
 }: Props) {
   const poses = striderImageUrls(strider)
-  const [pose, setPose] = useState(0)
+  const [frame, setFrame] = useState<Frame>({ current: 0, previous: null })
+  const pose = frame.current
   const [paused, setPaused] = useState(false)
   // Bumped on a manual pose change so the timer re-arms and the reader gets a
   // full dwell on the pose they picked, not the remainder of the current tick.
@@ -95,7 +103,11 @@ export function LeadStriderCard({
     const start = setTimeout(() => {
       armedOnce.current = true
       interval = setInterval(
-        () => setPose((i) => (i + 1) % poses.length),
+        () =>
+          setFrame((f) => ({
+            current: (f.current + 1) % poses.length,
+            previous: f.current,
+          })),
         CYCLE_MS
       )
     }, delay)
@@ -106,7 +118,8 @@ export function LeadStriderCard({
   }, [cycling, cardIndex, poses.length, manualTick])
 
   const showPose = (next: number) => {
-    setPose(next)
+    if (next === pose) return
+    setFrame({ current: next, previous: pose })
     setManualTick((t) => t + 1)
   }
 
@@ -130,38 +143,26 @@ export function LeadStriderCard({
     >
       {/* 3:4 portrait, matching the event-poster ratio used elsewhere. */}
       <div className='relative aspect-3/4 w-full bg-white/5'>
-        {/* Resting frame — always present, so it backs every crossfade. */}
-        <Image
-          src={poses[0]}
-          alt={alt}
-          fill
-          sizes='(min-width: 1024px) 33vw, 50vw'
-          priority={priority}
-          className='object-cover'
-        />
-
-        {poses.length > 1 && (
-          <AnimatePresence>
-            <motion.div
-              key={pose}
-              className='absolute inset-0'
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.7, ease: 'easeInOut' }}
-            >
-              <Image
-                src={poses[pose]}
-                alt=''
-                aria-hidden='true'
-                fill
-                sizes='(min-width: 1024px) 33vw, 50vw'
-                loading='lazy'
-                className='object-cover'
-              />
-            </motion.div>
-          </AnimatePresence>
-        )}
+        {/* Incoming pose on top, fading in; outgoing pose held opaque beneath
+            it; every other pose hidden underneath both. */}
+        {poses.map((src, i) => (
+          <Image
+            key={src}
+            src={src}
+            alt={i === 0 ? alt : ''}
+            aria-hidden={i === 0 ? undefined : true}
+            fill
+            sizes='(min-width: 1024px) 33vw, 50vw'
+            priority={priority && i === 0}
+            className={cn(
+              'object-cover',
+              i === pose &&
+                'z-20 opacity-100 transition-opacity duration-700 ease-in-out motion-reduce:transition-none',
+              i === frame.previous && 'z-10 opacity-100',
+              i !== pose && i !== frame.previous && 'z-0 opacity-0'
+            )}
+          />
+        ))}
       </div>
 
       {/* Pose picker. The bar is 2px of ink inside a 44px touch target. */}

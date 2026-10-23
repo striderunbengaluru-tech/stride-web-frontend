@@ -176,7 +176,7 @@ export function RacePopover({ state, todayKey, nowIso, onClose, onPointerEnter, 
                   </p>
                 )}
               </div>
-              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} discountPercent={race.discountPercent} open={open} layout='compact' />
+              <RaceDetailCtas registrationUrl={race.registrationUrl} couponCode={race.couponCode} discountPercent={race.discountPercent} open={open} />
               <Link
                 href={`/race-calendar/${race.slug}`}
                 prefetch={false}

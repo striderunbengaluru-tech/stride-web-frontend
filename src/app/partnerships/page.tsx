@@ -27,11 +27,11 @@ const CANONICAL_URL = 'https://www.strideclub.in/partnerships/'
 export const metadata: Metadata = {
   title: "Partner With India's Fittest Running Community | Stride Run Club",
   description:
-    "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Put your brand at every finish line in Bengaluru with India's most engaged running community.",
+    "55,000+ Instagram followers. 10,000+ athletes. 55+ brand partners. Put your brand at every finish line in Bengaluru with India's most engaged running community.",
   openGraph: {
     title: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
-      "52,000+ followers. 7,000+ athletes. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
+      "55,000+ followers. 10,000+ athletes. 55+ brand partners. Authentic partnerships with Bengaluru's most engaged fitness community.",
     url: CANONICAL_URL,
     siteName: 'Stride Run Club',
     images: [
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Partner With India's Fittest Running Community",
     description:
-      "52,000+ followers. 7,000+ athletes. 55+ brands. Authentic partnerships with Bengaluru's most engaged fitness community.",
+      "55,000+ followers. 10,000+ athletes. 55+ brands. Authentic partnerships with Bengaluru's most engaged fitness community.",
     images: [OG_IMAGE],
   },
   alternates: {
@@ -74,7 +74,7 @@ const schemaOrg = graph([
     url: CANONICAL_URL,
     name: "Partner With India's Fittest Running Community | Stride Run Club",
     description:
-      "52,000+ Instagram followers. 7,000+ weekly athletes. 55+ brand partners. Brand partnerships with Bengaluru's most engaged fitness community.",
+      "55,000+ Instagram followers. 10,000+ athletes. 55+ brand partners. Brand partnerships with Bengaluru's most engaged fitness community.",
     image: OG_IMAGE,
     inLanguage: 'en-IN',
     isPartOf: { '@id': websiteId(SITE_ORIGIN) },

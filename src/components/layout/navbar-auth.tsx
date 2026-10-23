@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useSyncExternalStore } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
 import { hasSessionCookie } from '@/lib/auth/session-cache'
-import { NavbarMemberCta } from './navbar-member-cta'
+import { GuestMenu } from './guest-menu'
 import { HideOnAdminRoute } from './navbar-gate'
 
 // UserMenu statically imports the Supabase browser client (for sign-out), and
@@ -46,7 +46,8 @@ function useHasSessionCookie(): boolean {
 // Client auth island for the static navbar shell. While a signed-in visitor's
 // session and profile resolve (supabase-js lazy-load + one profile query),
 // shows a skeleton of the user menu; signed-out visitors resolve within a frame
-// and see the CTA pair. Display-only — authorization is enforced server-side.
+// and see Partner With Us plus the guest menu. Display-only — authorization is
+// enforced server-side.
 export function NavbarAuth() {
   const { status, navProfile } = useAuth()
   const likelySignedIn = useHasSessionCookie()
@@ -68,17 +69,15 @@ export function NavbarAuth() {
 
   return (
     <HideOnAdminRoute>
-      <div className='hidden md:flex items-center'>
-        {/* Secondary to the Become-a-Member CTA that sits beside it */}
+      <div className='flex items-center gap-2.5'>
         <Link
           href='/partnerships'
-          className='inline-flex items-center font-bold px-4 py-2 rounded-md text-sm transition-all duration-150 bg-white/10 backdrop-blur-md border border-white/15 text-white hover:border-stride-yellow-accent/50'
+          className='hidden md:inline-flex items-center font-bold px-4 py-2 rounded-md text-sm transition-all duration-150 bg-white/10 backdrop-blur-md border border-white/15 text-white hover:border-stride-yellow-accent/50'
         >
           Partner With Us
         </Link>
-        {/* Reveals itself only once the homepage hero CTA scrolls out of
-            view — the same CTA never shows twice in one fold */}
-        <NavbarMemberCta />
+        {/* Become a Member and the site links live in here */}
+        <GuestMenu />
       </div>
     </HideOnAdminRoute>
   )

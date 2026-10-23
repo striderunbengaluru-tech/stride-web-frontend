@@ -1,9 +1,14 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
-import { SlidersHorizontal, X, Check } from 'lucide-react'
+import { SlidersHorizontal, X, Check, List, CalendarDays } from 'lucide-react'
 import { RACE_DISTANCES, RACE_DISTANCE_KEYS, OTHER_DISTANCE_KEY } from '@/types/race'
-import type { RaceWindow } from './use-race-calendar-params'
+import type { RaceView, RaceWindow } from './use-race-calendar-params'
+
+const VIEWS: { key: RaceView; label: string; icon: typeof List }[] = [
+  { key: 'list', label: 'List', icon: List },
+  { key: 'month', label: 'Calendar', icon: CalendarDays },
+]
 
 const WINDOWS: { key: RaceWindow; label: string }[] = [
   { key: 'all', label: 'All upcoming' },
@@ -12,6 +17,8 @@ const WINDOWS: { key: RaceWindow; label: string }[] = [
 ]
 
 type Props = {
+  view: RaceView
+  onViewChange: (view: RaceView) => void
   selectedDistances: string[]
   onToggleDistance: (key: string) => void
   /** Whether any race carries a custom distance — the "Other" option is pointless otherwise. */
@@ -38,13 +45,14 @@ const optionClass = (active: boolean) =>
   }`
 
 /**
- * One "Filters" control that opens a panel — a dropdown under the button on
- * wide screens, a bottom sheet on phones — with distance, city and date
- * window inside. What is active shows as removable chips beside the button,
- * so the page never needs to display every option at once.
+ * One "View & filters" control that opens a panel — a dropdown under the
+ * button on wide screens, a bottom sheet on phones — with the list/calendar
+ * switch, distance, city and date window inside. Active filters show as
+ * removable chips beside the button, so the page never needs to display every
+ * option at once.
  */
 export function RaceFilters({
-  selectedDistances, onToggleDistance, hasOther, city, cities, onCityChange, when, onWhenChange, showWindow, onClear,
+  view, onViewChange, selectedDistances, onToggleDistance, hasOther, city, cities, onCityChange, when, onWhenChange, showWindow, onClear,
 }: Props) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -72,6 +80,26 @@ export function RaceFilters({
 
   const panel = (
     <div className='space-y-6'>
+      <fieldset>
+        <legend className='text-white text-sm font-semibold mb-3'>View</legend>
+        <div className='flex flex-wrap gap-2'>
+          {VIEWS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type='button'
+              onClick={() => onViewChange(key)}
+              aria-pressed={view === key}
+              toolname={`show_races_as_${key}`}
+              tooldescription={`Show the race calendar as a ${label.toLowerCase()}`}
+              className={optionClass(view === key)}
+            >
+              <Icon size={14} aria-hidden='true' />
+              {label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
       <fieldset>
         <legend className='text-white text-sm font-semibold mb-3'>Distance</legend>
         <div className='flex flex-wrap gap-2'>
@@ -152,7 +180,7 @@ export function RaceFilters({
         }`}
       >
         <SlidersHorizontal size={15} aria-hidden='true' />
-        Filters
+        View &amp; filters
         {activeCount > 0 && (
           <span className='inline-flex items-center justify-center rounded-full bg-stride-yellow-accent text-copy-black text-[11px] font-black min-w-5 h-5 px-1.5 tabular-nums'>
             {activeCount}
@@ -181,8 +209,8 @@ export function RaceFilters({
         <>
           {/* Phones: sheet from the bottom over a dim backdrop */}
           <div className='sm:hidden fixed inset-0 z-50 flex flex-col justify-end'>
-            <button type='button' onClick={() => setOpen(false)} aria-label='Close filters' className='absolute inset-0 bg-black/60' />
-            <div id={panelId} role='dialog' aria-label='Filters' className='relative rounded-t-2xl bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/15 px-5 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[80dvh] overflow-y-auto shadow-2xl'>
+            <button type='button' onClick={() => setOpen(false)} aria-label='Close view and filters' className='absolute inset-0 bg-black/60' />
+            <div id={panelId} role='dialog' aria-label='View and filters' className='relative rounded-t-2xl bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/15 px-5 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[80dvh] overflow-y-auto shadow-2xl'>
               {panel}
             </div>
           </div>
@@ -190,7 +218,7 @@ export function RaceFilters({
           <div
             id={panelId}
             role='dialog'
-            aria-label='Filters'
+            aria-label='View and filters'
             className='hidden sm:block absolute right-0 top-full mt-2 z-40 w-[26rem] max-w-[calc(100vw-2rem)] rounded-xl bg-stride-purple-primary/95 backdrop-blur-xl border border-white/15 shadow-2xl p-5'
           >
             {panel}

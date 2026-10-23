@@ -6,6 +6,8 @@ import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronD
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
+import { EventRegistrationsPanel } from '@/components/admin/event-registrations-panel'
+import type { EventWithAttendees } from '@/types/admin-registrations'
 
 export type AdminEventRow = {
   id: string
@@ -138,7 +140,13 @@ function DeleteModal({ event, onClose }: { event: AdminEventRow; onClose: () => 
   )
 }
 
-export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
+type Props = {
+  events: AdminEventRow[]
+  /** Each event's attendees, keyed by event id — shown when its row is expanded. */
+  registrations: Record<string, EventWithAttendees>
+}
+
+export function EventsAdminClient({ events, registrations }: Props) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [deleteTarget, setDeleteTarget] = useState<AdminEventRow | null>(null)
@@ -245,7 +253,7 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       )}
                       {event.inviteOnly && (
                         <span
-                          title='Invite-only: registering is a free application you approve in Registrations.'
+                          title='Invite-only: registering is a free application you approve under this event’s registrations.'
                           className='flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-stride-yellow-accent/15 text-stride-yellow-accent shrink-0'
                         >
                           <Star size={10} className='fill-stride-yellow-accent' aria-hidden='true' />
@@ -263,7 +271,7 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                       )}
                       {event.appliedCount > 0 && (
                         <span
-                          title='Applications waiting on a decision. Approve or reject them in Registrations → by event.'
+                          title='Applications waiting on a decision. Expand this event to approve or reject them.'
                           className='text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 shrink-0'
                         >
                           {event.appliedCount} AWAITING
@@ -338,7 +346,7 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : event.id)}
                       className='p-2 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/5 transition-colors'
-                      aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                      aria-label={isExpanded ? 'Hide registrations' : 'Show registrations'}
                     >
                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
@@ -348,7 +356,7 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : event.id)}
                     className='sm:hidden p-2 rounded-lg text-white/25 hover:text-white/60 transition-colors shrink-0'
-                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                    aria-label={isExpanded ? 'Hide registrations' : 'Show registrations'}
                   >
                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </button>
@@ -371,7 +379,13 @@ export function EventsAdminClient({ events }: { events: AdminEventRow[] }) {
                   </div>
                 </div>
 
-                {/* Expanded detail */}
+                {/* Expanded: registrations first — what an admin opens a row for —
+                    then the event's own details */}
+                {isExpanded && registrations[event.id] && (
+                  <div className='border-t border-white/8'>
+                    <EventRegistrationsPanel event={registrations[event.id]} />
+                  </div>
+                )}
                 {isExpanded && (
                   <div className='border-t border-white/8 px-4 py-4 bg-white/[0.02] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs'>
                     <div>

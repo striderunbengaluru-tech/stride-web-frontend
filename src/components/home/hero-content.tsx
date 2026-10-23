@@ -6,9 +6,9 @@ import { AnimatedCounter } from '@/components/ui/animated-counter'
 import heroData from '@/content/hero.json'
 
 const STATS = [
-  { to: 52,   suffix: 'K+', formatLocale: false, label: 'Instagram Followers' },
-  { to: 6,    suffix: 'K+', formatLocale: false, label: 'WhatsApp Community'  },
-  { to: 7000, suffix: '+',  formatLocale: true,  label: 'Athletes Impacted'   },
+  { to: 55,    suffix: 'K+', formatLocale: false, label: 'Instagram Followers' },
+  { to: 7,     suffix: 'K+', formatLocale: false, label: 'WhatsApp Community'  },
+  { to: 10000, suffix: '+',  formatLocale: true,  label: 'Athletes Impacted'   },
   { to: 97,   suffix: '+',  formatLocale: false, label: 'Events per Year'     },
   { to: 55,   suffix: '+',  formatLocale: false, label: 'Brand Partners'      },
 ]
@@ -60,7 +60,7 @@ export default function HeroContent() {
         viewport={{ once: true, margin: '-60px' }}
         className='border-t border-white/10'
       >
-        <div className='flex flex-wrap justify-center pt-10'>
+        <div className='flex flex-wrap lg:flex-nowrap justify-center pt-10'>
           {STATS.map(({ to, suffix, formatLocale, label }, i) => (
             <motion.div
               key={label}
@@ -68,13 +68,13 @@ export default function HeroContent() {
               initial='hidden'
               whileInView='show'
               viewport={{ once: true, margin: '-60px' }}
-              className='flex flex-col items-center text-center py-6 px-3 basis-1/2 sm:basis-1/3 lg:basis-1/5'
+              className='flex flex-col items-center text-center py-6 px-3 basis-1/2 sm:basis-1/3 lg:flex-1 lg:basis-0 lg:min-w-0'
             >
               <AnimatedCounter
                 to={to}
                 suffix={suffix}
                 formatLocale={formatLocale}
-                className='text-4xl lg:text-5xl font-bold text-white tabular-nums font-mono leading-none'
+                className='text-4xl xl:text-5xl font-bold text-white tabular-nums font-mono leading-none whitespace-nowrap'
               />
               <div className='w-6 h-px bg-stride-yellow-accent/50 my-3' />
               <p className='text-white/55 text-xs font-mono uppercase tracking-[0.12em] leading-snug text-balance'>{label}</p>

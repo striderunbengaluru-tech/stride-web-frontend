@@ -20,6 +20,7 @@ import { dobError, requiresGuardianConsent } from '@/lib/utils/age'
 import { formatRupees, priceLabel as priceOf } from '@/lib/utils/money'
 import { reportFormError } from '@/lib/utils/form-errors'
 import { PHONE_DIGITS, PHONE_PATTERN } from '@/lib/utils/phone'
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock'
 
 // Razorpay checkout global — loaded via CDN Script below
 declare global {
@@ -204,7 +205,6 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(
     () => defaultPackageSelection(packages, packagesEnabled, packagesMultiSelect, packageSpotsTaken, packagesProgressive)
   )
-  const [accepted, setAccepted] = useState(false)
   // Terms scroll state. `atEnd` is transient and drives the fade at the bottom
   // edge (scroll back up and there genuinely is more below again); `read` is
   // sticky and drives the header's confirmation. Both start true when the terms
@@ -212,14 +212,19 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
   // isn't possible.
   const [termsAtEnd, setTermsAtEnd] = useState(false)
   const [termsRead, setTermsRead] = useState(false)
-  const [agreedPolicies, setAgreedPolicies] = useState(false)
+  // Pre-ticked by club decision; the runner can still untick either, which
+  // blocks submit. Guardian consent is never pre-ticked — it is a parent's
+  // declaration, not the runner's.
+  const [agreedPolicies, setAgreedPolicies] = useState(true)
   const [agreedGuardian, setAgreedGuardian] = useState(false)
-  const [agreedSafety, setAgreedSafety] = useState(false)
+  const [agreedSafety, setAgreedSafety] = useState(true)
   // Optional and unticked unless they already said yes — consent to marketing
   // email has to be an affirmative act, never a default (DPDP s.6). Unticking
   // it here doesn't revoke an existing opt-in either: the register route only
   // ever turns it on, and revoking lives on the profile and the unsubscribe link.
   const [marketingOptIn, setMarketingOptIn] = useState(initial.marketingOptIn)
+  // Only the form scrolls while the modal is open, never the page behind it.
+  useBodyScrollLock(open)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   // ── Coupon ──
@@ -352,10 +357,9 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
     if (!open) {
       setError(null)
       setLoading(false)
-      setAccepted(false)
-      setAgreedPolicies(false)
+      setAgreedPolicies(true)
       setAgreedGuardian(false)
-      setAgreedSafety(false)
+      setAgreedSafety(true)
       setMarketingOptIn(initial.marketingOptIn)
       setFieldErrors({})
       setDirtyFields({})
@@ -473,7 +477,6 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
       )
     }
 
-    if (hasTerms && !accepted) return fail('Please accept the terms & conditions to continue', 'acceptedTerms')
     if (!agreedPolicies) return fail('Please agree to the Privacy Policy and Terms of Service', 'agreedPolicies')
     if (isMinor && !agreedGuardian) return fail('Please confirm you have your guardian’s consent to attend', 'agreedGuardian')
     if (!agreedSafety) return fail('Please confirm the medical fitness declaration to continue', 'agreedSafety')
@@ -490,7 +493,8 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
           gender,
           contactNumber: contactNumber.trim(),
           emergencyContactNumber: emergencyContactNumber.trim(),
-          acceptedTerms: hasTerms ? accepted : undefined,
+          // Submitting is the acceptance: the notice under the terms says so.
+          acceptedTerms: hasTerms ? true : undefined,
           customResponses,
           // Ids only. The server looks up each one on the event and sums the
           // amounts itself — sending prices from here would be a price the
@@ -600,7 +604,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   <p className='text-white/50 text-sm mt-1 leading-snug'>
                     {inviteOnly
                       ? 'Free to apply. Stride reviews every application.'
-                      : 'Quick details to join the run.'}
+                      : 'Quick details to join the experience.'}
                   </p>
                 </div>
                 <button
@@ -616,7 +620,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
             </div>
 
             {/* Scrollable form area */}
-            <form onSubmit={handleSubmit} className='overflow-y-auto px-6 py-5 space-y-4 flex-1'>
+            <form onSubmit={handleSubmit} className='overflow-y-auto overscroll-contain px-6 py-5 space-y-4 flex-1'>
 
             {/* Full name */}
             <div>
@@ -739,9 +743,6 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 required
               />
               <FieldError msg={fieldErrors.emergencyContactNumber} />
-              <p className='text-white/30 text-[11px] mt-1.5'>
-                Someone we can reach if anything happens during the run. Let them know you&apos;ve listed them — we&apos;ll only contact them in an emergency on event day.
-              </p>
             </div>
 
             {/* Package selection — the runner builds their own total here */}
@@ -1052,8 +1053,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 <div className='flex items-baseline justify-between gap-3 mb-2'>
                   <h3 className={sectionHeading}>Event terms</h3>
                   {/* Only the prompt, never a "Read" confirmation: once they've
-                      scrolled through, the acknowledgement that matters is the
-                      checkbox below, and a second badge saying so was noise. */}
+                      scrolled through, a badge saying so was noise. */}
                   {!termsRead && (
                     <span aria-live='polite' className='text-[11px] text-white/40'>
                       Scroll to read
@@ -1074,18 +1074,11 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   <ReactMarkdown>{termsAndConditions ?? ''}</ReactMarkdown>
                 </div>
 
-                <label className='mt-1 flex min-h-11 items-center gap-2.5 cursor-pointer select-none group'>
-                  <input
-                    type='checkbox'
-                    data-field='acceptedTerms'
-                    checked={accepted}
-                    onChange={e => setAccepted(e.target.checked)}
-                    className='accent-stride-yellow-accent w-4 h-4 shrink-0 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stride-yellow-accent'
-                  />
-                  <span className='text-white/70 text-xs leading-snug group-hover:text-white/85 transition-colors duration-150 motion-reduce:transition-none'>
-                    I have read and agree to the terms &amp; conditions for this event.
-                  </span>
-                </label>
+                {/* No checkbox: registering is the acceptance, and this line is
+                    what makes that clear before they press the button. */}
+                <p className='mt-2 text-white/50 text-xs leading-snug'>
+                  By registering, you agree to the event terms above.
+                </p>
               </div>
             )}
 
@@ -1135,14 +1128,13 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   onChange={e => setAgreedSafety(e.target.checked)}
                   className={checkboxBase}
                 />
-                {/* Medical fitness + assumption of risk. Points at the waiver clause
-                    itself rather than restating it, so the two can't drift apart. */}
+                {/* Medical fitness. "Learn more" points at the waiver clause itself
+                    rather than restating it, so the two can't drift apart. */}
                 <span className='text-white/70 text-xs leading-snug'>
-                  I am medically fit to take part, have no condition that makes it unsafe for me to run, and I accept the risks of participating as set out in the{' '}
+                  I confirm that I am medically fit to take part in this experience.{' '}
                   <Link href='/terms-of-service#assumption-of-risk' target='_blank' className='text-stride-yellow-accent hover:underline underline-offset-2'>
-                    Assumption of Risk
+                    Learn more
                   </Link>
-                  {' '}clause of the Terms.
                 </span>
               </label>
 
@@ -1155,7 +1147,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                   className={checkboxBase}
                 />
                 <span className='text-white/70 text-xs leading-snug'>
-                  Email me about other Stride runs and partner events. You can unsubscribe anytime.
+                  I agree to be contacted by Stride Run Club for marketing communications.
                 </span>
               </label>
             </div>
@@ -1171,7 +1163,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
             {/* Submit */}
             <button
               type='submit'
-              disabled={loading || hasPhoneError || (hasTerms && !accepted) || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
+              disabled={loading || hasPhoneError || !agreedPolicies || !agreedSafety || (isMinor && !agreedGuardian)}
               className='w-full py-3 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-11 flex items-center justify-center gap-2'
             >
               {loading ? (
@@ -1201,9 +1193,6 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
               </p>
             )}
 
-            <p className='text-white/30 text-[11px] text-center'>
-              Your details are saved to your Stride profile, so you won&apos;t need to fill this in again.
-            </p>
             </form>
           </div>
         </div>

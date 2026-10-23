@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { ChevronDown } from 'lucide-react'
 import { monthKeyLabel } from '@/lib/utils/month-grid'
-import type { RaceCardData } from '@/lib/races/present'
+import { countdownLabel, type RaceCardData } from '@/lib/races/present'
 import { RaceCard } from './race-card'
 
 const DUCKY_URL =
@@ -62,7 +62,15 @@ export function RaceList({ upcoming, past, todayKey, nowIso, filtersActive = fal
               </div>
               <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10'>
                 {group.races.map(race => (
-                  <RaceCard key={race.id} race={race} todayKey={todayKey} nowIso={nowIso} />
+                  <RaceCard
+                    key={race.id}
+                    race={race}
+                    todayKey={todayKey}
+                    nowIso={nowIso}
+                    countdown={race.id === upcoming[0].id
+                      ? `Next up · ${countdownLabel(race.dayKey, todayKey)}`
+                      : countdownLabel(race.dayKey, todayKey)}
+                  />
                 ))}
               </div>
             </section>

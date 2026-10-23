@@ -3,7 +3,8 @@ import { adminClient } from '@/lib/supabase/admin'
 import { EventForm } from '@/components/admin/event-form'
 import { updateEventAction } from '@/lib/actions/admin'
 import { utcIsoToIstLocal } from '@/lib/utils/ist'
-import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { requireEventsAccess } from '@/lib/auth/admin-access'
+import { canManageEvent } from '@/lib/auth/event-access'
 import { listEventCoupons } from '@/lib/events/coupon-lookup'
 import { getSpotHolds } from '@/lib/events/spot-holds'
 
@@ -12,10 +13,19 @@ type Props = { params: Promise<{ id: string }> }
 export const metadata = { title: 'Edit Event — Admin' }
 
 export default async function EditEventPage({ params }: Props){
-  // ADMIN only. A LEAD reaching this route is redirected to check-in.
-  await requireFullAdmin()
+  // ADMIN, or a LEAD on a lead-created event. The ownership check runs before
+  // anything else is read, so a lead who types an admin event's URL gets a 404
+  // and never receives its coupons, registrations or form data.
+  const { role } = await requireEventsAccess()
 
   const { id } = await params
+
+  const { data: owner } = await adminClient
+    .from('events')
+    .select('owner_role')
+    .eq('id', id)
+    .maybeSingle()
+  if (!owner || !canManageEvent(role, owner.owner_role as string | null)) notFound()
 
   // Applications still awaiting a decision, so the form can warn before an
   // admin switches invite-only off and assumes they were cancelled.
@@ -31,8 +41,8 @@ export default async function EditEventPage({ params }: Props){
       .eq('event_id', id)
       .eq('status', 'APPLIED'),
     // Read here rather than in the form: the codes are secret, and this is a
-    // server component, so they only ever cross to the client for an admin who
-    // has already passed requireFullAdmin above.
+    // server component, so they only ever cross to the client for staff who
+    // passed the ownership check above.
     listEventCoupons(id),
     // Package ids per registration holding a spot, so the form can take spots
     // sold by a package the admin deletes off what the rest may share.

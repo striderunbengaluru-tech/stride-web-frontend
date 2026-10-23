@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     template: '%s | Stride Run Club',
   },
   description:
-    "Bengaluru's most engaged running community. 52,000+ followers, 7,000+ athletes, 97+ events a year. Join Stride Run Club.",
+    "Bengaluru's most engaged running community. 55,000+ followers, 10,000+ athletes, 97+ events a year. Join Stride Run Club.",
   keywords: ['Stride Run Club', 'Bengaluru running', 'running community', 'group runs Bengaluru', '10K', 'half marathon', 'marathon training'],
   openGraph: {
     type: 'website',

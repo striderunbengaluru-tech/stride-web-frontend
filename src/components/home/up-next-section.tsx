@@ -5,7 +5,7 @@ import { UpNextCarousel } from '@/components/events/up-next-carousel'
 // Kept out of the component body: reading the clock during render trips
 // react-hooks/purity, and the selection is easier to reason about on its own.
 // Rows arrive date-ascending, so this stays soonest-first.
-function findUpcoming(events: EventListRow[]): EventListRow[] {
+export function findUpcoming(events: EventListRow[]): EventListRow[] {
   const now = Date.now()
   return events.filter(e => e.event_date && new Date(e.event_date).getTime() >= now)
 }

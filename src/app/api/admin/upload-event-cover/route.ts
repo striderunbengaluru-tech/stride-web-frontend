@@ -3,6 +3,7 @@ import sharp from 'sharp'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { IMAGE_KINDS, imageKindSchema } from '@/lib/utils/storage-paths'
+import { ROLES } from '@/types/auth'
 
 /**
  * Converts an admin-uploaded poster to WebP and files it under the prefix for
@@ -21,7 +22,10 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .single()
 
-  if (adminUser?.role !== 'ADMIN') {
+  // ADMIN for any kind; a LEAD only for event posters (they run lead-created
+  // events, not the race calendar).
+  const role = adminUser?.role
+  if (role !== ROLES.ADMIN && role !== ROLES.LEAD) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -29,6 +33,9 @@ export async function POST(request: Request) {
   const kindResult = imageKindSchema.safeParse(form.get('kind') ?? undefined)
   if (!kindResult.success) return NextResponse.json({ error: 'Unknown image kind' }, { status: 400 })
   const kind = kindResult.data
+  if (role === ROLES.LEAD && kind !== 'event') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })

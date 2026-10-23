@@ -83,6 +83,14 @@ export function deadlineLabel(
   return { text: `Closes in ${days} days`, urgent: days <= CLOSING_SOON_DAYS }
 }
 
+/** "Race day" / "Tomorrow" / "In 25 days" — how far off an upcoming race is. */
+export function countdownLabel(dayKey: string, todayKey: string): string {
+  const days = Math.round((Date.parse(dayKey) - Date.parse(todayKey)) / MS_PER_DAY)
+  if (days <= 0) return 'Race day'
+  if (days === 1) return 'Tomorrow'
+  return `In ${days} days`
+}
+
 /** Distinct cities, alphabetical — the options for the city filter. */
 export function distinctCities(races: readonly { city: string }[]): string[] {
   return [...new Set(races.map(r => r.city.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))

@@ -4,20 +4,28 @@ import { EventsAdminClient, type AdminEventRow } from '@/components/admin/events
 import { validatePackageSpots, collectSpotHolds, countRetiredSpots, type SpotHoldRow } from '@/lib/events/package-spots'
 import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
 import type { EventPackage } from '@/types/event'
-import { requireFullAdmin } from '@/lib/auth/admin-access'
+import { requireEventsAccess } from '@/lib/auth/admin-access'
+import { ownerRoleFilter } from '@/lib/auth/event-access'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
+import { loadEventRegistrations } from '@/lib/admin/event-registrations'
 
 export const metadata = { title: 'Events — Admin' }
 
 export default async function AdminEventsPage(){
-  // ADMIN only. A LEAD reaching this route is redirected to check-in.
-  await requireFullAdmin()
+  // ADMIN sees every event; a LEAD only lead-created ones. The filter is in the
+  // query, and everything below — counts, registrations — is scoped to the
+  // events it returns, so nothing about an admin event reaches a lead's page.
+  const { role } = await requireEventsAccess()
+  const ownerRole = ownerRoleFilter(role)
 
-  const [{ data: allEvents }, regCounts] = await Promise.all([
-    adminClient
-      .from('events')
-      .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, registrations_closed, packages, packages_enabled')
-      .order('event_date', { ascending: false }),
+  let eventsQuery = adminClient
+    .from('events')
+    .select('id, name, subtitle, slug, status, event_date, end_date, location, price_paise, capacity, banner_images, cover_url, created_at, updated_at, created_by, updated_by, invite_only, registrations_closed, packages, packages_enabled')
+    .order('event_date', { ascending: false })
+  if (ownerRole) eventsQuery = eventsQuery.eq('owner_role', ownerRole)
+
+  const [{ data: allEvents }, allRegCounts] = await Promise.all([
+    eventsQuery,
     // Paged: these rows are counted per event, and a count is only right over
     // the whole table. An unpaged select stops at db.max_rows (1000) silently.
     fetchAllRows<SpotHoldRow & { event_id: string; status: string }>('registration counts', (from, to) =>
@@ -28,6 +36,11 @@ export default async function AdminEventsPage(){
         .range(from, to)
     ),
   ])
+
+  const visibleIds = new Set((allEvents ?? []).map(e => e.id as string))
+  const regCounts = allRegCounts.filter(r => visibleIds.has(r.event_id))
+  // Each visible event's attendee list, for the registrations panel in its expanded row.
+  const registrations = await loadEventRegistrations(visibleIds)
 
   // Confirmed registrations per event, and — for invite-only events — how many
   // applications are still waiting on a decision.
@@ -138,7 +151,7 @@ export default async function AdminEventsPage(){
         ))}
       </div>
 
-      <EventsAdminClient events={rows} />
+      <EventsAdminClient events={rows} registrations={registrations} />
     </div>
   )
 }

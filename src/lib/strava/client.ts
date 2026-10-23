@@ -9,6 +9,27 @@ const API_BASE = 'https://www.strava.com/api/v3'
 const REQUEST_TIMEOUT_MS = 10_000
 
 /**
+ * Sent on every Strava request. Without it Node's fetch identifies itself as
+ * plain `node`, and from Vercel's datacenter IPs Strava answered
+ * /athlete/activities with 403 — while the identical call from a home
+ * connection succeeded. Naming the app is what API clients are expected to do.
+ */
+const USER_AGENT = 'StrideRunClub/1.0 (+https://www.strideclub.in)'
+
+/** How much of an error response to keep in the log. */
+const ERROR_BODY_CHARS = 200
+
+/**
+ * The start of a failed response, single-lined, for the log. Strava's error
+ * bodies are `{ message, errors }` and a blocking proxy returns an HTML page —
+ * neither echoes the bearer token back, and telling them apart is the point.
+ */
+async function errorSnippet(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '')
+  return text.replace(/\s+/g, ' ').trim().slice(0, ERROR_BODY_CHARS)
+}
+
+/**
  * - `revoked`: the athlete removed Stride from their Strava settings, so the
  *   refresh token is dead. Their data must be deleted.
  * - `capacity`: the app's connected-athlete limit is reached (403 on exchange).
@@ -72,7 +93,7 @@ function credentials() {
 async function postOAuth(path: string, body: Record<string, string>): Promise<Response> {
   return fetch(`${OAUTH_BASE}/${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
     body: JSON.stringify(body),
     cache: 'no-store',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -81,13 +102,15 @@ async function postOAuth(path: string, body: Record<string, string>): Promise<Re
 
 async function getApi(path: string, accessToken: string): Promise<unknown> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': USER_AGENT },
     cache: 'no-store',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
   if (res.status === 401) throw new StravaError('unauthorized', `Strava ${path} returned 401`)
   if (res.status === 429) throw new StravaError('rate_limited', `Strava ${path} rate limited`)
-  if (!res.ok) throw new StravaError('failed', `Strava ${path} returned ${res.status}`)
+  if (!res.ok) {
+    throw new StravaError('failed', `Strava ${path} returned ${res.status}: ${await errorSnippet(res)}`)
+  }
   return res.json()
 }
 

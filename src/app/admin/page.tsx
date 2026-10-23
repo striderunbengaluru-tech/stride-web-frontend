@@ -3,6 +3,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { DashboardCharts } from '@/components/admin/dashboard-charts'
 import { CalendarRange, ClipboardCheck, Users, Package, LayoutDashboard, ArrowUpRight } from 'lucide-react'
 import { formatDayMonthIST } from '@/lib/utils/ist'
+import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { requireFullAdmin } from '@/lib/auth/admin-access'
 
 export const metadata = { title: 'Admin — Stride Run Club' }
@@ -53,9 +54,9 @@ export default async function AdminDashboardPage(){
     { count: userCount },
     { count: registrationCount },
     { data: recentRegs },
-    { data: eventsForStats },
     { data: checkInGenderRows },
     { data: dobRows },
+    recentSignups,
   ] = await Promise.all([
     adminClient.from('events').select('*', { count: 'exact', head: true }),
     adminClient.from('products').select('*', { count: 'exact', head: true }),
@@ -67,13 +68,6 @@ export default async function AdminDashboardPage(){
       .select('created_at')
       .eq('status', 'CONFIRMED')
       .gte('created_at', eightWeeksAgo.toISOString()),
-    // Per-event check-in stats (last 6 published events)
-    adminClient
-      .from('events')
-      .select('id, name, event_registrations(status, checked_in_at)')
-      .eq('status', 'PUBLISHED')
-      .order('event_date', { ascending: false })
-      .limit(6),
     // Gender distribution of check-ins — one row per check-in (per-check-in basis)
     adminClient
       .from('event_registrations')
@@ -85,6 +79,17 @@ export default async function AdminDashboardPage(){
       .from('users')
       .select('date_of_birth')
       .not('date_of_birth', 'is', null),
+    // New accounts, for the weekly sign-ups chart. Paged: well over 1,000 people
+    // sign up in 8 weeks, and an unpaged select stops at db.max_rows silently.
+    fetchAllRows<{ id: string; created_at: string }>('new members', (from, to) =>
+      adminClient
+        .from('users')
+        .select('id, created_at')
+        .gte('created_at', eightWeeksAgo.toISOString())
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
   ])
 
   // Build weekly registrations data — use stable bucket key (Monday ISO date) for matching
@@ -102,18 +107,13 @@ export default async function AdminDashboardPage(){
   }
   const weeklyRegistrations = weekBuckets.map(b => ({ week: b.label, registrations: b.registrations }))
 
-  // Build event check-in data
-  type EventWithRegs = { id: string; name: string; event_registrations: { status: string; checked_in_at: string | null }[] }
-  const eventCheckIns = (eventsForStats ?? [] as unknown as EventWithRegs[]).map((e) => {
-    const regs = (e as unknown as EventWithRegs).event_registrations ?? []
-    const confirmed = regs.filter((r) => r.status === 'CONFIRMED').length
-    const checkedIn = regs.filter((r) => r.status === 'CONFIRMED' && r.checked_in_at !== null).length
-    return {
-      name: (e as unknown as EventWithRegs).name,
-      confirmed,
-      checkedIn,
-    }
-  }).reverse()
+  // New members per week, in the same Monday buckets so the two charts line up
+  const signupsByWeek = new Array<number>(weekBuckets.length).fill(0)
+  for (const user of recentSignups) {
+    const idx = byKey.get(weekKey(new Date(user.created_at)))
+    if (idx !== undefined) signupsByWeek[idx]++
+  }
+  const weeklyNewMembers = weekBuckets.map((b, i) => ({ week: b.label, members: signupsByWeek[i] }))
 
   // Gender distribution — per-check-in counting
   type GenderRow = { users: { gender: string | null } | null }
@@ -142,7 +142,7 @@ export default async function AdminDashboardPage(){
 
   const stats: { label: string; count: number; href: string; icon: React.ReactNode; tone: string }[] = [
     { label: 'Events',                   count: eventCount ?? 0,        href: '/admin/events',        icon: <CalendarRange size={18} />, tone: 'bg-stride-yellow-accent/15 text-stride-yellow-accent' },
-    { label: 'Confirmed registrations',  count: registrationCount ?? 0, href: '/admin/registrations', icon: <ClipboardCheck size={18} />, tone: 'bg-green-500/15 text-green-400' },
+    { label: 'Confirmed registrations',  count: registrationCount ?? 0, href: '/admin/events', icon: <ClipboardCheck size={18} />, tone: 'bg-green-500/15 text-green-400' },
     { label: 'Runners',                  count: userCount ?? 0,         href: '/admin/users',         icon: <Users size={18} />,         tone: 'bg-sky-500/15 text-sky-400' },
     { label: 'Products',                 count: productCount ?? 0,      href: '/admin/products',      icon: <Package size={18} />,       tone: 'bg-purple-500/15 text-purple-400' },
   ]
@@ -185,7 +185,7 @@ export default async function AdminDashboardPage(){
       {/* Charts — 2×2 grid on desktop, stacked on mobile */}
       <DashboardCharts
         weeklyRegistrations={weeklyRegistrations}
-        eventCheckIns={eventCheckIns}
+        weeklyNewMembers={weeklyNewMembers}
         genderDistribution={genderDistribution}
         ageDistribution={ageDistribution}
       />

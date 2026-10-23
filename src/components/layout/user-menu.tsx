@@ -1,28 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints,
-  CalendarDays, Handshake, Trophy, ScanLine, Users, Flag,
+  LogOut, User, LayoutDashboard, ChevronDown, ShieldCheck, Footprints, ScanLine,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useDismiss } from '@/hooks/use-dismiss'
 import { ROLES, LEAD_HOME, isPortalRole, type Role } from '@/types/auth'
-
-// Site navigation. The desktop navbar carries no links of its own, so on
-// desktop this menu is where signed-in members reach the main pages — mirroring
-// the mobile bottom nav.
-// `/team` is labelled "Team" here and in the footer, deliberately shorter than
-// the "Lead Striders" wording on the page itself — a nav row reads better as a
-// single word.
-const SITE_LINKS = [
-  { label: 'Events',       href: '/events',       icon: CalendarDays },
-  { label: 'Races',        href: '/race-calendar', icon: Flag },
-  { label: 'Team',         href: '/team',         icon: Users },
-  { label: 'Partnerships', href: '/partnerships', icon: Handshake },
-  { label: 'Leaderboard',  href: '/leaderboard',  icon: Trophy },
-] as const
+import { SITE_LINKS } from './site-links'
 
 type Props = {
   username: string
@@ -42,22 +29,8 @@ export default function UserMenu({ username, firstName, avatarUrl, role, email }
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  useEffect(() => {
-    function onOutsideClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    function onEsc(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onOutsideClick)
-    document.addEventListener('keydown', onEsc)
-    return () => {
-      document.removeEventListener('mousedown', onOutsideClick)
-      document.removeEventListener('keydown', onEsc)
-    }
-  }, [])
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(ref, close)
 
   async function handleSignOut() {
     const supabase = createClient()
