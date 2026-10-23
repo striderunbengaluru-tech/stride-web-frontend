@@ -1,8 +1,6 @@
 import Link from 'next/link'
-import NavLinks from './nav-links'
 import { NavbarLogo } from './navbar-logo'
 import { NavbarAuth } from './navbar-auth'
-import { HideOnAdminRoute } from './navbar-gate'
 
 // Sync server component — no cookies()/auth here. The auth-dependent corner
 // is the <NavbarAuth /> client island, which keeps the root layout (and
@@ -33,11 +31,6 @@ const Navbar = () => {
         >
           <NavbarLogo />
         </Link>
-
-        {/* Nav links — hidden on admin routes (kept simple there) */}
-        <HideOnAdminRoute>
-          <NavLinks />
-        </HideOnAdminRoute>
 
         {/* Auth corner — user menu or logged-out CTAs, resolved client-side */}
         <div className='flex items-center gap-3 shrink-0 ml-auto sm:ml-0'>
