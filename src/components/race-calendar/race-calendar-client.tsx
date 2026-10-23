@@ -8,7 +8,6 @@ import { groupByDay, shiftMonth } from '@/lib/utils/month-grid'
 import type { RaceCardData } from '@/lib/races/present'
 import { isCanonicalDistance, OTHER_DISTANCE_KEY } from '@/types/race'
 import { useRaceCalendarParams, type RaceWindow } from './use-race-calendar-params'
-import { ViewToggle } from './view-toggle'
 import { RaceFilters } from './race-filters'
 import { RaceList } from './race-list'
 import { MonthGrid } from './month-grid'
@@ -142,13 +141,12 @@ export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
 
   return (
     <div className='space-y-8'>
-      {/* One toolbar row: view on the left, filters (and what is active) on the right */}
-      <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-y border-white/10 py-4'>
-        <div className='flex items-center gap-4'>
-          <ViewToggle view={state.view} onChange={view => set({ view })} />
-          <p className='text-white/40 text-sm hidden md:block' aria-live='polite'>{countLabel}</p>
-        </div>
+      {/* One toolbar row: the count on the left, one view & filters dropdown on the right */}
+      <div className='flex items-center justify-between gap-3 border-y border-white/10 py-3'>
+        <p className='text-white/40 text-sm' aria-live='polite'>{countLabel}</p>
         <RaceFilters
+          view={state.view}
+          onViewChange={view => set({ view })}
           selectedDistances={state.distances}
           onToggleDistance={toggleDistance}
           hasOther={hasOther}
@@ -161,7 +159,6 @@ export function RaceCalendarClient({ races, cities, todayKey, nowIso }: Props) {
           onClear={() => set({ distances: [], city: null, when: 'all' })}
         />
       </div>
-      <p className='text-white/40 text-sm md:hidden -mt-4' aria-live='polite'>{countLabel}</p>
 
       {state.view === 'list' ? (
         <RaceList upcoming={upcoming} past={past} todayKey={todayKey} nowIso={nowIso} filtersActive={filtersActive} />

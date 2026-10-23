@@ -127,10 +127,7 @@ export default async function RaceDetailPage({ params }: Props) {
           <div className='hidden lg:block mb-6'>{backLink}</div>
 
           <Reveal>
-            <span className='inline-flex items-center rounded-full bg-white/8 border border-white/15 px-2.5 py-1 text-[10px] font-bold font-mono uppercase tracking-widest text-white/60'>
-              Third-party race
-            </span>
-            <h1 className='text-4xl sm:text-5xl font-bold text-white leading-[1.05] tracking-tight mt-3'>{race.name}</h1>
+            <h1 className='text-4xl sm:text-5xl font-bold text-white leading-[1.05] tracking-tight'>{race.name}</h1>
             {race.organizer && (
               <p className='text-white/55 text-lg mt-3 flex items-center gap-2'>
                 <Building2 size={16} className='shrink-0 text-white/35' aria-hidden='true' />
@@ -179,25 +176,22 @@ export default async function RaceDetailPage({ params }: Props) {
 
           {/* Registration */}
           <Reveal>
-            <div className='mt-3 rounded-2xl border border-white/15 bg-white/3 overflow-hidden'>
-              <div className='px-5 py-3 border-b border-white/8 flex items-center justify-between gap-3'>
-                <p className='text-white/50 text-xs font-bold font-mono uppercase tracking-widest'>Registration</p>
+            <div className='mt-3 rounded-2xl border border-white/10 bg-white/4 p-5 space-y-4'>
+              <div className='flex items-start justify-between gap-3'>
+                <div className='min-w-0'>
+                  <p className='text-white font-semibold text-base'>Registration</p>
+                  {race.registration_deadline && open && (
+                    <p className='text-white/50 text-xs mt-0.5 font-mono'>Closes {formatDateTimeIST(race.registration_deadline)} IST</p>
+                  )}
+                </div>
                 {deadline && (
-                  <p className={`inline-flex items-center gap-1.5 text-xs font-bold font-mono ${deadline.urgent ? 'text-stride-yellow-accent' : 'text-white/50'}`}>
-                    <Hourglass size={12} aria-hidden='true' />
+                  <p className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold font-mono ${deadline.urgent ? 'border-stride-yellow-accent/40 text-stride-yellow-accent' : 'border-white/15 text-white/55'}`}>
+                    <Hourglass size={11} aria-hidden='true' />
                     {deadline.text}
                   </p>
                 )}
               </div>
-              <div className='px-5 py-5 space-y-3'>
-                {race.registration_deadline && open && (
-                  <p className='text-white/55 text-sm'>Registrations close {formatDateTimeIST(race.registration_deadline)} IST.</p>
-                )}
-                <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} discountPercent={race.discount_percent} open={open} />
-                <p className='text-white/35 text-xs leading-relaxed'>
-                  Stride doesn&apos;t organise this race or take payment for it. Registration, fees and refunds are handled by the organiser.
-                </p>
-              </div>
+              <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} discountPercent={race.discount_percent} open={open} />
             </div>
           </Reveal>
 
@@ -227,7 +221,7 @@ export default async function RaceDetailPage({ params }: Props) {
       </div>
 
       {/* Sticky mobile CTA bar */}
-      <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/95 backdrop-blur-xl border-t border-white/10 px-4 py-3 z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom))]'>
+      <div className='fixed bottom-0 left-0 right-0 sm:hidden bg-stride-purple-primary/85 backdrop-blur-xl border-t border-white/10 px-4 py-2.5 z-40 pb-[calc(0.625rem+env(safe-area-inset-bottom))]'>
         <div className='max-w-lg mx-auto'>
           <RaceDetailCtas registrationUrl={race.registration_url} couponCode={race.coupon_code} discountPercent={race.discount_percent} open={open} layout='row' />
         </div>
