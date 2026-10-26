@@ -53,32 +53,48 @@ export default async function AdminDashboardPage(){
     { count: productCount },
     { count: userCount },
     { count: registrationCount },
-    { data: recentRegs },
-    { data: checkInGenderRows },
-    { data: dobRows },
+    recentRegs,
+    checkInGenderRows,
+    dobRows,
     recentSignups,
   ] = await Promise.all([
     adminClient.from('events').select('*', { count: 'exact', head: true }),
     adminClient.from('products').select('*', { count: 'exact', head: true }),
     adminClient.from('users').select('*', { count: 'exact', head: true }),
     adminClient.from('event_registrations').select('*', { count: 'exact', head: true }).eq('status', 'CONFIRMED'),
+    // The three row reads below are paged: each feeds a count, and an unpaged
+    // select stops at db.max_rows (1000) silently — the charts flatlined at
+    // 1,000 people once the club passed that.
     // Weekly registrations
-    adminClient
-      .from('event_registrations')
-      .select('created_at')
-      .eq('status', 'CONFIRMED')
-      .gte('created_at', eightWeeksAgo.toISOString()),
+    fetchAllRows<{ id: string; created_at: string }>('recent registrations', (from, to) =>
+      adminClient
+        .from('event_registrations')
+        .select('id, created_at')
+        .eq('status', 'CONFIRMED')
+        .gte('created_at', eightWeeksAgo.toISOString())
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
     // Gender distribution of check-ins — one row per check-in (per-check-in basis)
-    adminClient
-      .from('event_registrations')
-      .select('users(gender)')
-      .eq('status', 'CONFIRMED')
-      .not('checked_in_at', 'is', null),
+    fetchAllRows<{ id: string; users: { gender: string | null } | null }>('check-in genders', (from, to) =>
+      adminClient
+        .from('event_registrations')
+        .select('id, users(gender)')
+        .eq('status', 'CONFIRMED')
+        .not('checked_in_at', 'is', null)
+        .order('id', { ascending: true })
+        .range(from, to)
+        .overrideTypes<{ id: string; users: { gender: string | null } | null }[], { merge: false }>()
+    ),
     // Age group distribution — pull DOBs for all users who've set one
-    adminClient
-      .from('users')
-      .select('date_of_birth')
-      .not('date_of_birth', 'is', null),
+    fetchAllRows<{ id: string; date_of_birth: string | null }>('dates of birth', (from, to) =>
+      adminClient
+        .from('users')
+        .select('id, date_of_birth')
+        .not('date_of_birth', 'is', null)
+        .order('id', { ascending: true })
+        .range(from, to)
+    ),
     // New accounts, for the weekly sign-ups chart. Paged: well over 1,000 people
     // sign up in 8 weeks, and an unpaged select stops at db.max_rows silently.
     fetchAllRows<{ id: string; created_at: string }>('new members', (from, to) =>
@@ -101,7 +117,7 @@ export default async function AdminDashboardPage(){
     weekBuckets.push({ key: weekKey(ref), label: weekLabel(ref), registrations: 0 })
   }
   const byKey = new Map(weekBuckets.map((b, i) => [b.key, i]))
-  for (const reg of recentRegs ?? []) {
+  for (const reg of recentRegs) {
     const idx = byKey.get(weekKey(new Date(reg.created_at)))
     if (idx !== undefined) weekBuckets[idx].registrations++
   }
@@ -116,9 +132,8 @@ export default async function AdminDashboardPage(){
   const weeklyNewMembers = weekBuckets.map((b, i) => ({ week: b.label, members: signupsByWeek[i] }))
 
   // Gender distribution — per-check-in counting
-  type GenderRow = { users: { gender: string | null } | null }
   const genderCounts: Record<typeof GENDER_KEYS[number], number> = { MALE: 0, FEMALE: 0, OTHER: 0, PREFER_NOT_TO_SAY: 0 }
-  for (const row of (checkInGenderRows ?? []) as unknown as GenderRow[]) {
+  for (const row of checkInGenderRows) {
     const g = row.users?.gender
     if (g && (GENDER_KEYS as readonly string[]).includes(g)) {
       genderCounts[g as typeof GENDER_KEYS[number]]++
@@ -133,7 +148,7 @@ export default async function AdminDashboardPage(){
 
   // Age group distribution
   const ageCounts: Record<typeof AGE_BUCKETS[number], number> = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 }
-  for (const row of (dobRows ?? []) as { date_of_birth: string | null }[]) {
+  for (const row of dobRows) {
     if (!row.date_of_birth) continue
     const b = ageBucket(row.date_of_birth)
     if (b) ageCounts[b]++

@@ -28,10 +28,10 @@ export default async function AdminEventsPage(){
     eventsQuery,
     // Paged: these rows are counted per event, and a count is only right over
     // the whole table. An unpaged select stops at db.max_rows (1000) silently.
-    fetchAllRows<SpotHoldRow & { event_id: string; status: string }>('registration counts', (from, to) =>
+    fetchAllRows<SpotHoldRow & { event_id: string; status: string; checked_in_at: string | null }>('registration counts', (from, to) =>
       adminClient
         .from('event_registrations')
-        .select('event_id, status, created_at, selected_packages')
+        .select('event_id, status, created_at, selected_packages, checked_in_at')
         .order('id', { ascending: true })
         .range(from, to)
     ),
@@ -46,6 +46,7 @@ export default async function AdminEventsPage(){
   // applications are still waiting on a decision.
   const confirmedByEvent = new Map<string, number>()
   const appliedByEvent = new Map<string, number>()
+  const checkedInByEvent = new Map<string, number>()
   // Registrations per event, for spots held by packages that have been removed.
   const regsByEvent = new Map<string, SpotHoldRow[]>()
   for (const reg of regCounts) {
@@ -55,6 +56,9 @@ export default async function AdminEventsPage(){
 
     if (reg.status === 'CONFIRMED') {
       confirmedByEvent.set(reg.event_id, (confirmedByEvent.get(reg.event_id) ?? 0) + 1)
+      if (reg.checked_in_at) {
+        checkedInByEvent.set(reg.event_id, (checkedInByEvent.get(reg.event_id) ?? 0) + 1)
+      }
     } else if (reg.status === 'APPLIED') {
       appliedByEvent.set(reg.event_id, (appliedByEvent.get(reg.event_id) ?? 0) + 1)
     }
@@ -98,6 +102,7 @@ export default async function AdminEventsPage(){
       pricePaise: e.price_paise ?? 0,
       capacity: e.capacity ?? null,
       confirmedCount: confirmedByEvent.get(e.id) ?? 0,
+      checkedInCount: checkedInByEvent.get(e.id) ?? 0,
       appliedCount: appliedByEvent.get(e.id) ?? 0,
       inviteOnly: e.invite_only ?? false,
       registrationsClosed: e.registrations_closed ?? false,

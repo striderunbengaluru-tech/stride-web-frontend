@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert, Star, PauseCircle } from 'lucide-react'
+import { Search, Pencil, Trash2, Link2, Check, Calendar, MapPin, Users, ChevronDown, ChevronUp, TriangleAlert, Star, PauseCircle, UserCheck } from 'lucide-react'
 import { deleteEventAction } from '@/lib/actions/admin'
 import { PendingButton } from '@/components/admin/pending-button'
 import { formatDateNumericIST, formatTimeIST } from '@/lib/utils/ist'
@@ -21,6 +21,8 @@ export type AdminEventRow = {
   pricePaise: number
   capacity: number | null
   confirmedCount: number
+  /** Confirmed registrations scanned in at the event. */
+  checkedInCount: number
   /** Invite-only applications still awaiting a decision. */
   appliedCount: number
   inviteOnly: boolean
@@ -75,6 +77,15 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
       </div>
       <span className='text-white/50 text-xs tabular-nums'>{confirmed}/{capacity}</span>
     </div>
+  )
+}
+
+function CheckedInCount({ count }: { count: number }) {
+  return (
+    <span className='flex items-center gap-1 text-white/50 text-xs tabular-nums'>
+      <UserCheck size={10} className='text-green-400 shrink-0' />
+      {count} checked in
+    </span>
   )
 }
 
@@ -324,6 +335,7 @@ export function EventsAdminClient({ events, registrations }: Props) {
                       <span>Registrations</span>
                     </div>
                     <CapacityBar confirmed={event.confirmedCount} capacity={event.capacity} />
+                    <CheckedInCount count={event.checkedInCount} />
                   </div>
 
                   {/* Desktop actions */}
@@ -364,9 +376,12 @@ export function EventsAdminClient({ events, registrations }: Props) {
 
                 {/* Mobile: capacity + actions strip */}
                 <div className='sm:hidden flex items-center gap-2 px-4 pb-3 border-t border-white/5 pt-2.5 mt-0.5'>
-                  <div className='flex items-center gap-1.5 flex-1'>
-                    <Users size={10} className='text-white/30 shrink-0' />
-                    <CapacityBar confirmed={event.confirmedCount} capacity={event.capacity} />
+                  <div className='flex flex-wrap items-center gap-x-3 gap-y-1 flex-1'>
+                    <div className='flex items-center gap-1.5'>
+                      <Users size={10} className='text-white/30 shrink-0' />
+                      <CapacityBar confirmed={event.confirmedCount} capacity={event.capacity} />
+                    </div>
+                    <CheckedInCount count={event.checkedInCount} />
                   </div>
                   <div className='flex items-center gap-1 shrink-0'>
                     <Link href={`/admin/events/${event.id}/edit`} title='Edit' className='p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-stride-yellow-accent transition-colors'>
