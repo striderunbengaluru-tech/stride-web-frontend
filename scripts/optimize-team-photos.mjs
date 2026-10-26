@@ -57,6 +57,7 @@ const SLUGS = [
   'janvi',
   'kushagra',
   'naman',
+  'nirmala',
   'sanches',
   'sidharth',
   'vagisha',

@@ -37,5 +37,18 @@
       "kushagra-pose-2.webp",
       "kushagra-pose-3.webp"
     ]
+  },
+  {
+    "slug": "nirmala-singh",
+    "name": "Nirmala Singh",
+    "role": "Lead Strider",
+    "bio": "Run the city, trek the hills.",
+    "instagramUrl": "https://www.instagram.com/she_explores.wild/",
+    "stravaUrl": "https://www.strava.com/athletes/154436550",
+    "images": [
+      "nirmala-pose-1.webp",
+      "nirmala-pose-2.webp",
+      "nirmala-pose-3.webp"
+    ]
   }
 ]

@@ -12,6 +12,7 @@ import {
 import { LEAD_STRIDERS, striderImageUrls } from '@/content/lead-striders'
 import { ParallaxUnfurlingGallery } from '@/components/ui/parallax-unfurling-gallery'
 import { LeadStriderCard } from '@/components/team/lead-strider-card'
+import { cn } from '@/lib/utils'
 
 const CANONICAL_PATH = '/team'
 const CANONICAL_URL = `${PRODUCTION_SITE_URL}${CANONICAL_PATH}`
@@ -131,28 +132,29 @@ export default function TeamPage() {
       <section className='px-4 pt-16 pb-28'>
         <div className='mx-auto max-w-6xl'>
 
-          {/* An odd number of striders leaves the last card alone on the final
-              row of the 2-up mobile grid. It spans both columns and centres
-              itself at one column's width rather than hugging the left edge.
-              The 3-up desktop grid divides evenly, so the override lifts at
-              `lg`. Applied as real classes on the card — an
+          {/* A lone card on the last row is centred rather than left hugging
+              the edge. On the 2-up mobile grid (odd count) it spans both
+              columns at one column's width; on the 3-up desktop grid (count
+              one past a multiple of three) it starts in the middle column.
+              Applied as real classes on the card — an
               `[&>*:last-child]:max-lg:…` arbitrary variant on this container
               compiled to no CSS at all. */}
           <div className='grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3'>
             {LEAD_STRIDERS.map((strider, i) => {
-              const isOrphan =
-                LEAD_STRIDERS.length % 2 === 1 && i === LEAD_STRIDERS.length - 1
+              const isLast = i === LEAD_STRIDERS.length - 1
+              const isMobileOrphan = isLast && LEAD_STRIDERS.length % 2 === 1
+              const isDesktopOrphan = isLast && LEAD_STRIDERS.length % 3 === 1
               return (
                 <LeadStriderCard
                   key={strider.slug}
                   strider={strider}
                   cardIndex={i}
                   priority={i < 2}
-                  className={
-                    isOrphan
-                      ? 'col-span-2 mx-auto w-[calc(50%_-_0.5rem)] sm:w-[calc(50%_-_0.75rem)] lg:col-span-1 lg:mx-0 lg:w-auto'
-                      : undefined
-                  }
+                  className={cn(
+                    isMobileOrphan &&
+                      'col-span-2 mx-auto w-[calc(50%_-_0.5rem)] sm:w-[calc(50%_-_0.75rem)] lg:col-span-1 lg:mx-0 lg:w-auto',
+                    isDesktopOrphan && 'lg:col-start-2'
+                  )}
                 />
               )
             })}
