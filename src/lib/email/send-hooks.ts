@@ -142,6 +142,7 @@ export async function sendConfirmationEmailOnce(
     const { subject, htmlContent } = buildEmail({
       fullName: user.full_name,
       eventName: event.name,
+      eventSlug: event.slug,
       eventDate: event.event_date,
       location: event.location,
       locationUrl: event.location_url,

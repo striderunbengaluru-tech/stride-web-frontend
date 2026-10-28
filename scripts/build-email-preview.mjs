@@ -37,6 +37,7 @@ const STORAGE = 'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/publ
 const ticket = {
   fullName: 'Asha Rao',
   eventName: 'Stride Sunday Long Run — Cubbon Park',
+  eventSlug: 'sunday-long-run',
   eventDate: '2026-09-06T06:00:00+05:30',
   location: 'Cubbon Park, Bengaluru',
   locationUrl: 'https://maps.google.com/?q=Cubbon+Park+Bengaluru',
