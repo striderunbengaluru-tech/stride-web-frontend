@@ -614,8 +614,8 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
   const sheet = `${paperMasthead()}
             <tr>
               <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
-                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:35px;line-height:1.14;letter-spacing:-0.005em;color:${PAPER_INK};text-align:center;">${
-                  isSelection ? 'You&#39;re selected' : 'See you at the start line'
+                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.14;letter-spacing:0.02em;color:${PAPER_INK};text-align:center;">${
+                  isSelection ? 'You&#39;re in' : 'See you at the start line'
                 }</h1>
                 <p style="margin:10px 0 0;font-family:${PAPER_FONT};font-size:17px;line-height:1.5;color:${PAPER_BODY};text-align:center;">${event}</p>
               </td>
@@ -625,7 +625,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
                 <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
                 <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">${
                   isSelection
-                    ? 'Your application has been approved and your spot is confirmed. See you there.'
+                    ? 'We loved your application and have reserved a spot for you.'
                     : 'Your spot is confirmed! See you there, with all the energy.'
                 }</p>
                 <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">All the important details for this event are given below.</p>
