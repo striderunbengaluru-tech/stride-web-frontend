@@ -1189,7 +1189,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                 have a spot. Repeated verbatim on the confirmation page. */}
             {inviteOnly && (
               <p className='text-amber-200/80 text-[11px] text-center leading-relaxed'>
-                Submitting does not guarantee your participation — Stride selects the athletes for this run.
+                Submitting does not guarantee your participation. Stride selects the athletes for this run.
               </p>
             )}
 
