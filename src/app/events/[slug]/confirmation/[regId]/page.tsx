@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import ReactMarkdown from 'react-markdown'
-import { CheckCircle2, MapPin, ArrowRight, Hourglass, XCircle, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, MapPin, ArrowRight, Hourglass, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { adminClient } from '@/lib/supabase/admin'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
@@ -210,11 +210,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         {isApplication && (
           <Reveal>
             <div className='rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4'>
-              <p className='flex items-center gap-2 text-amber-200 text-xs font-bold font-mono uppercase tracking-widest'>
-                <TriangleAlert size={13} aria-hidden='true' />
-                Important
-              </p>
-              <p className='text-white/85 text-sm leading-relaxed mt-2'>
+              <p className='text-white/85 text-sm leading-relaxed'>
                 {APPLICATION_DISCLAIMER}
               </p>
               <p className='text-white/50 text-xs leading-relaxed mt-2'>
