@@ -224,7 +224,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
           <Reveal>
             <div className='rounded-2xl border border-white/15 bg-white/5 px-5 py-4'>
               <p className='text-white/70 text-sm leading-relaxed'>
-                You weren&apos;t selected for this run. If registration is now open to everyone, you can still grab a spot from the event page.
+                We couldn&apos;t proceed with your application this time. Stay tuned for the next experiences.
               </p>
             </div>
           </Reveal>

@@ -109,20 +109,9 @@ export function RegisterButton({
     )
   }
 
-  // Not selected. Terminal only while the mode is still on — once invite-only
-  // is switched off they fall through to the ordinary register flow below and
-  // can buy a ticket like anyone else.
-  if (viewerState === 'rejected' && inviteOnly) {
-    return (
-      <button
-        disabled
-        aria-disabled='true'
-        className='w-full py-3.5 rounded-md bg-white/8 text-white/35 font-semibold text-sm cursor-not-allowed min-h-11 border border-white/10'
-      >
-        Not selected
-      </button>
-    )
-  }
+  // A not-selected applicant never reaches this component while the run is
+  // invite-only: registration-cta shows them the notice instead. Once
+  // invite-only is switched off they get the ordinary register flow below.
 
   if (isPast) {
     return (
