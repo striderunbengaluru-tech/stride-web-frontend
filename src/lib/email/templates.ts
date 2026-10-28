@@ -145,6 +145,8 @@ type TicketVariant = 'confirmed' | 'selected'
 type TicketEmailParams = {
   fullName: string | null
   eventName: string
+  /** Picks the event's own invite-only note, if it has one. */
+  eventSlug: string
   eventDate: string | null
   location: string | null
   locationUrl: string | null
@@ -185,7 +187,7 @@ const PAPER_SHEET = '#FFFFFF'
 const PAPER_INK = '#1C1A22' // headings and emphasis
 const PAPER_BODY = '#4A4652' // running copy
 const PAPER_MUTED = '#79737F' // labels, captions, footer
-const PAPER_STONE = '#F4F1ED' // the details panel fill
+const PAPER_STONE = '#F4F1ED' // the step-card fill
 const PAPER_RULE = '#E4E0DA' // hairlines
 const PURPLE = '#4B2862' // primary CTA fill + inline links
 
@@ -224,14 +226,6 @@ function paperDocument(params: { title: string; preheader: string; sheet: string
       @media only screen and (max-width:620px) {
         .col { width:100% !important; }
         .pad { padding-left:22px !important; padding-right:22px !important; }
-        /* When/Where are two floated tables rather than two cells in one row.
-           The festival mail stacks a single row's <td>s with display:block,
-           which does not actually work: a block child of a display:table-row
-           is wrapped in an anonymous cell, so WebKit and Blink keep the
-           columns side by side and merely squeeze them. Dropping the float is
-           the one stacking trick every client, Outlook included, honours. */
-        .stack { display:block !important; width:100% !important; float:none !important; }
-        .stack-next { padding-top:16px !important; }
         .h1 { font-size:27px !important; }
       }
     </style>
@@ -265,10 +259,6 @@ function paperMasthead(): string {
             </tr>`
 }
 
-/** Tracked uppercase micro-label above a value. */
-function paperLabel(text: string): string {
-  return `<div style="font-family:${PAPER_FONT};font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:${PAPER_MUTED};padding-bottom:6px;">${text}</div>`
-}
 
 /** Primary CTA — purple fill, white text, rounded-md. Never a pill. */
 function paperCta(href: string, label: string): string {
@@ -347,9 +337,8 @@ function paperFooter(): string {
             </tr>`
 }
 
-// The stone panel splits the date across two lines, the way the festival mail
-// does, so "When" and "Where" read as a matched pair rather than one long
-// wrapping sentence. Two formatters rather than one combined string, sliced:
+// The details list puts the day on the value line and the time on the quieter
+// line under it. Two formatters rather than one combined string, sliced:
 // the locale decides where the separator falls, so a slice would be fragile.
 function formatEventDayIST(eventDate: string): string {
   return new Intl.DateTimeFormat('en-IN', {
@@ -368,17 +357,24 @@ function formatEventTimeIST(eventDate: string): string {
   }).format(new Date(eventDate))
 }
 
-/** A full-width row inside the stone panel, under the When/Where pair. */
-function paperDetailRow(label: string, valueHtml: string): string {
+/**
+ * One row of the ticket's details list: a fixed label column, the value beside
+ * it, hairlines between rows. Rows stack one after another at every width, so
+ * nothing has to reflow on mobile. The label column stays narrow enough to
+ * leave the value ~230px on a 375px screen.
+ */
+function paperDetailRow(label: string, valueHtml: string, first = false): string {
+  const rule = first ? '' : `border-top:1px solid ${PAPER_RULE};`
   return `
-                      <tr>
-                        <td style="padding:18px 0 0;">
-                          <div style="border-top:1px solid ${PAPER_RULE};padding-top:16px;">
-                            ${paperLabel(label)}
-                            <div style="font-family:${PAPER_FONT};font-size:15px;line-height:1.55;color:${PAPER_INK};">${valueHtml}</div>
-                          </div>
-                        </td>
-                      </tr>`
+                  <tr>
+                    <td valign="top" width="84" style="width:84px;${rule}padding:17px 12px 15px 0;font-family:${PAPER_FONT};font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;line-height:20px;color:${PAPER_MUTED};">${label}</td>
+                    <td valign="top" style="${rule}padding:14px 0;font-family:${PAPER_FONT};font-size:15.5px;line-height:1.55;font-weight:600;color:${PAPER_INK};">${valueHtml}</td>
+                  </tr>`
+}
+
+/** The quieter second line under a details value: a time, a link, an id. */
+function paperDetailSub(html: string): string {
+  return `<div style="font-family:${PAPER_FONT};font-size:13.5px;line-height:1.5;font-weight:400;color:${PAPER_BODY};padding-top:2px;">${html}</div>`
 }
 
 /**
@@ -418,6 +414,39 @@ function paperStepCard(icon: string, title: string, bodyHtml: string): string {
 /** Inline link inside sheet copy. Purple, never yellow — see the palette note. */
 function paperLink(href: string, label: string): string {
   return `<a href="${href}" target="_blank" style="color:${PURPLE};font-weight:650;text-decoration:underline;">${label}</a>`
+}
+
+/**
+ * Run-day notes for individual invite-only events, keyed by event slug. They
+ * go out only in the "You're selected" mail for that event; every other ticket
+ * email carries no note. Items are HTML, so any `'` is written as `&#39;`.
+ */
+const INVITE_NOTES: Record<string, { title: string; items: string[] }> = {
+  'the-buddy-run': {
+    title: 'A quick vibe check',
+    items: [
+      'By participating, you confirm that you&#39;re medically fit.',
+      'Participant check-in closes at 6:40 am.',
+      'Wear comfortable sports gear.',
+      'Parking is available on public roads and is at the participant&#39;s discretion. Organisers are not responsible for vehicle security.',
+      `Share your stories by tagging ${paperLink(INSTAGRAM_URL, 'stride_runclub_bengaluru')}. We will reshare all your memories.`,
+    ],
+  },
+}
+
+function paperInviteNote(eventSlug: string): string {
+  const note = INVITE_NOTES[eventSlug]
+  if (!note) return ''
+
+  return `
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:28px;">
+                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.6;font-weight:650;color:${PAPER_INK};">${note.title}</p>
+                <ul style="margin:10px 0 0;padding:0 0 0 20px;font-family:${PAPER_FONT};font-size:15px;line-height:1.6;color:${PAPER_BODY};">${note.items
+                  .map(item => `<li style="margin:0 0 8px;padding:0;">${item}</li>`)
+                  .join('')}</ul>
+              </td>
+            </tr>`
 }
 
 export function welcomeEmail(params: {
@@ -490,7 +519,7 @@ export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
 export function registrationConfirmedEmail(params: TicketEmailParams & {
   variant?: TicketVariant
 }): EmailContent {
-  const { fullName, eventName, eventDate, location, locationUrl, routeUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
+  const { fullName, eventName, eventSlug, eventDate, location, locationUrl, routeUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
   const isSelection = variant === 'selected'
   const event = escapeHtml(eventName)
   const tag = escapeHtml(runnerTag ?? '—')
@@ -507,67 +536,49 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
             </tr>`
     : ''
 
-  // ── When / Where, side by side and stacking on mobile ──────────────────────
-  const whenCell = eventDate
-    ? `${paperLabel('When')}
-                              <div style="font-family:${PAPER_FONT};font-size:15px;line-height:1.5;color:${PAPER_INK};font-weight:650;">${escapeHtml(formatEventDayIST(eventDate))}<br>${escapeHtml(formatEventTimeIST(eventDate))}</div>
-                              <div style="font-family:${PAPER_FONT};font-size:13px;line-height:1.5;color:${PAPER_MUTED};padding-top:4px;">India Standard Time</div>`
-    : `${paperLabel('When')}
-                              <div style="font-family:${PAPER_FONT};font-size:15px;line-height:1.5;color:${PAPER_MUTED};">To be announced</div>`
+  // ── The details list: one row per fact, read top to bottom ────────────────
+  const whenRow = paperDetailRow(
+    'When',
+    eventDate
+      ? `${escapeHtml(formatEventDayIST(eventDate))}${paperDetailSub(`${escapeHtml(formatEventTimeIST(eventDate))} IST`)}`
+      : `<span style="color:${PAPER_MUTED};font-weight:400;">To be announced</span>`,
+    true,
+  )
 
   // href escaped like the route link below it. Admin-authored and URL-validated,
   // so this is defence in depth rather than a live hole — but a quote in the
   // value would otherwise close the attribute early. The other hrefs in this
   // file are constants or built from SITE_URL, so they are not the same input.
-  const whereCell = location
-    ? `${paperLabel('Where')}
-                              <div style="font-family:${PAPER_FONT};font-size:15px;line-height:1.5;color:${PAPER_INK};font-weight:650;">${escapeHtml(location)}</div>${
-                                locationUrl
-                                  ? `
-                              <div style="padding-top:4px;"><a href="${escapeHtml(locationUrl)}" target="_blank" style="font-family:${PAPER_FONT};font-size:13px;line-height:1.5;color:${PURPLE};font-weight:650;text-decoration:underline;">Open in Maps</a></div>`
-                                  : ''
-                              }`
+  const whereRow = location
+    ? paperDetailRow(
+        'Where',
+        `${escapeHtml(location)}${locationUrl ? paperDetailSub(paperLink(escapeHtml(locationUrl), 'Open in Maps')) : ''}`,
+      )
     : ''
 
-  // Half-width beside When, or the full panel width when the event has no
-  // location set and When is the only thing in the pair.
-  const paired = whereCell !== ''
-  const whenTableWidth = paired ? '48%' : '100%'
-
-  const whereTable = paired
-    ? `
-                      <table role="presentation" class="stack stack-next" width="48%" align="right" cellpadding="0" cellspacing="0" border="0" style="width:48%;">
-                        <tr>
-                          <td valign="top" style="padding:0;">
-                            ${whereCell}
-                          </td>
-                        </tr>
-                      </table>`
-    : ''
-
-  // ── The rows that only some events carry ───────────────────────────────────
   // Wording stays provider-neutral: the admin field takes Strava, Komoot or any
   // other link, so naming Strava here would be wrong as often as it was right.
   const routeRow = routeUrl
-    ? paperDetailRow('Route', `<a href="${escapeHtml(routeUrl)}" target="_blank" style="color:${PURPLE};font-weight:650;text-decoration:underline;">View the run route</a>`)
+    ? paperDetailRow('Route', paperLink(escapeHtml(routeUrl), 'View the run route'))
     : ''
 
   // Package names are admin-authored free text, so every one is escaped.
   const packagesRow = selectedPackages.length > 0
     ? paperDetailRow(
-        selectedPackages.length > 1 ? 'Your packages' : 'Your package',
+        selectedPackages.length > 1 ? 'Packages' : 'Package',
         selectedPackages
-          .map(pkg => `${escapeHtml(pkg.name)} <span style="color:${PAPER_MUTED};">· ${priceLabel(pkg.amountPaise)}</span>`)
+          .map(pkg => `${escapeHtml(pkg.name)} <span style="color:${PAPER_MUTED};font-weight:400;">· ${priceLabel(pkg.amountPaise)}</span>`)
           .join('<br>')
       )
     : ''
 
-  const paymentRow = amountPaidPaise != null
+  // Free runs carry no payment row at all: "Paid: Free" says nothing.
+  const paymentRow = amountPaidPaise != null && amountPaidPaise > 0
     ? paperDetailRow(
-        'Amount paid',
+        'Paid',
         `${formatRupees(amountPaidPaise)}${
           paymentId
-            ? ` <span style="font-family:${MONO_FONT};font-size:12px;color:${PAPER_MUTED};">· ${escapeHtml(paymentId)}</span>`
+            ? paperDetailSub(`<span style="font-family:${MONO_FONT};font-size:12px;">${escapeHtml(paymentId)}</span>`)
             : ''
         }`
       )
@@ -623,23 +634,10 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
             ${posterRow}
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:28px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPER_STONE};border-radius:12px;">
-                  <tr>
-                    <td style="padding:20px 22px;">
-                      <table role="presentation" class="stack" width="${whenTableWidth}" align="left" cellpadding="0" cellspacing="0" border="0" style="width:${whenTableWidth};">
-                        <tr>
-                          <td valign="top" style="padding:0;">
-                            ${whenCell}
-                          </td>
-                        </tr>
-                      </table>${whereTable}
-                      <div style="clear:both;height:0;font-size:0;line-height:0;">&nbsp;</div>
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${routeRow}${packagesRow}${paymentRow}</table>
-                    </td>
-                  </tr>
-                </table>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${PAPER_INK};border-bottom:1px solid ${PAPER_RULE};">${whenRow}${whereRow}${routeRow}${packagesRow}${paymentRow}</table>
               </td>
             </tr>
+            ${isSelection ? paperInviteNote(eventSlug) : ''}
             ${tagBand}
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
