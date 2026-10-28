@@ -78,10 +78,8 @@ function emailDocument(body: string): string {
 </html>`
 }
 
-const LOGO_URL =
-  'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/email-icons/stride-logo-purple-bg.png'
-// Purple-and-yellow wordmark on white, cropped tight. Used by the invite-only
-// mail, whose masthead sits on the white sheet. PNG, not WebP, for Outlook.
+// Purple-and-yellow wordmark on white, cropped tight, for the masthead of every
+// paper-sheet mail. PNG, not WebP, for Outlook.
 const WORDMARK_URL =
   'https://ienotcjldormdxrzukpk.supabase.co/storage/v1/object/public/stride-assets/images/web-assets/email-icons/stride-logo-wordmark.png'
 const DUCKY_URL =
@@ -251,16 +249,12 @@ function paperDocument(params: { title: string; preheader: string; sheet: string
 }
 
 /** Logo, centred, with the yellow rule beneath it. */
-/** The purple-tile logo, or the white-ground wordmark when `wordmark` is set. */
-function paperMasthead(wordmark = false): string {
-  const logo = wordmark
-    ? `<img src="${WORDMARK_URL}" alt="Stride Run Club" width="200" style="display:inline-block;width:200px;max-width:60%;height:auto;border:0;">`
-    : `<img src="${LOGO_URL}" alt="Stride Run Club" width="150" style="display:inline-block;width:150px;max-width:55%;height:auto;border-radius:6px;">`
+function paperMasthead(): string {
   return `
             <tr>
               <td class="pad" align="center" style="${PAPER_PAD}padding-top:34px;padding-bottom:26px;text-align:center;">
                 <a href="${HOME_URL}" target="_blank" style="text-decoration:none;">
-                  ${logo}
+                  <img src="${WORDMARK_URL}" alt="Stride Run Club" width="200" style="display:inline-block;width:200px;max-width:60%;height:auto;border:0;">
                 </a>
                 <div style="width:46px;height:4px;background:${YELLOW};border-radius:2px;margin:18px auto 0;"></div>
               </td>
@@ -619,7 +613,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
       )
     : ''
 
-  const sheet = `${paperMasthead(isSelection)}
+  const sheet = `${paperMasthead()}
             <tr>
               <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
                 <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.14;letter-spacing:0.02em;color:${PAPER_INK};text-align:center;">${
