@@ -120,6 +120,18 @@ type DesktopExtras = {
   spotsLine: React.ReactNode
 }
 
+/** What a not-selected applicant sees while the run is still invite-only. */
+const NOT_SELECTED_COPY = "We couldn't proceed with your application this time. Stay tuned for the next experiences."
+
+/** Red-tinted box that stands in for the price and button once they're out. */
+function NotSelectedNotice() {
+  return (
+    <p className='rounded-md border border-red-400/40 bg-red-500/15 px-3 py-2.5 text-red-100 text-sm leading-snug line-clamp-3'>
+      {NOT_SELECTED_COPY}
+    </p>
+  )
+}
+
 function statusText(opts: { viewerState: ViewerState; isPast: boolean; isFull: boolean; inviteOnly: boolean }) {
   if (opts.viewerState === 'confirmed') return "You're registered for this event."
   if (opts.viewerState === 'applied') return "Your application is in — we'll be in touch."
@@ -127,7 +139,7 @@ function statusText(opts: { viewerState: ViewerState; isPast: boolean; isFull: b
   // has to acknowledge the decision without closing the door.
   if (opts.viewerState === 'rejected') {
     return opts.inviteOnly
-      ? "You weren't selected for this run."
+      ? NOT_SELECTED_COPY
       : "You weren't selected earlier — this run is now open to everyone."
   }
   if (opts.isPast) return 'This event has concluded.'
@@ -155,6 +167,9 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
       />
     )
   }
+
+  // Price and a dead button mean nothing to someone who wasn't selected.
+  if (viewer.viewerState === 'rejected' && props.inviteOnly) return <NotSelectedNotice />
 
   return (
     <>
@@ -191,13 +206,40 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
   )
 }
 
-// Mobile sticky bar: just the button
-export function RegistrationCtaMobile(props: SharedProps) {
+type MobileExtras = {
+  priceCaption: string
+  priceLabel: string
+}
+
+/** The price half of the mobile bar, shared with its skeleton. */
+function MobilePrice(props: MobileExtras) {
+  return (
+    <div>
+      <p className='text-white/40 text-xs'>{props.priceCaption}</p>
+      <p className='text-white font-bold text-xl leading-none mt-0.5 font-mono'>{props.priceLabel}</p>
+    </div>
+  )
+}
+
+// Mobile sticky bar: price beside the button. It owns the price so that a
+// not-selected applicant gets the message alone, full width, with no price.
+export function RegistrationCtaMobile(props: SharedProps & MobileExtras) {
   const viewer = useViewerState(props.eventId)
 
-  if (!viewer) return <RegistrationCtaMobileSkeleton />
+  if (!viewer) return <RegistrationCtaMobileSkeleton priceCaption={props.priceCaption} priceLabel={props.priceLabel} />
+
+  if (viewer.viewerState === 'rejected' && props.inviteOnly) {
+    return (
+      <div className='max-w-lg mx-auto'>
+        <NotSelectedNotice />
+      </div>
+    )
+  }
 
   return (
+    <div className='flex items-center gap-4 max-w-lg mx-auto'>
+      <MobilePrice priceCaption={props.priceCaption} priceLabel={props.priceLabel} />
+      <div className='flex-1'>
     <RegisterButton
       eventId={props.eventId}
       eventSlug={props.eventSlug}
@@ -218,6 +260,8 @@ export function RegistrationCtaMobile(props: SharedProps) {
       razorpayKeyId={props.razorpayKeyId}
       inviteOnly={props.inviteOnly}
     />
+      </div>
+    </div>
   )
 }
 
@@ -247,6 +291,11 @@ export function RegistrationCtaDesktopSkeleton(props: {
   )
 }
 
-export function RegistrationCtaMobileSkeleton() {
-  return <div className='w-full py-3.5 rounded-md bg-white/10 animate-pulse min-h-11' aria-hidden='true' />
+export function RegistrationCtaMobileSkeleton(props: MobileExtras) {
+  return (
+    <div className='flex items-center gap-4 max-w-lg mx-auto'>
+      <MobilePrice priceCaption={props.priceCaption} priceLabel={props.priceLabel} />
+      <div className='flex-1 py-3.5 rounded-md bg-white/10 animate-pulse min-h-11' aria-hidden='true' />
+    </div>
+  )
 }

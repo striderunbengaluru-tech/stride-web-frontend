@@ -195,6 +195,7 @@ export default async function EventDetailPage({ params }: Props) {
   const priceLabel = inviteOnly
     ? FREE_LABEL
     : eventPriceLabel(event.price_paise, packages, packagesEnabled, openPackageIds)
+  const mobilePriceCaption = inviteOnly ? 'To apply' : 'Entry fee'
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
 
   // `overflow-clip`, NOT `overflow-hidden`: hidden makes this a scroll container,
@@ -519,14 +520,10 @@ export default async function EventDetailPage({ params }: Props) {
             {spotsLabel}
           </p>
         )}
-        <div className='flex items-center gap-4 max-w-lg mx-auto'>
-          <div>
-            <p className='text-white/40 text-xs'>{inviteOnly ? 'To apply' : 'Entry fee'}</p>
-            <p className='text-white font-bold text-xl leading-none mt-0.5 font-mono'>{priceLabel}</p>
-          </div>
-          <div className='flex-1'>
-            <Suspense fallback={<RegistrationCtaMobileSkeleton />}>
+        <Suspense fallback={<RegistrationCtaMobileSkeleton priceCaption={mobilePriceCaption} priceLabel={priceLabel} />}>
               <RegistrationCtaMobile
+                priceCaption={mobilePriceCaption}
+                priceLabel={priceLabel}
                 eventId={event.id}
                 eventSlug={slug}
                 pricePaise={event.price_paise}
@@ -542,9 +539,7 @@ export default async function EventDetailPage({ params }: Props) {
                 inviteOnly={inviteOnly}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
               />
-            </Suspense>
-          </div>
-        </div>
+        </Suspense>
       </div>
 
     </main>
