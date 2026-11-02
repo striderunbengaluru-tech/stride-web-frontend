@@ -50,5 +50,18 @@
       "nirmala-pose-2.webp",
       "nirmala-pose-3.webp"
     ]
+  },
+  {
+    "slug": "jeel-makwana",
+    "name": "Jeel Makwana",
+    "role": "Lead Strider",
+    "bio": "Happiest on a run or with a paintbrush.",
+    "instagramUrl": "https://www.instagram.com/fitwithjeel/",
+    "stravaUrl": "https://www.strava.com/athletes/158394610",
+    "images": [
+      "jeel-pose-1.webp",
+      "jeel-pose-2.webp",
+      "jeel-pose-3.webp"
+    ]
   }
 ]
