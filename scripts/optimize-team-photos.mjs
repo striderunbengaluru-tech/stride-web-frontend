@@ -55,6 +55,7 @@ const SLUGS = [
   'chethan',
   'ichita',
   'janvi',
+  'jeel',
   'kushagra',
   'naman',
   'nirmala',
