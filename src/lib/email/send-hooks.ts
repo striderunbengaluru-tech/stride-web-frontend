@@ -196,7 +196,7 @@ export async function sendPaymentDueEmailOnce(registrationId: string): Promise<v
       .eq('id', registrationId)
       .eq('status', 'AWAITING_PAYMENT')
       .is('payment_due_email_sent_at', null)
-      .select('amount_due_paise, users(email, full_name), events(name, slug, event_date, location, location_url, strava_route_url, banner_images)')
+      .select('amount_due_paise, users(email, full_name), events(name, slug, event_date, end_date, location, location_url, strava_route_url, banner_images)')
 
     if (error) {
       console.error('[Email] Payment-due claim failed', error)
@@ -211,6 +211,7 @@ export async function sendPaymentDueEmailOnce(registrationId: string): Promise<v
       name: string
       slug: string
       event_date: string | null
+      end_date: string | null
       location: string | null
       location_url: string | null
       strava_route_url: string | null
@@ -224,7 +225,9 @@ export async function sendPaymentDueEmailOnce(registrationId: string): Promise<v
     const { subject, htmlContent } = selectedPaymentDueEmail({
       fullName: user.full_name,
       eventName: event.name,
+      eventSlug: event.slug,
       eventDate: event.event_date,
+      eventEndDate: event.end_date,
       location: event.location,
       locationUrl: event.location_url,
       routeUrl: event.strava_route_url,

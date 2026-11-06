@@ -522,7 +522,11 @@ export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
 type PaymentDueEmailParams = {
   fullName: string | null
   eventName: string
+  /** Picks the event's own copy from PAYMENT_DUE_COPY, if it has one. */
+  eventSlug: string
   eventDate: string | null
+  /** Shown as a time range on the When row when set. */
+  eventEndDate?: string | null
   location: string | null
   locationUrl: string | null
   routeUrl: string | null
@@ -533,13 +537,56 @@ type PaymentDueEmailParams = {
 }
 
 /**
+ * Per-event copy for the payment-due mail, keyed by event slug. An event listed
+ * here gets its own subject, preview text, greeting, body and "what's included"
+ * list; every other paid invite-only event gets the standard copy below. Copy is
+ * HTML, so any `'` is written as `&#39;`.
+ */
+type PaymentDueCopy = {
+  subject: string
+  preheader: string
+  headline: string
+  /** Literal greeting, e.g. "Hello,". Omit to greet by first name. */
+  greeting?: string
+  paragraphs: string[]
+  /** Sub-line under the fee on the details list. */
+  feeNote?: string
+  includes?: { title: string; items: string[] }
+}
+
+const PAYMENT_DUE_COPY: Record<string, PaymentDueCopy> = {
+  'the-founders-social': {
+    subject: "You're in: Stride Founders' Social",
+    preheader: 'Complete the steps to confirm spot',
+    headline: 'You&#39;re in',
+    greeting: 'Hello,',
+    paragraphs: [
+      'Congratulations, you made it to The Founders&#39; Social.',
+      'This is an exclusive space for founders of all stages to sweat it out together and connect.',
+      'As the next step, please confirm your participation by clicking the button below.',
+    ],
+    feeNote: 'Paid when you confirm your spot',
+    includes: {
+      title: 'What your ticket includes',
+      items: [
+        'Access to an invite-only space where founders can mingle, share ideas, and build connections.',
+        'A guided walk and workouts led by a certified trainer.',
+        'Refreshing eats and beverages.',
+        `An opportunity to present to the room as part of the <strong style="color:${PAPER_INK};">&#8216;Teach the Room&#8217;</strong> segment. Get three minutes to share an insight, a lesson, or a hack. The goal is simple: leave knowing something new.`,
+      ],
+    },
+  },
+}
+
+/**
  * A paid invite-only application was approved. Not a ticket: no Stride Tag, no
  * calendar button, no wallet pass. The spot only becomes a booking once the
  * runner pays. The button lands on the event page with ?pay=1, which opens the
  * Razorpay payment popup straight away. No em dashes in runner copy.
  */
 export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailContent {
-  const { fullName, eventName, eventDate, location, locationUrl, routeUrl, bannerUrl, amountDuePaise, payUrl } = params
+  const { fullName, eventName, eventSlug, eventDate, eventEndDate, location, locationUrl, routeUrl, bannerUrl, amountDuePaise, payUrl } = params
+  const copy = PAYMENT_DUE_COPY[eventSlug]
   const event = escapeHtml(eventName)
   const amount = formatRupees(amountDuePaise)
   const ctaLabel = 'Reserve my spot'
@@ -558,7 +605,7 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
   const whenRow = paperDetailRow(
     'When',
     eventDate
-      ? `${escapeHtml(formatEventDayIST(eventDate))}${paperDetailSub(`${escapeHtml(formatEventTimeIST(eventDate))} IST`)}`
+      ? `${escapeHtml(formatEventDayIST(eventDate))}${paperDetailSub(`${escapeHtml(formatEventTimeIST(eventDate))}${eventEndDate ? ` to ${escapeHtml(formatEventTimeIST(eventEndDate))}` : ''} IST`)}`
       : `<span style="color:${PAPER_MUTED};font-weight:400;">To be announced</span>`,
     true,
   )
@@ -571,19 +618,37 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
   const routeRow = routeUrl
     ? paperDetailRow('Route', paperLink(escapeHtml(routeUrl), 'View the run route'))
     : ''
-  const amountRow = paperDetailRow('Amount due', amount)
+  const amountRow = copy
+    ? paperDetailRow('Entry fee', `${amount}${copy.feeNote ? paperDetailSub(copy.feeNote) : ''}`)
+    : paperDetailRow('Amount due', amount)
+
+  const bodyParagraphs = (copy?.paragraphs ?? ['We loved your application and you have been shortlisted.'])
+    .map((text, i, all) => `<p style="margin:${i === all.length - 1 ? '0' : '0 0 14px'};font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">${text}</p>`)
+    .join('\n                ')
+
+  const includesBlock = copy?.includes
+    ? `
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:28px;">
+                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.6;font-weight:650;color:${PAPER_INK};">${copy.includes.title}</p>
+                <ul style="margin:10px 0 0;padding:0 0 0 20px;font-family:${PAPER_FONT};font-size:15px;line-height:1.6;color:${PAPER_BODY};">${copy.includes.items
+                  .map((item, i, all) => `<li style="margin:${i === all.length - 1 ? '0' : '0 0 8px'};padding:0;">${item}</li>`)
+                  .join('')}</ul>
+              </td>
+            </tr>`
+    : ''
 
   const sheet = `${paperMasthead()}
             <tr>
               <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
-                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.14;letter-spacing:0.02em;color:${PAPER_INK};text-align:center;">You&#39;re selected</h1>
+                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.14;letter-spacing:0.02em;color:${PAPER_INK};text-align:center;">${copy?.headline ?? 'You&#39;re selected'}</h1>
                 <p style="margin:10px 0 0;font-family:${PAPER_FONT};font-size:17px;line-height:1.5;color:${PAPER_BODY};text-align:center;">${event}</p>
               </td>
             </tr>
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
-                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
-                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">We loved your application and you have been shortlisted.</p>
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">${copy?.greeting ?? `Hey ${firstName(fullName)},`}</p>
+                ${bodyParagraphs}
               </td>
             </tr>
             ${posterRow}
@@ -592,6 +657,7 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${PAPER_INK};border-bottom:1px solid ${PAPER_RULE};">${whenRow}${whereRow}${routeRow}${amountRow}</table>
               </td>
             </tr>
+            ${includesBlock}
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
                 ${paperCta(payUrl, ctaLabel)}
@@ -600,10 +666,10 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
             ${paperFooter()}`
 
   return {
-    subject: `You're selected. Complete payment to confirm your spot at ${eventName}`,
+    subject: copy?.subject ?? `You're selected. Complete payment to confirm your spot at ${eventName}`,
     htmlContent: paperDocument({
-      title: `You're selected for ${eventName}`,
-      preheader: `Pay ${amount} to confirm your spot at ${event}.`,
+      title: escapeHtml(copy?.subject ?? `You're selected for ${eventName}`),
+      preheader: copy?.preheader ?? `Pay ${amount} to confirm your spot at ${event}.`,
       sheet,
     }),
   }
