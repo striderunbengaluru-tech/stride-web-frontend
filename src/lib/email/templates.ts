@@ -518,6 +518,97 @@ export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
   return registrationConfirmedEmail({ ...params, variant: 'selected' })
 }
 
+type PaymentDueEmailParams = {
+  fullName: string | null
+  eventName: string
+  eventDate: string | null
+  location: string | null
+  locationUrl: string | null
+  routeUrl: string | null
+  bannerUrl: string | null
+  amountDuePaise: number
+  /** The event page, UTM-tagged. Where the Pay button lives. */
+  payUrl: string
+}
+
+/**
+ * A paid invite-only application was approved. Not a ticket: no Stride Tag, no
+ * calendar button, no wallet pass. The spot only becomes a booking once the
+ * runner pays, and the copy says so twice. No em dashes in runner copy.
+ */
+export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailContent {
+  const { fullName, eventName, eventDate, location, locationUrl, routeUrl, bannerUrl, amountDuePaise, payUrl } = params
+  const event = escapeHtml(eventName)
+  const amount = formatRupees(amountDuePaise)
+  const ctaLabel = `Pay ${amount} to confirm spot`
+
+  const posterRow = bannerUrl
+    ? `
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:28px;">
+                <a href="${payUrl}" target="_blank" style="display:block;">
+                  <img src="${bannerUrl}" alt="${event}" width="528" style="display:block;width:100%;max-width:528px;height:auto;border-radius:12px;">
+                </a>
+              </td>
+            </tr>`
+    : ''
+
+  const whenRow = paperDetailRow(
+    'When',
+    eventDate
+      ? `${escapeHtml(formatEventDayIST(eventDate))}${paperDetailSub(`${escapeHtml(formatEventTimeIST(eventDate))} IST`)}`
+      : `<span style="color:${PAPER_MUTED};font-weight:400;">To be announced</span>`,
+    true,
+  )
+  const whereRow = location
+    ? paperDetailRow(
+        'Where',
+        `${escapeHtml(location)}${locationUrl ? paperDetailSub(paperLink(escapeHtml(locationUrl), 'Open in Maps')) : ''}`,
+      )
+    : ''
+  const routeRow = routeUrl
+    ? paperDetailRow('Route', paperLink(escapeHtml(routeUrl), 'View the run route'))
+    : ''
+  const amountRow = paperDetailRow('Amount due', amount)
+
+  const sheet = `${paperMasthead()}
+            <tr>
+              <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
+                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.14;letter-spacing:0.02em;color:${PAPER_INK};text-align:center;">You&#39;re selected</h1>
+                <p style="margin:10px 0 0;font-family:${PAPER_FONT};font-size:17px;line-height:1.5;color:${PAPER_BODY};text-align:center;">${event}</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">We loved your application and you have been shortlisted.</p>
+                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_INK};font-weight:600;">Your spot is confirmed only after you pay ${amount}. Until then it is not a booking.</p>
+              </td>
+            </tr>
+            ${posterRow}
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${PAPER_INK};border-bottom:1px solid ${PAPER_RULE};">${whenRow}${whereRow}${routeRow}${amountRow}</table>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
+                ${paperCta(payUrl, ctaLabel)}
+                <p style="margin:14px 0 0;font-family:${PAPER_FONT};font-size:13px;line-height:1.55;color:${PAPER_MUTED};text-align:center;">Once your payment goes through, we will send your confirmation with your Stride Tag.</p>
+              </td>
+            </tr>
+            ${paperFooter()}`
+
+  return {
+    subject: `You're selected. Complete payment to confirm your spot at ${eventName}`,
+    htmlContent: paperDocument({
+      title: `You're selected for ${eventName}`,
+      preheader: `Pay ${amount} to confirm your spot at ${event}.`,
+      sheet,
+    }),
+  }
+}
+
 export function registrationConfirmedEmail(params: TicketEmailParams & {
   variant?: TicketVariant
 }): EmailContent {

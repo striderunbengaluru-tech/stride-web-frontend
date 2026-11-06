@@ -80,7 +80,10 @@ async function fetchEventsData(): Promise<{ events: EventRow[]; upNext: EventRow
       } catch { /* keep cover_url fallback */ }
     }
     const priceLabel = await getLivePriceLabel(event)
-    return { ...event, imageUrl, priceLabel, isFree: priceLabel === FREE_LABEL }
+    // A paid invite-only fee is for shortlisted runners only, so it must not
+    // reach the browser in the page payload either.
+    const price_paise = event.invite_only ? 0 : event.price_paise
+    return { ...event, price_paise, imageUrl, priceLabel, isFree: priceLabel === FREE_LABEL }
   }))
 
   // Every event still ahead of us, soonest first — the carousel rotates through

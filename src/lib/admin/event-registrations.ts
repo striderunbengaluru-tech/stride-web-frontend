@@ -223,6 +223,7 @@ export async function loadEventRegistrations(allowedEventIds: ReadonlySet<string
       custom_fields: customFieldsByEvent.get(e.id) ?? [],
       applied_count: attendees.filter(a => a.status === 'APPLIED').length,
       rejected_count: attendees.filter(a => a.status === 'REJECTED').length,
+      awaiting_payment_count: attendees.filter(a => a.status === 'AWAITING_PAYMENT').length,
       invite_only: pricing?.inviteOnly ?? false,
       banner_url: pricing?.bannerUrl ?? null,
       // admin_event_summary has no package columns, so the label is attached here

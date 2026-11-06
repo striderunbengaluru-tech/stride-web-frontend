@@ -3,7 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { adminClient } from '@/lib/supabase/admin'
 import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { selectableTierIds } from '@/types/event'
-import { eventRowPriceLabel, parsePackagesJson } from '@/lib/utils/money'
+import { eventRowPriceLabel, parsePackagesJson, FREE_LABEL } from '@/lib/utils/money'
 
 // Events flagged `is_test_event` exist so features can be exercised against real
 // data without the live site showing them. They resolve normally on staging,
@@ -201,7 +201,7 @@ export const getPublishedEvents = cache((): Promise<EventListRow[]> =>
   )()
 )
 
-type PricedEventRow = Pick<EventListRow, 'id' | 'price_paise' | 'packages' | 'packages_enabled' | 'packages_progressive'>
+type PricedEventRow = Pick<EventListRow, 'id' | 'price_paise' | 'packages' | 'packages_enabled' | 'packages_progressive' | 'invite_only'>
 
 /**
  * The headline price for an event card or detail page, counting only the tiers
@@ -212,6 +212,9 @@ type PricedEventRow = Pick<EventListRow, 'id' | 'price_paise' | 'packages' | 'pa
  * registration that fills a tier purges the stale label along with them.
  */
 export async function getLivePriceLabel(row: PricedEventRow): Promise<string> {
+  // Applying is free, and a paid invite-only event's fee is shown only to the
+  // runners it shortlists. Same label the event page uses.
+  if (row.invite_only) return FREE_LABEL
   const packages = row.packages_enabled ? parsePackagesJson(row.packages) : []
   if (packages.length === 0) return eventRowPriceLabel(row.price_paise, row.packages, row.packages_enabled)
 

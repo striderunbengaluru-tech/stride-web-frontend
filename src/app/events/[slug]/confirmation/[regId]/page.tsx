@@ -85,6 +85,13 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   // decision has a receipt worth showing, and a rejected one needs somewhere to
   // land other than a 404. PENDING (checkout in flight) and CANCELLED (payment
   // failed) still 404 — there is nothing to show for either.
+  // An approval not yet paid for has no receipt. Its old "View my application"
+  // link lands here, so send it to the event page where the Pay button is.
+  if (registration?.user_id === userId && registration.status === 'AWAITING_PAYMENT') {
+    const linked = Array.isArray(registration.events) ? registration.events[0] : registration.events
+    if (linked?.slug) redirect(`/events/${linked.slug}`)
+  }
+
   if (!registration || registration.user_id !== userId
       || !VIEWABLE_REGISTRATION_STATUSES.has(registration.status)) {
     notFound()

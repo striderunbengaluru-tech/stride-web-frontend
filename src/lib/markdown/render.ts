@@ -161,7 +161,7 @@ async function eventsIndexMarkdown(abs: Abs): Promise<MarkdownDoc> {
 
   const row = (e: (typeof events)[number]) => {
     const when = e.event_date ? formatDateTimeIST(e.event_date) : 'Date to be announced'
-    const price = eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled)
+    const price = e.invite_only ? 'Free to apply' : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled)
     const where = e.location ? ` · ${e.location}` : ''
     const invite = e.invite_only ? ' · Invite only (application reviewed by Stride)' : ''
     return `- [${e.name}](${abs(`/events/${e.slug}`)}) — ${when}${where} · ${price}${invite}`

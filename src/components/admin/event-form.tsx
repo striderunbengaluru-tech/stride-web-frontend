@@ -770,8 +770,8 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                   {/* readOnly, not disabled: a disabled input is not submitted, so
                       disabling it would post nothing and silently wipe the stored
                       price the moment packages were switched on. Invite-only is
-                      NOT readOnly for the same reason in reverse — the admin sets
-                      the price the event will charge once the mode comes off. */}
+                      NOT readOnly: on an invite-only event this is the fee an
+                      approved runner pays to confirm their spot. */}
                   <input
                     type='number'
                     name='priceRupees'
@@ -782,12 +782,12 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                     placeholder='0 for free'
                     readOnly={packagesEnabled}
                     aria-disabled={packagesEnabled}
-                    className={`${inputBase} scheme-dark read-only:opacity-40 read-only:cursor-not-allowed ${inviteOnly && !packagesEnabled ? 'opacity-60' : ''}`}
+                    className={`${inputBase} scheme-dark read-only:opacity-40 read-only:cursor-not-allowed `}
                   />
                   {packagesEnabled ? (
                     <p className='text-white/40 text-xs'>Packages set the price — see Registration below.</p>
                   ) : inviteOnly ? (
-                    <p className='text-white/40 text-xs'>Not charged while invite-only is on — applies again when you switch it off.</p>
+                    <p className='text-white/40 text-xs'>Applying is free. Runners you approve pay this to confirm their spot. Only they see the amount. Set 0 for a free run.</p>
                   ) : null}
                 </div>
               </div>
@@ -856,7 +856,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                   <div className='flex items-center gap-1.5'>
                     <Star size={14} className='text-white/40' />
                     <label className='text-white/70 text-sm font-medium'>Invite-only event mode</label>
-                    <HelpHint text='Registering becomes a free application you review. Price and packages are ignored while this is on (they are kept, and come back the moment you switch it off), and runners are only confirmed — and only emailed — once you approve them in Registrations. The event still shows on the site, with an INVITE ONLY badge.' />
+                    <HelpHint text='Registering becomes a free application you review. On a free run, approving confirms the runner. On a paid run, approving asks them to pay the entry fee, and they are confirmed once they pay. Only approved runners see the fee. Packages and coupons are ignored while this is on (they are kept, and come back the moment you switch it off). The event still shows on the site, with an INVITE ONLY badge.' />
                   </div>
                   <Switch
                     checked={inviteOnly}
@@ -868,7 +868,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
 
                 {inviteOnly && (
                   <p className='text-white/40 text-xs mt-2'>
-                    Free applications, no payment. Approve runners in Registrations → by event to confirm them and send their ticket.
+                    Free applications. Approve runners in Registrations → by event. Free run: they are confirmed straight away. Paid run: they get a payment email and are confirmed once they pay.
                   </p>
                 )}
 
@@ -915,7 +915,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                   <div className='flex items-center gap-1.5'>
                     <Mail size={14} className='text-white/40' />
                     <label className='text-white/70 text-sm font-medium'>Send confirmation email</label>
-                    <HelpHint text='Emails each runner their ticket when their spot is confirmed — for invite-only events, when you approve their application. Off by default: we can only send 300 emails a day across the whole club, so turn it on only for runs where the ticket email matters. Runners always get their confirmation page and wallet pass either way.' />
+                    <HelpHint text='Emails each runner their ticket when their spot is confirmed. For invite-only events, that is when you approve them, or once they pay on a paid run. The payment email to approved runners always sends, whatever this switch says. Off by default: we can only send 300 emails a day across the whole club, so turn it on only for runs where the ticket email matters. Runners always get their confirmation page and wallet pass either way.' />
                   </div>
                   <Switch
                     checked={confirmationEmailEnabled}

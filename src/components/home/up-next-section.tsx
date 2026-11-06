@@ -25,7 +25,8 @@ async function toUpNextEvent(row: EventListRow): Promise<UpNextEvent> {
     slug: row.slug,
     event_date: row.event_date,
     location: row.location,
-    price_paise: row.price_paise,
+    // A paid invite-only fee is shown only to shortlisted runners.
+    price_paise: row.invite_only ? 0 : row.price_paise,
     imageUrl,
     invite_only: row.invite_only,
     priceLabel: await getLivePriceLabel(row),

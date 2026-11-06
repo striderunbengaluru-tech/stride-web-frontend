@@ -22,6 +22,8 @@ export type EventSummary = {
   applied_count: number
   /** Applications turned down. */
   rejected_count: number
+  /** Approved on a paid event, not yet paid. Holds a seat. */
+  awaiting_payment_count: number
   /** Registering on this event is a free application an admin approves. */
   invite_only: boolean
   /** First banner image, falling back to cover_url. Null when neither is set. */

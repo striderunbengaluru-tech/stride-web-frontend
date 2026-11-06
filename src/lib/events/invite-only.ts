@@ -7,7 +7,8 @@
  *
  * Invite-only is a SELECTION model, not a visibility model: the event stays
  * publicly listed and carries a badge. What changes is that registering
- * becomes a free application an admin has to approve.
+ * becomes a free application an admin has to approve. On a paid event the
+ * approval lands on AWAITING_PAYMENT, and the runner pays to confirm.
  */
 
 export const REGISTRATION_STATUSES = [
@@ -16,6 +17,7 @@ export const REGISTRATION_STATUSES = [
   'CANCELLED',
   'APPLIED',
   'REJECTED',
+  'AWAITING_PAYMENT',
 ] as const
 
 export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number]
@@ -24,6 +26,12 @@ export type RegistrationStatus = (typeof REGISTRATION_STATUSES)[number]
 export const APPLIED: RegistrationStatus = 'APPLIED'
 /** An application Stride turned down. Permanent for that application. */
 export const REJECTED: RegistrationStatus = 'REJECTED'
+/**
+ * Approved on a paid invite-only event, not yet paid. Holds a seat until the
+ * runner pays or an admin revokes the approval. Never clearable by the
+ * register route.
+ */
+export const AWAITING_PAYMENT: RegistrationStatus = 'AWAITING_PAYMENT'
 
 /**
  * Statuses the confirmation page will render. PENDING (checkout in flight) and
@@ -53,6 +61,7 @@ export const CLEARABLE_REGISTRATION_STATUSES = ['PENDING', 'CANCELLED', 'REJECTE
  */
 export const AWAITING_LABEL = 'Awaiting invitation acceptance'
 export const NOT_SELECTED_LABEL = 'Not selected'
+export const PAYMENT_DUE_LABEL = 'Selected. Payment pending'
 
 /**
  * The note every applicant must see before and after applying. Wording is
