@@ -1,6 +1,6 @@
 import { adminClient } from '@/lib/supabase/admin'
 import { sendEmail } from './brevo'
-import { registrationConfirmedEmail, selectedForEventEmail, welcomeEmail } from './templates'
+import { registrationConfirmedEmail, selectedForEventEmail, selectedPaymentDueEmail, welcomeEmail } from './templates'
 import { buildGoogleCalendarUrl, calendarDescription } from '@/lib/google-calendar'
 import { PRODUCTION_SITE_URL } from '@/lib/site-url'
 import type { SelectedPackage } from '@/types/event'
@@ -168,6 +168,79 @@ export async function sendConfirmationEmailOnce(
         .update({ confirmation_email_sent_at: null })
         .eq('id', registrationId)
         .not('confirmation_email_sent_at', 'is', null)
+    }
+  }
+}
+
+/** GA4 campaign tags on the pay link. Matches the scripts/ campaign mails. */
+const PAYMENT_DUE_UTM = 'utm_source=brevo&utm_medium=email&utm_campaign=invite_payment_due'
+
+/**
+ * Send the "you're selected, pay to confirm" mail exactly once per approval.
+ * The atomic claim on `payment_due_email_sent_at` makes a double-click on
+ * Approve harmless.
+ *
+ * Deliberately NOT gated on `confirmation_email_enabled`. That switch exists to
+ * save Brevo quota on big open runs; this mail is the only way an approved
+ * runner learns they must act, so skipping it would strand their seat.
+ *
+ * Never throws.
+ */
+export async function sendPaymentDueEmailOnce(registrationId: string): Promise<void> {
+  let claimedStamp = false
+
+  try {
+    const { data: claimed, error } = await adminClient
+      .from('event_registrations')
+      .update({ payment_due_email_sent_at: new Date().toISOString() })
+      .eq('id', registrationId)
+      .eq('status', 'AWAITING_PAYMENT')
+      .is('payment_due_email_sent_at', null)
+      .select('amount_due_paise, users(email, full_name), events(name, slug, event_date, location, location_url, strava_route_url, banner_images)')
+
+    if (error) {
+      console.error('[Email] Payment-due claim failed', error)
+      return
+    }
+    const row = claimed?.[0]
+    if (!row) return
+    claimedStamp = true
+
+    const user = row.users as unknown as { email: string | null; full_name: string | null } | null
+    const event = row.events as unknown as {
+      name: string
+      slug: string
+      event_date: string | null
+      location: string | null
+      location_url: string | null
+      strava_route_url: string | null
+      banner_images: string | null
+    } | null
+    if (!user?.email || !event || !row.amount_due_paise) return
+
+    let bannerUrl: string | null = null
+    try { bannerUrl = (JSON.parse(event.banner_images ?? '[]') as string[])[0] ?? null } catch { /* keep null */ }
+
+    const { subject, htmlContent } = selectedPaymentDueEmail({
+      fullName: user.full_name,
+      eventName: event.name,
+      eventDate: event.event_date,
+      location: event.location,
+      locationUrl: event.location_url,
+      routeUrl: event.strava_route_url,
+      bannerUrl,
+      amountDuePaise: row.amount_due_paise,
+      payUrl: `${SITE_URL}/events/${event.slug}?${PAYMENT_DUE_UTM}&utm_content=${encodeURIComponent(event.slug)}`,
+    })
+    await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
+  } catch (err) {
+    console.error('[Email] Payment-due email failed', err)
+    if (claimedStamp) {
+      await adminClient
+        .from('event_registrations')
+        .update({ payment_due_email_sent_at: null })
+        .eq('id', registrationId)
+        .not('payment_due_email_sent_at', 'is', null)
     }
   }
 }
