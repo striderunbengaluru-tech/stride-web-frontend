@@ -18,7 +18,7 @@ import { BLOG_POSTS } from '@/content/blog/index'
 import { formatDateShortIST, formatTimeIST } from '@/lib/utils/ist'
 import { priceLabel as priceOf } from '@/lib/utils/money'
 import { sumPackageAmountPaise, type SelectedPackage } from '@/types/event'
-import { VIEWABLE_REGISTRATION_STATUSES, APPLICATION_DISCLAIMER } from '@/lib/events/invite-only'
+import { VIEWABLE_REGISTRATION_STATUSES } from '@/lib/events/invite-only'
 
 // Re-fetch on every visit. Confirmation state is per-user, not cacheable, and
 // we want to always reflect the live registration row.
@@ -209,23 +209,6 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
             </p>
           </div>
         </Reveal>
-
-        {/* ── The application disclaimer. The single most important thing on
-             this page for an applicant: without it, "Application submitted" on
-             a page that otherwise looks like a ticket reads as a confirmed
-             spot. Same wording as the modal's pre-submit line. ── */}
-        {isApplication && (
-          <Reveal>
-            <div className='rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-4'>
-              <p className='text-white/85 text-sm leading-relaxed'>
-                {APPLICATION_DISCLAIMER}
-              </p>
-              <p className='text-white/50 text-xs leading-relaxed mt-2'>
-                Selection is at Stride Run Club&apos;s discretion. Your ticket and wallet passes appear here once you&apos;re approved.
-              </p>
-            </div>
-          </Reveal>
-        )}
 
         {isRejected && (
           <Reveal>
