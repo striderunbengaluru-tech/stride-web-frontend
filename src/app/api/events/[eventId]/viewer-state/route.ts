@@ -53,7 +53,7 @@ export async function GET(
   // are signed out, and the panel renders a "sign in to register" state.
   if (!user) {
     return NextResponse.json(
-      { isLoggedIn: false, viewerState: 'none', registrationId: null, initial: EMPTY_INITIAL },
+      { isLoggedIn: false, viewerState: 'none', registrationId: null, amountDuePaise: null, initial: EMPTY_INITIAL },
       { status: 200, headers: PRIVATE_HEADERS },
     )
   }
@@ -61,7 +61,7 @@ export async function GET(
   const [{ data: reg }, { data: profile }] = await Promise.all([
     adminClient
       .from('event_registrations')
-      .select('id, status')
+      .select('id, status, amount_due_paise')
       .eq('event_id', eventId)
       .eq('user_id', user.id)
       .maybeSingle(),
@@ -89,27 +89,28 @@ export async function GET(
       }
     : { ...EMPTY_INITIAL, fullName: oauthName }
 
-  // Four viewer states rather than a boolean: an invite-only applicant is
+  // Five viewer states rather than a boolean: an invite-only applicant is
   // neither "registered" nor free to register again, and a rejected runner may
   // still buy a ticket once the mode is switched off.
   const status = reg?.status ?? null
   const viewerState =
     status === 'CONFIRMED' ? 'confirmed'
     : status === 'APPLIED' ? 'applied'
+    : status === 'AWAITING_PAYMENT' ? 'awaiting_payment'
     : status === 'REJECTED' ? 'rejected'
     : 'none'
 
-  // Surfaced for CONFIRMED and APPLIED — the two states the confirmation page
-  // renders (it re-checks session, ownership and status itself). A REJECTED
-  // runner is sent to the event page instead, where they can register if the
-  // event is now open.
-  const hasReceipt = viewerState === 'confirmed' || viewerState === 'applied'
+  // The id rides along for the receipt link (confirmed, applied) and for
+  // starting checkout (awaiting_payment). A REJECTED runner is sent to the
+  // event page instead.
+  const exposesId = viewerState === 'confirmed' || viewerState === 'applied' || viewerState === 'awaiting_payment'
 
   return NextResponse.json(
     {
       isLoggedIn: true,
       viewerState,
-      registrationId: hasReceipt ? reg!.id : null,
+      registrationId: exposesId ? reg!.id : null,
+      amountDuePaise: viewerState === 'awaiting_payment' ? (reg!.amount_due_paise ?? null) : null,
       initial,
     },
     { status: 200, headers: PRIVATE_HEADERS },

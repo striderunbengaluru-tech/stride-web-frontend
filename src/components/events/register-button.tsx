@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ParticipantDetailsModal } from '@/components/events/participant-details-modal'
+import { PayApprovedModal } from '@/components/events/pay-approved-modal'
+import { formatRupees } from '@/lib/utils/money'
 import type { ViewerState } from '@/components/events/registration-cta'
 import type { AdditionalField, EventPackage } from '@/types/event'
 
@@ -17,6 +19,8 @@ type Props = {
   inviteOnly?: boolean
   /** The viewer's CONFIRMED or APPLIED registration id — links to their receipt. */
   registrationId?: string | null
+  /** Locked at approval. Set only when viewerState is 'awaiting_payment'. */
+  amountDuePaise?: number | null
   isPast: boolean
   isLoggedIn: boolean
   initial: {
@@ -47,6 +51,7 @@ export function RegisterButton({
   viewerState,
   inviteOnly = false,
   registrationId,
+  amountDuePaise,
   isPast,
   isLoggedIn,
   initial,
@@ -65,8 +70,9 @@ export function RegisterButton({
   const autoOpen = searchParams.get('register') === '1'
   // A rejected runner on a now-open event is free to register, so only the
   // two "already in the system" states suppress the auto-open.
-  const settled = viewerState === 'confirmed' || viewerState === 'applied'
+  const settled = viewerState === 'confirmed' || viewerState === 'applied' || viewerState === 'awaiting_payment'
   const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !settled && !isFull && !isPast))
+  const [payOpen, setPayOpen] = useState(false)
 
   if (viewerState === 'confirmed') {
     // Plain <a>, not <Link>: the confirmation page is `force-dynamic` and
@@ -122,6 +128,27 @@ export function RegisterButton({
       >
         Event Concluded
       </button>
+    )
+  }
+
+  if (viewerState === 'awaiting_payment' && registrationId && amountDuePaise) {
+    return (
+      <>
+        <button
+          type='button'
+          onClick={() => setPayOpen(true)}
+          className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'
+        >
+          <span className='relative z-10'>Pay {formatRupees(amountDuePaise)} to confirm spot</span>
+        </button>
+        <PayApprovedModal
+          open={payOpen}
+          onClose={() => setPayOpen(false)}
+          registrationId={registrationId}
+          amountDuePaise={amountDuePaise}
+          razorpayKeyId={razorpayKeyId}
+        />
+      </>
     )
   }
 

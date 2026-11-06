@@ -15,12 +15,14 @@ import type { AdditionalField, EventPackage } from '@/types/event'
 // `/api/leaderboard/me`.
 
 /** Where this viewer stands with this event. */
-export type ViewerState = 'none' | 'applied' | 'confirmed' | 'rejected'
+export type ViewerState = 'none' | 'applied' | 'awaiting_payment' | 'confirmed' | 'rejected'
 
 type ViewerPayload = {
   isLoggedIn: boolean
   viewerState: ViewerState
   registrationId: string | null
+  /** Locked at approval. Set only for `awaiting_payment`. */
+  amountDuePaise: number | null
   initial: {
     fullName: string | null
     dateOfBirth: string | null
@@ -35,6 +37,7 @@ const ANONYMOUS: ViewerPayload = {
   isLoggedIn: false,
   viewerState: 'none',
   registrationId: null,
+  amountDuePaise: null,
   initial: {
     fullName: null,
     dateOfBirth: null,
@@ -135,6 +138,7 @@ function NotSelectedNotice() {
 function statusText(opts: { viewerState: ViewerState; isPast: boolean; isFull: boolean; inviteOnly: boolean }) {
   if (opts.viewerState === 'confirmed') return "You're registered for this event."
   if (opts.viewerState === 'applied') return "Your application is in — we'll be in touch."
+  if (opts.viewerState === 'awaiting_payment') return "You're selected. Pay to confirm your spot."
   // A rejected runner can still buy a ticket once the mode is off, so the copy
   // has to acknowledge the decision without closing the door.
   if (opts.viewerState === 'rejected') {
@@ -189,6 +193,7 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
         isFull={props.isFull}
         viewerState={viewer.viewerState}
         registrationId={viewer.registrationId}
+        amountDuePaise={viewer.amountDuePaise}
         isPast={props.isPast}
         isLoggedIn={viewer.isLoggedIn}
         initial={viewer.initial}
@@ -247,6 +252,7 @@ export function RegistrationCtaMobile(props: SharedProps & MobileExtras) {
       isFull={props.isFull}
       viewerState={viewer.viewerState}
       registrationId={viewer.registrationId}
+      amountDuePaise={viewer.amountDuePaise}
       isPast={props.isPast}
       isLoggedIn={viewer.isLoggedIn}
       initial={viewer.initial}
