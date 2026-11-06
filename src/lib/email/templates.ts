@@ -207,8 +207,9 @@ const PAPER_FONT_LINK =
 
 const PAPER_PAD = 'padding-left:36px;padding-right:36px;'
 
-/** Full sheet document: warm ground, centred white card, mobile rules. */
-function paperDocument(params: { title: string; preheader: string; sheet: string }): string {
+/** Full sheet document: warm ground (or a brand's own tint), centred white card, mobile rules. */
+function paperDocument(params: { title: string; preheader: string; sheet: string; ground?: string }): string {
+  const ground = params.ground ?? PAPER_GROUND
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -219,7 +220,7 @@ function paperDocument(params: { title: string; preheader: string; sheet: string
     <title>${params.title}</title>
     ${PAPER_FONT_LINK}
     <style>
-      body { margin:0; padding:0; width:100% !important; background:${PAPER_GROUND}; -webkit-text-size-adjust:100%; }
+      body { margin:0; padding:0; width:100% !important; background:${ground}; -webkit-text-size-adjust:100%; }
       img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
       table { border-collapse:collapse; }
       a { text-decoration:none; }
@@ -232,9 +233,9 @@ function paperDocument(params: { title: string; preheader: string; sheet: string
       }
     </style>
   </head>
-  <body style="margin:0;padding:0;background:${PAPER_GROUND};">
+  <body style="margin:0;padding:0;background:${ground};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${params.preheader}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPER_GROUND};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${ground};">
       <tr>
         <td align="center" style="padding:28px 12px 40px;">
           <table role="presentation" class="col" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${PAPER_SHEET};border-radius:16px;overflow:hidden;">
@@ -534,13 +535,14 @@ type PaymentDueEmailParams = {
 /**
  * A paid invite-only application was approved. Not a ticket: no Stride Tag, no
  * calendar button, no wallet pass. The spot only becomes a booking once the
- * runner pays, and the copy says so twice. No em dashes in runner copy.
+ * runner pays. The button lands on the event page with ?pay=1, which opens the
+ * Razorpay payment popup straight away. No em dashes in runner copy.
  */
 export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailContent {
   const { fullName, eventName, eventDate, location, locationUrl, routeUrl, bannerUrl, amountDuePaise, payUrl } = params
   const event = escapeHtml(eventName)
   const amount = formatRupees(amountDuePaise)
-  const ctaLabel = `Pay ${amount} to confirm spot`
+  const ctaLabel = 'Reserve my spot'
 
   const posterRow = bannerUrl
     ? `
@@ -581,8 +583,7 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
                 <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
-                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">We loved your application and you have been shortlisted.</p>
-                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_INK};font-weight:600;">Your spot is confirmed only after you pay ${amount}. Until then it is not a booking.</p>
+                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">We loved your application and you have been shortlisted.</p>
               </td>
             </tr>
             ${posterRow}
@@ -594,7 +595,6 @@ export function selectedPaymentDueEmail(params: PaymentDueEmailParams): EmailCon
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
                 ${paperCta(payUrl, ctaLabel)}
-                <p style="margin:14px 0 0;font-family:${PAPER_FONT};font-size:13px;line-height:1.55;color:${PAPER_MUTED};text-align:center;">Once your payment goes through, we will send your confirmation with your Stride Tag.</p>
               </td>
             </tr>
             ${paperFooter()}`
@@ -1036,8 +1036,109 @@ export function slayReportingTimeEmail(params: SlayReportingEmailParams): EmailC
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Slay Run Club — application approved
+// Slay Run Club — application approved (paper sheet)
 // ─────────────────────────────────────────────────────────────────────────────
+// Built on the same paper system as the Stride ticket and welcome mails, so the
+// sister clubs read as one family: tinted ground, white sheet, wordmark with a
+// short rule, Instrument Serif headline, hairline-free body, one bold panel and
+// one full-width button. Only the palette changes. Light only, like the rest of
+// the paper system.
+//
+// Pink is a FILL and a rule here, never body copy (3.98:1 on white); accent copy
+// uses SLAY_PINK_INK (5.9:1). The panel is lime with ink text (~15:1) and the
+// button is ink with lime text (15.9:1): the Slay site's own pairing.
+
+const SLAY_GROUND = '#F8EEF3' // the pink-tinted canvas around the sheet
+const SLAY_INK = '#0B0A0B'
+const SLAY_WORDMARK_URL = `${ICON_BASE}/slay-wordmark-pink.png` // uploaded by scripts/upload-slay-logo.mjs
+
+function slayMasthead(): string {
+  return `
+            <tr>
+              <td class="pad" align="center" style="${PAPER_PAD}padding-top:34px;padding-bottom:26px;text-align:center;">
+                <a href="${HOME_URL}/join-slay" target="_blank" style="text-decoration:none;">
+                  <img src="${SLAY_WORDMARK_URL}" alt="Slay Run Club" width="180" style="display:inline-block;width:180px;max-width:56%;height:auto;border:0;">
+                </a>
+                <div style="width:46px;height:4px;background:${SLAY_PINK};border-radius:2px;margin:18px auto 0;"></div>
+              </td>
+            </tr>`
+}
+
+/** Primary CTA: ink fill, lime label, rounded-md, full width. */
+function slayCta(href: string, label: string): string {
+  return `
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="${SLAY_INK}" style="background:${SLAY_INK};border-radius:6px;">
+                      <a href="${escapeHtml(href)}" target="_blank" style="display:block;padding:17px 24px;font-family:${PAPER_FONT};font-size:16px;font-weight:700;letter-spacing:.01em;color:${SLAY_LIME};text-decoration:none;">${label}</a>
+                    </td>
+                  </tr>
+                </table>`
+}
+
+/** A next-step card: ink tile with the shared email glyph, title, one line. */
+function slayStepCard(icon: string, title: string, bodyHtml: string): string {
+  return `
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:12px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPER_STONE};border-radius:12px;">
+                  <tr>
+                    <td style="padding:18px 20px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td valign="middle" width="40" bgcolor="${SLAY_INK}" style="width:40px;height:40px;background:${SLAY_INK};border-radius:8px;text-align:center;">
+                            <img src="${ICON_BASE}/${icon}.png" alt="" width="22" style="display:inline-block;width:22px;height:22px;border:0;vertical-align:middle;">
+                          </td>
+                          <td width="12" style="width:12px;font-size:0;line-height:0;">&nbsp;</td>
+                          <td valign="middle">
+                            <div style="font-family:${PAPER_FONT};font-size:16px;font-weight:650;line-height:1.3;color:${PAPER_INK};">${title}</div>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin:10px 0 0;font-family:${PAPER_FONT};font-size:14.5px;line-height:1.62;color:${PAPER_BODY};">${bodyHtml}</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>`
+}
+
+function slayPaperFooter(): string {
+  const links = [
+    { title: 'Slay Run Club', href: `${HOME_URL}/join-slay` },
+    { title: 'Stride Run Club', href: HOME_URL },
+    { title: 'Privacy Policy', href: `${HOME_URL}/privacy-policy` },
+    { title: 'Contact Us', href: `${HOME_URL}/contact-us` },
+  ]
+    .map(l => `<a href="${l.href}" target="_blank" style="font-family:${PAPER_FONT};font-size:12px;color:${PAPER_MUTED};text-decoration:none;">${l.title}</a>`)
+    .join(`<span style="color:${PAPER_RULE};">&nbsp;&nbsp;·&nbsp;&nbsp;</span>`)
+
+  return `
+            <tr>
+              <td class="pad" style="${PAPER_PAD}">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${PAPER_RULE};">
+                  <tr>
+                    <td align="center" style="padding:24px 0 0;text-align:center;font-family:${PAPER_FONT};font-size:13px;line-height:1.6;color:${PAPER_MUTED};">
+                      Bengaluru&#39;s women-only fitness community.<br>Stride Run Club and Slay Run Club are sister communities.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding:14px 0 0;text-align:center;font-family:${PAPER_FONT};font-size:12px;line-height:1.9;">${links}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:22px 0 0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${PAPER_RULE};">
+                        <tr>
+                          <td style="padding:18px 0 0;font-family:${PAPER_FONT};font-size:11px;line-height:1.5;color:${PAPER_MUTED};">&copy; ${new Date().getFullYear()} Slay Run Club, Bengaluru<br>You&#39;re receiving this because you applied to join.</td>
+                          <td align="right" valign="top" style="padding:18px 0 0;text-align:right;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:19px;line-height:1.4;color:${SLAY_PINK_INK};">Slay every move.</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>`
+}
 
 export type SlayInviteApprovedEmailParams = {
   fullName: string | null
@@ -1047,60 +1148,66 @@ export type SlayInviteApprovedEmailParams = {
 
 /**
  * Sent once, when an admin approves a /join-slay application in the Slay
- * Approvals tab. Its one job is the WhatsApp community link, so that is the
- * button above the fold. Same lime-on-black button as the run-day mail — the
- * only pairing in the palette that clears AA at button size.
+ * Approvals tab. Its one job is the WhatsApp community link, so the lime panel
+ * and the button both point at it, above the fold. No em dashes in member copy.
  */
 export function slayInviteApprovedEmail(params: SlayInviteApprovedEmailParams): EmailContent {
   const { fullName, whatsappUrl } = params
 
-  const bodyContent = `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:0 0 8px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
-          <tr>
-            <td style="padding:48px 32px 0;text-align:center;">
-              <img src="${SLAY_LOGO_URL}" alt="Slay Run Club" width="176" style="display:inline-block;width:176px;max-width:62%;height:auto;border:0;border-radius:18px;">
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:38px 32px 0;text-align:center;">
-              <h1 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:32px;line-height:1.25;letter-spacing:-0.5px;font-weight:normal;color:${TEXT};">You&#39;re <strong class="slay-a" style="font-weight:bold;color:${SLAY_PINK_INK};">in.</strong></h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:26px 32px 0;">
-              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Hey ${firstName(fullName)}, welcome to Slay Run Club. Your application is approved. Join the community on WhatsApp — that&#39;s where every social run, fitness experience and workshop is announced first, with venues and how to sign up.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px auto 0;">
-                <tr>
-                  <td style="background-color:${SLAY_LIME};border-radius:6px;text-align:center;">
-                    <a href="${escapeHtml(whatsappUrl)}" target="_blank" style="display:block;padding:16px 24px;font-family:${BODY_FONT};font-size:15px;font-weight:bold;letter-spacing:0.3px;color:${BLACK};text-decoration:none;border-radius:6px;">Join the Slay WhatsApp community</a>
-                  </td>
-                </tr>
-              </table>
-              <p class="t-muted" style="margin:12px 0 0;text-align:center;font-family:${BODY_FONT};font-size:12px;line-height:1.6;color:${MUTED};">This link is just for you — please don&#39;t share it.</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:30px 32px 0;">
-              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Slay every move. See you out there.</p>
-            </td>
-          </tr>
-
-          <tr><td style="padding:0 0 44px;"></td></tr>
-          ${slayFooter('You&#39;re receiving this because you applied to join Slay Run Club.')}
-        </table>
-      </td>
-    </tr>
-  </table>`
+  const sheet = `${slayMasthead()}
+            <tr>
+              <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:22px;text-align:center;">
+                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:38px;line-height:1.12;letter-spacing:-0.005em;color:${PAPER_INK};text-align:center;">You&#39;re in</h1>
+                <p style="margin:10px 0 0;font-family:${PAPER_FONT};font-size:17px;line-height:1.5;color:${PAPER_BODY};text-align:center;">Welcome to Slay Run Club</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">We loved your application. You&#39;re now part of a community of women who show up for themselves and each other.</p>
+                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">Everything happens on WhatsApp, so that&#39;s your next stop.</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:16px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${SLAY_LIME}" style="background:${SLAY_LIME};border-radius:12px;">
+                  <tr>
+                    <td align="center" style="padding:24px 22px;text-align:center;">
+                      <div style="font-family:${PAPER_FONT};font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${SLAY_INK};">Your invite</div>
+                      <div style="margin:8px 0 0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:28px;line-height:1.15;color:${SLAY_INK};">The Slay WhatsApp community</div>
+                      <div style="margin:8px 0 0;font-family:${PAPER_FONT};font-size:13.5px;line-height:1.55;color:${SLAY_INK};">Every social run, fitness experience and workshop is announced here first.</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:10px;">
+                ${slayCta(whatsappUrl, 'Join the WhatsApp community')}
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:30px;text-align:center;font-family:${PAPER_FONT};font-size:12.5px;line-height:1.5;color:${PAPER_MUTED};">
+                This invite is just for you. Please don&#39;t share the link.
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:14px;">
+                <div style="font-family:${PAPER_FONT};font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:${PAPER_MUTED};">What happens next</div>
+              </td>
+            </tr>
+            ${slayStepCard('footprints', 'Pick your first experience', 'Social runs, bungee, Pilates, spin, bedazzling and more. We host 2&#8211;3 a month, and every level is welcome.')}
+            ${slayStepCard('circle-user-round', 'Come as you are', 'Plenty of women join without knowing anyone. Say hi in the group and you&#39;ll have running buddies by the first meet.')}
+            <tr><td style="height:18px;font-size:0;line-height:0;">&nbsp;</td></tr>
+            ${slayPaperFooter()}`
 
   return {
-    subject: "You're in — welcome to Slay Run Club",
-    htmlContent: emailDocument(bodyContent),
+    subject: "You're in! Welcome to Slay Run Club",
+    htmlContent: paperDocument({
+      title: 'Welcome to Slay Run Club',
+      preheader: 'Your application is approved. Here is your invite to the Slay WhatsApp community.',
+      sheet,
+      ground: SLAY_GROUND,
+    }),
   }
 }

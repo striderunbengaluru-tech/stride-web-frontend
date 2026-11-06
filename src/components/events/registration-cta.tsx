@@ -156,10 +156,10 @@ function statusText(opts: { viewerState: ViewerState; isPast: boolean; isFull: b
 export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
   const viewer = useViewerState(props.eventId)
 
-  // RegisterButton decides whether to auto-open the modal (?register=1 on the
-  // way back from sign-in) in a useState initialiser, so it must not mount
-  // until the real viewer state is known — otherwise it would settle that
-  // decision against a signed-out placeholder.
+  // RegisterButton auto-opens a popup on arrival (?register=1 back from
+  // sign-in, ?pay=1 from the payment email), so it must not mount until the
+  // real viewer state is known — otherwise it would decide against a
+  // signed-out placeholder.
   if (!viewer) {
     return (
       <RegistrationCtaDesktopSkeleton

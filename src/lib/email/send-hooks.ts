@@ -230,7 +230,8 @@ export async function sendPaymentDueEmailOnce(registrationId: string): Promise<v
       routeUrl: event.strava_route_url,
       bannerUrl,
       amountDuePaise: row.amount_due_paise,
-      payUrl: `${SITE_URL}/events/${event.slug}?${PAYMENT_DUE_UTM}&utm_content=${encodeURIComponent(event.slug)}`,
+      // pay=1 opens the payment popup on arrival (register-button.tsx).
+      payUrl: `${SITE_URL}/events/${event.slug}?pay=1&${PAYMENT_DUE_UTM}&utm_content=${encodeURIComponent(event.slug)}`,
     })
     await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
   } catch (err) {

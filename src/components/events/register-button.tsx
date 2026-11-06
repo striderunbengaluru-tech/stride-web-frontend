@@ -1,12 +1,48 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ParticipantDetailsModal } from '@/components/events/participant-details-modal'
 import { PayApprovedModal } from '@/components/events/pay-approved-modal'
 import { formatRupees } from '@/lib/utils/money'
 import type { ViewerState } from '@/components/events/registration-cta'
 import type { AdditionalField, EventPackage } from '@/types/event'
+
+/**
+ * Query params that open a popup on arrival:
+ * `register=1` — back from sign-in, open the registration form.
+ * `pay=1`      — from the "You're selected" payment email, open Razorpay.
+ */
+const REGISTER_PARAM = 'register'
+const PAY_PARAM = 'pay'
+
+/**
+ * Opens a popup on arrival, from whichever copy of this button is on screen.
+ *
+ * The event page mounts RegisterButton twice (desktop box and mobile bar, one
+ * hidden by CSS) and both popups portal to <body>, so opening from both would
+ * stack two popups. The hidden copy's button has no client rects, so it stays
+ * shut. Checked on the next frame, after layout, so the check sees final CSS.
+ * The param is then dropped so a refresh doesn't reopen the popup.
+ */
+function useOpenOnArrival(
+  enabled: boolean,
+  button: React.RefObject<HTMLButtonElement | null>,
+  param: string,
+  open: () => void,
+) {
+  useEffect(() => {
+    if (!enabled) return
+    const frame = requestAnimationFrame(() => {
+      if (!button.current || button.current.getClientRects().length === 0) return
+      open()
+      const url = new URL(window.location.href)
+      url.searchParams.delete(param)
+      window.history.replaceState(window.history.state, '', url)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [enabled, button, param, open])
+}
 
 type Props = {
   eventId: string
@@ -64,15 +100,31 @@ export function RegisterButton({
   packagesProgressive,
   razorpayKeyId,
 }: Props) {
-  // ?register=1 (returning from login) is read here client-side so the server
-  // page never touches searchParams — never auto-open for past events
+  // The params are read here client-side so the server page never touches
+  // searchParams. Never auto-open for past events.
   const searchParams = useSearchParams()
-  const autoOpen = searchParams.get('register') === '1'
+  const wantsRegister = searchParams.get(REGISTER_PARAM) === '1'
+  const wantsPay = searchParams.get(PAY_PARAM) === '1'
   // A rejected runner on a now-open event is free to register, so only the
-  // two "already in the system" states suppress the auto-open.
+  // three "already in the system" states suppress the registration auto-open.
   const settled = viewerState === 'confirmed' || viewerState === 'applied' || viewerState === 'awaiting_payment'
-  const [modalOpen, setModalOpen] = useState(Boolean(autoOpen && isLoggedIn && !settled && !isFull && !isPast))
+  const [modalOpen, setModalOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(false)
+  const registerButton = useRef<HTMLButtonElement>(null)
+  const payButton = useRef<HTMLButtonElement>(null)
+
+  useOpenOnArrival(
+    wantsRegister && isLoggedIn && !settled && !isFull && !isPast,
+    registerButton,
+    REGISTER_PARAM,
+    useCallback(() => setModalOpen(true), []),
+  )
+  useOpenOnArrival(
+    wantsPay && viewerState === 'awaiting_payment' && !isPast,
+    payButton,
+    PAY_PARAM,
+    useCallback(() => setPayOpen(true), []),
+  )
 
   if (viewerState === 'confirmed') {
     // Plain <a>, not <Link>: the confirmation page is `force-dynamic` and
@@ -135,11 +187,12 @@ export function RegisterButton({
     return (
       <>
         <button
+          ref={payButton}
           type='button'
           onClick={() => setPayOpen(true)}
           className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'
         >
-          <span className='relative z-10'>Pay {formatRupees(amountDuePaise)} to confirm spot</span>
+          <span className='relative z-10'>Pay {formatRupees(amountDuePaise)} to reserve my spot</span>
         </button>
         <PayApprovedModal
           open={payOpen}
@@ -164,7 +217,9 @@ export function RegisterButton({
   }
 
   if (!isLoggedIn) {
-    const next = `/events/${eventSlug}?register=1`
+    // A selected runner arriving from the payment email signed out keeps the
+    // pay intent through sign-in, so the popup still opens when they're back.
+    const next = `/events/${eventSlug}?${wantsPay ? PAY_PARAM : REGISTER_PARAM}=1`
     const href = `/become-a-member?next=${encodeURIComponent(next)}`
     return (
       <a
@@ -179,6 +234,7 @@ export function RegisterButton({
   return (
     <>
       <button
+        ref={registerButton}
         type='button'
         onClick={() => setModalOpen(true)}
         className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'

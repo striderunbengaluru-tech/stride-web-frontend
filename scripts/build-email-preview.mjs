@@ -28,6 +28,7 @@ writeFileSync(tmp, ts.transpileModule(readFileSync('src/lib/email/templates.ts',
 }).outputText)
 const {
   welcomeEmail, registrationConfirmedEmail, selectedForEventEmail, slayReportingTimeEmail,
+  slayInviteApprovedEmail,
 } = await import(pathToFileURL(tmp).href)
 
 const SITE = 'https://www.strideclub.in'
@@ -82,6 +83,13 @@ const EMAILS = {
         '- Waves will start every 20 minutes from 1 p.m.',
         '- Take care of your belongings.',
       ].join('\n'),
+    }),
+  },
+  slayApproved: {
+    label: 'Slay application approved',
+    ...slayInviteApprovedEmail({
+      fullName: 'Asha Rao',
+      whatsappUrl: 'https://chat.whatsapp.com/example',
     }),
   },
 }
