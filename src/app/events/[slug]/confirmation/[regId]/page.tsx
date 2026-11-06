@@ -70,7 +70,7 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
     adminClient
       .from('event_registrations')
       .select(
-        'id, user_id, status, amount_paid_paise, razorpay_payment_id, selected_packages, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, distance_km, confirmation_text)'
+        'id, user_id, status, amount_paid_paise, razorpay_payment_id, selected_packages, events!inner(name, slug, subtitle, event_date, end_date, location, banner_images, price_paise, distance_km, confirmation_text, invite_only)'
       )
       .eq('id', regId)
       .single(),
@@ -107,6 +107,14 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
   // a relationship-shape surprise can't crash the page.
   const event = Array.isArray(registration.events) ? registration.events[0] : registration.events
   if (!event) notFound()
+
+  // Invite-only runs use the admin's confirmation text as the note that sits
+  // with an application while it awaits a decision. Once the spot is held that
+  // note is stale, so a fixed line replaces it. Open events keep showing it.
+  const confirmationNote = event.invite_only && !isApplication
+    ? null
+    : event.confirmation_text?.trim() || null
+  const showInviteConfirmedNote = event.invite_only && isConfirmed
 
   const dateShort = formatDateShort(event.event_date)
   const startTime = formatTime(event.event_date)
@@ -221,12 +229,20 @@ export default async function ConfirmationPage({ params, searchParams }: Props) 
         )}
 
         {/* ── A note from Stride — field only, no label, sits right under the header ── */}
-        {event.confirmation_text && event.confirmation_text.trim() && (
+        {confirmationNote && (
           <Reveal>
             <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
               <div className='prose prose-invert prose-sm max-w-none prose-p:text-white/85 prose-p:leading-relaxed prose-p:my-1.5 prose-headings:text-white prose-headings:font-bold prose-a:text-stride-yellow-accent prose-strong:text-white prose-li:text-white/85 prose-ul:my-2 prose-ol:my-2 [&_ul>li::marker]:text-stride-yellow-accent [&_ol>li::marker]:text-stride-yellow-accent'>
-                <ReactMarkdown>{event.confirmation_text}</ReactMarkdown>
+                <ReactMarkdown>{confirmationNote}</ReactMarkdown>
               </div>
+            </div>
+          </Reveal>
+        )}
+
+        {showInviteConfirmedNote && (
+          <Reveal>
+            <div className='rounded-2xl border border-stride-yellow-accent/25 bg-stride-yellow-accent/5 px-5 py-4'>
+              <p className='text-white/85 text-sm leading-relaxed'>Your spot is now confirmed!</p>
             </div>
           </Reveal>
         )}
