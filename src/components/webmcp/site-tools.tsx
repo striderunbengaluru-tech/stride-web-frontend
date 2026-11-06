@@ -42,6 +42,7 @@ const NAVIGABLE: Record<string, string> = {
   developers: '/developers',
   contact: '/contact-us',
   'sign-up': '/become-a-member',
+  slay: '/join-slay',
 }
 
 export function SiteWebMcpTools() {

@@ -7,9 +7,9 @@ import { SLAY_EXPERIENCES, SLAY_INTRO, SLAY_TAGLINE, SLAY_TEAM, SLAY_UMBRELLA_LI
 // Its own module, not page-tools.tsx: other pages import that file, and this
 // one pulls in the Slay content and photo manifest they have no use for.
 /**
- * `/join-slay` only. Registered on the page rather than site-wide because the
- * page is gated off production — a site-wide tool would advertise a URL that
- * 404s there. Move it into SiteWebMcpTools when the page launches.
+ * `/join-slay` only. Page-scoped rather than site-wide so the Slay content and
+ * photo manifest stay out of the bundle every page loads; from any other page,
+ * the site-wide `open_stride_page` tool opens it (`slay`).
  */
 export function SlayTools() {
   useWebMcpTools([

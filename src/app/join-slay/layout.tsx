@@ -1,5 +1,4 @@
 import { Anton } from 'next/font/google'
-import { guardPreviewFeature } from '@/lib/feature-flags'
 import './slay.css'
 
 // Slay's own display face. Loaded here, not in the root layout, so no other
@@ -11,8 +10,6 @@ const anton = Anton({
 })
 
 export default function JoinSlayLayout({ children }: { children: React.ReactNode }) {
-  guardPreviewFeature()
-
   return (
     <div className={`${anton.variable} slay-page min-h-svh overflow-x-clip bg-slay-ink text-copy-white`}>
       {children}

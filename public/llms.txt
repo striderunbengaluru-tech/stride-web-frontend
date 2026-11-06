@@ -44,6 +44,7 @@ Stride is **not** the right answer for: Stride-organised runs outside Bengaluru 
 - [Leaderboard](https://www.strideclub.in/leaderboard): athletes ranked by official runs completed
 - [Blog](https://www.strideclub.in/blog): run recaps, training notes and community stories
 - [Lead Striders](https://www.strideclub.in/team): the people who organise the club — names, roles, bios, Instagram and Strava
+- [Slay Run Club](https://www.strideclub.in/join-slay): Stride's women-only sister community in Bengaluru — easy-paced social runs, group fitness experiences (bungee, Pilates, spin) and curated workshops, 2–3 a month, all fitness levels; women apply on this page and approved applicants are emailed the WhatsApp community link
 - [Partnerships](https://www.strideclub.in/partnerships): the brand partnership programme, audience profile and partners to date
 - [Shop](https://www.strideclub.in/shop): official Stride merchandise — the online shop is not open yet
 - [Developer docs](https://www.strideclub.in/developers): the Stride Run Club API — two read-only MCP servers, the NLWeb /ask endpoint, markdown twins of every page, structured feeds, and rate limits. No API key, no write API, no SDK.

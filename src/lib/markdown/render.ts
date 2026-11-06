@@ -22,7 +22,6 @@ import {
   SLAY_TEAM,
   SLAY_UMBRELLA_LINE,
 } from '@/content/slay'
-import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { MILESTONE_TIERS } from '@/lib/milestones'
 import { WHY_US, ALL_PARTNERS, PARTNER_CATEGORIES } from '@/app/partnerships/partners-data'
 import { ALL_SERVERS, MCP_SERVER_VERSION } from '@/lib/mcp/registry'
@@ -103,6 +102,7 @@ export const PAGE_INDEX: { path: string; label: string; blurb: string }[] = [
   { path: '/leaderboard', label: 'Leaderboard', blurb: 'athletes ranked by community runs attended' },
   { path: '/blog', label: 'Blog', blurb: 'run recaps and community stories' },
   { path: '/team', label: 'Lead Striders', blurb: 'the people who organise the club' },
+  { path: '/join-slay', label: 'Slay Run Club', blurb: "Stride's women-only sister community — social runs, fitness experiences and workshops, and how to apply" },
   { path: '/developers', label: 'Developer docs', blurb: 'the Stride Run Club API — MCP servers, /ask, markdown twins; read-only and anonymous' },
   { path: '/partnerships', label: 'Partnerships', blurb: 'brand collaborations and the partnership programme' },
   { path: '/shop', label: 'Shop', blurb: 'official Stride merchandise' },
@@ -1003,8 +1003,7 @@ export async function renderMarkdownPath(
     case '/milestones':       return milestonesMarkdown(abs)
     case '/leaderboard':      return leaderboardMarkdown(abs)
     case '/team':             return teamMarkdown(abs)
-    // Gated with the page: no twin on production until /join-slay launches.
-    case '/join-slay':        return PREVIEW_FEATURES_ENABLED ? joinSlayMarkdown(abs) : null
+    case '/join-slay':        return joinSlayMarkdown(abs)
     case '/partnerships':     return partnershipsMarkdown(abs)
     case '/contact-us':       return contactMarkdown(abs)
     case '/shop':             return shopMarkdown(abs)
