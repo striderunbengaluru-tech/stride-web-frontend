@@ -11,6 +11,8 @@
  * approval lands on AWAITING_PAYMENT, and the runner pays to confirm.
  */
 
+import { FREE_LABEL } from '@/lib/utils/money'
+
 export const REGISTRATION_STATUSES = [
   'PENDING',
   'CONFIRMED',
@@ -62,3 +64,18 @@ export const CLEARABLE_REGISTRATION_STATUSES = ['PENDING', 'CANCELLED', 'REJECTE
 export const AWAITING_LABEL = 'Awaiting invitation acceptance'
 export const NOT_SELECTED_LABEL = 'Not selected'
 export const PAYMENT_DUE_LABEL = 'Selected. Payment pending'
+
+/**
+ * The public price label for an invite-only event. A paid one's fee is shown
+ * only to the runners it shortlists, so the public sees no price at all: an
+ * empty label, which every price slot treats as "render nothing". A free one
+ * still reads "Free".
+ */
+export function inviteOnlyPriceLabel(pricePaise: number | null): string {
+  return (pricePaise ?? 0) > 0 ? '' : FREE_LABEL
+}
+
+/** Same rule for agent surfaces (markdown twins, MCP), which need words. */
+export function inviteOnlyAgentPriceLabel(pricePaise: number | null): string {
+  return (pricePaise ?? 0) > 0 ? 'Fee shared with shortlisted applicants' : 'Free to apply'
+}

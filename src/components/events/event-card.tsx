@@ -208,9 +208,11 @@ export function EventCard({ name, subtitle, slug, eventDate, location, priceLabe
                 <span className='truncate'>{location}</span>
               </span>
             ) : <span />}
-            <span className={`text-sm font-bold shrink-0 font-mono ${isFree ? 'text-green-400' : 'text-white/70'}`}>
-              {priceLabel}
-            </span>
+            {priceLabel && (
+              <span className={`text-sm font-bold shrink-0 font-mono ${isFree ? 'text-green-400' : 'text-white/70'}`}>
+                {priceLabel}
+              </span>
+            )}
           </div>
         </div>
       </Link>

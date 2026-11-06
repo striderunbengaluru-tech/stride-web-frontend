@@ -4,6 +4,7 @@ import { getPublishedEvents, getEventBySlug } from '@/lib/data/events'
 import { getPublishedRaces, getRaceBySlug } from '@/lib/data/races'
 import { getLeaderboardTop } from '@/lib/leaderboard'
 import { eventRowPriceLabel, eventPriceLabel } from '@/lib/utils/money'
+import { inviteOnlyAgentPriceLabel } from '@/lib/events/invite-only'
 import { formatDateTimeIST, formatDateFullIST, istDayKey, istMonthKey } from '@/lib/utils/ist'
 import { monthKeyLabel } from '@/lib/utils/month-grid'
 import { isRegistrationOpen } from '@/lib/races/present'
@@ -161,7 +162,7 @@ async function eventsIndexMarkdown(abs: Abs): Promise<MarkdownDoc> {
 
   const row = (e: (typeof events)[number]) => {
     const when = e.event_date ? formatDateTimeIST(e.event_date) : 'Date to be announced'
-    const price = e.invite_only ? 'Free to apply' : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled)
+    const price = e.invite_only ? inviteOnlyAgentPriceLabel(e.price_paise) : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled)
     const where = e.location ? ` · ${e.location}` : ''
     const invite = e.invite_only ? ' · Invite only (application reviewed by Stride)' : ''
     return `- [${e.name}](${abs(`/events/${e.slug}`)}) — ${when}${where} · ${price}${invite}`
@@ -205,7 +206,7 @@ async function eventMarkdown(slug: string, abs: Abs): Promise<MarkdownDoc | null
 
   const inviteOnly = event.invite_only === true
   const packagesEnabled = !inviteOnly && (event.packages_enabled ?? false) && packages.length > 0
-  const price = inviteOnly ? 'Free to apply' : eventPriceLabel(event.price_paise, packages, packagesEnabled)
+  const price = inviteOnly ? inviteOnlyAgentPriceLabel(event.price_paise) : eventPriceLabel(event.price_paise, packages, packagesEnabled)
 
   return {
     title: event.name,
@@ -744,7 +745,7 @@ async function pricingMarkdown(abs: Abs): Promise<MarkdownDoc> {
       slug: e.slug,
       when: e.event_date ? formatDateTimeIST(e.event_date) : 'Date to be announced',
       price: e.invite_only
-        ? 'Free to apply'
+        ? inviteOnlyAgentPriceLabel(e.price_paise)
         : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled),
     }))
 
