@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { after } from 'next/server'
 import { revalidatePath, updateTag } from 'next/cache'
 import { nanoid } from 'nanoid'
-import { sendConfirmationEmailOnce } from '@/lib/email/send-hooks'
+import { sendConfirmationEmailOnce, sendPaymentDueEmailOnce } from '@/lib/email/send-hooks'
 import { adminClient } from '@/lib/supabase/admin'
 import { requireAdmin, requireEventManager } from '@/lib/actions/require-admin'
 import { canManageEventId } from '@/lib/auth/event-access'
@@ -381,6 +381,8 @@ export type DecisionResult =
       ok: true
       /** Ids this call actually moved. Only these are emailed. */
       decided: string[]
+      /** Subset of `decided` that is now AWAITING_PAYMENT (paid event). Approve only. */
+      awaitingPayment: string[]
       /** Left alone because someone else got there first. */
       alreadyDecided: string[]
       /** APPLIED, but the event ran out of seats. Approve only. */
@@ -423,7 +425,7 @@ async function eventDecisionContext(eventId: string) {
       .from('event_registrations')
       .select('id', { count: 'exact', head: true })
       .eq('event_id', eventId)
-      .eq('status', 'CONFIRMED'),
+      .in('status', ['CONFIRMED', 'AWAITING_PAYMENT']),
   ])
 
   return {
@@ -469,6 +471,7 @@ export async function approveRegistrationsAction(eventId: string, ids: string[])
   if (blocked === 'EVENT_CONCLUDED') return { ok: false, error: 'This run has already happened — approving would email a ticket for a finished event.' }
 
   const approved = withOutcome('APPROVED')
+  const awaitingPayment = withOutcome('APPROVED_PAYMENT_DUE')
   const context = await eventDecisionContext(eventId)
 
   // Purged synchronously: an after() callback runs once the response is gone,
@@ -477,22 +480,25 @@ export async function approveRegistrationsAction(eventId: string, ids: string[])
   if (context.slug) revalidatePath(`/events/${context.slug}`)
   revalidatePath('/admin/events')
 
-  if (approved.length > 0) {
-    // Only ids THIS call promoted — never the already-confirmed ones. The claim
-    // inside sendConfirmationEmailOnce is the second layer. Chunked rather than
-    // one big Promise.all so a 50-row approve doesn't hammer Brevo at once.
+  // Only ids THIS call promoted. Free approvals get the ticket ("selected")
+  // mail; paid ones get the pay-to-confirm mail and their ticket after payment.
+  // Chunked so a 50-row approve doesn't hammer Brevo at once.
+  const sends: (() => Promise<void>)[] = [
+    ...approved.map(id => () => sendConfirmationEmailOnce(id, 'selected')),
+    ...awaitingPayment.map(id => () => sendPaymentDueEmailOnce(id)),
+  ]
+  if (sends.length > 0) {
     after(async () => {
-      for (let i = 0; i < approved.length; i += 5) {
-        await Promise.allSettled(
-          approved.slice(i, i + 5).map(id => sendConfirmationEmailOnce(id, 'selected')),
-        )
+      for (let i = 0; i < sends.length; i += 5) {
+        await Promise.allSettled(sends.slice(i, i + 5).map(send => send()))
       }
     })
   }
 
   return {
     ok: true,
-    decided: approved,
+    decided: [...approved, ...awaitingPayment],
+    awaitingPayment,
     alreadyDecided: [...withOutcome('ALREADY_CONFIRMED'), ...withOutcome('NOT_APPLIED'), ...withOutcome('NOT_FOUND')],
     skippedCapacity: withOutcome('CAPACITY_FULL'),
     capacity: context.capacity,
@@ -542,7 +548,63 @@ export async function rejectRegistrationsAction(eventId: string, ids: string[]):
   return {
     ok: true,
     decided: rejected,
+    awaitingPayment: [],
     alreadyDecided: pre.ids.filter(id => !rejectedSet.has(id)),
+    skippedCapacity: [],
+    capacity: context.capacity,
+    confirmedAfter: context.confirmed,
+  }
+}
+
+/**
+ * Take back an approval nobody paid for. AWAITING_PAYMENT → APPLIED, which
+ * frees the seat and puts the runner back in the review queue, where the
+ * existing Reject can turn them down.
+ *
+ * Compare-and-swap on status, same as reject: a runner who paid a moment ago
+ * is CONFIRMED and is left alone. Clears the order id and the payment-due
+ * claim, so a re-approval issues a fresh order and a fresh mail.
+ */
+export async function revokeApprovalsAction(eventId: string, ids: string[]): Promise<DecisionResult> {
+  const pre = await decisionPreflight(eventId, ids)
+  if (!pre.ok) return pre
+
+  const now = new Date().toISOString()
+  const { data, error } = await adminClient
+    .from('event_registrations')
+    .update({
+      status: 'APPLIED',
+      amount_due_paise: 0,
+      razorpay_order_id: null,
+      payment_due_email_sent_at: null,
+      decided_at: now,
+      decided_by: pre.actorName,
+      updated_at: now,
+    })
+    .eq('event_id', eventId)
+    .in('id', pre.ids)
+    .eq('status', 'AWAITING_PAYMENT')
+    .select('id')
+
+  if (error) {
+    console.error('[Admin] revoke approvals failed', error)
+    return { ok: false, error: 'Could not revoke those approvals. Please try again.' }
+  }
+
+  const revoked = (data ?? []).map(r => r.id as string)
+  const revokedSet = new Set(revoked)
+
+  // A seat came free, so the public spots-left figure moved.
+  updateTag(eventRegsTag(eventId))
+  const context = await eventDecisionContext(eventId)
+  if (context.slug) revalidatePath(`/events/${context.slug}`)
+  revalidatePath('/admin/events')
+
+  return {
+    ok: true,
+    decided: revoked,
+    awaitingPayment: [],
+    alreadyDecided: pre.ids.filter(id => !revokedSet.has(id)),
     skippedCapacity: [],
     capacity: context.capacity,
     confirmedAfter: context.confirmed,
