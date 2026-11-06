@@ -30,7 +30,7 @@ APPLIED ──approve, price = 0──▶ CONFIRMED                       (uncha
 APPLIED ──approve, price > 0──▶ AWAITING_PAYMENT ──paid──▶ CONFIRMED
 APPLIED ──reject──────────────▶ REJECTED                        (unchanged)
 AWAITING_PAYMENT ──revoke─────▶ APPLIED
-AWAITING_PAYMENT ──reject─────▶ REJECTED
+AWAITING_PAYMENT ──revoke, then reject from APPLIED──▶ REJECTED
 ```
 
 A failed or abandoned payment leaves the row in `AWAITING_PAYMENT`, so the
@@ -56,7 +56,7 @@ Idempotent. Run it in the SQL Editor before deploying the app.
 
 ## 2. Shared vocabulary — `src/lib/events/invite-only.ts`
 
-- Add `AWAITING_PAYMENT` to `REGISTRATION_STATUSES` and `VIEWABLE_REGISTRATION_STATUSES`.
+- Add `AWAITING_PAYMENT` to `REGISTRATION_STATUSES`. It is not in `VIEWABLE_REGISTRATION_STATUSES`: the confirmation page redirects it to the event page instead.
 - **Do not** add it to `CLEARABLE_REGISTRATION_STATUSES`. The register route must
   never delete an approved row.
 - Add the member-facing label `PAYMENT_DUE_LABEL = 'Selected. Payment pending'`.
@@ -84,17 +84,17 @@ Idempotent. Run it in the SQL Editor before deploying the app.
   stored order-id match, a payment captured for exactly `amount_due_paise`,
   and order status `paid`. Confirmation still goes only through
   `confirm_registration`.
-- **My Runs:** shows `PAYMENT_DUE_LABEL` and the same Pay CTA.
-- **Confirmation page:** renders `AWAITING_PAYMENT` with the pay CTA and no ticket.
+- **My Runs:** shows a `PAYMENT_DUE_LABEL` chip; the row opens the event page, where the Pay CTA is.
+- **Confirmation page:** an `AWAITING_PAYMENT` row redirects to the event page (old "View my application" links keep working).
 
 ## 4. Admin
 
-- `event-registrations-panel.tsx`: an "Awaiting payment" badge and filter.
+- `event-registrations-panel.tsx`: an "AWAITING PAYMENT" pill, an awaiting-payment count in the stats, and a per-row **Revoke** button.
 - **New `revokeApprovalsAction(eventId, ids)`:** calls `requireEventManager()`
   and `canManageEventId()`, then runs a compare-and-swap
   `UPDATE … SET status='APPLIED' WHERE status='AWAITING_PAYMENT'`, clearing
   `amount_due_paise` and `razorpay_order_id`.
-- `rejectRegistrationsAction`: also accepts `AWAITING_PAYMENT` as a source status.
+- `rejectRegistrationsAction`: unchanged. To reject an unpaid approval, revoke it, then reject it from Applied.
 - The approve toast reports confirmed and awaiting-payment counts separately.
 - Check-in already requires `CONFIRMED`. No change.
 
@@ -116,6 +116,8 @@ Copy in both runner-facing emails uses no em dashes.
   `?utm_source=brevo&utm_medium=email&utm_campaign=invite_payment_due&utm_content={slug}`
 - Sent once per row after approval, using a new claim column
   `payment_due_email_sent_at`, following the `*_email_sent_at` pattern.
+- **Not** gated on the event's `confirmation_email_enabled` switch: it is the only
+  way the runner learns they must pay. Mail 2 still follows that switch.
 **Mail 2: participation confirmed (sent after payment)**
 
 - The existing participation confirmation email (`'confirmed'` variant), sent
