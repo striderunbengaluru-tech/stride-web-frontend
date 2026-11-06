@@ -144,7 +144,7 @@ export function RegisterButton({
         href={href}
         className='block w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-semibold text-sm text-center min-h-11 hover:bg-stride-yellow-accent/90 transition-colors'
       >
-        {inviteOnly ? 'Become a Member to Apply' : 'Become a Member to Register'}
+        {inviteOnly ? 'Join the Waitlist' : 'Join the experience'}
       </a>
     )
   }
@@ -156,7 +156,7 @@ export function RegisterButton({
         onClick={() => setModalOpen(true)}
         className='relative w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-bold text-sm hover:bg-stride-yellow-accent/90 transition-colors min-h-11 overflow-hidden cta-shimmer'
       >
-        <span className='relative z-10'>{inviteOnly ? 'Apply to join' : 'Join here'}</span>
+        <span className='relative z-10'>{inviteOnly ? 'Join the Waitlist' : 'Join here'}</span>
       </button>
 
       <ParticipantDetailsModal

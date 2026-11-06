@@ -120,7 +120,7 @@ export function UpNextBanner({ event, imagePriority = false, showLabel = true, b
 
           <div className='flex items-center gap-4 pt-1'>
             <span className='inline-flex items-center bg-stride-yellow-accent text-copy-black font-bold text-sm px-5 py-2.5 rounded-md group-hover:scale-[1.02] group-active:scale-[0.98] transition-transform min-h-11'>
-              View event
+              {event.invite_only ? 'Join the Waitlist' : 'View event'}
             </span>
             <span className='text-white font-semibold text-sm font-mono tabular-nums'>{priceLabel}</span>
           </div>
