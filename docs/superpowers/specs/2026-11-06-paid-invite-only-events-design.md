@@ -59,15 +59,16 @@ Idempotent. Run it in the SQL Editor before deploying the app.
 - Add `AWAITING_PAYMENT` to `REGISTRATION_STATUSES` and `VIEWABLE_REGISTRATION_STATUSES`.
 - **Do not** add it to `CLEARABLE_REGISTRATION_STATUSES`. The register route must
   never delete an approved row.
-- Add the member-facing label `PAYMENT_DUE_LABEL = 'Selected — payment pending'`.
+- Add the member-facing label `PAYMENT_DUE_LABEL = 'Selected. Payment pending'`.
 
 ## 3. Runner flow
 
 - **Viewer state:** `/api/events/[eventId]/viewer-state` returns a new
   `'awaiting_payment'` state plus `amountDuePaise`.
-- **Event page CTA** (`register-button.tsx`, `registration-cta.tsx`): the button
-  reads **Pay ₹X to confirm**. The status line reads "You're selected — pay to
-  confirm your spot."
+- **Event page CTA** (`register-button.tsx`, `registration-cta.tsx`): for an
+  `awaiting_payment` viewer, the button that read **Join the Waitlist** now reads
+  **Pay ₹X to confirm spot** (amount formatted from `amount_due_paise`). The
+  status line reads "You're selected. Pay to confirm your spot."
 - **Popup:** a small modal showing the event name and the amount, with the note
   "Your spot is confirmed only after payment." Its **Proceed to pay** button
   opens Razorpay Checkout.
@@ -99,15 +100,27 @@ Idempotent. Run it in the SQL Editor before deploying the app.
 
 ## 5. Email
 
+Copy in both runner-facing emails uses no em dashes.
+
+**Mail 1: shortlisted (sent on approval of a paid event)**
+
 - New template `selectedPaymentDueEmail`:
-  - subject: "You're selected — complete payment to confirm"
-  - body: the amount, a clear statement that the spot is **not confirmed until
-    payment**, and a CTA to the event page
+  - subject: "You're selected. Complete payment to confirm your spot"
+  - body: the event details (name, date and time, location, distance), the
+    amount due, and a clear statement that the spot is **not confirmed until
+    payment**
+  - CTA **Pay ₹X to confirm spot**, linking to the same event page
+    `/events/{slug}`, where the button now reads **Pay ₹X to confirm spot**
   - no ticket, no wallet pass
+- The CTA link carries GA4 UTM tags, matching the existing campaign scripts:
+  `?utm_source=brevo&utm_medium=email&utm_campaign=invite_payment_due&utm_content={slug}`
 - Sent once per row after approval, using a new claim column
   `payment_due_email_sent_at`, following the `*_email_sent_at` pattern.
-- The existing ticket email (`'confirmed'` variant) goes out after payment
-  through the normal confirmation hook.
+**Mail 2: participation confirmed (sent after payment)**
+
+- The existing participation confirmation email (`'confirmed'` variant), sent
+  through the normal confirmation hook once `confirm_registration` moves the row
+  to `CONFIRMED`. No new template.
 - The `'selected'` variant stays for free invite-only events.
 
 ## Edge cases
@@ -128,6 +141,7 @@ packages or coupons on invite-only events.
 
 - Unit: the status vocabulary sets, and the `pay-approved` route's Zod body and
   status guards.
-- Manual on staging with Razorpay test keys: approve a paid event → email
-  received → Pay → `CONFIRMED` plus ticket email. Revoke frees the seat.
+- Manual on staging with Razorpay test keys: approve a paid event → shortlist
+  mail received (UTM tags on the CTA) → event page shows Pay ₹X to confirm spot →
+  pay → `CONFIRMED` plus participation confirmation mail. Revoke frees the seat.
   Capacity blocks over-approval. Free invite-only events are unchanged.
