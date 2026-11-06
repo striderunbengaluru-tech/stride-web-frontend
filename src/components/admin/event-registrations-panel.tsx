@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, Search, CheckCircle, Download, Loader2, Phone, AlertCircle, MapPin,
   Cake, UserRound, Mail, CalendarPlus, Ticket, Check, X, ClipboardList, Tag,
 } from 'lucide-react'
-import { approveRegistrationsAction, rejectRegistrationsAction } from '@/lib/actions/admin'
+import { approveRegistrationsAction, rejectRegistrationsAction, revokeApprovalsAction } from '@/lib/actions/admin'
 import type { EventWithAttendees, Attendee } from '@/types/admin-registrations'
 import type { AdditionalField, CustomResponses } from '@/types/event'
 import { RunnerTagBadge } from '@/components/ui/runner-tag-badge'
@@ -25,7 +25,11 @@ const STATUS_PILL: Record<string, string> = {
   // Invite-only. Without these two the pill renders unstyled.
   APPLIED:   'bg-amber-400/15 text-amber-300',
   REJECTED:  'bg-white/8 text-white/40',
+  AWAITING_PAYMENT: 'bg-sky-400/15 text-sky-300',
 }
+
+/** Display text where the raw status would read badly. */
+const STATUS_TEXT: Record<string, string> = { AWAITING_PAYMENT: 'AWAITING PAYMENT' }
 
 /** Only an application awaiting a decision can be approved or rejected. */
 const DECIDABLE_STATUS = 'APPLIED'
@@ -174,7 +178,7 @@ function CapacityBar({ confirmed, capacity }: { confirmed: number; capacity: num
  */
 function ApplicationStats({ event }: { event: EventWithAttendees }) {
   const remaining = event.capacity != null
-    ? Math.max(0, event.capacity - event.confirmed_count)
+    ? Math.max(0, event.capacity - event.confirmed_count - event.awaiting_payment_count)
     : null
 
   const tiles: { label: string; value: string | number; hint: string; tone: string }[] = [
@@ -183,7 +187,7 @@ function ApplicationStats({ event }: { event: EventWithAttendees }) {
       // Every row on the event, whatever its status — including applications
       // that were turned down. The three tiles beside it are the breakdown.
       value: event.total_registrations,
-      hint: `Every application received: ${event.confirmed_count} accepted, ${event.applied_count} awaiting review, ${event.rejected_count} rejected.`,
+      hint: `Every application received: ${event.confirmed_count} accepted, ${event.awaiting_payment_count} awaiting payment, ${event.applied_count} awaiting review, ${event.rejected_count} rejected.`,
       tone: 'text-white',
     },
     {
@@ -248,6 +252,28 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
   const [exporting, setExporting] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [decisionPending, setDecisionPending] = useState<'approve' | 'reject' | null>(null)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
+
+  async function revoke(registrationId: string) {
+    setRevokingId(registrationId)
+    try {
+      const result = await revokeApprovalsAction(event.id, [registrationId])
+      if (!result.ok) {
+        toast.error(result.error)
+        return
+      }
+      if (result.decided.length === 0) {
+        toast.error('Nothing to revoke. They may have just paid.')
+        return
+      }
+      toast.success('Approval revoked. The runner is back in review and the seat is free.')
+      router.refresh()
+    } catch {
+      toast.error('Could not revoke that approval. Please try again.')
+    } finally {
+      setRevokingId(null)
+    }
+  }
 
   // One rule for the whole panel: search and the package filter narrow what is
   // listed, what "select all" covers, and what the CSV contains. Anything else
@@ -339,7 +365,9 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
         alreadyDecided.length > 0
           ? `${alreadyDecided.length} had already been decided by someone else.`
           : null,
-        action === 'approve' ? 'Selection emails are on their way.' : null,
+        action === 'approve' && result.awaitingPayment.length > 0
+          ? `${result.awaitingPayment.length} must pay to confirm. Payment emails are on their way.`
+          : action === 'approve' ? 'Selection emails are on their way.' : null,
       ].filter(Boolean).join(' ')
 
       const total = decided.length + skippedCapacity.length
@@ -583,8 +611,18 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
                     {/* Status + check-in */}
                     <div className='shrink-0 text-right'>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${STATUS_PILL[a.status] ?? 'bg-white/10 text-white/50'}`}>
-                        {a.status}
+                        {STATUS_TEXT[a.status] ?? a.status}
                       </span>
+                      {a.status === 'AWAITING_PAYMENT' && (
+                        <button
+                          type='button'
+                          onClick={e => { e.stopPropagation(); revoke(a.registration_id) }}
+                          disabled={revokingId === a.registration_id}
+                          className='block ml-auto mt-1 text-[11px] font-semibold text-red-300 hover:text-red-200 underline underline-offset-2 disabled:opacity-50 min-h-6'
+                        >
+                          {revokingId === a.registration_id ? 'Revoking…' : 'Revoke'}
+                        </button>
+                      )}
                       {a.checked_in_at ? (
                         <p className='text-green-400 text-xs mt-1 flex items-center justify-end gap-1'>
                           <CheckCircle size={9} />
