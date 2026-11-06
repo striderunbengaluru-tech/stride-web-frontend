@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   // 2) The registration must belong to this user, carry the matching order id,
-  // and be PENDING. We also pull the event's canonical price for the amount
+  // and be PENDING or AWAITING_PAYMENT. We also pull the event's canonical price for the amount
   // check below — the amount is never trusted from the client.
   const { data: registration } = await adminClient
     .from('event_registrations')
@@ -62,7 +62,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true })
   }
 
-  if (registration.status !== 'PENDING') {
+  // PENDING = an ordinary checkout; AWAITING_PAYMENT = an invite-only approval
+  // being paid for. Both confirm through confirm_registration below.
+  if (registration.status !== 'PENDING' && registration.status !== 'AWAITING_PAYMENT') {
     return NextResponse.json({ error: 'Registration is not in a confirmable state' }, { status: 400 })
   }
 
