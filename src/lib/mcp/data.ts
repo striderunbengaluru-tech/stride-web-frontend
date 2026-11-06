@@ -93,7 +93,8 @@ export async function listEvents(
         priceLabel: e.invite_only
           ? 'Free to apply'
           : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled),
-        pricePaise: e.price_paise,
+        // A paid invite-only fee is shown only to the runners it shortlists.
+        pricePaise: e.invite_only ? 0 : e.price_paise,
         // Not on the list row — the detail read has them. Listing surfaces show
         // neither, so returning null here matches what a card shows rather than
         // triggering one detail query per row.
@@ -173,7 +174,8 @@ export async function getEvent(
     priceLabel: inviteOnly
       ? 'Free to apply'
       : eventPriceLabel(event.price_paise, rawPackages, packagesEnabled),
-    pricePaise: event.price_paise,
+    // A paid invite-only fee is shown only to the runners it shortlists.
+    pricePaise: inviteOnly ? 0 : event.price_paise,
     distanceKm: event.distance_km,
     difficulty: event.difficulty,
     inviteOnly,

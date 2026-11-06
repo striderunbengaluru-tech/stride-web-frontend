@@ -475,7 +475,7 @@ export default async function EventDetailPage({ params }: Props) {
                   <RegistrationCtaDesktop
                     eventId={event.id}
                     eventSlug={slug}
-                    pricePaise={event.price_paise}
+                    pricePaise={inviteOnly ? 0 : event.price_paise}
                     isFull={isFull}
                     isPast={isPast}
                     additionalFields={additionalFields}
@@ -526,7 +526,7 @@ export default async function EventDetailPage({ params }: Props) {
                 priceLabel={priceLabel}
                 eventId={event.id}
                 eventSlug={slug}
-                pricePaise={event.price_paise}
+                pricePaise={inviteOnly ? 0 : event.price_paise}
                 isFull={isFull}
                 isPast={isPast}
                 additionalFields={additionalFields}
