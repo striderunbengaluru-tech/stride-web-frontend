@@ -243,7 +243,7 @@
 
 "@gsap/react@2.1.2":
   version "2.1.2"
-  resolved "https://factory.endorlabs.com/v1/namespaces/atlan.atlanhq/firewall/npm/@gsap/react/-/react-2.1.2.tgz#bfc055a41b402e8d1dc56839e9d077407027b0a0"
+  resolved "https://registry.yarnpkg.com/@gsap/react/-/react-2.1.2.tgz#bfc055a41b402e8d1dc56839e9d077407027b0a0"
   integrity sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==
 
 "@hono/node-server@^1.19.9 || ^2.0.5":
@@ -2608,7 +2608,7 @@ graceful-fs@^4.2.4:
 
 gsap@3.15.0:
   version "3.15.0"
-  resolved "https://factory.endorlabs.com/v1/namespaces/atlan.atlanhq/firewall/npm/gsap/-/gsap-3.15.0.tgz#7851baaffc77642f2db3b1749d3634f9b5a19d14"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.15.0.tgz#7851baaffc77642f2db3b1749d3634f9b5a19d14"
   integrity sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==
 
 has-bigints@^1.0.2:
