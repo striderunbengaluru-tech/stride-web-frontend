@@ -24,6 +24,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/leaderboard`,        lastModified: now, changeFrequency: 'daily',   priority: 0.7 },
     { url: `${SITE_URL}/shop`,               lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
     { url: `${SITE_URL}/team`,               lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/join-slay`,          lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/partnerships`,       lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact-us`,         lastModified: now, changeFrequency: 'yearly',  priority: 0.5 },
     { url: `${SITE_URL}/developers`,         lastModified: now, changeFrequency: 'monthly', priority: 0.6 },

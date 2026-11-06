@@ -766,7 +766,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
  * than brand communication. The policy links stay: a bulk send needs a
  * reachable owner and a privacy policy behind it.
  */
-function slayFooter(): string {
+function slayFooter(reason = 'You&#39;re receiving this because you registered for this run.'): string {
   const links = [
     { title: 'Privacy Policy', href: `${HOME_URL}/privacy-policy` },
     { title: 'Terms of Service', href: `${HOME_URL}/terms-of-service` },
@@ -790,7 +790,7 @@ function slayFooter(): string {
           <tr>
             <td class="t-muted" style="padding:14px 0 0;text-align:center;font-family:${BODY_FONT};font-size:11px;color:${DIM};">
               &copy; ${new Date().getFullYear()} Slay Run Club · Bengaluru<br>
-              You&#39;re receiving this because you registered for this run.
+              ${reason}
             </td>
           </tr>
         </table>
@@ -1031,6 +1031,76 @@ export function slayReportingTimeEmail(params: SlayReportingEmailParams): EmailC
 
   return {
     subject: `${run} — reporting time ${reportingTime}`,
+    htmlContent: emailDocument(bodyContent),
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slay Run Club — application approved
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SlayInviteApprovedEmailParams = {
+  fullName: string | null
+  /** The Slay WhatsApp community invite link. Private: only approved applicants get it. */
+  whatsappUrl: string
+}
+
+/**
+ * Sent once, when an admin approves a /join-slay application in the Slay
+ * Approvals tab. Its one job is the WhatsApp community link, so that is the
+ * button above the fold. Same lime-on-black button as the run-day mail — the
+ * only pairing in the palette that clears AA at button size.
+ */
+export function slayInviteApprovedEmail(params: SlayInviteApprovedEmailParams): EmailContent {
+  const { fullName, whatsappUrl } = params
+
+  const bodyContent = `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:0 0 8px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+          <tr>
+            <td style="padding:48px 32px 0;text-align:center;">
+              <img src="${SLAY_LOGO_URL}" alt="Slay Run Club" width="176" style="display:inline-block;width:176px;max-width:62%;height:auto;border:0;border-radius:18px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:38px 32px 0;text-align:center;">
+              <h1 class="t" style="margin:0;font-family:${HEADING_FONT};font-size:32px;line-height:1.25;letter-spacing:-0.5px;font-weight:normal;color:${TEXT};">You&#39;re <strong class="slay-a" style="font-weight:bold;color:${SLAY_PINK_INK};">in.</strong></h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:26px 32px 0;">
+              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Hey ${firstName(fullName)}, welcome to Slay Run Club. Your application is approved. Join the community on WhatsApp — that&#39;s where every social run, fitness experience and workshop is announced first, with venues and how to sign up.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px auto 0;">
+                <tr>
+                  <td style="background-color:${SLAY_LIME};border-radius:6px;text-align:center;">
+                    <a href="${escapeHtml(whatsappUrl)}" target="_blank" style="display:block;padding:16px 24px;font-family:${BODY_FONT};font-size:15px;font-weight:bold;letter-spacing:0.3px;color:${BLACK};text-decoration:none;border-radius:6px;">Join the Slay WhatsApp community</a>
+                  </td>
+                </tr>
+              </table>
+              <p class="t-muted" style="margin:12px 0 0;text-align:center;font-family:${BODY_FONT};font-size:12px;line-height:1.6;color:${MUTED};">This link is just for you — please don&#39;t share it.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 32px 0;">
+              <p class="t" style="margin:0;font-family:${BODY_FONT};font-size:15px;line-height:1.7;color:${TEXT};">Slay every move. See you out there.</p>
+            </td>
+          </tr>
+
+          <tr><td style="padding:0 0 44px;"></td></tr>
+          ${slayFooter('You&#39;re receiving this because you applied to join Slay Run Club.')}
+        </table>
+      </td>
+    </tr>
+  </table>`
+
+  return {
+    subject: "You're in — welcome to Slay Run Club",
     htmlContent: emailDocument(bodyContent),
   }
 }

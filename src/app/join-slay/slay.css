@@ -1,0 +1,90 @@
+/*
+ * /join-slay only. The scroll effects are adapted from Made With GSAP
+ * (065 Triple marquee parallax, 032 Text on a curved path, 031 Scrolling
+ * sections, 042 Card deck, 035 Smooth thumbnails). Their 3D rules live
+ * here rather than in utilities because Tailwind v4 emits no CSS for
+ * `preserve-3d`.
+ */
+
+/* The Stride body is purple; overscroll on this page should show Slay ink. */
+body:has(.slay-page) {
+  background-color: var(--color-slay-ink);
+}
+
+/*
+ * Slay's display face. A plain class rather than a theme token: `--font-anton`
+ * only exists inside this route, and the unlayered `h1…h6` rule in
+ * globals.css would beat a Tailwind utility anyway — this selector outranks it.
+ */
+.slay-page .font-slay {
+  font-family: var(--font-anton), 'Arial Narrow', sans-serif;
+  font-weight: 400;
+}
+
+@keyframes slay-ticker {
+  to { transform: translateX(-50%); }
+}
+
+.slay-ticker {
+  animation: slay-ticker 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slay-ticker { animation: none; }
+}
+
+/* ── 042 · card deck ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .slay-deck {
+    position: relative;
+    width: clamp(230px, 24vw, 360px);
+    aspect-ratio: 0.75;
+    perspective: max(25vw, 320px);
+  }
+
+  .slay-deck-card {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+/* ── 031 · scrolling sections ─────────────────────────────────────── */
+
+.slay-slide-wrapper {
+  perspective: 250vw;
+}
+
+.slay-slide-content {
+  transform-style: preserve-3d;
+  transform-origin: 50% 10%;
+}
+
+/* Headings that aren't set in the display face use Slay's body face, not the
+   Stride serif from the global h1–h6 rule. `.font-slay` (above) still wins. */
+.slay-page :is(h1, h2, h3, h4) {
+  font-family: var(--font-figtree), sans-serif;
+}
+
+/* ── 032 · text along a curved path ───────────────────────────────── */
+
+.slay-arc svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  /* Scaled past the edges so letters never appear mid-air at either end. */
+  transform: translateY(50%) scale(1.1);
+}
+
+/* SVG user units, not CSS px: the SVG scales with the viewport, so a phone
+   needs a bigger number to land at a similar on-screen size. */
+.slay-arc textPath {
+  fill: currentColor;
+  font-family: var(--font-anton), 'Arial Narrow', sans-serif;
+  font-size: 300px;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .slay-arc textPath { font-size: 170px; }
+}

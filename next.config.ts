@@ -66,6 +66,7 @@ const MARKDOWN_PAGES = [
   '/contact-us',
   '/developers',
   '/events',
+  '/join-slay',
   '/leaderboard',
   '/milestones',
   '/partnerships',

@@ -10,6 +10,7 @@ import {
   ScanLine,
   GraduationCap,
   Flag,
+  Zap,
 } from 'lucide-react'
 import { NavLoadingLink } from '@/components/layout/nav-loading-link'
 import { StravaIcon } from '@/components/ui/brand-icons'
@@ -32,6 +33,7 @@ const navLinks = [
   { href: '/admin/users',         label: 'Users',          icon: Users },
   { href: '/admin/graduation',    label: 'Graduation',     icon: GraduationCap },
   { href: '/admin/strava',        label: 'Strava',         icon: StravaNavIcon },
+  { href: '/admin/slay',          label: 'Slay Approvals', icon: Zap },
   { href: '/admin/check-in',      label: 'Check-in',       icon: ScanLine },
 ]
 

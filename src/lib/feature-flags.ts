@@ -18,10 +18,11 @@ export function guardPreviewFeature(): void {
 // on the live site. When a feature launches, remove its `guardPreviewFeature()`
 // call AND drop its prefix from this list so it re-enters the production sitemap.
 //
-// Empty today — `/team` has launched. Annotated `readonly string[]` rather than
-// left to `as const` inference: an empty tuple infers `prefix` as `never`, and
-// the comparison in `isGatedRoute` then fails to compile.
-export const GATED_ROUTE_PREFIXES: readonly string[] = []
+// `/join-slay` is gated until its application form is wired to the database —
+// until then a submission is validated and then dropped. Annotated
+// `readonly string[]` rather than left to `as const` inference, so the list can
+// go back to empty without `prefix` inferring as `never`.
+export const GATED_ROUTE_PREFIXES: readonly string[] = ['/join-slay']
 
 // True when `path` is (or is nested under) a route hidden on production.
 export function isGatedRoute(path: string): boolean {

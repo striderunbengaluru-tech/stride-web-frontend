@@ -11,6 +11,18 @@ import { isRegistrationOpen } from '@/lib/races/present'
 import { distanceLabel, sortDistances, type RaceRow } from '@/types/race'
 import { BLOG_POSTS } from '@/content/blog/index'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
+import {
+  SLAY_ABOUT,
+  SLAY_EXPERIENCES,
+  SLAY_EXPERIENCES_HEADLINE,
+  SLAY_FAQ,
+  SLAY_INTRO,
+  SLAY_JOIN,
+  SLAY_TAGLINE,
+  SLAY_TEAM,
+  SLAY_UMBRELLA_LINE,
+} from '@/content/slay'
+import { PREVIEW_FEATURES_ENABLED } from '@/lib/feature-flags'
 import { MILESTONE_TIERS } from '@/lib/milestones'
 import { WHY_US, ALL_PARTNERS, PARTNER_CATEGORIES } from '@/app/partnerships/partners-data'
 import { ALL_SERVERS, MCP_SERVER_VERSION } from '@/lib/mcp/registry'
@@ -927,6 +939,45 @@ export const FAQ_ENTRIES: FaqEntry[] = FAQ.map(({ id, question, answer }) => ({
   answer,
 }))
 
+function joinSlayMarkdown(abs: Abs): MarkdownDoc {
+  return {
+    title: 'Slay Run Club - Women-only running in Bengaluru',
+    description: `${SLAY_INTRO} Social runs, fitness experiences and curated workshops in Bengaluru.`,
+    body: tidy([
+      '# Slay Run Club',
+      '',
+      `> ${SLAY_INTRO} Tagline: "${SLAY_TAGLINE}" ${SLAY_UMBRELLA_LINE}`,
+      '',
+      `## ${SLAY_ABOUT.headline}`,
+      '',
+      ...SLAY_ABOUT.paragraphs.flatMap(paragraph => [paragraph, '']),
+      `**${SLAY_ABOUT.closing}**`,
+      '',
+      `## ${SLAY_EXPERIENCES_HEADLINE}`,
+      '',
+      ...SLAY_EXPERIENCES.flatMap(experience => [`### ${experience.title}`, '', experience.description, '']),
+      '## The people behind Slay',
+      '',
+      ...SLAY_TEAM.map(member => {
+        const links = [
+          member.instagramUrl ? `[Instagram](${member.instagramUrl})` : null,
+          member.stravaUrl ? `[Strava](${member.stravaUrl})` : null,
+        ].filter(Boolean)
+        return `- **${member.name}**, ${member.role}${links.length > 0 ? ` — ${links.join(' · ')}` : ''}`
+      }),
+      '',
+      '## How to join',
+      '',
+      `${SLAY_JOIN.intro} Apply with the form at ${abs('/join-slay')}#join: it asks for your full name, WhatsApp number, Instagram ID and why you want to join. Slay is open to women only.`,
+      '',
+      '## Frequently asked questions',
+      '',
+      ...SLAY_FAQ.flatMap(({ question, answer }) => [`### ${question}`, '', answer, '']),
+      `Slay is part of [Stride Run Club](${abs('/')}).`,
+    ]),
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------
@@ -952,6 +1003,8 @@ export async function renderMarkdownPath(
     case '/milestones':       return milestonesMarkdown(abs)
     case '/leaderboard':      return leaderboardMarkdown(abs)
     case '/team':             return teamMarkdown(abs)
+    // Gated with the page: no twin on production until /join-slay launches.
+    case '/join-slay':        return PREVIEW_FEATURES_ENABLED ? joinSlayMarkdown(abs) : null
     case '/partnerships':     return partnershipsMarkdown(abs)
     case '/contact-us':       return contactMarkdown(abs)
     case '/shop':             return shopMarkdown(abs)

@@ -10,6 +10,15 @@
   --color-copy-black: #010101;            /* Text on light/yellow surfaces */
   --color-strava-orange: #FC5200;         /* Strava brand guideline — Strava icon/attribution only */
 
+  /* ── Slay Run Club (/join-slay only) ──
+     Sampled from the Slay logo art, same values as the Slay emails. Pink is
+     3.98:1 against white, so white type on pink is display-size only; body copy
+     on pink is ink. */
+  --color-slay-pink: #E6358F;
+  --color-slay-pink-ink: #BE1470;  /* Pink for type on white — 6.2:1 */
+  --color-slay-lime: #B6F33B;
+  --color-slay-ink: #0B0A0B;
+
   /* ── Font Families ──
      Titles → Libre Baskerville · Body → Figtree · Uppercase (eyebrows,
      footer/metric headers) → Geist Mono. `--font-mono` is wired so the

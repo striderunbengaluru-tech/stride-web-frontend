@@ -5,7 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CampaignArrival } from "@/components/analytics/campaign-arrival";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import Navbar from "@/components/layout/navbar";
-import { NavbarGate } from "@/components/layout/navbar-gate";
+import { ContentFrame, HideOnChromeFreeRoute, NavbarGate } from "@/components/layout/navbar-gate";
 import Footer from "@/components/layout/footer";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 import { CookieNotice } from "@/components/layout/cookie-notice";
@@ -108,16 +108,23 @@ export default function RootLayout({
               they work on every page and so document.modelContext lands in the
               shared bundle rather than a lazily-loaded feature chunk. */}
           <SiteWebMcpTools />
-          {/* Navbar always renders — internal pieces hide themselves on /admin */}
-          <Navbar />
-          <div className='pb-20 md:pb-0'>
+          {/* Navbar renders on every page with Stride chrome — internal pieces
+              hide themselves on /admin */}
+          <HideOnChromeFreeRoute>
+            <Navbar />
+          </HideOnChromeFreeRoute>
+          <ContentFrame>
             {children}
-            <Footer />
-          </div>
+            <HideOnChromeFreeRoute>
+              <Footer />
+            </HideOnChromeFreeRoute>
+          </ContentFrame>
           {/* MobileBottomNav is a consumer-only nav, hidden entirely on /admin */}
-          <NavbarGate>
-            <MobileBottomNav />
-          </NavbarGate>
+          <HideOnChromeFreeRoute>
+            <NavbarGate>
+              <MobileBottomNav />
+            </NavbarGate>
+          </HideOnChromeFreeRoute>
           <CookieNotice />
         </AuthProvider>
         <Analytics />

@@ -23,9 +23,10 @@ function prefersReducedMotion(): boolean {
  * who has just successfully applied a coupon.
  *
  * Honours `prefers-reduced-motion` by doing nothing at all, matching how every
- * keyframe in globals.css is gated.
+ * keyframe in globals.css is gated. `colors` overrides the Stride palette — the
+ * Slay page passes its own.
  */
-export async function fireConfetti(): Promise<void> {
+export async function fireConfetti(colors: string[] = COLORS): Promise<void> {
   if (prefersReducedMotion()) return
 
   try {
@@ -36,7 +37,7 @@ export async function fireConfetti(): Promise<void> {
     const shared = {
       particleCount: 60,
       spread: 70,
-      colors: COLORS,
+      colors,
       disableForReducedMotion: true,
       zIndex: 200, // above the modal's z-[100] shell
       scalar: 0.9,
