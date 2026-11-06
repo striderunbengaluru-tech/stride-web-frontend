@@ -3,6 +3,7 @@ import { getPublishedRaces, getRaceBySlug } from '@/lib/data/races'
 import { getLeaderboardTop } from '@/lib/leaderboard'
 import { MILESTONE_TIERS, getMilestone } from '@/lib/milestones'
 import { eventRowPriceLabel, eventPriceLabel } from '@/lib/utils/money'
+import { inviteOnlyAgentPriceLabel } from '@/lib/events/invite-only'
 import { istDayKey, istMonthKey } from '@/lib/utils/ist'
 import { isRegistrationOpen } from '@/lib/races/present'
 import { LEAD_STRIDERS } from '@/content/lead-striders'
@@ -91,7 +92,7 @@ export async function listEvents(
         eventDate: e.event_date,
         location: e.location,
         priceLabel: e.invite_only
-          ? 'Free to apply'
+          ? inviteOnlyAgentPriceLabel(e.price_paise)
           : eventRowPriceLabel(e.price_paise, e.packages, e.packages_enabled),
         // A paid invite-only fee is shown only to the runners it shortlists.
         pricePaise: e.invite_only ? 0 : e.price_paise,
@@ -172,7 +173,7 @@ export async function getEvent(
     endDate: event.end_date,
     location: event.location,
     priceLabel: inviteOnly
-      ? 'Free to apply'
+      ? inviteOnlyAgentPriceLabel(event.price_paise)
       : eventPriceLabel(event.price_paise, rawPackages, packagesEnabled),
     // A paid invite-only fee is shown only to the runners it shortlists.
     pricePaise: inviteOnly ? 0 : event.price_paise,

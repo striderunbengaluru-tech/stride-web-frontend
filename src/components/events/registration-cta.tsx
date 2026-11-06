@@ -184,7 +184,7 @@ export function RegistrationCtaDesktop(props: SharedProps & DesktopExtras) {
           </p>
           {props.spotsLine}
         </div>
-        <p className='text-2xl font-bold text-white shrink-0 font-mono'>{props.priceLabel}</p>
+        {props.priceLabel && <p className='text-2xl font-bold text-white shrink-0 font-mono'>{props.priceLabel}</p>}
       </div>
       <RegisterButton
         eventId={props.eventId}
@@ -218,6 +218,8 @@ type MobileExtras = {
 
 /** The price half of the mobile bar, shared with its skeleton. */
 function MobilePrice(props: MobileExtras) {
+  // Empty on a paid invite-only run: the fee is for shortlisted runners only.
+  if (!props.priceLabel) return null
   return (
     <div>
       <p className='text-white/40 text-xs'>{props.priceCaption}</p>
@@ -290,7 +292,7 @@ export function RegistrationCtaDesktopSkeleton(props: {
           </p>
           {props.spotsLine}
         </div>
-        <p className='text-2xl font-bold text-white shrink-0 font-mono'>{props.priceLabel}</p>
+        {props.priceLabel && <p className='text-2xl font-bold text-white shrink-0 font-mono'>{props.priceLabel}</p>}
       </div>
       <div className='w-full py-3.5 rounded-md bg-white/10 animate-pulse min-h-11' aria-hidden='true' />
     </>

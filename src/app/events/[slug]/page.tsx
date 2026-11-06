@@ -18,7 +18,8 @@ import { selectableTierIds, type AdditionalField, type EventPackage } from '@/ty
 import {
   formatDateLongIST, formatTimeIST, formatMonthIST, formatDayIST,
 } from '@/lib/utils/ist'
-import { eventPriceLabel, FREE_LABEL } from '@/lib/utils/money'
+import { eventPriceLabel } from '@/lib/utils/money'
+import { inviteOnlyPriceLabel } from '@/lib/events/invite-only'
 import { InviteOnlyBadge } from '@/components/events/invite-only-badge'
 import { MapEmbed } from '@/components/events/map-embed'
 import { BfcacheRefresh } from '@/components/events/bfcache-refresh'
@@ -190,10 +191,11 @@ export default async function EventDetailPage({ params }: Props) {
   const endTime   = fmtTime(event.end_date)
   // With packages the headline can only be a "From ₹X" — the runner picks the
   // total — and only open tiers count, so a sold-out Early Bird stops setting it.
-  // Under invite-only there is nothing to charge, so it reads as free.
+  // Under invite-only a paid fee is for shortlisted runners only, so the public
+  // label is empty (no price shown); a free invite-only run reads "Free".
   const openPackageIds = selectableTierIds(packages, packageSpotsTaken, event.packages_progressive === true)
   const priceLabel = inviteOnly
-    ? FREE_LABEL
+    ? inviteOnlyPriceLabel(event.price_paise)
     : eventPriceLabel(event.price_paise, packages, packagesEnabled, openPackageIds)
   const mobilePriceCaption = inviteOnly ? 'To apply' : 'Entry fee'
   const shareUrl   = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.strideclub.in'}/events/${slug}`
