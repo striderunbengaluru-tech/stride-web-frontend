@@ -78,6 +78,7 @@ export default async function MyRunsPage() {
     const state: MyRun['state'] =
       r.status === 'REJECTED' ? 'rejected'
       : r.status === 'APPLIED' ? (isPastEvent ? 'rejected' : 'applied')
+      : r.status === 'AWAITING_PAYMENT' ? (isPastEvent ? 'rejected' : 'payment_due')
       : 'active'
 
     return {
@@ -109,7 +110,7 @@ export default async function MyRunsPage() {
   // Upcoming = a live registration or a pending application for a run still
   // ahead. An allowlist, not `!== 'CANCELLED'`: a REJECTED row would otherwise
   // render here as an ordinary upcoming run.
-  const UPCOMING_STATUSES = new Set(['CONFIRMED', 'PENDING', 'APPLIED'])
+  const UPCOMING_STATUSES = new Set(['CONFIRMED', 'PENDING', 'APPLIED', 'AWAITING_PAYMENT'])
   const upcoming: MyRun[] = paired
     .filter(({ reg }) => UPCOMING_STATUSES.has(reg.status ?? ''))
     .filter(({ event }) => event.event_date && new Date(event.event_date) >= now)
