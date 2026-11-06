@@ -62,13 +62,3 @@ export const CLEARABLE_REGISTRATION_STATUSES = ['PENDING', 'CANCELLED', 'REJECTE
 export const AWAITING_LABEL = 'Awaiting invitation acceptance'
 export const NOT_SELECTED_LABEL = 'Not selected'
 export const PAYMENT_DUE_LABEL = 'Selected. Payment pending'
-
-/**
- * The note every applicant must see before and after applying. Wording is
- * deliberate — it is the only thing standing between an application and
- * someone believing they have a confirmed spot.
- */
-export const APPLICATION_DISCLAIMER =
-  'Submission of this application does NOT guarantee your participation. We will review your ' +
-  'application soon, and you will receive an email and an update in the My Runs section of your ' +
-  'profile once your application is approved.'

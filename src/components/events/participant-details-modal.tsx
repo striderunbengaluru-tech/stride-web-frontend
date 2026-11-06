@@ -1186,7 +1186,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
             </button>
 
             {/* Last thing before the button, so nobody submits believing they
-                have a spot. Repeated verbatim on the confirmation page. */}
+                have a spot. */}
             {inviteOnly && (
               <p className='text-amber-200/80 text-[11px] text-center leading-relaxed'>
                 Submitting does not guarantee your participation. Stride selects the athletes for this run.
