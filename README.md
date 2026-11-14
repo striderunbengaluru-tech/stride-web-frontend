@@ -187,6 +187,8 @@ Copy that changes often lives in `src/content/` — editing `faq.json` or `hero.
 
 **Check-in** — every athlete gets a 4-character **Stride Tag**, shown on their ticket after registering. At the run, an admin enters it at `/admin/check-in`. `POST /api/events/check-in` verifies the session and re-reads the caller's role from the DB, rejects a closed check-in window, requires a `CONFIRMED` registration that isn't already checked in, then sets `checked_in_at` and increments the athlete's `runs_completed` — which is what advances milestone tiers.
 
+**Invite-only events** — runners apply for free (`APPLIED`) and an admin approves or rejects them. Approval on a paid event moves the row to `AWAITING_PAYMENT`, which holds a seat at the price snapshotted in `amount_due_paise` and sends the "You're selected" email; its button opens the event page with `?pay=1`, which pops Razorpay on arrival. Switching on **Registrations closed** stops new applications only — approved runners can still pay, and a signed-out visitor gets a "Sign in to pay" path instead of a dead "Event Full" button.
+
 **Test events** — an event with `is_test_event = true` never appears on production (list, homepage, sitemap; its page 404s) even when `PUBLISHED`, but works fully on staging. Toggle it in the admin event form.
 
 **Monthly cron** — `vercel.json` schedules `/api/cron/purge-inactive` (DPDP retention), authorised by `CRON_SECRET`.
