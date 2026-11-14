@@ -206,7 +206,7 @@ export function RegisterButton({
   }
 
   if (isFull) {
-    return (
+    const fullButton = (
       <button
         disabled
         className='w-full py-3.5 rounded-md bg-white/10 text-white/40 font-semibold text-sm cursor-not-allowed min-h-11'
@@ -214,6 +214,35 @@ export function RegisterButton({
         Event Full
       </button>
     )
+    // Closing an invite-only run stops applications, not payments: a selected
+    // runner who is signed out can't be told apart from anyone else until they
+    // sign in, so they need a way to do that or they're stuck behind "full".
+    if (!isLoggedIn && inviteOnly) {
+      const href = `/become-a-member?next=${encodeURIComponent(`/events/${eventSlug}?${PAY_PARAM}=1`)}`
+      // Arriving from the payment email: signing in is the main action.
+      if (wantsPay) {
+        return (
+          <a
+            href={href}
+            className='block w-full py-3.5 rounded-md bg-stride-yellow-accent text-copy-black font-semibold text-sm text-center min-h-11 hover:bg-stride-yellow-accent/90 transition-colors'
+          >
+            Sign in to pay
+          </a>
+        )
+      }
+      return (
+        <>
+          {fullButton}
+          <a
+            href={href}
+            className='flex items-center justify-center min-h-11 text-stride-yellow-accent text-sm font-semibold underline underline-offset-4 hover:text-stride-yellow-accent/80 transition-colors'
+          >
+            Selected? Sign in to pay
+          </a>
+        </>
+      )
+    }
+    return fullButton
   }
 
   if (!isLoggedIn) {
