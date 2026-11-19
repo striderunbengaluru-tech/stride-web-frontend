@@ -230,9 +230,23 @@ function ApplicationStats({ event }: { event: EventWithAttendees }) {
 }
 
 /**
+ * Confirmed registrations per coupon code, most-used first. Codes are compared
+ * case-insensitively so "early10" and "EARLY10" count as one coupon.
+ */
+function countCouponUses(confirmed: Attendee[]): [code: string, uses: number][] {
+  const uses = new Map<string, number>()
+  for (const { coupon_code } of confirmed) {
+    if (!coupon_code) continue
+    const code = coupon_code.trim().toUpperCase()
+    uses.set(code, (uses.get(code) ?? 0) + 1)
+  }
+  return [...uses].sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
+}
+
+/**
  * Headline numbers for the confirmed field: the men / women split, and — only
  * once someone has actually used one — how many confirmed registrations applied
- * a coupon. Confirmed only, so pending carts and rejected applications don't
+ * each coupon. Confirmed only, so pending carts and rejected applications don't
  * inflate a start list.
  */
 function ConfirmedBreakdown({ attendees }: { attendees: Attendee[] }) {
@@ -241,27 +255,31 @@ function ConfirmedBreakdown({ attendees }: { attendees: Attendee[] }) {
 
   const men = confirmed.filter(a => a.gender === 'MALE').length
   const women = confirmed.filter(a => a.gender === 'FEMALE').length
-  const couponCount = confirmed.filter(a => a.coupon_code).length
 
   const tiles = [
-    { label: 'Men', value: men, Icon: Mars, tone: 'text-sky-400', hint: 'Confirmed registrations from runners whose profile says male.' },
-    { label: 'Women', value: women, Icon: Venus, tone: 'text-pink-400', hint: 'Confirmed registrations from runners whose profile says female.' },
-    ...(couponCount > 0
-      ? [{ label: 'Coupons used', value: couponCount, Icon: TicketPercent, tone: 'text-stride-yellow-accent', hint: 'Confirmed registrations that applied a coupon code.' }]
-      : []),
+    { key: 'men', label: 'Men', value: men, Icon: Mars, tone: 'text-sky-400', hint: 'Confirmed registrations from runners whose profile says male.' },
+    { key: 'women', label: 'Women', value: women, Icon: Venus, tone: 'text-pink-400', hint: 'Confirmed registrations from runners whose profile says female.' },
+    ...countCouponUses(confirmed).map(([code, uses]) => ({
+      key: `coupon-${code}`,
+      label: code,
+      value: uses,
+      Icon: TicketPercent,
+      tone: 'text-stride-yellow-accent',
+      hint: `Confirmed registrations that applied coupon ${code}.`,
+    })),
   ]
 
   return (
     <div className='flex flex-wrap gap-2 px-4 py-3 border-b border-white/8'>
-      {tiles.map(({ label, value, Icon, tone, hint }) => (
+      {tiles.map(({ key, label, value, Icon, tone, hint }) => (
         <div
-          key={label}
+          key={key}
           title={hint}
-          className='flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2'
+          className='flex items-center gap-2 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 py-2'
         >
           <Icon size={16} className={`${tone} shrink-0`} aria-hidden='true' />
           <span className={`text-lg font-bold tabular-nums font-mono ${tone}`}>{value}</span>
-          <span className='text-white/40 text-[11px]'>{label}</span>
+          <span className='text-white/40 text-[11px] line-clamp-1 break-all'>{label}</span>
         </div>
       ))}
     </div>
