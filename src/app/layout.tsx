@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Libre_Baskerville, Figtree, Geist_Mono } from "next/font/google";
+import { Libre_Baskerville, Figtree } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CampaignArrival } from "@/components/analytics/campaign-arrival";
@@ -29,10 +30,13 @@ const figtree = Figtree({
   weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
+// Self-hosted: Google Fonts sometimes serves Geist Mono from a `/l/font?kit=`
+// URL that Turbopack can't resolve, which fails the Vercel build.
+const geistMono = localFont({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: "./fonts/geist-mono-latin.woff2",
+  weight: "400 700",
+  display: "swap",
 });
 
 const SITE_URL = 'https://www.strideclub.in'
