@@ -63,5 +63,18 @@
       "jeel-pose-2.webp",
       "jeel-pose-3.webp"
     ]
+  },
+  {
+    "slug": "nithin-k-n",
+    "name": "Nithin K. N.",
+    "role": "Lead Strider",
+    "bio": "Creator of The Lake Hop Project",
+    "instagramUrl": "https://www.instagram.com/nithin.keen/",
+    "stravaUrl": "https://strava.app.link/00CpGPoDg8b",
+    "images": [
+      "nithin-pose-1.webp",
+      "nithin-pose-2.webp",
+      "nithin-pose-3.webp"
+    ]
   }
 ]

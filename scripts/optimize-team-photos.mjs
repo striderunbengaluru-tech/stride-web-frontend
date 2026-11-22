@@ -15,14 +15,15 @@
 //       node --env-file=.env.local scripts/optimize-team-photos.mjs --only=kushagra
 // Needs: NEXT_PUBLIC_SUPABASE_URL, STRIDE_SUPABASE_SERVICE_ROLE_KEY
 //
-// Add new poses by extending POSES — sources are read from ~/Downloads.
+// Add new poses by extending POSES — sources are read from ~/Downloads, as
+// `<slug>-<pose>.webp` or, failing that, `<slug>-<pose>.png`.
 //
 // Re-uploading overwrites the same object path, so the public URL does not
 // change. That URL is served `immutable` with a 1-year max-age and Next's image
 // optimizer caches its own variants for 31 days, so a replaced portrait will NOT
 // reach browsers that already hold the old one. See the note printed at the end.
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -59,6 +60,7 @@ const SLUGS = [
   'kushagra',
   'naman',
   'nirmala',
+  'nithin',
   'sanches',
   'sidharth',
   'vagisha',
@@ -74,8 +76,19 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
 const kb = (bytes) => `${(bytes / 1024).toFixed(0)} KB`
 const mb = (bytes) => `${(bytes / 1048576).toFixed(2)} MB`
 
+/** The source export for an output name: the .webp if present, else a .png. */
+async function sourcePath(name) {
+  const webp = join(SRC_DIR, name)
+  try {
+    await access(webp)
+    return webp
+  } catch {
+    return webp.replace(/\.webp$/, '.png')
+  }
+}
+
 async function processOne(name) {
-  const src = await readFile(join(SRC_DIR, name))
+  const src = await readFile(await sourcePath(name))
 
   const out = await sharp(src)
     .rotate() // honour EXIF orientation before resizing
