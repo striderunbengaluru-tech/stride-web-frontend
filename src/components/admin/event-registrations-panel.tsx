@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ChevronDown, ChevronUp, Search, CheckCircle, Download, Loader2, Phone, AlertCircle, MapPin,
+  ChevronDown, ChevronUp, CheckCircle, Download, Loader2, Phone, AlertCircle, MapPin,
   Cake, UserRound, Mail, CalendarPlus, Ticket, Check, X, ClipboardList, Tag,
   Mars, Venus, TicketPercent,
 } from 'lucide-react'
@@ -18,6 +18,11 @@ import { getMilestone } from '@/lib/milestones'
 import { formatDateNumericIST, formatTimeIST, formatDateTimeIST } from '@/lib/utils/ist'
 import { priceLabel as priceOf } from '@/lib/utils/money'
 import { toCsv, downloadCsv, safeFilenamePart, csvTimestamp, CSV_EMPTY } from '@/lib/utils/csv'
+import { AttendeeFilterBar } from '@/components/admin/attendee-filter-bar'
+import {
+  DEFAULT_SORT, EMPTY_FILTERS, answerText, couponKey, filterAttendees, sortAttendees,
+  type AttendeeFilters, type SortKey,
+} from '@/lib/admin/attendee-filters'
 
 const STATUS_PILL: Record<string, string> = {
   CONFIRMED: 'bg-green-500/15 text-green-400',
@@ -249,38 +254,60 @@ function countCouponUses(confirmed: Attendee[]): [code: string, uses: number][] 
  * each coupon. Confirmed only, so pending carts and rejected applications don't
  * inflate a start list.
  */
-function ConfirmedBreakdown({ attendees }: { attendees: Attendee[] }) {
+function ConfirmedBreakdown({ attendees, filters, onFilter }: {
+  attendees: Attendee[]
+  filters: AttendeeFilters
+  /** Clicking a tile toggles the matching filter, so a count leads to its people. */
+  onFilter: (patch: Partial<AttendeeFilters>) => void
+}) {
   const confirmed = attendees.filter(a => a.status === 'CONFIRMED')
   if (confirmed.length === 0) return null
 
   const men = confirmed.filter(a => a.gender === 'MALE').length
   const women = confirmed.filter(a => a.gender === 'FEMALE').length
 
+  const genderTile = (gender: string) => ({
+    active: filters.gender === gender && filters.status === 'CONFIRMED',
+    apply: () => onFilter(filters.gender === gender && filters.status === 'CONFIRMED'
+      ? { gender: '' }
+      : { gender, status: 'CONFIRMED' }),
+  })
   const tiles = [
-    { key: 'men', label: 'Men', value: men, Icon: Mars, tone: 'text-sky-400', hint: 'Confirmed registrations from runners whose profile says male.' },
-    { key: 'women', label: 'Women', value: women, Icon: Venus, tone: 'text-pink-400', hint: 'Confirmed registrations from runners whose profile says female.' },
+    { key: 'men', label: 'Men', value: men, Icon: Mars, tone: 'text-sky-400', hint: 'Confirmed registrations from runners whose profile says male. Click to list them.', ...genderTile('MALE') },
+    { key: 'women', label: 'Women', value: women, Icon: Venus, tone: 'text-pink-400', hint: 'Confirmed registrations from runners whose profile says female. Click to list them.', ...genderTile('FEMALE') },
     ...countCouponUses(confirmed).map(([code, uses]) => ({
       key: `coupon-${code}`,
       label: code,
       value: uses,
       Icon: TicketPercent,
       tone: 'text-stride-yellow-accent',
-      hint: `Confirmed registrations that applied coupon ${code}.`,
+      hint: `Confirmed registrations that applied coupon ${code}. Click to list them.`,
+      active: filters.coupon === code && filters.status === 'CONFIRMED',
+      apply: () => onFilter(filters.coupon === code && filters.status === 'CONFIRMED'
+        ? { coupon: '' }
+        : { coupon: code, status: 'CONFIRMED' }),
     })),
   ]
 
   return (
     <div className='flex flex-wrap gap-2 px-4 py-3 border-b border-white/8'>
-      {tiles.map(({ key, label, value, Icon, tone, hint }) => (
-        <div
+      {tiles.map(({ key, label, value, Icon, tone, hint, active, apply }) => (
+        <button
+          type='button'
           key={key}
           title={hint}
-          className='flex items-center gap-2 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 py-2'
+          onClick={apply}
+          aria-pressed={active}
+          className={`flex items-center gap-2 min-w-0 min-h-11 border rounded-xl px-3 py-2 transition-colors ${
+            active
+              ? 'bg-stride-yellow-accent/10 border-stride-yellow-accent/60'
+              : 'bg-white/5 border-white/10 hover:border-stride-yellow-accent/50'
+          }`}
         >
           <Icon size={16} className={`${tone} shrink-0`} aria-hidden='true' />
           <span className={`text-lg font-bold tabular-nums font-mono ${tone}`}>{value}</span>
           <span className='text-white/40 text-[11px] line-clamp-1 break-all'>{label}</span>
-        </div>
+        </button>
       ))}
     </div>
   )
@@ -302,9 +329,8 @@ const EXPORT_STATUS = 'CONFIRMED'
  */
 export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }) {
   const router = useRouter()
-  const [search, setSearch] = useState('')
-  /** '' = no package filter. */
-  const [packageFilter, setPackageFilter] = useState('')
+  const [filters, setFilters] = useState<AttendeeFilters>(EMPTY_FILTERS)
+  const [sort, setSort] = useState<SortKey>(DEFAULT_SORT)
   /** Registration id of the attendee whose full details are open, if any. */
   const [expandedAttendeeId, setExpandedAttendeeId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
@@ -333,20 +359,15 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
     }
   }
 
-  // One rule for the whole panel: search and the package filter narrow what is
-  // listed, what "select all" covers, and what the CSV contains. Anything else
-  // lets an admin act on rows they can't see.
-  const visibleAttendees = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return event.attendees.filter(a =>
-      (!packageFilter || a.packages.some(p => p.name === packageFilter)) &&
-      (!q ||
-        a.full_name?.toLowerCase().includes(q) ||
-        a.email?.toLowerCase().includes(q) ||
-        a.username?.toLowerCase().includes(q) ||
-        a.runner_tag?.toLowerCase().includes(q))
-    )
-  }, [event.attendees, search, packageFilter])
+  // One rule for the whole panel: search and filters narrow what is listed,
+  // what "select all" covers, and what the CSV contains. Anything else lets an
+  // admin act on rows they can't see. Sorting also orders the CSV.
+  const visibleAttendees = useMemo(
+    () => sortAttendees(filterAttendees(event.attendees, filters, event.custom_fields), sort, event.custom_fields),
+    [event.attendees, event.custom_fields, filters, sort],
+  )
+  /** When sorted by a question, each row shows its answer so the grouping is visible. */
+  const sortField = event.custom_fields.find(f => sort === `field:${f.id}`) ?? null
 
   const narrowed = visibleAttendees.length !== event.attendees.length
   // Only confirmed runners are exported — the sheet is the start list, and
@@ -368,13 +389,8 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
    * selected, so leaving a filtered-out applicant checked would approve someone
    * the admin can no longer see.
    */
-  function changeSearch(value: string) {
-    setSearch(value)
-    setSelectedIds(new Set())
-  }
-
-  function changePackageFilter(value: string) {
-    setPackageFilter(value)
+  function changeFilters(next: AttendeeFilters) {
+    setFilters(next)
     setSelectedIds(new Set())
   }
 
@@ -482,45 +498,24 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
 
   return (
     <div>
-      <ConfirmedBreakdown attendees={event.attendees} />
+      <ConfirmedBreakdown
+        attendees={event.attendees}
+        filters={filters}
+        onFilter={patch => changeFilters({ ...filters, ...patch })}
+      />
       {event.invite_only && <ApplicationStats event={event} />}
 
-      {/* Search + package filter — finding one runner in a few hundred rows
-          was otherwise a scroll. */}
       {event.attendees.length > 0 && (
-        <div className='flex flex-col sm:flex-row gap-2 px-4 pt-3'>
-          <div className='relative flex-1'>
-            <label htmlFor={`attendee-search-${event.id}`} className='sr-only'>
-              Search participants of {event.name}
-            </label>
-            <Search size={15} className='absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
-            <input
-              id={`attendee-search-${event.id}`}
-              type='text'
-              placeholder='Search name, tag, email…'
-              value={search}
-              onChange={e => changeSearch(e.target.value)}
-              className='w-full min-h-11 bg-white/8 border border-white/20 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
-            />
-          </div>
-          {event.package_names.length > 0 && (
-            <div className='relative shrink-0'>
-              <label htmlFor={`package-filter-${event.id}`} className='sr-only'>Filter by package</label>
-              <select
-                id={`package-filter-${event.id}`}
-                value={packageFilter}
-                onChange={e => changePackageFilter(e.target.value)}
-                className='w-full sm:w-auto min-h-11 appearance-none bg-white/8 border border-white/20 rounded-xl pl-4 pr-9 py-2.5 text-white text-sm cursor-pointer focus:outline-none focus:border-stride-yellow-accent/60 transition-colors'
-              >
-                <option value='' className='bg-stride-purple-primary'>All packages</option>
-                {event.package_names.map(name => (
-                  <option key={name} value={name} className='bg-stride-purple-primary'>{name}</option>
-                ))}
-              </select>
-              <ChevronDown size={15} className='absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none' />
-            </div>
-          )}
-        </div>
+        <AttendeeFilterBar
+          eventId={event.id}
+          attendees={event.attendees}
+          fields={event.custom_fields}
+          packageNames={event.package_names}
+          filters={filters}
+          sort={sort}
+          onFiltersChange={changeFilters}
+          onSortChange={setSort}
+        />
       )}
 
       {/* Export toolbar */}
@@ -594,7 +589,7 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
 
       {visibleAttendees.length === 0 ? (
         <p className='text-white/30 text-sm px-4 py-5 text-center'>
-          {narrowed ? 'No participants match your search.' : 'No registrations for this event yet.'}
+          {narrowed ? 'No participants match these filters.' : 'No registrations for this event yet.'}
         </p>
       ) : (
         <div className='divide-y divide-white/4'>
@@ -648,6 +643,22 @@ export function EventRegistrationsPanel({ event }: { event: EventWithAttendees }
                         </a>
                       ) : (
                         <p className='text-white/20 text-xs'>No contact number</p>
+                      )}
+                      {(couponKey(a.coupon_code) || sortField) && (
+                        <div className='flex flex-wrap items-center gap-1.5 mt-1'>
+                          {couponKey(a.coupon_code) && (
+                            <span className='inline-flex items-center gap-1 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-stride-yellow-accent/15 text-stride-yellow-accent'>
+                              <TicketPercent size={10} aria-hidden='true' />
+                              {couponKey(a.coupon_code)}
+                              {a.coupon_percent != null && <span className='font-normal opacity-80'>· {a.coupon_percent}%</span>}
+                            </span>
+                          )}
+                          {sortField && (
+                            <span className='text-[11px] px-1.5 py-0.5 rounded-md bg-white/8 text-white/70 line-clamp-1 break-all'>
+                              {answerText(a, sortField) ?? 'Not answered'}
+                            </span>
+                          )}
+                        </div>
                       )}
                       {a.packages.length > 0 && (
                         <p className='text-stride-yellow-accent/70 text-xs mt-1 line-clamp-1'>
