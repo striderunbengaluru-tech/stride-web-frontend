@@ -14,6 +14,10 @@ export function isChoiceFieldType(type: AdditionalFieldType): boolean {
 /** Upper bound on choices per question — keeps the registration form usable. */
 export const MAX_FIELD_OPTIONS = 20
 
+/** Longest question label / option the schema accepts. The inputs cap at this too. */
+export const MAX_FIELD_LABEL_LENGTH = 250
+export const MAX_FIELD_OPTION_LENGTH = 250
+
 export type AdditionalField = {
   id: string
   label: string
@@ -22,6 +26,31 @@ export type AdditionalField = {
   placeholder?: string
   /** Allowed answers for the choice types. Absent on text/number/link. */
   options?: string[]
+}
+
+/**
+ * The first reason a custom question can't be saved, phrased for the admin, or
+ * null when every question is valid. Mirrors additionalFieldSchema so the form
+ * and the server reject the same things — a question that fails the schema must
+ * block the save, never vanish from it.
+ */
+export function findAdditionalFieldProblem(fields: AdditionalField[]): string | null {
+  for (const [index, field] of fields.entries()) {
+    const label = field.label.trim()
+    const name = label ? `"${label.slice(0, 40)}${label.length > 40 ? '…' : ''}"` : `Question ${index + 1}`
+    if (!label) return `${name} needs a question label.`
+    if (label.length > MAX_FIELD_LABEL_LENGTH) {
+      return `${name} is too long — keep questions to ${MAX_FIELD_LABEL_LENGTH} characters or fewer.`
+    }
+    if (!isChoiceFieldType(field.type)) continue
+    const options = (field.options ?? []).map(o => o.trim())
+    if (!options.some(Boolean)) return `Add at least one option to ${name}.`
+    if (options.length > MAX_FIELD_OPTIONS) return `${name} can have at most ${MAX_FIELD_OPTIONS} options.`
+    if (options.some(o => o.length > MAX_FIELD_OPTION_LENGTH)) {
+      return `An option in ${name} is too long — keep options to ${MAX_FIELD_OPTION_LENGTH} characters or fewer.`
+    }
+  }
+  return null
 }
 
 export type CustomResponses = Record<string, string | number>

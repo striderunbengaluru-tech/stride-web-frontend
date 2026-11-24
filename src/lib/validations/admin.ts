@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_FIELD_OPTIONS, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField } from '@/types/event'
+import { MAX_FIELD_OPTIONS, MAX_FIELD_LABEL_LENGTH, MAX_FIELD_OPTION_LENGTH, MAX_COUPON_CODE_LENGTH, isChoiceFieldType, type AdditionalField } from '@/types/event'
 import {
   MAX_RACE_DISTANCES, MAX_CUSTOM_DISTANCE_LENGTH, MAX_RACE_POSTERS, MAX_RACE_COUPON_LENGTH, MIN_RACE_DISCOUNT_PERCENT, MAX_RACE_DISCOUNT_PERCENT,
   normaliseDistance,
@@ -16,14 +16,14 @@ const blankToUndefined = (v: unknown) => (v === '' || v === null || v === undefi
 
 export const additionalFieldSchema = z.object({
   id:          z.string().min(1),
-  label:       z.string().trim().min(1).max(80),
+  label:       z.string().trim().min(1).max(MAX_FIELD_LABEL_LENGTH),
   type:        z.enum(['text', 'number', 'link', 'mcq', 'dropdown']),
   required:    z.boolean(),
   placeholder: z.string().max(120).optional(),
   // Choices for the mcq/dropdown types. Stored trimmed, de-duplicated and with
   // blanks dropped, so the saved list is exactly what the runner may answer and
   // what the register route validates against.
-  options:     z.array(z.string().trim().max(80)).max(MAX_FIELD_OPTIONS).optional(),
+  options:     z.array(z.string().trim().max(MAX_FIELD_OPTION_LENGTH)).max(MAX_FIELD_OPTIONS).optional(),
 })
   .transform(({ options, ...field }): AdditionalField => {
     if (!isChoiceFieldType(field.type)) return field

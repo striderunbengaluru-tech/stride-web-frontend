@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import type { EventFormData, EventActionResult } from '@/lib/validations/admin'
 import {
-  isChoiceFieldType, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
+  isChoiceFieldType, findAdditionalFieldProblem, MAX_FIELD_LABEL_LENGTH, MAX_FIELD_OPTION_LENGTH, MAX_FIELD_OPTIONS, MAX_PACKAGES, sumPackageAmountPaise, sumPackageSpots,
   type AdditionalField, type AdditionalFieldType, type EventPackage, type EventCoupon, TIER_GATES } from '@/types/event'
 import {
   validatePackageSpots, splitSpotsEvenly, countRetiredSpots, allocatableSpots, type SpotHold,
@@ -224,14 +224,10 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
     markDirty()
   }
 
-  // A choice question with no filled-in options is dropped on save, so block the
-  // submit and say which one rather than letting it disappear silently.
+  // The server rejects a question the schema won't accept (blank label, too long,
+  // no options), so block the submit here and say which one.
   function validateAdditionalFields(): string {
-    const broken = additionalFields.find(
-      f => isChoiceFieldType(f.type) && !(f.options ?? []).some(o => o.trim())
-    )
-    if (!broken) return ''
-    return `Add at least one option to the "${broken.label.trim() || 'untitled'}" question.`
+    return findAdditionalFieldProblem(additionalFields) ?? ''
   }
   function removeField(index: number) {
     setAdditionalFields(prev => prev.filter((_, i) => i !== index))
@@ -1307,6 +1303,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                               type='text'
                               value={field.label}
                               onChange={e => updateField(i, { label: e.target.value })}
+                              maxLength={MAX_FIELD_LABEL_LENGTH}
                               placeholder='e.g. T-shirt size'
                               className={inputBase}
                             />
@@ -1352,6 +1349,7 @@ export function EventForm({ action, defaultValues = {}, submitLabel, pendingAppl
                                     type='text'
                                     value={option}
                                     onChange={e => updateOption(i, oi, e.target.value)}
+                                    maxLength={MAX_FIELD_OPTION_LENGTH}
                                     placeholder={`Option ${oi + 1}`}
                                     aria-label={`Option ${oi + 1}`}
                                     className={`${inputBase} py-1.5 text-xs`}

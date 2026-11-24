@@ -13,7 +13,7 @@ import { firstFormIssue } from '@/lib/utils/form-issues'
 import { storagePathsUnder } from '@/lib/utils/storage-paths'
 import { EVENTS_TAG, eventTag, eventRegsTag } from '@/lib/data/events'
 import { eventSchema, productSchema, additionalFieldSchema, eventPackageSchema, eventCouponSchema, EVENT_FIELD_ORDER, type EventActionResult } from '@/lib/validations/admin'
-import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, type EventPackage } from '@/types/event'
+import { MAX_PACKAGES, MAX_COUPONS, hasSpotBudget, findAdditionalFieldProblem, type AdditionalField, type EventPackage } from '@/types/event'
 import { validatePackageSpots, countRetiredSpots } from '@/lib/events/package-spots'
 import { getSpotHolds } from '@/lib/events/spot-holds'
 import { normaliseCouponCode } from '@/lib/events/coupons'
@@ -37,6 +37,32 @@ function sanitiseAdditionalFields(raw: string | undefined): string {
     })
     return JSON.stringify(clean)
   } catch { return '[]' }
+}
+
+// sanitiseAdditionalFields drops any entry the schema rejects, so a question
+// with an over-long label used to vanish on save with no error. Reject the whole
+// save instead, with the same message the form shows.
+function additionalFieldsError(raw: string | undefined): { error: string; field: string } | null {
+  if (!raw) return null
+  const unreadable = { error: 'The custom questions could not be read — reload and try again.', field: 'additionalFields' }
+  let parsed: unknown
+  try { parsed = JSON.parse(raw) } catch { return unreadable }
+  if (!Array.isArray(parsed)) return unreadable
+  for (const entry of parsed) {
+    const result = additionalFieldSchema.safeParse(entry)
+    if (result.success) continue
+    const friendly = isAdditionalFieldShape(entry) ? findAdditionalFieldProblem([entry]) : null
+    return { error: friendly ?? 'One of the custom questions is invalid — check its label, type and options.', field: 'additionalFields' }
+  }
+  return null
+}
+
+// Just enough shape for findAdditionalFieldProblem to read safely.
+function isAdditionalFieldShape(entry: unknown): entry is AdditionalField {
+  if (typeof entry !== 'object' || entry === null) return false
+  const { label, type, options } = entry as Record<string, unknown>
+  return typeof label === 'string' && typeof type === 'string'
+    && (options === undefined || (Array.isArray(options) && options.every(o => typeof o === 'string')))
 }
 
 // Same contract as sanitiseAdditionalFields, including the per-entry validation:
@@ -185,6 +211,9 @@ export async function createEventAction(_prev: EventActionResult, formData: Form
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, ...rest } = parsed.data
 
+  const fieldsError = additionalFieldsError(additionalFields)
+  if (fieldsError) return fieldsError
+
   // A new event has no registrations, so nothing is retired yet.
   const spotsProblem = validatePackageSpots(parsePackages(packages), rest.capacity, packagesEnabled)
   if (spotsProblem) return { error: spotsProblem.message, field: spotsProblem.field }
@@ -279,6 +308,9 @@ export async function updateEventAction(id: string, _prev: EventActionResult, fo
   if (!parsed.success) return firstFormIssue(parsed.error.issues, EVENT_FIELD_ORDER)
 
   const { name, eventDate, endDate, locationUrl, postRunLocation, postRunLocationUrl, stravaRouteUrl, priceRupees, confirmationText, termsText, bannerImages, additionalFields, packages, packagesEnabled, packagesMultiSelect, packagesProgressive, distanceKm, difficulty, showSpotsLeft, isTestEvent, inviteOnly, registrationsClosed, confirmationEmailEnabled, couponsEnabled, capacity, ...rest } = parsed.data
+
+  const fieldsError = additionalFieldsError(additionalFields)
+  if (fieldsError) return fieldsError
 
   // Spots sold by packages the admin has since deleted still count against
   // capacity, so the remaining packages must add up to what is left.

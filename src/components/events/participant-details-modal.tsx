@@ -959,7 +959,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                     // question by its id, and the controls inside don't carry it
                     // as a `name` — this wrapper is what focusField scrolls to.
                     <div key={field.id} data-field={field.id} tabIndex={-1}>
-                      <label className='block text-white/70 text-xs font-medium mb-1.5'>
+                      <label className='block text-white/70 text-xs font-medium mb-1.5 wrap-break-word'>
                         {field.label || 'Untitled'} {field.required && <span className='text-stride-yellow-accent'>*</span>}
                       </label>
                       {field.type === 'mcq' ? (
@@ -971,7 +971,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                           {(field.options ?? []).map(option => (
                             <label
                               key={option}
-                              className='flex items-center gap-2.5 min-h-11 px-3.5 rounded-lg border border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10 transition-colors'
+                              className='flex items-center gap-2.5 min-h-11 px-3.5 py-2 rounded-lg border border-white/15 bg-white/6 cursor-pointer hover:border-white/30 has-checked:border-stride-yellow-accent/70 has-checked:bg-stride-yellow-accent/10 transition-colors'
                             >
                               <input
                                 type='radio'
@@ -982,7 +982,7 @@ export function ParticipantDetailsModal({ open, onClose, eventId, eventSlug, pri
                                 className='accent-stride-yellow-accent w-4 h-4 shrink-0'
                                 required={field.required}
                               />
-                              <span className='text-white/85 text-sm'>{option}</span>
+                              <span className='text-white/85 text-sm min-w-0 wrap-break-word'>{option}</span>
                             </label>
                           ))}
                         </div>
