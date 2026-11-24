@@ -266,7 +266,7 @@ export async function POST(request: Request) {
   // able to re-apply — but once the mode is switched off they CAN buy a ticket
   // like anyone else, which is why REJECTED is only blocking while it's on.
   if (existing?.status === 'APPLIED') {
-    return NextResponse.json({ error: "Your application is already in — we'll be in touch." }, { status: 409 })
+    return NextResponse.json({ error: 'We are already reviewing your application. Stay tuned.' }, { status: 409 })
   }
   if (existing?.status === 'REJECTED' && inviteOnly) {
     return NextResponse.json({ error: 'Applications for this event are closed for your account.' }, { status: 409 })
