@@ -422,9 +422,46 @@ function paperLink(href: string, label: string): string {
 /**
  * Run-day notes for individual invite-only events, keyed by event slug. They
  * go out only in the "You're selected" mail for that event; every other ticket
- * email carries no note. Items are HTML, so any `'` is written as `&#39;`.
+ * email carries no note. Copy is HTML, so any `'` is written as `&#39;`.
+ *
+ * `subject` and `intro` replace the standard subject line and opening
+ * paragraphs. `directionsLabel` adds a "get directions" button beside the
+ * ticket button, pointing at the event's own map link.
  */
-const INVITE_NOTES: Record<string, { title: string; items: string[] }> = {
+type InviteNote = {
+  title: string
+  items: string[]
+  subject?: string
+  intro?: string[]
+  directionsLabel?: string
+  /** Replaces the event's map link in this mail, e.g. a pin on one store inside a mall. */
+  locationUrl?: string
+}
+
+const FOOT_LOCKER_INSTAGRAM_URL = 'https://www.instagram.com/footlockerindia_official/'
+
+const INVITE_NOTES: Record<string, InviteNote> = {
+  'the-foot-locker-run': {
+    subject: "You're selected for the Foot Locker Run",
+    intro: [
+      'Congratulations, you&#39;ve secured a spot at the Run with Foot Locker.',
+      'We start at the Foot Locker store at Phoenix Marketcity, Whitefield, on Saturday, 28 November. Get more details below.',
+    ],
+    directionsLabel: 'Get directions to the venue',
+    locationUrl: 'https://maps.app.goo.gl/QdoaikkG6awZMpiX9',
+    title: 'More about the run',
+    items: [
+      'Arrive at <b>6 a.m.</b> at the Foot Locker store, Lower Ground Floor, Phoenix Marketcity, Whitefield.',
+      'Tees are available on a first-come, first-served basis. The sizes are subject to availability.',
+      'Parking at Phoenix Marketcity is available on a paid basis.',
+      'There is no bag drop-off at the venue. Carry light.',
+      'You may use the mall restrooms to change into the Foot Locker tee.',
+      `Tag ${paperLink(INSTAGRAM_URL, 'stride_runclub_bengaluru')} and ${paperLink(FOOT_LOCKER_INSTAGRAM_URL, 'footlockerindia_official')} in all your shares.`,
+      'Come in sports gear with comfortable shoes.',
+      'This is not a race. You can choose to walk or run at your pace on the route.',
+      'Foot Locker goodies are for contest winners, subject to availability.',
+    ],
+  },
   'the-buddy-run': {
     title: 'A quick vibe check',
     items: [
@@ -680,6 +717,8 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
 }): EmailContent {
   const { fullName, eventName, eventSlug, eventDate, location, locationUrl, routeUrl, bannerUrl, runnerTag, calendarUrl, confirmationUrl, amountPaidPaise, paymentId, selectedPackages = [], variant = 'confirmed' } = params
   const isSelection = variant === 'selected'
+  const note = isSelection ? INVITE_NOTES[eventSlug] : undefined
+  const mapUrl = note?.locationUrl ?? locationUrl
   const event = escapeHtml(eventName)
   const tag = escapeHtml(runnerTag ?? '—')
 
@@ -711,7 +750,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
   const whereRow = location
     ? paperDetailRow(
         'Where',
-        `${escapeHtml(location)}${locationUrl ? paperDetailSub(paperLink(escapeHtml(locationUrl), 'Open in Maps')) : ''}`,
+        `${escapeHtml(location)}${mapUrl ? paperDetailSub(paperLink(escapeHtml(mapUrl), 'Open in Maps')) : ''}`,
       )
     : ''
 
@@ -770,6 +809,19 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
       )
     : ''
 
+  const introParagraphs = note?.intro ?? [
+    isSelection
+      ? 'We loved your application and have reserved a spot for you.'
+      : 'Your spot is confirmed! See you there, with all the energy.',
+    'All the important details for this event are given below.',
+  ]
+
+  const directionsCta = note?.directionsLabel && mapUrl
+    ? paperGhostCta(escapeHtml(mapUrl), note.directionsLabel)
+    : ''
+
+  const subject = note?.subject ?? (isSelection ? `You're selected for ${eventName}` : `Ticket for ${eventName}`)
+
   const sheet = `${paperMasthead()}
             <tr>
               <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
@@ -782,12 +834,9 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
                 <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(fullName)},</p>
-                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">${
-                  isSelection
-                    ? 'We loved your application and have reserved a spot for you.'
-                    : 'Your spot is confirmed! See you there, with all the energy.'
-                }</p>
-                <p style="margin:0;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">All the important details for this event are given below.</p>
+                ${introParagraphs
+                  .map((text, i) => `<p style="margin:0${i < introParagraphs.length - 1 ? ' 0 14px' : ''};font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">${text}</p>`)
+                  .join('')}
               </td>
             </tr>
             ${posterRow}
@@ -801,6 +850,7 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
             <tr>
               <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
                 ${paperCta(confirmationUrl, 'View your ticket')}
+                ${directionsCta}
                 ${calendarCta}
               </td>
             </tr>
@@ -813,9 +863,9 @@ export function registrationConfirmedEmail(params: TicketEmailParams & {
     : `Your spot at ${event} is confirmed.`
 
   return {
-    subject: isSelection ? `You're selected for ${eventName}` : `Ticket for ${eventName}`,
+    subject,
     htmlContent: paperDocument({
-      title: isSelection ? `You're selected for ${eventName}` : `Ticket for ${eventName}`,
+      title: escapeHtml(subject),
       preheader,
       sheet,
     }),
