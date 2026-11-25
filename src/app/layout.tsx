@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Libre_Baskerville, Figtree } from "next/font/google";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -16,22 +15,25 @@ import { SiteWebMcpTools } from "@/components/webmcp/site-tools";
 import { graph, organizationNode, websiteNode, founderNode } from "@/lib/json-ld";
 import "./globals.css";
 
-const libreBaskerville = Libre_Baskerville({
+// Every face is self-hosted (latin subset, variable files from Google Fonts).
+// next/font/google fetches at build time, and Google sometimes answers with a
+// `/l/font?kit=` URL that Turbopack can't resolve, which fails the Vercel build.
+const libreBaskerville = localFont({
   variable: "--font-libre-baskerville",
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  style: ["normal", "italic"],
+  src: [
+    { path: "./fonts/libre-baskerville-latin.woff2", weight: "400 700", style: "normal" },
+    { path: "./fonts/libre-baskerville-italic-latin.woff2", weight: "400 700", style: "italic" },
+  ],
+  display: "swap",
 });
 
-const figtree = Figtree({
+const figtree = localFont({
   variable: "--font-figtree",
-  subsets: ["latin"],
-  // 300 dropped — no font-light usage anywhere in src/
-  weight: ["400", "500", "600", "700"],
+  src: "./fonts/figtree-latin.woff2",
+  weight: "400 700",
+  display: "swap",
 });
 
-// Self-hosted: Google Fonts sometimes serves Geist Mono from a `/l/font?kit=`
-// URL that Turbopack can't resolve, which fails the Vercel build.
 const geistMono = localFont({
   variable: "--font-geist-mono",
   src: "./fonts/geist-mono-latin.woff2",
