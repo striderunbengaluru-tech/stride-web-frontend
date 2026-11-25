@@ -11,12 +11,21 @@ import type { SelectedPackage } from '@/types/event'
 const SITE_URL = PRODUCTION_SITE_URL
 
 /**
+ * Paused while Brevo's 300-a-day allowance goes to invite-only approval mails.
+ * The check runs before the claim, so nobody is stamped while it is off: a user
+ * who signs up meanwhile gets their welcome mail on their next sign-in after it
+ * is switched back on.
+ */
+const WELCOME_EMAIL_ENABLED = false
+
+/**
  * Send the welcome email exactly once per user. The conditional UPDATE is an
  * atomic claim on `welcome_email_sent_at` — safe to call on every sign-in;
  * existing users are backfilled with a timestamp so only new users match.
  * Never throws.
  */
 export async function sendWelcomeEmailOnce(userId: string): Promise<void> {
+  if (!WELCOME_EMAIL_ENABLED) return
   try {
     const { data: claimed, error } = await adminClient
       .from('users')
@@ -155,7 +164,11 @@ export async function sendConfirmationEmailOnce(
       paymentId: reg?.razorpay_payment_id ?? null,
       selectedPackages,
     })
-    await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
+    // sendEmail reports a Brevo rejection (e.g. the daily quota is spent) as
+    // false rather than throwing. Throw here so the catch releases the claim
+    // and the registration stays sendable.
+    const sent = await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
+    if (!sent) throw new Error('Brevo did not accept the confirmation email')
   } catch (err) {
     console.error('[Email] Confirmation email failed', err)
 
@@ -236,7 +249,8 @@ export async function sendPaymentDueEmailOnce(registrationId: string): Promise<v
       // pay=1 opens the payment popup on arrival (register-button.tsx).
       payUrl: `${SITE_URL}/events/${event.slug}?pay=1&${PAYMENT_DUE_UTM}&utm_content=${encodeURIComponent(event.slug)}`,
     })
-    await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
+    const sent = await sendEmail({ to: user.email, toName: user.full_name, subject, htmlContent })
+    if (!sent) throw new Error('Brevo did not accept the payment-due email')
   } catch (err) {
     console.error('[Email] Payment-due email failed', err)
     if (claimedStamp) {
