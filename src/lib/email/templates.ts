@@ -453,7 +453,7 @@ const INVITE_NOTES: Record<string, InviteNote> = {
     items: [
       'Arrive at <b>6 a.m.</b> at the Foot Locker store, Lower Ground Floor, Phoenix Marketcity, Whitefield.',
       'Tees are available on a first-come, first-served basis. The sizes are subject to availability. Tees are non-returnable.',
-      'Entry closes at <b>6:30 am</b> at the Foot Locker store. No meal coupons or tees will be available after that. So, arrive on time.',
+      'Entry closes at <b>6:30 a.m.</b> at the Foot Locker store. No meal coupons or tees will be available after that. So, arrive on time.',
       'Parking at Phoenix Marketcity is available on a paid basis.',
       'There is no bag drop-off at the venue. Carry light.',
       'You may use the mall restrooms to change into the Foot Locker tee.',
