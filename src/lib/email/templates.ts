@@ -462,6 +462,7 @@ const INVITE_NOTES: Record<string, InviteNote> = {
       'This is not a race. Walk or run at your own pace.',
       'One loop of the route is less than 1 km. Runners will be required to complete multiple rounds to complete the required distance.',
       'Foot Locker goodies are for contest winners, subject to availability.',
+      `For further updates, follow ${paperLink(INSTAGRAM_URL, 'stride_runclub_bengaluru')} on Instagram.`,
     ],
   },
   'the-buddy-run': {
