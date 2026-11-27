@@ -554,6 +554,51 @@ export function welcomeEmail(params: {
   }
 }
 
+const STRIDE_WHATSAPP_URL = 'https://chat.whatsapp.com/FQV2XHcUW6pFmxpogkfcMP'
+
+/**
+ * Sent in bulk to Foot Locker Run applicants who were not selected. Not wired to
+ * an admin action: it goes out once, from a script, after approvals close.
+ */
+export function footLockerApplicationUpdateEmail(params: { fullName: string | null }): EmailContent {
+  const paragraph = (html: string, last = false) =>
+    `<p style="margin:0 0 ${last ? 0 : 14}px;font-family:${PAPER_FONT};font-size:16px;line-height:1.68;color:${PAPER_BODY};">${html}</p>`
+
+  const sheet = `${paperMasthead()}
+            <tr>
+              <td class="pad" align="center" style="${PAPER_PAD}padding-bottom:20px;text-align:center;">
+                <h1 class="h1" style="margin:0;font-family:${DISPLAY_FONT};font-weight:${DISPLAY_WEIGHT};font-size:35px;line-height:1.14;letter-spacing:-0.005em;color:${PAPER_INK};text-align:center;">See you next time</h1>
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:24px;">
+                <p style="margin:0 0 14px;font-family:${PAPER_FONT};font-size:16px;line-height:1.65;color:${PAPER_INK};font-weight:600;">Hey ${firstName(params.fullName)},</p>
+                ${paragraph('Thanks for applying for Run with Foot Locker by Stride Run Club!')}
+                ${paragraph('Unfortunately, we couldn&#39;t proceed with your application this time. But we&#39;d love to have you join us for one of our upcoming runs.')}
+                ${paragraph('There are no spot registrations. We have limited spots for this experience and couldn&#39;t accommodate everyone.')}
+                ${paragraph(`We host community runs twice every week. Stay tuned to our Instagram, ${paperLink(INSTAGRAM_URL, '@stride_runclub_bengaluru')}, and join our ${paperLink(STRIDE_WHATSAPP_URL, 'WhatsApp community')} to stay updated on upcoming runs and experiences.`)}
+                ${paragraph('Thanks,<br>Sidharth, founder,<br>Stride Run Club', true)}
+              </td>
+            </tr>
+            <tr>
+              <td class="pad" style="${PAPER_PAD}padding-bottom:32px;">
+                ${paperCta(STRIDE_WHATSAPP_URL, 'Join the WhatsApp community')}
+                ${paperGhostCta(INSTAGRAM_URL, 'Follow us on Instagram')}
+              </td>
+            </tr>
+            ${paperFooter()}`
+
+  const subject = 'Update on Your Run with Foot Locker Application'
+  return {
+    subject,
+    htmlContent: paperDocument({
+      title: escapeHtml(subject),
+      preheader: 'Thanks for applying for Run with Foot Locker by Stride Run Club.',
+      sheet,
+    }),
+  }
+}
+
 /** An invite-only applicant has been approved — "You're selected for X". */
 export function selectedForEventEmail(params: TicketEmailParams): EmailContent {
   return registrationConfirmedEmail({ ...params, variant: 'selected' })
