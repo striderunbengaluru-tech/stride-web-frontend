@@ -9,7 +9,10 @@ const InstagramIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const contacts = [
+// Hidden for a few days from 2026-11-27; set back to true to show the number again.
+const SHOW_PHONE = false
+
+const allContacts = [
   {
     icon: Mail,
     channel: 'Email',
@@ -32,6 +35,8 @@ const contacts = [
     external: true,
   },
 ]
+
+const contacts = allContacts.filter(c => SHOW_PHONE || c.channel !== 'Phone')
 
 export function ContactContent() {
   return (
