@@ -11,12 +11,12 @@ import type { SelectedPackage } from '@/types/event'
 const SITE_URL = PRODUCTION_SITE_URL
 
 /**
- * Paused while Brevo's 300-a-day allowance goes to invite-only approval mails.
- * The check runs before the claim, so nobody is stamped while it is off: a user
- * who signs up meanwhile gets their welcome mail on their next sign-in after it
- * is switched back on.
+ * Kill switch for the welcome mail, e.g. to save Brevo quota for a big batch of
+ * event mails. The check runs before the claim, so nobody is stamped while it
+ * is off: a user who signs up meanwhile gets their welcome mail on their next
+ * sign-in after it is switched back on.
  */
-const WELCOME_EMAIL_ENABLED = false
+const WELCOME_EMAIL_ENABLED = true
 
 /**
  * Send the welcome email exactly once per user. The conditional UPDATE is an
